@@ -10,6 +10,9 @@
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
     
     <!-- Custom Styles matching the sidebar theme -->
     <script>
@@ -28,7 +31,6 @@
                         'border-soft': '#e8dfd4',
                     },
                     fontFamily: {
-                        'display': ['Playfair Display', 'serif'],
                         'sans': ['Inter', 'system-ui', 'sans-serif'],
                     }
                 }

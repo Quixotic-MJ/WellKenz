@@ -34,7 +34,7 @@
             <!-- Notifications -->
             <div class="relative" role="menu">
                 <button id="notificationsBtn" onclick="toggleNotifications()" 
-                        class="square-button p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors border border-border-soft relative focus:outline-none">
+                        class="square-button p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors relative focus:outline-none">
                     <i class="fas fa-bell text-base"></i>
                     <span class="absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white">5</span>
                 </button>
@@ -96,7 +96,7 @@
             <!-- Profile -->
             <div class="relative" role="menu">
                 <button id="profileBtn" onclick="toggleProfile()" 
-                        class="flex items-center space-x-2 p-1.5 hover:bg-cream-bg transition-colors border border-border-soft focus:outline-none square-button">
+                        class="flex items-center space-x-2 p-1.5 hover:bg-cream-bg transition-colors focus:outline-none square-button">
                     <div class="w-8 h-8 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
                         <span class="text-white text-sm font-bold">JD</span>
                     </div>
