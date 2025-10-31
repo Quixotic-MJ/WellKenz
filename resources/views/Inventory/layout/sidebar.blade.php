@@ -26,7 +26,7 @@
             <ul class="space-y-1 px-3">
                 <!-- Dashboard -->
                 <li>
-                    <a href="{{ route('Admin_dashboard') }}"
+                    <a href="{{ route('Inventory_dashboard') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('dashboard') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
@@ -41,7 +41,7 @@
                         <i
                             class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Requisition</span>
+                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory List</span>
                     </a>
                 </li>
 
