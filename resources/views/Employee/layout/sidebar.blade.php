@@ -69,6 +69,21 @@
     </div>
 </aside>
 
+<script>
+    // Set active menu based on current route
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentPath = window.location.pathname;
+        const menuItems = document.querySelectorAll('.menu-item');
+        
+        menuItems.forEach(item => {
+            const href = item.getAttribute('href');
+            if (href && currentPath.includes(href.replace('{{ url('') }}', ''))) {
+                item.classList.add('active-menu');
+            }
+        });
+    });
+</script>
+
 <style>
     .active-menu {
         background-color: rgba(255, 255, 255, 0.15);

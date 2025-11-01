@@ -136,21 +136,39 @@
                     </p>
                 </div>
 
-                <form method="POST" action="#" class="space-y-6">
+                <!-- Error Messages -->
+                @if(session('error'))
+                    <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                @if($errors->any())
+                    <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                        <ul class="list-disc list-inside">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('login.post') }}" class="space-y-6">
+                    @csrf
                     
                     <div>
                         <label for="username" class="block text-xs font-bold text-text-dark uppercase tracking-wider mb-2">
-                            Staff ID or Email
+                            Username
                         </label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <i class="fas fa-user text-text-muted text-sm"></i>
                             </div>
-                            <input id="username" name="username" type="text" autocomplete="username" required
+                            <input id="username" name="username" type="text" value="{{ old('username') }}" required
                                 class="block w-full pl-11 pr-4 py-3.5 bg-white border-2 border-border-soft
                                        placeholder-text-muted text-text-dark text-base
                                        focus:outline-none focus:border-chocolate transition-colors"
-                                placeholder="Enter your staff ID">
+                                placeholder="Enter your username">
                         </div>
                     </div>
 
@@ -162,20 +180,20 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <i class="fas fa-lock text-text-muted text-sm"></i>
                             </div>
-                            <input id="password" name="password" type="password" autocomplete="current-password" required
+                            <input id="password" name="password" type="password" required
                                 class="block w-full pl-11 pr-12 py-3.5 bg-white border-2 border-border-soft
                                        placeholder-text-muted text-text-dark text-base
                                        focus:outline-none focus:border-chocolate transition-colors"
                                 placeholder="Enter your password">
-                            <div class="absolute inset-y-0 right-0 pr-4 flex items-center cursor-pointer">
-                                <i class="fas fa-eye text-text-muted hover:text-text-dark text-sm transition-colors"></i>
-                            </div>
+                            <button type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center" onclick="togglePassword()">
+                                <i class="fas fa-eye text-text-muted hover:text-text-dark text-sm transition-colors" id="passwordToggle"></i>
+                            </button>
                         </div>
                     </div>
 
                     <div class="flex items-center justify-between text-sm">
                         <label class="flex items-center cursor-pointer">
-                            <input type="checkbox" class="w-4 h-4 border-2 border-border-soft text-chocolate focus:ring-0 focus:ring-offset-0">
+                            <input type="checkbox" name="remember" class="w-4 h-4 border-2 border-border-soft text-chocolate focus:ring-0 focus:ring-offset-0">
                             <span class="ml-2 text-text-muted">Remember me</span>
                         </label>
                         <a href="#" class="text-chocolate hover:text-chocolate-dark font-semibold transition-colors">
@@ -212,6 +230,23 @@
             </div>
         </div>
     </div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const passwordToggle = document.getElementById('passwordToggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordToggle.classList.remove('fa-eye');
+                passwordToggle.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                passwordToggle.classList.remove('fa-eye-slash');
+                passwordToggle.classList.add('fa-eye');
+            }
+        }
+    </script>
 
 </body>
 </html>

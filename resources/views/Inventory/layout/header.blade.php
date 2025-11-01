@@ -3,18 +3,17 @@
     <div class="flex items-center justify-between px-4 sm:px-6 py-3">
         <!-- Left Section -->
         <div class="flex items-center space-x-3">
-            <!-- Menu Toggle -->
-            {{-- <button onclick="toggleSidebar()" 
-                    class="square-button p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors border border-border-soft focus:outline-none">
+            <!-- Toggle Sidebar Button -->
+            <button onclick="toggleSidebar()" class="p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors square-button">
                 <i class="fas fa-bars text-base"></i>
-            </button> --}}
+            </button>
             
             <!-- Breadcrumb / Logo -->
             <div class="flex items-center space-x-2 text-sm">
                 <i class="fas fa-birthday-cake text-caramel text-xl"></i>
                 <span class="font-display font-bold text-text-dark text-lg hidden sm:block">WellKenz</span>
                 <span class="text-border-soft mx-2 hidden sm:block">/</span>
-                <span class="text-text-muted text-xs uppercase tracking-wider hidden md:block">Dashboard</span>
+                <span class="text-text-muted text-xs uppercase tracking-wider hidden md:block">@yield('breadcrumb', 'Dashboard')</span>
             </div>
         </div>
 
@@ -98,11 +97,13 @@
                 <button id="profileBtn" onclick="toggleProfile()" 
                         class="flex items-center space-x-2 p-1.5 hover:bg-cream-bg transition-colors focus:outline-none square-button">
                     <div class="w-8 h-8 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
-                        <span class="text-white text-sm font-bold">JD</span>
+                        <span class="text-white text-sm font-bold">
+                            {{ substr(session('emp_name'), 0, 1) }}{{ substr(strstr(session('emp_name'), ' ') ?: '', 1, 1) }}
+                        </span>
                     </div>
                     <div class="hidden lg:block text-left pr-1">
-                        <p class="text-sm font-semibold text-text-dark leading-none">John Doe</p>
-                        <p class="text-xs text-text-muted leading-none mt-0.5">Manager</p>
+                        <p class="text-sm font-semibold text-text-dark leading-none">{{ session('emp_name') }}</p>
+                        <p class="text-xs text-text-muted leading-none mt-0.5">{{ session('emp_position') }}</p>
                     </div>
                     <i class="fas fa-chevron-down text-text-muted text-xs hidden lg:block"></i>
                 </button>
@@ -112,14 +113,16 @@
                     <div class="p-4 border-b-2 border-border-soft bg-cream-bg rounded-t-lg">
                         <div class="flex items-center space-x-3 mb-2">
                             <div class="w-10 h-10 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
-                                <span class="text-white text-base font-bold">JD</span>
+                                <span class="text-white text-base font-bold">
+                                    {{ substr(session('emp_name'), 0, 1) }}{{ substr(strstr(session('emp_name'), ' ') ?: '', 1, 1) }}
+                                </span>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-text-dark">John Doe</p>
-                                <p class="text-xs text-text-muted">Baker & Manager</p>
+                                <p class="text-sm font-bold text-text-dark">{{ session('emp_name') }}</p>
+                                <p class="text-xs text-text-muted">{{ session('emp_position') }}</p>
                             </div>
                         </div>
-                        <p class="text-xs text-text-muted mt-2 border-t border-border-soft pt-2 truncate">john.doe@wellkenz.com</p>
+                        <p class="text-xs text-text-muted mt-2 border-t border-border-soft pt-2 truncate">{{ session('username') }}</p>
                     </div>
                     <div class="p-2">
                         <a href="#" class="flex items-center space-x-3 px-3 py-2 text-sm text-text-dark hover:bg-cream-bg transition rounded-md">
@@ -128,10 +131,13 @@
                         </a>
                     </div>
                     <div class="p-2 border-t-2 border-border-soft">
-                        <a href="#" class="flex items-center space-x-3 px-3 py-2 text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark transition justify-center rounded-md">
-                            <i class="fas fa-sign-out-alt w-4 text-center"></i>
-                            <span>Sign Out</span>
-                        </a>
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="flex items-center space-x-3 w-full px-3 py-2 text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark transition justify-center rounded-md">
+                                <i class="fas fa-sign-out-alt w-4 text-center"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
