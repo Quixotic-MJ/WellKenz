@@ -3,15 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
-class User extends Model
+class User extends Authenticatable
 {
-    use HasFactory;
+    use HasFactory, Notifiable;
 
     protected $primaryKey = 'user_id';
+
     protected $fillable = [
         'username',
         'password',
@@ -19,56 +19,82 @@ class User extends Model
         'emp_id'
     ];
 
-    protected $hidden = ['password'];
+    protected $hidden = [
+        'password',
+    ];
 
+    // Relationship with Employee
     public function employee()
     {
-        return $this->belongsTo(Employee::class, 'emp_id');
+        return $this->belongsTo(Employee::class, 'emp_id', 'emp_id');
     }
 
-    public function setPasswordAttribute($value)
+    // Relationship with Notifications
+    public function notifications()
     {
-        $this->attributes['password'] = Hash::make($value);
+        return $this->hasMany(Notification::class, 'user_id', 'user_id');
     }
 
-    // CRUD methods using stored procedures
-    public static function createUser($data)
+    // Get unread notifications count
+    public function getUnreadNotificationsCount()
     {
-        return DB::select('SELECT create_user(?, ?, ?, ?) as result', [
-            $data['username'],
-            $data['password'],
-            $data['role'],
-            $data['emp_id']
-        ])[0]->result;
+        return $this->notifications()->unread()->count();
     }
 
-    public static function getUser($userId)
+    // Get recent notifications
+    public function getRecentNotifications($limit = 5)
     {
-        return DB::select('SELECT get_user(?) as result', [$userId])[0]->result;
+        return $this->notifications()->recent($limit)->get();
     }
 
-    public static function authenticate($username, $password)
+    // Role-based scopes and helper methods remain the same...
+    public function scopeAdmins($query)
     {
-        return DB::select('SELECT authenticate_user(?, ?) as result', [$username, $password])[0]->result;
+        return $query->where('role', 'admin');
     }
 
-    public static function updateUser($userId, $data)
+    public function scopeEmployees($query)
     {
-        return DB::select('SELECT update_user(?, ?, ?, ?) as result', [
-            $userId,
-            $data['username'],
-            $data['role'],
-            $data['emp_id']
-        ])[0]->result;
+        return $query->where('role', 'employee');
     }
 
-    public static function changePassword($userId, $newPassword)
+    public function scopeInventory($query)
     {
-        return DB::select('SELECT change_user_password(?, ?) as result', [$userId, $newPassword])[0]->result;
+        return $query->where('role', 'inventory');
     }
 
-    public static function deleteUser($userId)
+    public function scopePurchasing($query)
     {
-        return DB::select('SELECT delete_user(?) as result', [$userId])[0]->result;
+        return $query->where('role', 'purchasing');
+    }
+
+    public function scopeSupervisors($query)
+    {
+        return $query->where('role', 'supervisor');
+    }
+
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isEmployee()
+    {
+        return $this->role === 'employee';
+    }
+
+    public function isInventory()
+    {
+        return $this->role === 'inventory';
+    }
+
+    public function isPurchasing()
+    {
+        return $this->role === 'purchasing';
+    }
+
+    public function isSupervisor()
+    {
+        return $this->role === 'supervisor';
     }
 }

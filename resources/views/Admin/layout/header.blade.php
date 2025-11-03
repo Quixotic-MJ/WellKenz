@@ -35,58 +35,56 @@
                 <button id="notificationsBtn" onclick="toggleNotifications()" 
                         class="square-button p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors relative focus:outline-none">
                     <i class="fas fa-bell text-base"></i>
-                    <span class="absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white">5</span>
+                    @if($unreadNotificationsCount > 0)
+                        <span class="absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white" id="notificationCount">
+                            {{ $unreadNotificationsCount > 99 ? '99+' : $unreadNotificationsCount }}
+                        </span>
+                    @endif
                 </button>
                 
                 <!-- Notifications Dropdown -->
                 <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white shadow-lg border-2 border-border-soft z-50 rounded-lg" role="menu">
-                    <div class="p-3 border-b-2 border-border-soft bg-cream-bg rounded-t-lg">
-                        <h3 class="font-bold text-text-dark text-xs uppercase tracking-wider">Notifications (5)</h3>
+                    <div class="p-3 border-b-2 border-border-soft bg-cream-bg rounded-t-lg flex justify-between items-center">
+                        <h3 class="font-bold text-text-dark text-xs uppercase tracking-wider">
+                            Notifications ({{ $unreadNotificationsCount }})
+                        </h3>
+                        @if($unreadNotificationsCount > 0)
+                            <button onclick="markAllAsRead()" class="text-xs text-chocolate hover:text-chocolate-dark font-bold">
+                                Mark all as read
+                            </button>
+                        @endif
                     </div>
-                    <div class="max-h-80 overflow-y-auto">
-                        <!-- Notification Items -->
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-caramel flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-shopping-bag text-white text-sm"></i>
+                    <div class="max-h-80 overflow-y-auto" id="notificationsList">
+                        @if($recentNotifications->count() > 0)
+                            @foreach($recentNotifications as $notification)
+                                <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
+                                     data-notification-id="{{ $notification->notif_id }}"
+                                     onclick="markNotificationAsRead({{ $notification->notif_id }})">
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 {{ $notification->type_color }} flex items-center justify-center flex-shrink-0 rounded-full">
+                                            <i class="{{ $notification->icon }} text-white text-sm"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-dark">{{ $notification->notif_title }}</p>
+                                            <p class="text-xs text-text-muted mt-1">{{ $notification->notif_content }}</p>
+                                            <p class="text-xs text-text-muted mt-2">{{ $notification->created_at->diffForHumans() }}</p>
+                                        </div>
+                                        @if(!$notification->is_read)
+                                            <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1"></div>
+                                        @endif
+                                    </div>
                                 </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">New Order Received</p>
-                                    <p class="text-xs text-text-muted mt-1">Wedding cake - 50 servings</p>
-                                    <p class="text-xs text-text-muted mt-2">5 min ago</p>
-                                </div>
+                            @endforeach
+                        @else
+                            <div class="p-8 text-center">
+                                <i class="fas fa-bell-slash text-border-soft text-2xl mb-2"></i>
+                                <p class="text-text-muted text-sm">No notifications</p>
                             </div>
-                        </div>
-                        
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-chocolate flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-box text-white text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">Low Stock Alert</p>
-                                    <p class="text-xs text-text-muted mt-1">Chocolate chips running low</p>
-                                    <p class="text-xs text-text-muted mt-2">1 hour ago</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-caramel flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-truck text-white text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">Delivery Completed</p>
-                                    <p class="text-xs text-text-muted mt-1">Order #4523 delivered successfully</p>
-                                    <p class="text-xs text-text-muted mt-2">2 hours ago</p>
-                                </div>
-                            </div>
-                        </div>
+                        @endif
                     </div>
                     <div class="p-3 border-t-2 border-border-soft rounded-b-lg">
-                        <a href="#" class="block text-center text-xs font-bold text-chocolate hover:text-chocolate-dark transition uppercase tracking-wider">
-                            View All
+                        <a href="{{ route('notifications.index') }}" class="block text-center text-xs font-bold text-chocolate hover:text-chocolate-dark transition uppercase tracking-wider">
+                            View All Notifications
                         </a>
                     </div>
                 </div>
@@ -98,12 +96,29 @@
                         class="flex items-center space-x-2 p-1.5 hover:bg-cream-bg transition-colors focus:outline-none square-button">
                     <div class="w-8 h-8 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
                         <span class="text-white text-sm font-bold">
-                            {{ substr(session('emp_name'), 0, 1) }}{{ substr(strstr(session('emp_name'), ' ') ?: '', 1, 1) }}
+                            @php
+                                $user = Auth::user();
+                                $employee = $user->employee ?? null;
+                                if($employee) {
+                                    $names = explode(' ', $employee->emp_name);
+                                    $initials = '';
+                                    foreach ($names as $name) {
+                                        $initials .= strtoupper(substr($name, 0, 1));
+                                    }
+                                    echo substr($initials, 0, 2);
+                                } else {
+                                    echo 'U';
+                                }
+                            @endphp
                         </span>
                     </div>
                     <div class="hidden lg:block text-left pr-1">
-                        <p class="text-sm font-semibold text-text-dark leading-none">{{ session('emp_name') }}</p>
-                        <p class="text-xs text-text-muted leading-none mt-0.5">{{ session('emp_position') }}</p>
+                        <p class="text-sm font-semibold text-text-dark leading-none">
+                            {{ $employee->emp_name ?? 'User' }}
+                        </p>
+                        <p class="text-xs text-text-muted leading-none mt-0.5">
+                            {{ $employee->emp_position ?? 'Employee' }}
+                        </p>
                     </div>
                     <i class="fas fa-chevron-down text-text-muted text-xs hidden lg:block"></i>
                 </button>
@@ -114,17 +129,34 @@
                         <div class="flex items-center space-x-3 mb-2">
                             <div class="w-10 h-10 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
                                 <span class="text-white text-base font-bold">
-                                    {{ substr(session('emp_name'), 0, 1) }}{{ substr(strstr(session('emp_name'), ' ') ?: '', 1, 1) }}
+                                    @php
+                                        if($employee) {
+                                            $names = explode(' ', $employee->emp_name);
+                                            $initials = '';
+                                            foreach ($names as $name) {
+                                                $initials .= strtoupper(substr($name, 0, 1));
+                                            }
+                                            echo substr($initials, 0, 2);
+                                        } else {
+                                            echo 'U';
+                                        }
+                                    @endphp
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-text-dark">{{ session('emp_name') }}</p>
-                                <p class="text-xs text-text-muted">{{ session('emp_position') }}</p>
+                                <p class="text-sm font-bold text-text-dark">{{ $employee->emp_name ?? 'User' }}</p>
+                                <p class="text-xs text-text-muted">{{ $employee->emp_position ?? 'Employee' }}</p>
                             </div>
                         </div>
-                        <p class="text-xs text-text-muted mt-2 border-t border-border-soft pt-2 truncate">{{ session('username') }}</p>
+                        <p class="text-xs text-text-muted mt-2 border-t border-border-soft pt-2 truncate">
+                            {{ $user->username }} • {{ ucfirst($user->role) }}
+                        </p>
                     </div>
                     <div class="p-2">
+                        <a href="#" class="flex items-center space-x-3 px-3 py-2 text-sm text-text-dark hover:bg-cream-bg transition rounded-md">
+                            <i class="fas fa-user text-text-muted w-4 text-center"></i>
+                            <span>My Profile</span>
+                        </a>
                         <a href="#" class="flex items-center space-x-3 px-3 py-2 text-sm text-text-dark hover:bg-cream-bg transition rounded-md">
                             <i class="fas fa-cog text-text-muted w-4 text-center"></i>
                             <span>Settings</span>
@@ -179,6 +211,98 @@
         const sidebar = getEl('sidebar');
         if (sidebar) {
             sidebar.classList.toggle('collapsed');
+            // Store sidebar state in localStorage
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        }
+    }
+
+    // Mark notification as read
+    async function markNotificationAsRead(notificationId) {
+        try {
+            const response = await fetch(`/notifications/${notificationId}/read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Update UI
+                const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (notificationItem) {
+                    const unreadDot = notificationItem.querySelector('.bg-caramel');
+                    if (unreadDot) unreadDot.remove();
+                    
+                    // Update notification count
+                    updateNotificationCount(-1);
+                }
+            }
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    }
+
+    // Mark all notifications as read
+    async function markAllAsRead() {
+        try {
+            const response = await fetch('/notifications/mark-all-read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Remove all unread indicators
+                document.querySelectorAll('.bg-caramel').forEach(dot => dot.remove());
+                
+                // Update notification count to zero
+                const notificationCount = getEl('notificationCount');
+                if (notificationCount) {
+                    notificationCount.remove();
+                }
+                
+                // Update the count in the header
+                getEl('notificationsDropdown').querySelector('h3').textContent = 'Notifications (0)';
+            }
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+        }
+    }
+
+    // Update notification count in the bell
+    function updateNotificationCount(change) {
+        const notificationCount = getEl('notificationCount');
+        let currentCount = parseInt(notificationCount?.textContent || 0);
+        currentCount += change;
+        
+        if (currentCount <= 0) {
+            if (notificationCount) notificationCount.remove();
+        } else {
+            if (!notificationCount) {
+                // Create new count badge
+                const bell = getEl('notificationsBtn');
+                const badge = document.createElement('span');
+                badge.id = 'notificationCount';
+                badge.className = 'absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white';
+                badge.textContent = currentCount > 99 ? '99+' : currentCount;
+                bell.appendChild(badge);
+            } else {
+                notificationCount.textContent = currentCount > 99 ? '99+' : currentCount;
+            }
+        }
+        
+        // Update dropdown header
+        const dropdownHeader = getEl('notificationsDropdown')?.querySelector('h3');
+        if (dropdownHeader) {
+            dropdownHeader.textContent = `Notifications (${Math.max(0, currentCount)})`;
         }
     }
 
@@ -198,5 +322,32 @@
         if (profileDropdown && profileBtn && !profileBtn.contains(event.target) && !profileDropdown.contains(event.target)) {
             profileDropdown.classList.add('hidden');
         }
+    });
+
+    // Restore sidebar state from localStorage
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        const sidebar = getEl('sidebar');
+        if (sidebar) {
+            if (sidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+            }
+        }
+
+        // Poll for new notifications every 30 seconds
+        setInterval(async () => {
+            try {
+                const response = await fetch('/notifications/unread-count');
+                const data = await response.json();
+                const currentCount = parseInt(getEl('notificationCount')?.textContent || 0);
+                
+                if (data.count !== currentCount) {
+                    // Refresh the page to get updated notifications
+                    window.location.reload();
+                }
+            } catch (error) {
+                console.error('Error checking for new notifications:', error);
+            }
+        }, 30000);
     });
 </script>

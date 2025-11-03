@@ -59,6 +59,31 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        /* Loading state for button */
+        .btn-loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .btn-loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin-left: -10px;
+            margin-top: -10px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body class="antialiased body-pattern font-sans">
@@ -119,16 +144,30 @@
                     </p>
                 </div>
 
+                <!-- Success Messages -->
+                @if(session('success'))
+                    <div class="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
                 <!-- Error Messages -->
                 @if(session('error'))
                     <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                        {{ session('error') }}
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            {{ session('error') }}
+                        </div>
                     </div>
                 @endif
 
                 @if($errors->any())
                     <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                        <ul class="list-disc list-inside">
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            <span class="font-semibold">Please fix the following errors:</span>
+                        </div>
+                        <ul class="list-disc list-inside ml-2">
                             @foreach($errors->all() as $error)
                                 <li>{{ $error }}</li>
                             @endforeach
@@ -136,7 +175,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('login.post') }}" class="space-y-6">
+                <form method="POST" action="{{ route('login.post') }}" class="space-y-6" id="loginForm">
                     @csrf
                     
                     <div>
@@ -150,9 +189,15 @@
                             <input id="username" name="username" type="text" value="{{ old('username') }}" required
                                 class="block w-full pl-11 pr-4 py-3.5 bg-white border-2 border-border-soft
                                        placeholder-text-muted text-text-dark text-base
-                                       focus:outline-none focus:border-chocolate transition-colors"
-                                placeholder="Enter your username">
+                                       focus:outline-none focus:border-chocolate transition-colors
+                                       {{ $errors->has('username') ? 'border-red-400' : '' }}"
+                                placeholder="Enter your username"
+                                autocomplete="username"
+                                autofocus>
                         </div>
+                        @if($errors->has('username'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('username') }}</p>
+                        @endif
                     </div>
 
                     <div>
@@ -166,22 +211,27 @@
                             <input id="password" name="password" type="password" required
                                 class="block w-full pl-11 pr-12 py-3.5 bg-white border-2 border-border-soft
                                        placeholder-text-muted text-text-dark text-base
-                                       focus:outline-none focus:border-chocolate transition-colors"
-                                placeholder="Enter your password">
+                                       focus:outline-none focus:border-chocolate transition-colors
+                                       {{ $errors->has('password') ? 'border-red-400' : '' }}"
+                                placeholder="Enter your password"
+                                autocomplete="current-password">
                             <button type="button" class="absolute inset-y-0 right-0 pr-4 flex items-center" onclick="togglePassword()">
                                 <i class="fas fa-eye text-text-muted hover:text-text-dark text-sm transition-colors" id="passwordToggle"></i>
                             </button>
                         </div>
+                        @if($errors->has('password'))
+                            <p class="mt-1 text-sm text-red-600">{{ $errors->first('password') }}</p>
+                        @endif
                     </div>
 
-
                     <div class="pt-4">
-                        <button type="submit"
+                        <button type="submit" id="submitBtn"
                                 class="group relative w-full px-6 py-4 text-sm font-bold tracking-widest text-white uppercase
                                        bg-chocolate border-2 border-chocolate overflow-hidden
                                        hover:bg-chocolate-dark hover:border-chocolate-dark transition-all duration-300
-                                       focus:outline-none focus:ring-2 focus:ring-chocolate focus:ring-offset-2">
-                            <span class="relative z-10 flex items-center justify-center">
+                                       focus:outline-none focus:ring-2 focus:ring-chocolate focus:ring-offset-2
+                                       disabled:opacity-70 disabled:cursor-not-allowed">
+                            <span class="relative z-10 flex items-center justify-center" id="buttonText">
                                 Sign In to Dashboard
                                 <i class="fas fa-arrow-right ml-3 group-hover:translate-x-1 transition-transform"></i>
                             </span>
@@ -200,7 +250,6 @@
                         </a>
                     </p>
                 </div>
-
             </div>
         </div>
     </div>
@@ -220,6 +269,30 @@
                 passwordToggle.classList.add('fa-eye');
             }
         }
+
+        // Form submission handling
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const buttonText = document.getElementById('buttonText');
+            
+            // Disable button and show loading state
+            submitBtn.disabled = true;
+            buttonText.innerHTML = 'Signing In...';
+            submitBtn.classList.add('btn-loading');
+        });
+
+        // Clear error borders on input
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', function() {
+                if (this.classList.contains('border-red-400')) {
+                    this.classList.remove('border-red-400');
+                    this.classList.add('border-border-soft');
+                }
+            });
+        });
+
+        // Auto-focus username field
+        document.getElementById('username')?.focus();
     </script>
 
 </body>

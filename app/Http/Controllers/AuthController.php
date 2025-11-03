@@ -3,54 +3,40 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class AuthController extends Controller
 {
     public function showLogin()
     {
-        return view('Auth.login');
+        return view('auth.login');
     }
 
     public function login(Request $request)
     {
-        $request->validate([
-            'username' => 'required',
-            'password' => 'required'
+        $credentials = $request->validate([
+            'username' => 'required|string',
+            'password' => 'required|string',
         ]);
 
-        // Use the stored procedure for authentication
-        $authResult = User::authenticate($request->username, $request->password);
-        $result = json_decode($authResult, true);
+        // Attempt to find user by username
+        $user = User::where('username', $credentials['username'])->first();
 
-        if ($result['success']) {
-            $userData = $result['data'];
+        // Check if user exists and password is correct
+        if ($user && Hash::check($credentials['password'], $user->password)) {
+            // Manually log in the user
+            Auth::login($user);
             
-            // Get employee details using the stored procedure
-            $employeeResult = json_decode(User::getUser($userData['user_id']), true);
-            $employeeData = $employeeResult['success'] ? $employeeResult['data']['employee'] : null;
-
-            session([
-                'user_id' => $userData['user_id'],
-                'username' => $userData['username'],
-                'role' => $userData['role'],
-                'emp_id' => $userData['emp_id'],
-                'emp_name' => $employeeData['emp_name'] ?? 'Unknown',
-                'emp_position' => $employeeData['emp_position'] ?? 'Unknown',
-                'logged_in' => true
-            ]);
-
-            return $this->redirectToDashboard($userData['role']);
+            // Store role in session for individual middleware
+            session(['role' => $user->role]);
+            
+            // Redirect based on user role
+            return $this->redirectToDashboard($user->role);
         }
 
-        return back()->with('error', $result['message'] ?? 'Invalid username or password.');
-    }
-
-    public function logout()
-    {
-        session()->flush();
-        return redirect('/')->with('success', 'You have been logged out.');
+        return back()->with('error', 'Invalid credentials. Please try again.')->withInput();
     }
 
     private function redirectToDashboard($role)
@@ -61,13 +47,22 @@ class AuthController extends Controller
             case 'employee':
                 return redirect()->route('Staff_dashboard');
             case 'inventory':
-                return redirect()->route('Inventory_dashboard');
+                return redirect()->route('Inventory_Dashboard');
             case 'purchasing':
                 return redirect()->route('Purchasing_dashboard');
             case 'supervisor':
-                return redirect()->route('Supervisor_dashboard');
+                return redirect()->route('Supervisor_Dashboard');
             default:
-                return redirect('/');
+                return redirect()->route('login')->with('error', 'Unknown user role.');
         }
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        return redirect('/');
     }
 }

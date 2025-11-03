@@ -1,0 +1,29 @@
+# First: Base tables without foreign keys
+php artisan make:migration create_departments_table
+php artisan make:migration create_categories_table
+php artisan make:migration create_suppliers_table
+
+# Second: Tables that depend on above
+php artisan make:migration create_employees_table
+php artisan make:migration create_items_table
+
+# Third: User table (depends on employees)
+php artisan make:migration create_users_table
+
+# Fourth: Request and requisition tables
+php artisan make:migration create_item_requests_table
+php artisan make:migration create_requisitions_table
+php artisan make:migration create_requisition_items_table
+
+# Fifth: Purchase related tables
+php artisan make:migration create_purchase_orders_table
+php artisan make:migration create_purchase_items_table
+
+# Sixth: Inventory and transaction tables
+php artisan make:migration create_inventories_table
+php artisan make:migration create_inventory_transactions_table
+
+# Seventh: Other supporting tables
+php artisan make:migration create_acknowledge_receipts_table
+php artisan make:migration create_memos_table
+php artisan make:migration create_notifications_table

@@ -4,62 +4,68 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 
 class Employee extends Model
 {
     use HasFactory;
 
     protected $primaryKey = 'emp_id';
+
     protected $fillable = [
-        'emp_name', 
-        'emp_position', 
-        'emp_email', 
-        'emp_contact', 
+        'emp_name',
+        'emp_position',
+        'emp_email',
+        'emp_contact',
+        'emp_status',
         'dept_id'
     ];
 
-    public function department()
-    {
-        return $this->belongsTo(Department::class, 'dept_id');
-    }
+    protected $casts = [
+        'emp_status' => 'string',
+    ];
 
+    // Relationship with User
     public function user()
     {
-        return $this->hasOne(User::class, 'emp_id');
+        return $this->hasOne(User::class, 'emp_id', 'emp_id');
     }
 
-    // CRUD methods using stored procedures
-    public static function createEmployee($data)
+    // Relationship with Department
+    public function department()
     {
-        return DB::select('SELECT create_employee(?, ?, ?, ?, ?) as result', [
-            $data['emp_name'],
-            $data['emp_position'],
-            $data['emp_email'],
-            $data['emp_contact'],
-            $data['dept_id']
-        ])[0]->result;
+        return $this->belongsTo(Department::class, 'dept_id', 'dept_id');
     }
 
-    public static function getEmployee($empId)
+    // Get initials for avatar
+    public function getInitialsAttribute()
     {
-        return DB::select('SELECT get_employee(?) as result', [$empId])[0]->result;
+        $names = explode(' ', $this->emp_name);
+        $initials = '';
+        
+        foreach ($names as $name) {
+            $initials .= strtoupper(substr($name, 0, 1));
+        }
+        
+        return substr($initials, 0, 2);
     }
 
-    public static function updateEmployee($empId, $data)
+    // Check if employee is a baker
+    public function getIsBakerAttribute()
     {
-        return DB::select('SELECT update_employee(?, ?, ?, ?, ?, ?) as result', [
-            $empId,
-            $data['emp_name'],
-            $data['emp_position'],
-            $data['emp_email'],
-            $data['emp_contact'],
-            $data['dept_id']
-        ])[0]->result;
+        return stripos($this->emp_position, 'baker') !== false;
     }
 
-    public static function deleteEmployee($empId)
+    // Get status badge color
+    public function getStatusBadgeAttribute()
     {
-        return DB::select('SELECT delete_employee(?) as result', [$empId])[0]->result;
+        return $this->emp_status === 'active' 
+            ? 'bg-green-100 text-green-800 border-green-200' 
+            : 'bg-red-100 text-red-800 border-red-200';
+    }
+
+    // Get status text
+    public function getStatusTextAttribute()
+    {
+        return $this->emp_status === 'active' ? 'Active' : 'Inactive';
     }
 }

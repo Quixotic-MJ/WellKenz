@@ -7,12 +7,16 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Support\Facades\Auth;
 
-class CheckAuth
+class CheckRole
 {
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $role): Response
     {
         if (!Auth::check()) {
             return redirect()->route('login');
+        }
+
+        if (Auth::user()->role !== $role) {
+            abort(403, 'Unauthorized access.');
         }
 
         return $next($request);

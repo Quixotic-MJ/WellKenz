@@ -118,7 +118,7 @@
 <body class="antialiased body-pattern font-sans">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        @include('Admin.layout.sidebar')
+        @include('Purchasing.layout.sidebar')
         
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">

@@ -58,7 +58,7 @@
         </a>
 
         <!-- Notifications -->
-        <a href="{{ route('Staff_notification') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
+        <a href="{{ route('Staff_Notification') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 bg-indigo-500 flex items-center justify-center rounded-lg">
                     <i class="fas fa-bell text-white text-lg"></i>

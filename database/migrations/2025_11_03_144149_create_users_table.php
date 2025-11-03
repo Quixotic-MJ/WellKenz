@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id('user_id');
             $table->string('username')->unique();
             $table->string('password');
-            $table->enum('role', ['admin', 'employee', 'purchasing', 'inventory', 'supervisor']);
+            $table->enum('role', ['admin', 'employee', 'inventory', 'purchasing', 'supervisor'])->default('employee');
             $table->foreignId('emp_id')->constrained('employees', 'emp_id');
             $table->timestamps();
         });

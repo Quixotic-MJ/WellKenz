@@ -14,11 +14,11 @@ class EmployeeController extends Controller
     {
         try {
             Log::info('EmployeeController: Starting index method');
-            
+
             // Check if tables exist
             $employeesTableExists = Schema::hasTable('employees');
             $departmentsTableExists = Schema::hasTable('departments');
-            
+
             Log::info("Employees table exists: " . ($employeesTableExists ? 'Yes' : 'No'));
             Log::info("Departments table exists: " . ($departmentsTableExists ? 'Yes' : 'No'));
 
@@ -27,13 +27,13 @@ class EmployeeController extends Controller
                 return $this->getEmptyData();
             }
 
-            // Use Eloquent for listing (we didn't create a stored procedure for listing all)
+            // Use Eloquent for listing
             $employees = Employee::with('department', 'user')->get();
             $departments = Department::all();
-            
+
             Log::info("Found " . $departments->count() . " departments in database");
 
-            // If no departments exist, create some default ones using stored procedure
+            // If no departments exist, create some default ones
             if ($departments->isEmpty()) {
                 Log::info('No departments found, creating default departments');
                 $this->createDefaultDepartments();
@@ -41,24 +41,30 @@ class EmployeeController extends Controller
                 Log::info("Now have " . $departments->count() . " departments after creation");
             }
 
+            // Calculate statistics
+            $totalEmployees = Employee::count();
+            $activeEmployees = Employee::where('emp_status', 'active')->count();
+            $bakersCount = Employee::where('emp_position', 'like', '%baker%')->orWhere('emp_position', 'like', '%Baker%')->count();
+            $newThisMonth = Employee::where('created_at', '>=', now()->subDays(30))->count();
+
             $stats = [
-                'total_employees' => Employee::count(),
-                'active_employees' => Employee::count(),
-                'bakers' => Employee::where('emp_position', 'like', '%baker%')->orWhere('emp_position', 'like', '%Baker%')->count(),
-                'new_this_month' => Employee::where('created_at', '>=', now()->subDays(30))->count(),
+                'total_employees' => $totalEmployees,
+                'active_employees' => $activeEmployees,
+                'bakers' => $bakersCount,
+                'new_this_month' => $newThisMonth,
             ];
 
             $positions = $this->getPositions();
-            
-            Log::info("Sending to view - Positions: " . count($positions) . ", Departments: " . $departments->count());
 
-            return view('Admin.employees', [
+            Log::info("Sending to view - Employees: " . $employees->count() . ", Departments: " . $departments->count());
+
+            // Make sure we're returning the correct view name
+            return view('Admin.Management.employee_management', [ // Updated view path
                 'employees' => $employees,
                 'departments' => $departments,
                 'stats' => $stats,
                 'positions' => $positions
             ]);
-
         } catch (\Exception $e) {
             Log::error('EmployeeController error: ' . $e->getMessage());
             Log::error($e->getTraceAsString());
@@ -69,12 +75,12 @@ class EmployeeController extends Controller
     private function getPositions()
     {
         return [
-            'Baker', 
+            'Baker',
             'Pastry Chef',
             'Head Baker',
-            'Purchasing Officer', 
-            'Inventory Clerk', 
-            'Supervisor / Owner', 
+            'Purchasing Officer',
+            'Inventory Clerk',
+            'Supervisor / Owner',
             'Admin / IT staff',
             'Sales Staff',
             'Delivery Driver'
@@ -86,7 +92,7 @@ class EmployeeController extends Controller
         try {
             $defaultDepartments = [
                 'Bakery',
-                'Pastry', 
+                'Pastry',
                 'Administration',
                 'Purchasing',
                 'Inventory',
@@ -96,7 +102,7 @@ class EmployeeController extends Controller
             foreach ($defaultDepartments as $deptName) {
                 Department::createDepartment($deptName);
             }
-            
+
             Log::info('Default departments created successfully using stored procedures');
         } catch (\Exception $e) {
             Log::error('Failed to create default departments: ' . $e->getMessage());
@@ -106,9 +112,9 @@ class EmployeeController extends Controller
     private function getEmptyData()
     {
         Log::info('Using empty data fallback');
-        
+
         $positions = $this->getPositions();
-        
+
         $defaultDepartments = collect([
             (object)['dept_id' => 1, 'dept_name' => 'Bakery'],
             (object)['dept_id' => 2, 'dept_name' => 'Pastry'],
@@ -118,7 +124,7 @@ class EmployeeController extends Controller
             (object)['dept_id' => 6, 'dept_name' => 'Sales'],
         ]);
 
-        return view('Admin.employees', [
+        return view('Admin.Management.employee_management', [ // Updated view path
             'employees' => collect(),
             'departments' => $defaultDepartments,
             'stats' => [
