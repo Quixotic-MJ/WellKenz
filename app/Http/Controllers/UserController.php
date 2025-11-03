@@ -27,9 +27,6 @@ class UserController extends Controller
             // Get employees without user accounts
             $employees = Employee::doesntHave('user')->get();
             
-            // Get all departments
-            $departments = Department::all();
-            
             // Calculate statistics
             $stats = [
                 'total_users' => User::count(),
@@ -40,13 +37,18 @@ class UserController extends Controller
 
             $roles = ['admin', 'employee', 'purchasing', 'inventory', 'supervisor'];
 
-            return view('Admin.user', compact('usersWithDetails', 'employees', 'departments', 'stats', 'roles'));
+            // Pass usersWithDetails as 'users' to the view
+            return view('Admin.user', [
+                'users' => $usersWithDetails,
+                'employees' => $employees,
+                'stats' => $stats,
+                'roles' => $roles
+            ]);
 
         } catch (\Exception $e) {
             return view('Admin.user', [
-                'usersWithDetails' => [],
+                'users' => [],
                 'employees' => collect(),
-                'departments' => collect(),
                 'stats' => [
                     'total_users' => 0,
                     'active_users' => 0,
@@ -73,11 +75,29 @@ class UserController extends Controller
             $resultData = json_decode($result, true);
 
             if ($resultData['success']) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $resultData['message']
+                    ]);
+                }
                 return redirect()->route('Admin_user')->with('success', $resultData['message']);
             } else {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultData['message']
+                    ], 400);
+                }
                 return redirect()->route('Admin_user')->with('error', $resultData['message']);
             }
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error creating user: ' . $e->getMessage()
+                ], 500);
+            }
             return redirect()->route('Admin_user')->with('error', 'Error creating user: ' . $e->getMessage());
         }
     }
@@ -90,15 +110,34 @@ class UserController extends Controller
             $resultData = json_decode($result, true);
 
             if (!$resultData['success']) {
+                if (request()->ajax()) {
+                    return response()->json(['error' => $resultData['message']], 404);
+                }
                 return redirect()->route('Admin_user')->with('error', $resultData['message']);
             }
 
             $user = (object) $resultData['data'];
             $employees = Employee::all();
             $roles = ['admin', 'employee', 'purchasing', 'inventory', 'supervisor'];
-            
+
+            // If it's an AJAX request (from modal), return JSON
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'user' => $user,
+                    'employees' => $employees,
+                    'roles' => $roles
+                ]);
+            }
+
             return view('Admin.user-edit', compact('user', 'employees', 'roles'));
         } catch (\Exception $e) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Error retrieving user: ' . $e->getMessage()
+                ], 500);
+            }
             return redirect()->route('Admin_user')->with('error', 'Error retrieving user: ' . $e->getMessage());
         }
     }
@@ -124,20 +163,48 @@ class UserController extends Controller
 
             // If password is provided, update it using stored procedure
             if ($request->filled('password')) {
+                $request->validate([
+                    'password' => 'required|string|min:6|confirmed'
+                ]);
+                
                 $passwordResult = User::changePassword($id, $request->password);
                 $passwordData = json_decode($passwordResult, true);
                 
                 if (!$passwordData['success']) {
+                    if ($request->ajax()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'User updated but password change failed: ' . $passwordData['message']
+                        ], 400);
+                    }
                     return redirect()->route('Admin_user')->with('error', 'User updated but password change failed: ' . $passwordData['message']);
                 }
             }
 
             if ($resultData['success']) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $resultData['message']
+                    ]);
+                }
                 return redirect()->route('Admin_user')->with('success', $resultData['message']);
             } else {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultData['message']
+                    ], 400);
+                }
                 return redirect()->route('Admin_user')->with('error', $resultData['message']);
             }
         } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error updating user: ' . $e->getMessage()
+                ], 500);
+            }
             return redirect()->route('Admin_user')->with('error', 'Error updating user: ' . $e->getMessage());
         }
     }
@@ -150,11 +217,29 @@ class UserController extends Controller
             $resultData = json_decode($result, true);
 
             if ($resultData['success']) {
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $resultData['message']
+                    ]);
+                }
                 return redirect()->route('Admin_user')->with('success', $resultData['message']);
             } else {
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultData['message']
+                    ], 400);
+                }
                 return redirect()->route('Admin_user')->with('error', $resultData['message']);
             }
         } catch (\Exception $e) {
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error deleting user: ' . $e->getMessage()
+                ], 500);
+            }
             return redirect()->route('Admin_user')->with('error', 'Error deleting user: ' . $e->getMessage());
         }
     }

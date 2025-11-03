@@ -28,7 +28,7 @@ class EmployeeController extends Controller
             }
 
             // Use Eloquent for listing (we didn't create a stored procedure for listing all)
-            $employees = Employee::with('department')->get();
+            $employees = Employee::with('department', 'user')->get();
             $departments = Department::all();
             
             Log::info("Found " . $departments->count() . " departments in database");
@@ -147,13 +147,31 @@ class EmployeeController extends Controller
             $resultData = json_decode($result, true);
 
             if ($resultData['success']) {
-                return redirect()->route('Admin_employees')->with('success', $resultData['message']);
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $resultData['message']
+                    ]);
+                }
+                return redirect()->route('Admin_employee')->with('success', $resultData['message']);
             } else {
-                return redirect()->route('Admin_employees')->with('error', $resultData['message']);
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultData['message']
+                    ], 400);
+                }
+                return redirect()->route('Admin_employee')->with('error', $resultData['message']);
             }
         } catch (\Exception $e) {
             Log::error('Error creating employee: ' . $e->getMessage());
-            return redirect()->route('Admin_employees')->with('error', 'Error creating employee: ' . $e->getMessage());
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error creating employee: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->route('Admin_employee')->with('error', 'Error creating employee: ' . $e->getMessage());
         }
     }
 
@@ -165,15 +183,28 @@ class EmployeeController extends Controller
             $resultData = json_decode($result, true);
 
             if (!$resultData['success']) {
-                return redirect()->route('Admin_employees')->with('error', $resultData['message']);
+                if (request()->ajax()) {
+                    return response()->json(['error' => $resultData['message']], 404);
+                }
+                return redirect()->route('Admin_employee')->with('error', $resultData['message']);
             }
 
             $employee = (object) $resultData['data'];
             $departments = Department::all();
 
+            if (request()->ajax()) {
+                return response()->json([
+                    'employee' => $employee,
+                    'departments' => $departments
+                ]);
+            }
+
             return view('Admin.employees-show', compact('employee', 'departments'));
         } catch (\Exception $e) {
-            return redirect()->route('Admin_employees')->with('error', 'Error retrieving employee: ' . $e->getMessage());
+            if (request()->ajax()) {
+                return response()->json(['error' => 'Error retrieving employee: ' . $e->getMessage()], 500);
+            }
+            return redirect()->route('Admin_employee')->with('error', 'Error retrieving employee: ' . $e->getMessage());
         }
     }
 
@@ -185,16 +216,35 @@ class EmployeeController extends Controller
             $resultData = json_decode($result, true);
 
             if (!$resultData['success']) {
-                return redirect()->route('Admin_employees')->with('error', $resultData['message']);
+                if (request()->ajax()) {
+                    return response()->json(['error' => $resultData['message']], 404);
+                }
+                return redirect()->route('Admin_employee')->with('error', $resultData['message']);
             }
 
             $employee = (object) $resultData['data'];
             $departments = Department::all();
             $positions = $this->getPositions();
 
+            // If it's an AJAX request (from modal), return JSON
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'employee' => $employee,
+                    'departments' => $departments,
+                    'positions' => $positions
+                ]);
+            }
+
             return view('Admin.employees-edit', compact('employee', 'departments', 'positions'));
         } catch (\Exception $e) {
-            return redirect()->route('Admin_employees')->with('error', 'Error retrieving employee: ' . $e->getMessage());
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Error retrieving employee: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->route('Admin_employee')->with('error', 'Error retrieving employee: ' . $e->getMessage());
         }
     }
 
@@ -214,13 +264,31 @@ class EmployeeController extends Controller
             $resultData = json_decode($result, true);
 
             if ($resultData['success']) {
-                return redirect()->route('Admin_employees')->with('success', $resultData['message']);
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $resultData['message']
+                    ]);
+                }
+                return redirect()->route('Admin_employee')->with('success', $resultData['message']);
             } else {
-                return redirect()->route('Admin_employees')->with('error', $resultData['message']);
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultData['message']
+                    ], 400);
+                }
+                return redirect()->route('Admin_employee')->with('error', $resultData['message']);
             }
         } catch (\Exception $e) {
             Log::error('Error updating employee: ' . $e->getMessage());
-            return redirect()->route('Admin_employees')->with('error', 'Error updating employee: ' . $e->getMessage());
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error updating employee: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->route('Admin_employee')->with('error', 'Error updating employee: ' . $e->getMessage());
         }
     }
 
@@ -232,13 +300,31 @@ class EmployeeController extends Controller
             $resultData = json_decode($result, true);
 
             if ($resultData['success']) {
-                return redirect()->route('Admin_employees')->with('success', $resultData['message']);
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => $resultData['message']
+                    ]);
+                }
+                return redirect()->route('Admin_employee')->with('success', $resultData['message']);
             } else {
-                return redirect()->route('Admin_employees')->with('error', $resultData['message']);
+                if (request()->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultData['message']
+                    ], 400);
+                }
+                return redirect()->route('Admin_employee')->with('error', $resultData['message']);
             }
         } catch (\Exception $e) {
             Log::error('Error deleting employee: ' . $e->getMessage());
-            return redirect()->route('Admin_employees')->with('error', 'Error deleting employee: ' . $e->getMessage());
+            if (request()->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error deleting employee: ' . $e->getMessage()
+                ], 500);
+            }
+            return redirect()->route('Admin_employee')->with('error', 'Error deleting employee: ' . $e->getMessage());
         }
     }
 }

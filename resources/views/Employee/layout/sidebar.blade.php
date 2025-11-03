@@ -27,17 +27,17 @@
                 <!-- Dashboard -->
                 <li>
                     <a href="{{ route('Staff_dashboard') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('dashboard') ? 'active-menu' : '' }}">
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Staff_dashboard') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
                     </a>
                 </li>
 
-                <!-- Requisition -->
+                <!-- Create Requisition -->
                 <li>
-                    <a href="{{ route('Staff_requisition') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('requisition') ? 'active-menu' : '' }}">
+                    <a href="{{ route('Staff_Create_Requisition') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Staff_Create_Requisition') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
@@ -45,20 +45,40 @@
                     </a>
                 </li>
 
-                <!-- History -->
+                <!-- My Requisitions -->
                 <li>
-                    <a href="{{ route('Staff_history') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing') ? 'active-menu' : '' }}">
+                    <a href="{{ route('Staff_Requisition_Record') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Staff_Requisition_Record') ? 'active-menu' : '' }}">
                         <i
-                            class="fas fa-shopping-cart w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                            class="fas fa-history w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My Requisitions</span>
+                    </a>
+                </li>
+
+                <!-- Item Request -->
+                <li>
+                    <a href="{{ route('Staff_Item_Request') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Staff_Item_Request') ? 'active-menu' : '' }}">
+                        <i
+                            class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Item Request</span>
+                    </a>
+                </li>
+
+                <!-- Receipt -->
+                <li>
+                    <a href="{{ route('Staff_Reciept') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Staff_Reciept') ? 'active-menu' : '' }}">
+                        <i
+                            class="fas fa-receipt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Acknowledgement Receipt</span>
                     </a>
                 </li>
 
                 <!-- Notification -->
                 <li>
-                    <a href="{{ route('Staff_notification') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('notification') ? 'active-menu' : '' }}">
+                    <a href="{{ route('Staff_Notification') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Staff_notification') ? 'active-menu' : '' }}">
                         <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
                             class="sidebar-text font-medium text-sm transition-opacity duration-300">Notification</span>

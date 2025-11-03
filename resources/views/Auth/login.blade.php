@@ -87,10 +87,6 @@
                                 <p class="text-xs text-white/70 uppercase tracking-widest">Cakes & Pastries</p>
                             </div>
                         </div>
-
-                        <div class="inline-block px-4 py-1.5 bg-white/10 border border-white/20 backdrop-blur-sm">
-                            <span class="text-xs font-semibold uppercase tracking-wider">ERP System v2.0</span>
-                        </div>
                     </div>
                     
                     <div>
@@ -102,20 +98,7 @@
                             Built exclusively for artisan bakeries that value precision and quality.
                         </p>
 
-                        <div class="grid grid-cols-3 gap-4 mt-8 pt-8 border-t border-white/20">
-                            <div>
-                                <p class="text-2xl font-bold text-caramel">500+</p>
-                                <p class="text-xs text-white/60 uppercase tracking-wider mt-1">Daily Orders</p>
-                            </div>
-                            <div>
-                                <p class="text-2xl font-bold text-caramel">12</p>
-                                <p class="text-xs text-white/60 uppercase tracking-wider mt-1">Locations</p>
-                            </div>
-                            <div>
-                                <p class="text-2xl font-bold text-caramel">99.9%</p>
-                                <p class="text-xs text-white/60 uppercase tracking-wider mt-1">Uptime</p>
-                            </div>
-                        </div>
+                     
                     </div>
                 </div>
             </div>
@@ -125,7 +108,7 @@
                 
                 <div class="mb-8">
                     <div class="inline-block px-3 py-1 bg-caramel/10 border border-caramel/20 mb-4">
-                        <span class="text-xs font-bold text-caramel uppercase tracking-wider">Staff Portal</span>
+                        <span class="text-xs font-bold text-caramel uppercase tracking-wider">Portal</span>
                     </div>
                     
                     <h2 class="font-display text-3xl font-bold text-text-dark mb-2">
@@ -191,15 +174,6 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between text-sm">
-                        <label class="flex items-center cursor-pointer">
-                            <input type="checkbox" name="remember" class="w-4 h-4 border-2 border-border-soft text-chocolate focus:ring-0 focus:ring-offset-0">
-                            <span class="ml-2 text-text-muted">Remember me</span>
-                        </label>
-                        <a href="#" class="text-chocolate hover:text-chocolate-dark font-semibold transition-colors">
-                            Forgot password?
-                        </a>
-                    </div>
 
                     <div class="pt-4">
                         <button type="submit"
