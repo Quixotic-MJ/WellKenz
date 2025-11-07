@@ -11,12 +11,13 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $primaryKey = 'user_id';
+    protected $table = 'users';
 
     protected $fillable = [
         'username',
         'password',
         'role',
-        'emp_id'
+        'emp_id',
     ];
 
     protected $hidden = [
@@ -29,72 +30,152 @@ class User extends Authenticatable
         return $this->belongsTo(Employee::class, 'emp_id', 'emp_id');
     }
 
+    // Relationship with Requisitions (requested by)
+    // public function requisitions()
+    // {
+    //     return $this->hasMany(Requisition::class, 'requested_by', 'user_id');
+    // }
+
+    // // Relationship with Approved Requisitions
+    // public function approvedRequisitions()
+    // {
+    //     return $this->hasMany(Requisition::class, 'approved_by', 'user_id');
+    // }
+
     // Relationship with Notifications
     public function notifications()
     {
         return $this->hasMany(Notification::class, 'user_id', 'user_id');
     }
 
+    // // Relationship with Inventory Transactions
+    // public function inventoryTransactions()
+    // {
+    //     return $this->hasMany(InventoryTransaction::class, 'trans_by', 'user_id');
+    // }
+
+    // // Relationship with Acknowledge Receipts (issued by)
+    // public function issuedAcknowledgeReceipts()
+    // {
+    //     return $this->hasMany(AcknowledgeReceipt::class, 'issued_by', 'user_id');
+    // }
+
+    // // Relationship with Acknowledge Receipts (issued to)
+    // public function receivedAcknowledgeReceipts()
+    // {
+    //     return $this->hasMany(AcknowledgeReceipt::class, 'issued_to', 'user_id');
+    // }
+
+    // // Relationship with Memos
+    // public function memos()
+    // {
+    //     return $this->hasMany(Memo::class, 'received_by', 'user_id');
+    // }
+
     // Get unread notifications count
     public function getUnreadNotificationsCount()
     {
-        return $this->notifications()->unread()->count();
+        return $this->notifications()->where('is_read', false)->count();
     }
 
     // Get recent notifications
     public function getRecentNotifications($limit = 5)
     {
-        return $this->notifications()->recent($limit)->get();
+        return $this->notifications()
+            ->orderBy('created_at', 'desc')
+            ->limit($limit)
+            ->get();
     }
 
-    // Role-based scopes and helper methods remain the same...
-    public function scopeAdmins($query)
+    // Accessor for unread notifications count (for blade templates)
+    public function getUnreadNotificationsCountAttribute()
     {
-        return $query->where('role', 'admin');
+        return $this->getUnreadNotificationsCount();
     }
 
-    public function scopeEmployees($query)
+    // Accessor for recent notifications (for blade templates)
+    public function getRecentNotificationsAttribute()
     {
-        return $query->where('role', 'employee');
+        return $this->getRecentNotifications(5);
     }
 
-    public function scopeInventory($query)
+    // Accessor for role display name
+    public function getRoleDisplayAttribute()
     {
-        return $query->where('role', 'inventory');
+        $roleNames = [
+            'admin' => 'Admin',
+            'employee' => 'Employee',
+            'inventory' => 'Inventory Staff',
+            'purchasing' => 'Purchase Staff',
+            'supervisor' => 'Supervisor'
+        ];
+
+        return $roleNames[$this->role] ?? ucfirst($this->role);
     }
 
-    public function scopePurchasing($query)
+    // Accessor for role badge color
+    public function getRoleBadgeAttribute()
     {
-        return $query->where('role', 'purchasing');
+        $roleColors = [
+            'admin' => 'bg-purple-100 text-purple-700 border-purple-200',
+            'employee' => 'bg-caramel text-white border-caramel-dark',
+            'inventory' => 'bg-blue-100 text-blue-700 border-blue-200',
+            'purchasing' => 'bg-green-100 text-green-700 border-green-200',
+            'supervisor' => 'bg-yellow-100 text-yellow-700 border-yellow-200'
+        ];
+
+        return $roleColors[$this->role] ?? 'bg-gray-100 text-gray-700 border-gray-200';
     }
 
-    public function scopeSupervisors($query)
-    {
-        return $query->where('role', 'supervisor');
-    }
-
-    public function isAdmin()
+    // Check if user is admin
+    public function getIsAdminAttribute()
     {
         return $this->role === 'admin';
     }
 
-    public function isEmployee()
-    {
-        return $this->role === 'employee';
-    }
-
-    public function isInventory()
-    {
-        return $this->role === 'inventory';
-    }
-
-    public function isPurchasing()
-    {
-        return $this->role === 'purchasing';
-    }
-
-    public function isSupervisor()
+    // Check if user is supervisor
+    public function getIsSupervisorAttribute()
     {
         return $this->role === 'supervisor';
+    }
+
+    // Check if user can approve requisitions
+    public function getCanApproveRequisitionsAttribute()
+    {
+        return in_array($this->role, ['admin', 'supervisor']);
+    }
+
+    // Check if user can manage inventory
+    public function getCanManageInventoryAttribute()
+    {
+        return in_array($this->role, ['admin', 'inventory']);
+    }
+
+    // Check if user can manage purchases
+    public function getCanManagePurchasesAttribute()
+    {
+        return in_array($this->role, ['admin', 'purchasing']);
+    }
+
+    // Scope for active users
+    public function scopeActive($query)
+    {
+        return $query->whereHas('employee', function($q) {
+            $q->where('emp_status', 'active');
+        });
+    }
+
+    // Scope for inactive users
+    public function scopeInactive($query)
+    {
+        return $query->whereHas('employee', function($q) {
+            $q->where('emp_status', 'inactive');
+        });
+    }
+
+    // Scope by role
+    public function scopeByRole($query, $role)
+    {
+        return $query->where('role', $role);
     }
 }

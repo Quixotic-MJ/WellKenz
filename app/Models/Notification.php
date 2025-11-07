@@ -22,6 +22,8 @@ class Notification extends Model
 
     protected $casts = [
         'is_read' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     // Relationship with User
@@ -64,15 +66,51 @@ class Notification extends Model
         return $icons[$type] ?? $icons['general'];
     }
 
+    // Format created_at to human readable time
+    public function getTimeAgoAttribute()
+    {
+        return $this->created_at->diffForHumans();
+    }
+
+    // Check if notification is unread
+    public function getIsUnreadAttribute()
+    {
+        return !$this->is_read;
+    }
+
     // Scope for unread notifications
     public function scopeUnread($query)
     {
         return $query->where('is_read', false);
     }
 
+    // Scope for read notifications
+    public function scopeRead($query)
+    {
+        return $query->where('is_read', true);
+    }
+
     // Scope for recent notifications
     public function scopeRecent($query, $limit = 5)
     {
         return $query->orderBy('created_at', 'desc')->limit($limit);
+    }
+
+    // Scope by type
+    public function scopeOfType($query, $type)
+    {
+        return $query->where('related_type', $type);
+    }
+
+    // Mark as read
+    public function markAsRead()
+    {
+        $this->update(['is_read' => true]);
+    }
+
+    // Mark as unread
+    public function markAsUnread()
+    {
+        $this->update(['is_read' => false]);
     }
 }

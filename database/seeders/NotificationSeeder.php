@@ -9,6 +9,8 @@ class NotificationSeeder extends Seeder
 {
     public function run()
     {
+        DB::table('notifications')->delete();
+
         $notifications = [
             // Admin notifications
             [
@@ -97,5 +99,7 @@ class NotificationSeeder extends Seeder
                 'updated_at' => now(),
             ]);
         }
+
+        $this->command->info('Notifications seeded successfully!');
     }
 }

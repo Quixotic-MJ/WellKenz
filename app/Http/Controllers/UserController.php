@@ -4,243 +4,258 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Employee;
-use App\Models\Department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
     public function index()
     {
-        try {
-            // Get all users using stored procedures (individual calls)
-            $users = User::all();
-            $usersWithDetails = [];
-            
-            foreach ($users as $user) {
-                $userResult = json_decode(User::getUser($user->user_id), true);
-                if ($userResult['success']) {
-                    $usersWithDetails[] = $userResult['data'];
-                }
-            }
-            
-            // Get employees without user accounts
-            $employees = Employee::doesntHave('user')->get();
-            
-            // Calculate statistics
-            $stats = [
-                'total_users' => User::count(),
-                'active_users' => User::count(),
-                'admin_users' => User::where('role', 'admin')->count(),
-                'pending_users' => 0,
-            ];
+        $users = User::with('employee')->get();
+        $employees = Employee::where('emp_status', 'active')
+            ->whereDoesntHave('user')
+            ->get();
 
-            $roles = ['admin', 'employee', 'purchasing', 'inventory', 'supervisor'];
+        $totalUsers = User::count();
+        $activeUsers = User::whereHas('employee', function ($query) {
+            $query->where('emp_status', 'active');
+        })->count();
+        $adminsCount = User::where('role', 'admin')->count();
+        $inactiveUsers = User::whereHas('employee', function ($query) {
+            $query->where('emp_status', 'inactive');
+        })->count();
 
-            // Pass usersWithDetails as 'users' to the view
-            return view('Admin.user', [
-                'users' => $usersWithDetails,
-                'employees' => $employees,
-                'stats' => $stats,
-                'roles' => $roles
-            ]);
-
-        } catch (\Exception $e) {
-            return view('Admin.user', [
-                'users' => [],
-                'employees' => collect(),
-                'stats' => [
-                    'total_users' => 0,
-                    'active_users' => 0,
-                    'admin_users' => 0,
-                    'pending_users' => 0,
-                ],
-                'roles' => ['admin', 'employee', 'purchasing', 'inventory', 'supervisor']
-            ]);
-        }
+        return view('Admin.Management.user_management', compact(
+            'users',
+            'employees',
+            'totalUsers',
+            'activeUsers',
+            'adminsCount',
+            'inactiveUsers'
+        ));
     }
 
-    public function store(Request $request)
+    public function show($id)
     {
-        $request->validate([
-            'username' => 'required|string|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-            'role' => 'required|string',
-            'emp_id' => 'required|exists:employees,emp_id'
-        ]);
-
-        try {
-            // Use stored procedure
-            $result = User::createUser($request->all());
-            $resultData = json_decode($result, true);
-
-            if ($resultData['success']) {
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => true,
-                        'message' => $resultData['message']
-                    ]);
-                }
-                return redirect()->route('Admin_user')->with('success', $resultData['message']);
-            } else {
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $resultData['message']
-                    ], 400);
-                }
-                return redirect()->route('Admin_user')->with('error', $resultData['message']);
-            }
-        } catch (\Exception $e) {
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error creating user: ' . $e->getMessage()
-                ], 500);
-            }
-            return redirect()->route('Admin_user')->with('error', 'Error creating user: ' . $e->getMessage());
-        }
+        $user = User::with('employee')->findOrFail($id);
+        return response()->json($user);
     }
 
     public function edit($id)
     {
+        $user = User::with('employee')->findOrFail($id);
+        return response()->json($user);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'username' => 'required|unique:users,username|max:50',
+            'password' => 'required|min:6|confirmed',
+            'role' => 'required|in:admin,employee,inventory,purchasing,supervisor',
+            'emp_id' => 'required|exists:employees,emp_id|unique:users,emp_id',
+        ]);
+
         try {
-            // Use stored procedure
-            $result = User::getUser($id);
-            $resultData = json_decode($result, true);
+            DB::beginTransaction();
 
-            if (!$resultData['success']) {
-                if (request()->ajax()) {
-                    return response()->json(['error' => $resultData['message']], 404);
-                }
-                return redirect()->route('Admin_user')->with('error', $resultData['message']);
-            }
+            $user = User::create([
+                'username' => $validated['username'],
+                'password' => Hash::make($validated['password']),
+                'role' => $validated['role'],
+                'emp_id' => $validated['emp_id'],
+            ]);
 
-            $user = (object) $resultData['data'];
-            $employees = Employee::all();
-            $roles = ['admin', 'employee', 'purchasing', 'inventory', 'supervisor'];
+            DB::commit();
 
-            // If it's an AJAX request (from modal), return JSON
-            if (request()->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'user' => $user,
-                    'employees' => $employees,
-                    'roles' => $roles
-                ]);
-            }
-
-            return view('Admin.user-edit', compact('user', 'employees', 'roles'));
+            return response()->json([
+                'success' => true,
+                'message' => 'User created successfully!',
+                'user' => $user->load('employee')
+            ]);
         } catch (\Exception $e) {
-            if (request()->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Error retrieving user: ' . $e->getMessage()
-                ], 500);
-            }
-            return redirect()->route('Admin_user')->with('error', 'Error retrieving user: ' . $e->getMessage());
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error creating user: ' . $e->getMessage()
+            ], 500);
         }
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'username' => 'required|string|unique:users,username,' . $id . ',user_id',
-            'role' => 'required|string',
-            'emp_id' => 'required|exists:employees,emp_id'
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'username' => [
+                'required',
+                'max:50',
+                Rule::unique('users', 'username')->ignore($user->user_id, 'user_id')
+            ],
+            'role' => 'required|in:admin,employee,inventory,purchasing,supervisor',
+            // Remove emp_id validation since we're not allowing it to be changed
         ]);
 
         try {
-            $data = [
-                'username' => $request->username,
-                'role' => $request->role,
-                'emp_id' => $request->emp_id
-            ];
-            
-            // Use stored procedure for update
-            $result = User::updateUser($id, $data);
-            $resultData = json_decode($result, true);
+            DB::beginTransaction();
 
-            // If password is provided, update it using stored procedure
-            if ($request->filled('password')) {
-                $request->validate([
-                    'password' => 'required|string|min:6|confirmed'
-                ]);
-                
-                $passwordResult = User::changePassword($id, $request->password);
-                $passwordData = json_decode($passwordResult, true);
-                
-                if (!$passwordData['success']) {
-                    if ($request->ajax()) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'User updated but password change failed: ' . $passwordData['message']
-                        ], 400);
-                    }
-                    return redirect()->route('Admin_user')->with('error', 'User updated but password change failed: ' . $passwordData['message']);
-                }
-            }
+            $user->update([
+                'username' => $validated['username'],
+                'role' => $validated['role'],
+                // Don't update emp_id since we're not allowing it to be changed
+            ]);
 
-            if ($resultData['success']) {
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => true,
-                        'message' => $resultData['message']
-                    ]);
-                }
-                return redirect()->route('Admin_user')->with('success', $resultData['message']);
-            } else {
-                if ($request->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $resultData['message']
-                    ], 400);
-                }
-                return redirect()->route('Admin_user')->with('error', $resultData['message']);
-            }
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User updated successfully!',
+                'user' => $user->load('employee')
+            ]);
         } catch (\Exception $e) {
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error updating user: ' . $e->getMessage()
-                ], 500);
-            }
-            return redirect()->route('Admin_user')->with('error', 'Error updating user: ' . $e->getMessage());
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating user: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function updatePassword(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'password' => 'required|min:6|confirmed',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $user->update([
+                'password' => Hash::make($validated['password']),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password updated successfully!'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating password: ' . $e->getMessage()
+            ], 500);
         }
     }
 
     public function destroy($id)
     {
         try {
-            // Use stored procedure
-            $result = User::deleteUser($id);
-            $resultData = json_decode($result, true);
+            $user = User::findOrFail($id);
 
-            if ($resultData['success']) {
-                if (request()->ajax()) {
-                    return response()->json([
-                        'success' => true,
-                        'message' => $resultData['message']
-                    ]);
-                }
-                return redirect()->route('Admin_user')->with('success', $resultData['message']);
-            } else {
-                if (request()->ajax()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $resultData['message']
-                    ], 400);
-                }
-                return redirect()->route('Admin_user')->with('error', $resultData['message']);
-            }
-        } catch (\Exception $e) {
-            if (request()->ajax()) {
+            // Check if user has related records
+            if (
+                $user->requisitions()->exists() ||
+                $user->approvedRequisitions()->exists() ||
+                $user->inventoryTransactions()->exists() ||
+                $user->issuedAcknowledgeReceipts()->exists() ||
+                $user->receivedAcknowledgeReceipts()->exists() ||
+                $user->memos()->exists()
+            ) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error deleting user: ' . $e->getMessage()
-                ], 500);
+                    'message' => 'Cannot delete user with existing related records. Please deactivate instead.'
+                ], 422);
             }
-            return redirect()->route('Admin_user')->with('error', 'Error deleting user: ' . $e->getMessage());
+
+            $user->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User deleted successfully!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error deleting user: ' . $e->getMessage()
+            ], 500);
         }
+    }
+
+    public function resetPassword($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+
+            // Generate a temporary password
+            $tempPassword = 'wellkenz_' . rand(1000, 9999);
+
+            $user->update([
+                'password' => Hash::make($tempPassword)
+            ]);
+
+            // In a real application, you would send this via email
+            // Mail::to($user->employee->emp_email)->send(new PasswordResetMail($tempPassword));
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password reset successfully! Temporary password: ' . $tempPassword,
+                'temp_password' => $tempPassword // Remove this in production
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error resetting password: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function toggleStatus($id)
+    {
+        try {
+            $user = User::with('employee')->findOrFail($id);
+
+            DB::beginTransaction();
+
+            $newStatus = $user->employee->emp_status === 'active' ? 'inactive' : 'active';
+
+            $user->employee->update([
+                'emp_status' => $newStatus
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User ' . $newStatus . 'd successfully!',
+                'new_status' => $newStatus
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error updating user status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function search(Request $request)
+    {
+        $search = $request->get('search', '');
+
+        $users = User::with('employee')
+            ->where('username', 'like', "%{$search}%")
+            ->orWhereHas('employee', function ($query) use ($search) {
+                $query->where('emp_name', 'like', "%{$search}%")
+                    ->orWhere('emp_position', 'like', "%{$search}%");
+            })
+            ->get();
+
+        return response()->json($users);
     }
 }

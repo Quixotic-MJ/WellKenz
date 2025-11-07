@@ -7,13 +7,8 @@
 @section('content')
     <div class="space-y-6">
         <!-- Messages -->
-        <div id="successMessage" class="hidden bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3">
-            User created successfully!
-        </div>
-
-        <div id="errorMessage" class="hidden bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3">
-            Error processing request.
-        </div>
+        <div id="successMessage" class="hidden bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3 rounded"></div>
+        <div id="errorMessage" class="hidden bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded"></div>
 
         <!-- Header -->
         <div class="flex items-center justify-between">
@@ -32,22 +27,22 @@
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div class="bg-white border-2 border-border-soft p-6">
                 <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Total Users</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="totalUsers">8</p>
+                <p class="text-3xl font-bold text-text-dark mt-2" id="totalUsers">{{ $totalUsers }}</p>
             </div>
 
             <div class="bg-white border-2 border-green-200 p-6">
                 <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Active</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="activeUsers">7</p>
+                <p class="text-3xl font-bold text-text-dark mt-2" id="activeUsers">{{ $activeUsers }}</p>
             </div>
 
             <div class="bg-white border-2 border-border-soft p-6">
                 <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Admins</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="adminsCount">2</p>
+                <p class="text-3xl font-bold text-text-dark mt-2" id="adminsCount">{{ $adminsCount }}</p>
             </div>
 
             <div class="bg-white border-2 border-border-soft p-6">
                 <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Inactive</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="inactiveUsers">1</p>
+                <p class="text-3xl font-bold text-text-dark mt-2" id="inactiveUsers">{{ $inactiveUsers }}</p>
             </div>
         </div>
 
@@ -65,7 +60,7 @@
                             <option value="role">Sort by: Role</option>
                             <option value="status">Sort by: Status</option>
                         </select>
-                        
+
                         <!-- Search Input -->
                         <div class="relative">
                             <input type="text" placeholder="Search users..." onkeyup="searchUsers(this.value)"
@@ -80,316 +75,104 @@
                 <table class="w-full" id="usersTable">
                     <thead>
                         <tr class="bg-gray-50 border-b-2 border-border-soft">
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('username')">
+                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                                onclick="sortTable('username')">
                                 Username <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('role')">
+                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                                onclick="sortTable('role')">
                                 Role <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('employee_name')">
+                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                                onclick="sortTable('employee_name')">
                                 Employee Name <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100" onclick="sortTable('status')">
+                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                                onclick="sortTable('status')">
                                 Status <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-soft" id="usersTableBody">
-                        <!-- Sample User Data -->
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="admin.maria" data-role="admin" data-employee-name="Maria Garcia" data-status="active">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">admin.maria</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold">
-                                    Admin
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Maria Garcia</p>
-                                <p class="text-xs text-text-muted">Head Baker</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    ACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(1, 'admin.maria')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(1, 'admin.maria')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openDeactivateUserModal(1, 'admin.maria')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition">
-                                        Deactivate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="john.smith" data-role="employee" data-employee-name="John Smith" data-status="active">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">john.smith</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-caramel text-white text-xs font-bold">
-                                    Employee
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">John Smith</p>
-                                <p class="text-xs text-text-muted">Pastry Chef</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    ACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(2, 'john.smith')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(2, 'john.smith')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openDeactivateUserModal(2, 'john.smith')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition">
-                                        Deactivate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="inventory.sarah" data-role="inventory_staff" data-employee-name="Sarah Wilson" data-status="active">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">inventory.sarah</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold">
-                                    Inventory Staff
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Sarah Wilson</p>
-                                <p class="text-xs text-text-muted">Inventory Clerk</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    ACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(3, 'inventory.sarah')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(3, 'inventory.sarah')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openDeactivateUserModal(3, 'inventory.sarah')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition">
-                                        Deactivate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="purchase.robert" data-role="purchase_staff" data-employee-name="Robert Johnson" data-status="active">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">purchase.robert</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    Purchase Staff
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Robert Johnson</p>
-                                <p class="text-xs text-text-muted">Purchasing Officer</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    ACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(4, 'purchase.robert')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(4, 'purchase.robert')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openDeactivateUserModal(4, 'purchase.robert')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition">
-                                        Deactivate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="baker.david" data-role="employee" data-employee-name="David Brown" data-status="active">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">baker.david</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-caramel text-white text-xs font-bold">
-                                    Employee
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">David Brown</p>
-                                <p class="text-xs text-text-muted">Baker</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    ACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(5, 'baker.david')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(5, 'baker.david')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openDeactivateUserModal(5, 'baker.david')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition">
-                                        Deactivate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="sales.emily" data-role="sales_staff" data-employee-name="Emily Chen" data-status="active">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">sales.emily</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold">
-                                    Sales Staff
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Emily Chen</p>
-                                <p class="text-xs text-text-muted">Sales Staff</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    ACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(6, 'sales.emily')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(6, 'sales.emily')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openDeactivateUserModal(6, 'sales.emily')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition">
-                                        Deactivate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="admin.michael" data-role="admin" data-employee-name="Michael Wong" data-status="active">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">admin.michael</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold">
-                                    Admin
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Michael Wong</p>
-                                <p class="text-xs text-text-muted">Supervisor</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
-                                    ACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(7, 'admin.michael')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(7, 'admin.michael')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openDeactivateUserModal(7, 'admin.michael')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition">
-                                        Deactivate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition user-row" data-username="driver.tom" data-role="driver" data-employee-name="Tom Jackson" data-status="inactive">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">driver.tom</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold">
-                                    Driver
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Tom Jackson</p>
-                                <p class="text-xs text-text-muted">Delivery Driver</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold">
-                                    INACTIVE
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="openEditUserModal(8, 'driver.tom')"
-                                        class="px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="openResetPasswordModal(8, 'driver.tom')"
-                                        class="px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition">
-                                        Reset Password
-                                    </button>
-                                    <button onclick="openActivateUserModal(8, 'driver.tom')"
-                                        class="px-3 py-1 bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition">
-                                        Activate
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                        @foreach ($users as $user)
+                            <tr class="hover:bg-cream-bg transition user-row" data-username="{{ $user->username }}"
+                                data-role="{{ $user->role }}" data-employee-name="{{ $user->employee->emp_name }}"
+                                data-status="{{ $user->employee->emp_status }}">
+                                <td class="px-6 py-4">
+                                    <p class="text-sm font-bold text-text-dark">{{ $user->username }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    @php
+                                        $roleColors = [
+                                            'admin' => 'bg-purple-100 text-purple-700',
+                                            'employee' => 'bg-caramel text-white',
+                                            'inventory' => 'bg-blue-100 text-blue-700',
+                                            'purchasing' => 'bg-green-100 text-green-700',
+                                            'supervisor' => 'bg-yellow-100 text-yellow-700',
+                                        ];
+                                        $color = $roleColors[$user->role] ?? 'bg-gray-100 text-gray-700';
+                                    @endphp
+                                    <span class="inline-block px-2 py-1 {{ $color }} text-xs font-bold capitalize">
+                                        {{ str_replace('_', ' ', $user->role) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <p class="text-sm text-text-dark">{{ $user->employee->emp_name }}</p>
+                                    <p class="text-xs text-text-muted">{{ $user->employee->emp_position }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    @if ($user->employee->emp_status === 'active')
+                                        <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
+                                            ACTIVE
+                                        </span>
+                                    @else
+                                        <span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold">
+                                            INACTIVE
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex space-x-2">
+                                        <button
+                                            class="edit-btn px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition"
+                                            data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
+                                            Edit
+                                        </button>
+                                        <button
+                                            class="change-password-btn px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition"
+                                            data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
+                                            Change Password
+                                        </button>
+                                        @if ($user->employee->emp_status === 'active')
+                                            <button
+                                                class="deactivate-btn px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
+                                                data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
+                                                Deactivate
+                                            </button>
+                                        @else
+                                            <button
+                                                class="activate-btn px-3 py-1 bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition"
+                                                data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
+                                                Activate
+                                            </button>
+                                        @endif
+                                        <button
+                                            class="delete-btn px-3 py-1 bg-red-700 text-white text-xs font-semibold hover:bg-red-800 transition"
+                                            data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
 
             <div class="px-6 py-4 border-t-2 border-border-soft bg-cream-bg">
-                <p class="text-sm text-text-muted">Showing <span id="visibleCount">8</span> of 8 users</p>
+                <p class="text-sm text-text-muted">Showing <span id="visibleCount">{{ $users->count() }}</span> of
+                    {{ $users->count() }} users</p>
             </div>
         </div>
 
@@ -397,60 +180,33 @@
         <div class="bg-white border-2 border-border-soft p-6">
             <h3 class="font-display text-xl font-bold text-text-dark mb-6">Role Distribution</h3>
             <div class="space-y-4">
-                <div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-semibold text-text-dark">Employee</span>
-                        <span class="text-text-muted">2 (25%)</span>
+                @php
+                    $roleDistribution = $users->groupBy('role')->map->count();
+                    $totalUsersCount = $users->count();
+                @endphp
+                @foreach ($roleDistribution as $role => $count)
+                    @php
+                        $percentage = $totalUsersCount > 0 ? round(($count / $totalUsersCount) * 100, 1) : 0;
+                        $roleColors = [
+                            'admin' => 'bg-purple-500',
+                            'employee' => 'bg-caramel',
+                            'inventory' => 'bg-blue-500',
+                            'purchasing' => 'bg-green-500',
+                            'supervisor' => 'bg-yellow-500',
+                        ];
+                        $color = $roleColors[$role] ?? 'bg-gray-500';
+                    @endphp
+                    <div>
+                        <div class="flex justify-between text-sm mb-2">
+                            <span
+                                class="font-semibold text-text-dark capitalize">{{ str_replace('_', ' ', $role) }}</span>
+                            <span class="text-text-muted">{{ $count }} ({{ $percentage }}%)</span>
+                        </div>
+                        <div class="w-full bg-gray-200 h-2">
+                            <div class="h-2 {{ $color }}" style="width: {{ $percentage }}%"></div>
+                        </div>
                     </div>
-                    <div class="w-full bg-gray-200 h-2">
-                        <div class="bg-caramel h-2" style="width: 25%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-semibold text-text-dark">Admin</span>
-                        <span class="text-text-muted">2 (25%)</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2">
-                        <div class="bg-purple-500 h-2" style="width: 25%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-semibold text-text-dark">Inventory Staff</span>
-                        <span class="text-text-muted">1 (12.5%)</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2">
-                        <div class="bg-blue-500 h-2" style="width: 12.5%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-semibold text-text-dark">Purchase Staff</span>
-                        <span class="text-text-muted">1 (12.5%)</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2">
-                        <div class="bg-green-500 h-2" style="width: 12.5%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-semibold text-text-dark">Sales Staff</span>
-                        <span class="text-text-muted">1 (12.5%)</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2">
-                        <div class="bg-yellow-500 h-2" style="width: 12.5%"></div>
-                    </div>
-                </div>
-                <div>
-                    <div class="flex justify-between text-sm mb-2">
-                        <span class="font-semibold text-text-dark">Driver</span>
-                        <span class="text-text-muted">1 (12.5%)</span>
-                    </div>
-                    <div class="w-full bg-gray-200 h-2">
-                        <div class="bg-gray-500 h-2" style="width: 12.5%"></div>
-                    </div>
-                </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -470,6 +226,7 @@
 
             <div class="p-6">
                 <form id="createUserForm" class="space-y-4">
+                    @csrf
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-text-dark mb-2">Username</label>
@@ -484,27 +241,23 @@
                                 <option value="">Select Role</option>
                                 <option value="admin">Admin</option>
                                 <option value="employee">Employee</option>
-                                <option value="inventory_staff">Inventory Staff</option>
-                                <option value="purchase_staff">Purchase Staff</option>
-                                <option value="sales_staff">Sales Staff</option>
-                                <option value="driver">Driver</option>
+                                <option value="inventory">Inventory Staff</option>
+                                <option value="purchasing">Purchase Staff</option>
+                                <option value="supervisor">Supervisor</option>
                             </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Employee Name</label>
-                        <select name="employee_id" required
+                        <label class="block text-sm font-semibold text-text-dark mb-2">Employee</label>
+                        <select name="emp_id" required
                             class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
                             <option value="">Select Employee</option>
-                            <option value="1">Maria Garcia - Head Baker</option>
-                            <option value="2">John Smith - Pastry Chef</option>
-                            <option value="3">Robert Johnson - Purchasing Officer</option>
-                            <option value="4">Sarah Wilson - Inventory Clerk</option>
-                            <option value="5">David Brown - Baker</option>
-                            <option value="6">Emily Chen - Sales Staff</option>
-                            <option value="7">Michael Wong - Supervisor</option>
-                            <option value="8">Tom Jackson - Delivery Driver</option>
+                            @foreach ($employees as $employee)
+                                <option value="{{ $employee->emp_id }}">
+                                    {{ $employee->emp_name }} - {{ $employee->emp_position }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -521,15 +274,6 @@
                                 class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
                                 placeholder="Confirm password">
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Status</label>
-                        <select name="status" required
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-4">
@@ -559,51 +303,36 @@
             </div>
             <div class="p-6">
                 <form id="editUserForm" class="space-y-4">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="user_id" id="edit_user_id">
+
+                    <!-- Display employee info (read-only) -->
+                    <div class="bg-gray-50 p-4 rounded border">
+                        <label class="block text-sm font-semibold text-text-dark mb-2">Associated Employee</label>
+                        <p class="text-sm text-text-dark" id="edit_employee_display"></p>
+                        <p class="text-xs text-text-muted mt-1">Employee association cannot be changed</p>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-text-dark mb-2">Username</label>
-                            <input type="text" name="username" required
+                            <input type="text" name="username" id="edit_username" required
                                 class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
                                 placeholder="Enter username">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-text-dark mb-2">Role</label>
-                            <select name="role" required
+                            <select name="role" id="edit_role" required
                                 class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
                                 <option value="">Select Role</option>
                                 <option value="admin">Admin</option>
                                 <option value="employee">Employee</option>
-                                <option value="inventory_staff">Inventory Staff</option>
-                                <option value="purchase_staff">Purchase Staff</option>
-                                <option value="sales_staff">Sales Staff</option>
-                                <option value="driver">Driver</option>
+                                <option value="inventory">Inventory Staff</option>
+                                <option value="purchasing">Purchase Staff</option>
+                                <option value="supervisor">Supervisor</option>
                             </select>
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Employee Name</label>
-                        <select name="employee_id" required
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
-                            <option value="">Select Employee</option>
-                            <option value="1">Maria Garcia - Head Baker</option>
-                            <option value="2">John Smith - Pastry Chef</option>
-                            <option value="3">Robert Johnson - Purchasing Officer</option>
-                            <option value="4">Sarah Wilson - Inventory Clerk</option>
-                            <option value="5">David Brown - Baker</option>
-                            <option value="6">Emily Chen - Sales Staff</option>
-                            <option value="7">Michael Wong - Supervisor</option>
-                            <option value="8">Tom Jackson - Delivery Driver</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Status</label>
-                        <select name="status" required
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                        </select>
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-4">
@@ -620,43 +349,68 @@
         </div>
     </div>
 
-    <!-- Reset Password Modal -->
-    <div id="resetPasswordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white max-w-md w-full">
             <div class="p-6 border-b-2 border-border-soft">
-                <h3 class="font-display text-xl font-bold text-text-dark">Reset Password</h3>
+                <h3 class="font-display text-xl font-bold text-text-dark">Change Password</h3>
             </div>
             <div class="p-6">
-                <p class="text-text-dark mb-4">Reset password for <span id="resetPasswordUsername" class="font-semibold"></span>?</p>
-                <p class="text-sm text-text-muted mb-4">A temporary password will be generated and sent to the user's email.</p>
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeResetPasswordModal()"
-                        class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
-                        Cancel
-                    </button>
-                    <button type="button" onclick="resetPassword()" class="px-6 py-2 bg-amber-500 text-white hover:bg-amber-600 transition">
-                        Reset Password
-                    </button>
-                </div>
+                <form id="changePasswordForm" class="space-y-4">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="user_id" id="change_password_user_id">
+                    <p class="text-text-dark mb-4">Change password for <span id="changePasswordUsername"
+                            class="font-semibold"></span></p>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-text-dark mb-2">New Password</label>
+                        <input type="password" name="password" required
+                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                            placeholder="Enter new password">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-text-dark mb-2">Confirm New Password</label>
+                        <input type="password" name="password_confirmation" required
+                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                            placeholder="Confirm new password">
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeChangePasswordModal()"
+                            class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-amber-500 text-white hover:bg-amber-600 transition">
+                            Change Password
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
     <!-- Deactivate User Modal -->
-    <div id="deactivateUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div id="deactivateUserModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white max-w-md w-full">
             <div class="p-6 border-b-2 border-border-soft">
                 <h3 class="font-display text-xl font-bold text-text-dark">Deactivate User</h3>
             </div>
             <div class="p-6">
-                <p class="text-text-dark mb-4">Are you sure you want to deactivate <span id="deactivateUserName" class="font-semibold"></span>?</p>
-                <p class="text-sm text-text-muted mb-4">The user will lose system access but their account will be preserved.</p>
+                <p class="text-text-dark mb-4">Are you sure you want to deactivate <span id="deactivateUserName"
+                        class="font-semibold"></span>?</p>
+                <p class="text-sm text-text-muted mb-4">The user will lose system access but their account will be
+                    preserved.</p>
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="closeDeactivateUserModal()"
                         class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
                         Cancel
                     </button>
-                    <button type="button" onclick="deactivateUser()" class="px-6 py-2 bg-red-500 text-white hover:bg-red-600 transition">
+                    <button type="button" onclick="deactivateUser()"
+                        class="px-6 py-2 bg-red-500 text-white hover:bg-red-600 transition">
                         Deactivate
                     </button>
                 </div>
@@ -665,21 +419,51 @@
     </div>
 
     <!-- Activate User Modal -->
-    <div id="activateUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div id="activateUserModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white max-w-md w-full">
             <div class="p-6 border-b-2 border-border-soft">
                 <h3 class="font-display text-xl font-bold text-text-dark">Activate User</h3>
             </div>
             <div class="p-6">
-                <p class="text-text-dark mb-4">Are you sure you want to activate <span id="activateUserName" class="font-semibold"></span>?</p>
-                <p class="text-sm text-text-muted mb-4">The user will regain system access with their existing permissions.</p>
+                <p class="text-text-dark mb-4">Are you sure you want to activate <span id="activateUserName"
+                        class="font-semibold"></span>?</p>
+                <p class="text-sm text-text-muted mb-4">The user will regain system access with their existing permissions.
+                </p>
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="closeActivateUserModal()"
                         class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
                         Cancel
                     </button>
-                    <button type="button" onclick="activateUser()" class="px-6 py-2 bg-green-500 text-white hover:bg-green-600 transition">
+                    <button type="button" onclick="activateUser()"
+                        class="px-6 py-2 bg-green-500 text-white hover:bg-green-600 transition">
                         Activate
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete User Modal -->
+    <div id="deleteUserModal"
+        class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white max-w-md w-full">
+            <div class="p-6 border-b-2 border-border-soft">
+                <h3 class="font-display text-xl font-bold text-text-dark">Delete User</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-text-dark mb-4">Are you sure you want to delete <span id="deleteUserName"
+                        class="font-semibold"></span>?</p>
+                <p class="text-sm text-text-muted mb-4">This action cannot be undone. All user data will be permanently
+                    removed.</p>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeDeleteUserModal()"
+                        class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="deleteUser()"
+                        class="px-6 py-2 bg-red-700 text-white hover:bg-red-800 transition">
+                        Delete User
                     </button>
                 </div>
             </div>
@@ -729,76 +513,126 @@
     </style>
 
     <script>
-        // Sample user data for UI demonstration
-        let users = [
-            {
-                id: 1,
-                username: "admin.maria",
-                fullName: "Maria Garcia",
-                role: "admin",
-                email: "maria.garcia@wellkenz.com",
-                status: "active"
-            },
-            {
-                id: 2,
-                username: "john.smith",
-                fullName: "John Smith",
-                role: "employee",
-                email: "john.smith@wellkenz.com",
-                status: "active"
-            },
-            {
-                id: 3,
-                username: "inventory.sarah",
-                fullName: "Sarah Wilson",
-                role: "inventory_staff",
-                email: "sarah.wilson@wellkenz.com",
-                status: "active"
-            },
-            {
-                id: 4,
-                username: "purchase.robert",
-                fullName: "Robert Johnson",
-                role: "purchase_staff",
-                email: "robert.johnson@wellkenz.com",
-                status: "active"
-            },
-            {
-                id: 5,
-                username: "baker.david",
-                fullName: "David Brown",
-                role: "employee",
-                email: "david.brown@wellkenz.com",
-                status: "active"
-            },
-            {
-                id: 6,
-                username: "sales.emily",
-                fullName: "Emily Chen",
-                role: "sales_staff",
-                email: "emily.chen@wellkenz.com",
-                status: "active"
-            },
-            {
-                id: 7,
-                username: "admin.michael",
-                fullName: "Michael Wong",
-                role: "admin",
-                email: "michael.wong@wellkenz.com",
-                status: "active"
-            },
-            {
-                id: 8,
-                username: "driver.tom",
-                fullName: "Tom Jackson",
-                role: "driver",
-                email: "tom.jackson@wellkenz.com",
-                status: "inactive"
-            }
-        ];
-
         let currentUserId = null;
         let currentUsername = null;
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEventListeners();
+        });
+
+        function initializeEventListeners() {
+            // Form Handling
+            const createUserForm = document.getElementById('createUserForm');
+            const editUserForm = document.getElementById('editUserForm');
+            const changePasswordForm = document.getElementById('changePasswordForm');
+
+            if (createUserForm) {
+                createUserForm.addEventListener('submit', handleCreateUser);
+            }
+
+            if (editUserForm) {
+                editUserForm.addEventListener('submit', handleEditUser);
+            }
+
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', handleChangePassword);
+            }
+
+            // Event delegation for action buttons
+            document.getElementById('usersTableBody').addEventListener('click', function(e) {
+                const target = e.target;
+
+                // Edit button
+                if (target.classList.contains('edit-btn') || target.closest('.edit-btn')) {
+                    const button = target.classList.contains('edit-btn') ? target : target.closest('.edit-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    const username = button.getAttribute('data-username');
+                    openEditUserModal(userId, username);
+                }
+
+                // Change Password button
+                if (target.classList.contains('change-password-btn') || target.closest('.change-password-btn')) {
+                    const button = target.classList.contains('change-password-btn') ? target : target.closest(
+                        '.change-password-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    const username = button.getAttribute('data-username');
+                    openChangePasswordModal(userId, username);
+                }
+
+                // Deactivate button
+                if (target.classList.contains('deactivate-btn') || target.closest('.deactivate-btn')) {
+                    const button = target.classList.contains('deactivate-btn') ? target : target.closest(
+                        '.deactivate-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    const username = button.getAttribute('data-username');
+                    openDeactivateUserModal(userId, username);
+                }
+
+                // Activate button
+                if (target.classList.contains('activate-btn') || target.closest('.activate-btn')) {
+                    const button = target.classList.contains('activate-btn') ? target : target.closest(
+                        '.activate-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    const username = button.getAttribute('data-username');
+                    openActivateUserModal(userId, username);
+                }
+
+                // Delete button
+                if (target.classList.contains('delete-btn') || target.closest('.delete-btn')) {
+                    const button = target.classList.contains('delete-btn') ? target : target.closest('.delete-btn');
+                    const userId = button.getAttribute('data-user-id');
+                    const username = button.getAttribute('data-username');
+                    openDeleteUserModal(userId, username);
+                }
+            });
+
+            // Modal close handlers
+            setupModalCloseHandlers();
+        }
+
+        function setupModalCloseHandlers() {
+            // Close modals when clicking outside
+            const modals = ['createUserModal', 'editUserModal', 'changePasswordModal', 'deactivateUserModal',
+                'activateUserModal', 'deleteUserModal'
+            ];
+
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.addEventListener('click', function(e) {
+                        if (e.target === this) {
+                            closeModal(modalId);
+                        }
+                    });
+                }
+            });
+
+            // Close modals with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    modals.forEach(modalId => closeModal(modalId));
+                }
+            });
+        }
+
+        function closeModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+
+            // Reset forms if needed
+            if (modalId === 'createUserModal') {
+                document.getElementById('createUserForm').reset();
+            }
+            if (modalId === 'changePasswordModal') {
+                document.getElementById('changePasswordForm').reset();
+            }
+
+            currentUserId = null;
+            currentUsername = null;
+        }
 
         // Modal Functions
         function openCreateUserModal() {
@@ -806,43 +640,63 @@
         }
 
         function closeCreateUserModal() {
-            document.getElementById('createUserModal').classList.add('hidden');
-            document.getElementById('createUserForm').reset();
+            closeModal('createUserModal');
         }
 
         function openEditUserModal(userId, username) {
             currentUserId = userId;
             currentUsername = username;
-            
-            // In a real app, you would fetch user data here
-            // For demo, we'll just populate with sample data
-            const user = users.find(u => u.id === userId);
-            if (user) {
-                document.getElementById('editUserForm').querySelector('[name="username"]').value = user.username;
-                document.getElementById('editUserForm').querySelector('[name="role"]').value = user.role;
-                document.getElementById('editUserForm').querySelector('[name="status"]').value = user.status;
-            }
-            
-            document.getElementById('editUserModal').classList.remove('hidden');
+
+            // Show loading state
+            const modal = document.getElementById('editUserModal');
+            modal.classList.remove('hidden');
+
+            // Fetch user data via AJAX
+            fetch(`/users/${userId}/edit`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(user => {
+                    document.getElementById('edit_user_id').value = user.user_id;
+                    document.getElementById('edit_username').value = user.username;
+                    document.getElementById('edit_role').value = user.role;
+
+                    // Only set emp_id if the element exists
+                    const empIdElement = document.getElementById('edit_emp_id');
+                    if (empIdElement) {
+                        empIdElement.value = user.emp_id;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Error loading user data', 'error');
+                    closeEditUserModal();
+                });
         }
 
         function closeEditUserModal() {
-            document.getElementById('editUserModal').classList.add('hidden');
-            currentUserId = null;
-            currentUsername = null;
+            closeModal('editUserModal');
         }
 
-        function openResetPasswordModal(userId, username) {
+        function openChangePasswordModal(userId, username) {
             currentUserId = userId;
             currentUsername = username;
-            document.getElementById('resetPasswordUsername').textContent = username;
-            document.getElementById('resetPasswordModal').classList.remove('hidden');
+            document.getElementById('changePasswordUsername').textContent = username;
+            document.getElementById('change_password_user_id').value = userId;
+            document.getElementById('changePasswordModal').classList.remove('hidden');
         }
 
-        function closeResetPasswordModal() {
-            document.getElementById('resetPasswordModal').classList.add('hidden');
-            currentUserId = null;
-            currentUsername = null;
+        function closeChangePasswordModal() {
+            closeModal('changePasswordModal');
         }
 
         function openDeactivateUserModal(userId, username) {
@@ -853,9 +707,7 @@
         }
 
         function closeDeactivateUserModal() {
-            document.getElementById('deactivateUserModal').classList.add('hidden');
-            currentUserId = null;
-            currentUsername = null;
+            closeModal('deactivateUserModal');
         }
 
         function openActivateUserModal(userId, username) {
@@ -866,137 +718,372 @@
         }
 
         function closeActivateUserModal() {
-            document.getElementById('activateUserModal').classList.add('hidden');
-            currentUserId = null;
-            currentUsername = null;
+            closeModal('activateUserModal');
+        }
+
+        function openDeleteUserModal(userId, username) {
+            currentUserId = userId;
+            currentUsername = username;
+            document.getElementById('deleteUserName').textContent = username;
+            document.getElementById('deleteUserModal').classList.remove('hidden');
+        }
+
+        function closeDeleteUserModal() {
+            closeModal('deleteUserModal');
         }
 
         // User Actions
-        function resetPassword() {
-            showMessage('Password reset successfully! Temporary password sent to user email.', 'success');
-            closeResetPasswordModal();
-        }
-
         function deactivateUser() {
-            showMessage('User deactivated successfully!', 'success');
-            closeDeactivateUserModal();
+            toggleUserStatus('deactivate');
         }
 
         function activateUser() {
-            showMessage('User activated successfully!', 'success');
-            closeActivateUserModal();
+            toggleUserStatus('activate');
         }
 
-        // Form Handling
-        document.getElementById('createUserForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            
-            // Simulate creating user
-            showMessage('User created successfully!', 'success');
-            closeCreateUserModal();
-            this.reset();
-        });
+        function deleteUser() {
+            if (!currentUserId) {
+                showMessage('No user selected', 'error');
+                return;
+            }
 
-        document.getElementById('editUserForm').addEventListener('submit', function(e) {
+            // Create form data with CSRF token
+            const formData = new FormData();
+            formData.append('_method', 'DELETE');
+            formData.append('_token', getCsrfToken());
+
+            fetch(`/users/${currentUserId}`, {
+                    method: 'POST', // Use POST method for DELETE with _method parameter
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        // Reload the page to reflect changes
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                    closeDeleteUserModal();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Error deleting user', 'error');
+                    closeDeleteUserModal();
+                });
+        }
+
+        function toggleUserStatus(action) {
+            if (!currentUserId) {
+                showMessage('No user selected', 'error');
+                return;
+            }
+
+            // Create form data with CSRF token
+            const formData = new FormData();
+            formData.append('_token', getCsrfToken());
+
+            fetch(`/users/${currentUserId}/toggle-status`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        // Reload the page to reflect changes
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                    if (action === 'deactivate') {
+                        closeDeactivateUserModal();
+                    } else {
+                        closeActivateUserModal();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Error updating user status', 'error');
+                    if (action === 'deactivate') {
+                        closeDeactivateUserModal();
+                    } else {
+                        closeActivateUserModal();
+                    }
+                });
+        }
+
+        // Form Handlers
+        function handleCreateUser(e) {
             e.preventDefault();
             const formData = new FormData(this);
-            
-            // Simulate updating user
-            showMessage('User updated successfully!', 'success');
-            closeEditUserModal();
-        });
+
+            fetch('/users', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        closeCreateUserModal();
+                        // Reload the page to show new user
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Error creating user', 'error');
+                });
+        }
+
+        function handleEditUser(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            fetch(`/users/${currentUserId}`, {
+                    method: 'POST', // Use POST method for PUT with _method parameter
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        closeEditUserModal();
+                        // Reload the page to show updated user
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Error updating user', 'error');
+                });
+        }
+
+        function handleChangePassword(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+
+            fetch(`/users/${currentUserId}/password`, {
+                    method: 'POST', // Use POST method for PUT with _method parameter
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        closeChangePasswordModal();
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Error changing password', 'error');
+                });
+        }
 
         // Search functionality
         function searchUsers(query) {
-            const rows = document.querySelectorAll('.user-row');
-            let visibleCount = 0;
-            
-            rows.forEach(row => {
-                const username = row.getAttribute('data-username');
-                const role = row.getAttribute('data-role');
-                const employeeName = row.getAttribute('data-employee-name');
-                const searchText = (username + ' ' + role + ' ' + employeeName).toLowerCase();
-                
-                if (searchText.includes(query.toLowerCase()) || query === '') {
+            if (query.length === 0) {
+                // Show all rows if query is empty
+                document.querySelectorAll('.user-row').forEach(row => {
                     row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-            
-            document.getElementById('visibleCount').textContent = visibleCount;
+                });
+                document.getElementById('visibleCount').textContent = document.querySelectorAll('.user-row').length;
+                return;
+            }
+
+            fetch(`/users/search?search=${encodeURIComponent(query)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    }
+                })
+                .then(response => response.json())
+                .then(users => {
+                    const tbody = document.getElementById('usersTableBody');
+                    tbody.innerHTML = '';
+
+                    users.forEach(user => {
+                        const row = createUserRow(user);
+                        tbody.appendChild(row);
+                    });
+
+                    document.getElementById('visibleCount').textContent = users.length;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function createUserRow(user) {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-cream-bg transition user-row';
+            row.setAttribute('data-username', user.username);
+            row.setAttribute('data-role', user.role);
+            row.setAttribute('data-employee-name', user.employee.emp_name);
+            row.setAttribute('data-status', user.employee.emp_status);
+
+            const roleColors = {
+                'admin': 'bg-purple-100 text-purple-700',
+                'employee': 'bg-caramel text-white',
+                'inventory': 'bg-blue-100 text-blue-700',
+                'purchasing': 'bg-green-100 text-green-700',
+                'supervisor': 'bg-yellow-100 text-yellow-700'
+            };
+
+            const statusBadge = user.employee.emp_status === 'active' ?
+                '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">ACTIVE</span>' :
+                '<span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold">INACTIVE</span>';
+
+            const isActive = user.employee.emp_status === 'active';
+
+            row.innerHTML = `
+            <td class="px-6 py-4">
+                <p class="text-sm font-bold text-text-dark">${user.username}</p>
+            </td>
+            <td class="px-6 py-4">
+                <span class="inline-block px-2 py-1 ${roleColors[user.role]} text-xs font-bold capitalize">
+                    ${user.role.replace('_', ' ')}
+                </span>
+            </td>
+            <td class="px-6 py-4">
+                <p class="text-sm text-text-dark">${user.employee.emp_name}</p>
+                <p class="text-xs text-text-muted">${user.employee.emp_position}</p>
+            </td>
+            <td class="px-6 py-4">
+                ${statusBadge}
+            </td>
+            <td class="px-6 py-4">
+                <div class="flex space-x-2">
+                    <button class="edit-btn px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition"
+                        data-user-id="${user.user_id}" data-username="${user.username}">
+                        Edit
+                    </button>
+                    <button class="change-password-btn px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition"
+                        data-user-id="${user.user_id}" data-username="${user.username}">
+                        Change Password
+                    </button>
+                    ${isActive ? 
+                        `<button class="deactivate-btn px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
+                                data-user-id="${user.user_id}" data-username="${user.username}">
+                                Deactivate
+                            </button>` :
+                        `<button class="activate-btn px-3 py-1 bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition"
+                                data-user-id="${user.user_id}" data-username="${user.username}">
+                                Activate
+                            </button>`
+                    }
+                    <button class="delete-btn px-3 py-1 bg-red-700 text-white text-xs font-semibold hover:bg-red-800 transition"
+                        data-user-id="${user.user_id}" data-username="${user.username}">
+                        Delete
+                    </button>
+                </div>
+            </td>
+        `;
+
+            return row;
         }
 
         // Sort functionality
         function sortTable(criteria) {
-            // Simple client-side sorting demonstration
             const tbody = document.getElementById('usersTableBody');
             const rows = Array.from(tbody.querySelectorAll('tr'));
-            
+
             rows.sort((a, b) => {
-                const aValue = a.querySelector('td:first-child').textContent.toLowerCase();
-                const bValue = b.querySelector('td:first-child').textContent.toLowerCase();
-                
-                if (criteria === 'username_asc' || criteria === 'username') {
-                    return aValue.localeCompare(bValue);
-                } else if (criteria === 'username_desc') {
-                    return bValue.localeCompare(aValue);
+                let aValue, bValue;
+
+                switch (criteria) {
+                    case 'username_asc':
+                        aValue = a.getAttribute('data-username').toLowerCase();
+                        bValue = b.getAttribute('data-username').toLowerCase();
+                        return aValue.localeCompare(bValue);
+                    case 'username_desc':
+                        aValue = a.getAttribute('data-username').toLowerCase();
+                        bValue = b.getAttribute('data-username').toLowerCase();
+                        return bValue.localeCompare(aValue);
+                    case 'role':
+                        aValue = a.getAttribute('data-role').toLowerCase();
+                        bValue = b.getAttribute('data-role').toLowerCase();
+                        return aValue.localeCompare(bValue);
+                    case 'status':
+                        aValue = a.getAttribute('data-status').toLowerCase();
+                        bValue = b.getAttribute('data-status').toLowerCase();
+                        return aValue.localeCompare(bValue);
+                    default:
+                        return 0;
                 }
-                return 0;
             });
-            
+
             // Remove existing rows and append sorted rows
             rows.forEach(row => tbody.appendChild(row));
-            
-            showMessage(`Sorted by ${criteria}`, 'success');
         }
 
         // Utility Functions
         function showMessage(message, type) {
-            const messageDiv = type === 'success' ? 
-                document.getElementById('successMessage') : 
+            const messageDiv = type === 'success' ?
+                document.getElementById('successMessage') :
                 document.getElementById('errorMessage');
-            
-            messageDiv.textContent = message;
-            messageDiv.classList.remove('hidden');
-            
-            setTimeout(() => {
-                messageDiv.classList.add('hidden');
-            }, 3000);
+
+            if (messageDiv) {
+                messageDiv.textContent = message;
+                messageDiv.classList.remove('hidden');
+
+                setTimeout(() => {
+                    messageDiv.classList.add('hidden');
+                }, 5000);
+            }
         }
 
-        // Close modals when clicking outside
-        document.getElementById('createUserModal').addEventListener('click', function(e) {
-            if (e.target === this) closeCreateUserModal();
-        });
-
-        document.getElementById('editUserModal').addEventListener('click', function(e) {
-            if (e.target === this) closeEditUserModal();
-        });
-
-        document.getElementById('resetPasswordModal').addEventListener('click', function(e) {
-            if (e.target === this) closeResetPasswordModal();
-        });
-
-        document.getElementById('deactivateUserModal').addEventListener('click', function(e) {
-            if (e.target === this) closeDeactivateUserModal();
-        });
-
-        document.getElementById('activateUserModal').addEventListener('click', function(e) {
-            if (e.target === this) closeActivateUserModal();
-        });
-
-        // Close modals with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeCreateUserModal();
-                closeEditUserModal();
-                closeResetPasswordModal();
-                closeDeactivateUserModal();
-                closeActivateUserModal();
+        function getCsrfToken() {
+            const metaTag = document.querySelector('meta[name="csrf-token"]');
+            if (metaTag) {
+                return metaTag.getAttribute('content');
             }
-        });
+
+            // Fallback: try to get from forms
+            const tokenInput = document.querySelector('input[name="_token"]');
+            if (tokenInput) {
+                return tokenInput.value;
+            }
+
+            console.error('CSRF token not found');
+            return '';
+        }
     </script>
 @endsection

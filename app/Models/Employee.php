@@ -17,7 +17,6 @@ class Employee extends Model
         'emp_email',
         'emp_contact',
         'emp_status',
-        'dept_id'
     ];
 
     protected $casts = [
@@ -28,12 +27,6 @@ class Employee extends Model
     public function user()
     {
         return $this->hasOne(User::class, 'emp_id', 'emp_id');
-    }
-
-    // Relationship with Department
-    public function department()
-    {
-        return $this->belongsTo(Department::class, 'dept_id', 'dept_id');
     }
 
     // Get initials for avatar

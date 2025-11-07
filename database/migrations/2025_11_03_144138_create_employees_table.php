@@ -15,7 +15,6 @@ return new class extends Migration
             $table->string('emp_email')->unique();
             $table->string('emp_contact');
             $table->enum('emp_status', ['active', 'inactive'])->default('active');
-            $table->foreignId('dept_id')->constrained('departments', 'dept_id');
             $table->timestamps();
         });
     }
