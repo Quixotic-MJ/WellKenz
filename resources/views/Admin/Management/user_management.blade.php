@@ -7,17 +7,17 @@
 @section('content')
     <div class="space-y-6">
         <!-- Messages -->
-        <div id="successMessage" class="hidden bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3 rounded"></div>
-        <div id="errorMessage" class="hidden bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded"></div>
+        <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded"></div>
+        <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
 
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="font-display text-3xl font-bold text-text-dark">User Management</h1>
-                <p class="text-text-muted mt-2">Manage user accounts and access permissions</p>
+                <h1 class="text-3xl font-semibold text-gray-900">User Management</h1>
+                <p class="text-gray-500 mt-2">Manage user accounts and access permissions</p>
             </div>
             <button onclick="openCreateUserModal()"
-                class="px-4 py-2 bg-caramel text-white hover:bg-caramel-dark transition font-semibold">
+                class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 transition text-sm font-medium rounded">
                 <i class="fas fa-user-plus mr-2"></i>
                 Add User
             </button>
@@ -25,47 +25,42 @@
 
         <!-- Stats -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="bg-white border-2 border-border-soft p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Total Users</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="totalUsers">{{ $totalUsers }}</p>
+            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Total Users</p>
+                <p class="text-3xl font-semibold text-gray-900 mt-2" id="totalUsers">{{ $totalUsers }}</p>
             </div>
 
-            <div class="bg-white border-2 border-green-200 p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Active</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="activeUsers">{{ $activeUsers }}</p>
+            <div class="bg-white border border-green-200 rounded-lg p-6">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Active</p>
+                <p class="text-3xl font-semibold text-gray-900 mt-2" id="activeUsers">{{ $activeUsers }}</p>
             </div>
 
-            <div class="bg-white border-2 border-border-soft p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Admins</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="adminsCount">{{ $adminsCount }}</p>
+            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Admins</p>
+                <p class="text-3xl font-semibold text-gray-900 mt-2" id="adminsCount">{{ $adminsCount }}</p>
             </div>
 
-            <div class="bg-white border-2 border-border-soft p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Inactive</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="inactiveUsers">{{ $inactiveUsers }}</p>
+            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Inactive</p>
+                <p class="text-3xl font-semibold text-gray-900 mt-2" id="inactiveUsers">{{ $inactiveUsers }}</p>
             </div>
         </div>
 
         <!-- Users Table -->
-        <div class="bg-white border-2 border-border-soft">
-            <div class="px-6 py-4 border-b-2 border-border-soft bg-cream-bg">
+        <div class="bg-white border border-gray-200 rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-display text-xl font-bold text-text-dark">User Accounts</h3>
+                    <h3 class="text-xl font-semibold text-gray-900">User Accounts</h3>
                     <div class="flex items-center space-x-4">
-                        <!-- Sort Dropdown -->
-                        <select onchange="sortTable(this.value)"
-                            class="border-2 border-border-soft px-3 py-2 text-sm focus:outline-none focus:border-chocolate transition bg-white">
-                            <option value="username_asc">Sort by: Username A-Z</option>
-                            <option value="username_desc">Sort by: Username Z-A</option>
-                            <option value="role">Sort by: Role</option>
-                            <option value="status">Sort by: Status</option>
-                        </select>
-
                         <!-- Search Input -->
                         <div class="relative">
-                            <input type="text" placeholder="Search users..." onkeyup="searchUsers(this.value)"
-                                class="pl-9 pr-4 py-2 border-2 border-border-soft text-sm focus:outline-none focus:border-chocolate transition w-64">
-                            <i class="fas fa-search absolute left-3 top-3 text-text-muted text-xs"></i>
+                            <input type="text" id="searchInput" placeholder="Search users..." onkeyup="searchUsers(this.value)"
+                                class="pl-9 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition w-64"
+                                onfocus="this.placeholder='Search by username, role, name...'">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
+                            <button type="button" onclick="clearSearch()" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 hidden" id="clearSearchBtn">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -74,60 +69,63 @@
             <div class="overflow-x-auto">
                 <table class="w-full" id="usersTable">
                     <thead>
-                        <tr class="bg-gray-50 border-b-2 border-border-soft">
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                        <tr class="bg-gray-50 border-b border-gray-200">
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
                                 onclick="sortTable('username')">
                                 Username <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
                                 onclick="sortTable('role')">
                                 Role <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
                                 onclick="sortTable('employee_name')">
                                 Employee Name <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100"
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
                                 onclick="sortTable('status')">
                                 Status <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Actions</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-border-soft" id="usersTableBody">
+                    <tbody class="divide-y divide-gray-200" id="usersTableBody">
                         @foreach ($users as $user)
-                            <tr class="hover:bg-cream-bg transition user-row" data-username="{{ $user->username }}"
-                                data-role="{{ $user->role }}" data-employee-name="{{ $user->employee->emp_name }}"
-                                data-status="{{ $user->employee->emp_status }}">
+                            <tr class="hover:bg-gray-50 transition user-row" 
+                                data-username="{{ strtolower($user->username) }}"
+                                data-role="{{ strtolower($user->role) }}" 
+                                data-employee-name="{{ strtolower($user->employee->emp_name) }}"
+                                data-status="{{ strtolower($user->employee->emp_status) }}"
+                                data-position="{{ strtolower($user->employee->emp_position) }}">
                                 <td class="px-6 py-4">
-                                    <p class="text-sm font-bold text-text-dark">{{ $user->username }}</p>
+                                    <p class="text-sm font-semibold text-gray-900">{{ $user->username }}</p>
                                 </td>
                                 <td class="px-6 py-4">
                                     @php
                                         $roleColors = [
                                             'admin' => 'bg-purple-100 text-purple-700',
-                                            'employee' => 'bg-caramel text-white',
+                                            'employee' => 'bg-gray-600 text-white',
                                             'inventory' => 'bg-blue-100 text-blue-700',
                                             'purchasing' => 'bg-green-100 text-green-700',
                                             'supervisor' => 'bg-yellow-100 text-yellow-700',
                                         ];
                                         $color = $roleColors[$user->role] ?? 'bg-gray-100 text-gray-700';
                                     @endphp
-                                    <span class="inline-block px-2 py-1 {{ $color }} text-xs font-bold capitalize">
+                                    <span class="inline-block px-2 py-1 {{ $color }} text-xs font-semibold capitalize rounded">
                                         {{ str_replace('_', ' ', $user->role) }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <p class="text-sm text-text-dark">{{ $user->employee->emp_name }}</p>
-                                    <p class="text-xs text-text-muted">{{ $user->employee->emp_position }}</p>
+                                    <p class="text-sm text-gray-900">{{ $user->employee->emp_name }}</p>
+                                    <p class="text-xs text-gray-500">{{ $user->employee->emp_position }}</p>
                                 </td>
                                 <td class="px-6 py-4">
                                     @if ($user->employee->emp_status === 'active')
-                                        <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">
+                                        <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
                                             ACTIVE
                                         </span>
                                     @else
-                                        <span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold">
+                                        <span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
                                             INACTIVE
                                         </span>
                                     @endif
@@ -135,30 +133,30 @@
                                 <td class="px-6 py-4">
                                     <div class="flex space-x-2">
                                         <button
-                                            class="edit-btn px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition"
+                                            class="edit-btn px-3 py-1 bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition rounded"
                                             data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
                                             Edit
                                         </button>
                                         <button
-                                            class="change-password-btn px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition"
+                                            class="change-password-btn px-3 py-1 bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition rounded"
                                             data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
                                             Change Password
                                         </button>
                                         @if ($user->employee->emp_status === 'active')
                                             <button
-                                                class="deactivate-btn px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
+                                                class="deactivate-btn px-3 py-1 bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition rounded"
                                                 data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
                                                 Deactivate
                                             </button>
                                         @else
                                             <button
-                                                class="activate-btn px-3 py-1 bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition"
+                                                class="activate-btn px-3 py-1 bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition rounded"
                                                 data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
                                                 Activate
                                             </button>
                                         @endif
                                         <button
-                                            class="delete-btn px-3 py-1 bg-red-700 text-white text-xs font-semibold hover:bg-red-800 transition"
+                                            class="delete-btn px-3 py-1 bg-red-800 text-white text-xs font-medium hover:bg-red-900 transition rounded"
                                             data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
                                             Delete
                                         </button>
@@ -170,43 +168,9 @@
                 </table>
             </div>
 
-            <div class="px-6 py-4 border-t-2 border-border-soft bg-cream-bg">
-                <p class="text-sm text-text-muted">Showing <span id="visibleCount">{{ $users->count() }}</span> of
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                <p class="text-sm text-gray-500">Showing <span id="visibleCount">{{ $users->count() }}</span> of
                     {{ $users->count() }} users</p>
-            </div>
-        </div>
-
-        <!-- Role Distribution Card -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6">Role Distribution</h3>
-            <div class="space-y-4">
-                @php
-                    $roleDistribution = $users->groupBy('role')->map->count();
-                    $totalUsersCount = $users->count();
-                @endphp
-                @foreach ($roleDistribution as $role => $count)
-                    @php
-                        $percentage = $totalUsersCount > 0 ? round(($count / $totalUsersCount) * 100, 1) : 0;
-                        $roleColors = [
-                            'admin' => 'bg-purple-500',
-                            'employee' => 'bg-caramel',
-                            'inventory' => 'bg-blue-500',
-                            'purchasing' => 'bg-green-500',
-                            'supervisor' => 'bg-yellow-500',
-                        ];
-                        $color = $roleColors[$role] ?? 'bg-gray-500';
-                    @endphp
-                    <div>
-                        <div class="flex justify-between text-sm mb-2">
-                            <span
-                                class="font-semibold text-text-dark capitalize">{{ str_replace('_', ' ', $role) }}</span>
-                            <span class="text-text-muted">{{ $count }} ({{ $percentage }}%)</span>
-                        </div>
-                        <div class="w-full bg-gray-200 h-2">
-                            <div class="h-2 {{ $color }}" style="width: {{ $percentage }}%"></div>
-                        </div>
-                    </div>
-                @endforeach
             </div>
         </div>
     </div>
@@ -214,11 +178,11 @@
     <!-- Create User Modal -->
     <div id="createUserModal"
         class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b-2 border-border-soft">
+        <div class="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-lg">
+            <div class="p-6 border-b border-gray-200">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-display text-2xl font-bold text-text-dark">Add New User</h3>
-                    <button onclick="closeCreateUserModal()" class="text-text-muted hover:text-text-dark">
+                    <h3 class="text-2xl font-semibold text-gray-900">Add New User</h3>
+                    <button onclick="closeCreateUserModal()" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
@@ -229,15 +193,15 @@
                     @csrf
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold text-text-dark mb-2">Username</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
                             <input type="text" name="username" required
-                                class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
                                 placeholder="Enter username">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-text-dark mb-2">Role</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
                             <select name="role" required
-                                class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400">
                                 <option value="">Select Role</option>
                                 <option value="admin">Admin</option>
                                 <option value="employee">Employee</option>
@@ -249,9 +213,9 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Employee</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Employee</label>
                         <select name="emp_id" required
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400">
                             <option value="">Select Employee</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->emp_id }}">
@@ -263,25 +227,25 @@
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold text-text-dark mb-2">Password</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
                             <input type="password" name="password" required
-                                class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
                                 placeholder="Enter password">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-text-dark mb-2">Confirm Password</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
                             <input type="password" name="password_confirmation" required
-                                class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
                                 placeholder="Confirm password">
                         </div>
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeCreateUserModal()"
-                            class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                            class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                             Cancel
                         </button>
-                        <button type="submit" class="px-6 py-2 bg-caramel text-white hover:bg-caramel-dark transition">
+                        <button type="submit" class="px-6 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
                             Add User
                         </button>
                     </div>
@@ -292,11 +256,11 @@
 
     <!-- Edit User Modal -->
     <div id="editUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b-2 border-border-soft">
+        <div class="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-lg">
+            <div class="p-6 border-b border-gray-200">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-display text-2xl font-bold text-text-dark">Edit User</h3>
-                    <button onclick="closeEditUserModal()" class="text-text-muted hover:text-text-dark">
+                    <h3 class="text-2xl font-semibold text-gray-900">Edit User</h3>
+                    <button onclick="closeEditUserModal()" class="text-gray-500 hover:text-gray-700">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
@@ -308,23 +272,23 @@
                     <input type="hidden" name="user_id" id="edit_user_id">
 
                     <!-- Display employee info (read-only) -->
-                    <div class="bg-gray-50 p-4 rounded border">
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Associated Employee</label>
-                        <p class="text-sm text-text-dark" id="edit_employee_display"></p>
-                        <p class="text-xs text-text-muted mt-1">Employee association cannot be changed</p>
+                    <div class="bg-gray-50 p-4 rounded border border-gray-200">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Associated Employee</label>
+                        <p class="text-sm text-gray-900" id="edit_employee_display"></p>
+                        <p class="text-xs text-gray-500 mt-1">Employee association cannot be changed</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold text-text-dark mb-2">Username</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
                             <input type="text" name="username" id="edit_username" required
-                                class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
                                 placeholder="Enter username">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-text-dark mb-2">Role</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Role</label>
                             <select name="role" id="edit_role" required
-                                class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate">
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400">
                                 <option value="">Select Role</option>
                                 <option value="admin">Admin</option>
                                 <option value="employee">Employee</option>
@@ -337,10 +301,10 @@
 
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeEditUserModal()"
-                            class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                            class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                             Cancel
                         </button>
-                        <button type="submit" class="px-6 py-2 bg-caramel text-white hover:bg-caramel-dark transition">
+                        <button type="submit" class="px-6 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
                             Update User
                         </button>
                     </div>
@@ -352,38 +316,38 @@
     <!-- Change Password Modal -->
     <div id="changePasswordModal"
         class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-md w-full">
-            <div class="p-6 border-b-2 border-border-soft">
-                <h3 class="font-display text-xl font-bold text-text-dark">Change Password</h3>
+        <div class="bg-white max-w-md w-full rounded-lg">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-900">Change Password</h3>
             </div>
             <div class="p-6">
                 <form id="changePasswordForm" class="space-y-4">
                     @csrf
                     @method('PUT')
                     <input type="hidden" name="user_id" id="change_password_user_id">
-                    <p class="text-text-dark mb-4">Change password for <span id="changePasswordUsername"
+                    <p class="text-gray-900 mb-4">Change password for <span id="changePasswordUsername"
                             class="font-semibold"></span></p>
 
                     <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">New Password</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
                         <input type="password" name="password" required
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
                             placeholder="Enter new password">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Confirm New Password</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
                         <input type="password" name="password_confirmation" required
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate"
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
                             placeholder="Confirm new password">
                     </div>
 
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeChangePasswordModal()"
-                            class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                            class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                             Cancel
                         </button>
-                        <button type="submit" class="px-6 py-2 bg-amber-500 text-white hover:bg-amber-600 transition">
+                        <button type="submit" class="px-6 py-2 bg-amber-600 text-white hover:bg-amber-700 transition rounded">
                             Change Password
                         </button>
                     </div>
@@ -395,22 +359,22 @@
     <!-- Deactivate User Modal -->
     <div id="deactivateUserModal"
         class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-md w-full">
-            <div class="p-6 border-b-2 border-border-soft">
-                <h3 class="font-display text-xl font-bold text-text-dark">Deactivate User</h3>
+        <div class="bg-white max-w-md w-full rounded-lg">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-900">Deactivate User</h3>
             </div>
             <div class="p-6">
-                <p class="text-text-dark mb-4">Are you sure you want to deactivate <span id="deactivateUserName"
+                <p class="text-gray-900 mb-4">Are you sure you want to deactivate <span id="deactivateUserName"
                         class="font-semibold"></span>?</p>
-                <p class="text-sm text-text-muted mb-4">The user will lose system access but their account will be
+                <p class="text-sm text-gray-500 mb-4">The user will lose system access but their account will be
                     preserved.</p>
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="closeDeactivateUserModal()"
-                        class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                        class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                         Cancel
                     </button>
                     <button type="button" onclick="deactivateUser()"
-                        class="px-6 py-2 bg-red-500 text-white hover:bg-red-600 transition">
+                        class="px-6 py-2 bg-red-600 text-white hover:bg-red-700 transition rounded">
                         Deactivate
                     </button>
                 </div>
@@ -421,22 +385,22 @@
     <!-- Activate User Modal -->
     <div id="activateUserModal"
         class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-md w-full">
-            <div class="p-6 border-b-2 border-border-soft">
-                <h3 class="font-display text-xl font-bold text-text-dark">Activate User</h3>
+        <div class="bg-white max-w-md w-full rounded-lg">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-900">Activate User</h3>
             </div>
             <div class="p-6">
-                <p class="text-text-dark mb-4">Are you sure you want to activate <span id="activateUserName"
+                <p class="text-gray-900 mb-4">Are you sure you want to activate <span id="activateUserName"
                         class="font-semibold"></span>?</p>
-                <p class="text-sm text-text-muted mb-4">The user will regain system access with their existing permissions.
+                <p class="text-sm text-gray-500 mb-4">The user will regain system access with their existing permissions.
                 </p>
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="closeActivateUserModal()"
-                        class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                        class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                         Cancel
                     </button>
                     <button type="button" onclick="activateUser()"
-                        class="px-6 py-2 bg-green-500 text-white hover:bg-green-600 transition">
+                        class="px-6 py-2 bg-green-600 text-white hover:bg-green-700 transition rounded">
                         Activate
                     </button>
                 </div>
@@ -447,22 +411,22 @@
     <!-- Delete User Modal -->
     <div id="deleteUserModal"
         class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-md w-full">
-            <div class="p-6 border-b-2 border-border-soft">
-                <h3 class="font-display text-xl font-bold text-text-dark">Delete User</h3>
+        <div class="bg-white max-w-md w-full rounded-lg">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-xl font-semibold text-gray-900">Delete User</h3>
             </div>
             <div class="p-6">
-                <p class="text-text-dark mb-4">Are you sure you want to delete <span id="deleteUserName"
+                <p class="text-gray-900 mb-4">Are you sure you want to delete <span id="deleteUserName"
                         class="font-semibold"></span>?</p>
-                <p class="text-sm text-text-muted mb-4">This action cannot be undone. All user data will be permanently
+                <p class="text-sm text-gray-500 mb-4">This action cannot be undone. All user data will be permanently
                     removed.</p>
                 <div class="flex justify-end space-x-3">
                     <button type="button" onclick="closeDeleteUserModal()"
-                        class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
+                        class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                         Cancel
                     </button>
                     <button type="button" onclick="deleteUser()"
-                        class="px-6 py-2 bg-red-700 text-white hover:bg-red-800 transition">
+                        class="px-6 py-2 bg-red-800 text-white hover:bg-red-900 transition rounded">
                         Delete User
                     </button>
                 </div>
@@ -470,55 +434,15 @@
         </div>
     </div>
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
-        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
-
-        .font-display {
-            font-family: 'Playfair Display', serif;
-        }
-
-        .cream-bg {
-            background-color: #faf7f3;
-        }
-
-        .text-text-dark {
-            color: #1a1410;
-        }
-
-        .text-text-muted {
-            color: #8b7355;
-        }
-
-        .bg-caramel {
-            background-color: #c48d3f;
-        }
-
-        .bg-caramel-dark {
-            background-color: #a67332;
-        }
-
-        .bg-chocolate {
-            background-color: #3d2817;
-        }
-
-        .border-border-soft {
-            border-color: #e8dfd4;
-        }
-
-        .hover-lift:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-
     <script>
         let currentUserId = null;
         let currentUsername = null;
+        let currentSearchTerm = '';
 
         // Initialize when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {
             initializeEventListeners();
+            setupSearchClearButton();
         });
 
         function initializeEventListeners() {
@@ -616,6 +540,30 @@
             });
         }
 
+        function setupSearchClearButton() {
+            const searchInput = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearchBtn');
+
+            if (searchInput && clearBtn) {
+                searchInput.addEventListener('input', function() {
+                    if (this.value.length > 0) {
+                        clearBtn.classList.remove('hidden');
+                    } else {
+                        clearBtn.classList.add('hidden');
+                    }
+                });
+            }
+        }
+
+        function clearSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const clearBtn = document.getElementById('clearSearchBtn');
+            
+            searchInput.value = '';
+            clearBtn.classList.add('hidden');
+            searchUsers('');
+        }
+
         function closeModal(modalId) {
             const modal = document.getElementById(modalId);
             if (modal) {
@@ -670,10 +618,10 @@
                     document.getElementById('edit_username').value = user.username;
                     document.getElementById('edit_role').value = user.role;
 
-                    // Only set emp_id if the element exists
-                    const empIdElement = document.getElementById('edit_emp_id');
-                    if (empIdElement) {
-                        empIdElement.value = user.emp_id;
+                    // Display employee information
+                    if (user.employee) {
+                        document.getElementById('edit_employee_display').textContent = 
+                            `${user.employee.emp_name} - ${user.employee.emp_position}`;
                     }
                 })
                 .catch(error => {
@@ -916,142 +864,119 @@
                 });
         }
 
-        // Search functionality
+        // Search functionality - Fixed version
         function searchUsers(query) {
-            if (query.length === 0) {
-                // Show all rows if query is empty
-                document.querySelectorAll('.user-row').forEach(row => {
-                    row.style.display = '';
-                });
-                document.getElementById('visibleCount').textContent = document.querySelectorAll('.user-row').length;
-                return;
+            currentSearchTerm = query.toLowerCase().trim();
+            const rows = document.querySelectorAll('.user-row');
+            let visibleCount = 0;
+
+            // Show clear button if there's text
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (clearBtn) {
+                if (currentSearchTerm.length > 0) {
+                    clearBtn.classList.remove('hidden');
+                } else {
+                    clearBtn.classList.add('hidden');
+                }
             }
 
-            fetch(`/users/search?search=${encodeURIComponent(query)}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': getCsrfToken()
-                    }
-                })
-                .then(response => response.json())
-                .then(users => {
-                    const tbody = document.getElementById('usersTableBody');
-                    tbody.innerHTML = '';
+            rows.forEach(row => {
+                const username = row.getAttribute('data-username').toLowerCase();
+                const role = row.getAttribute('data-role').toLowerCase();
+                const employeeName = row.getAttribute('data-employee-name').toLowerCase();
+                const status = row.getAttribute('data-status').toLowerCase();
+                const position = row.getAttribute('data-position').toLowerCase();
 
-                    users.forEach(user => {
-                        const row = createUserRow(user);
-                        tbody.appendChild(row);
-                    });
+                // Search in multiple fields
+                const matches = username.includes(currentSearchTerm) || 
+                               role.includes(currentSearchTerm) || 
+                               employeeName.includes(currentSearchTerm) ||
+                               status.includes(currentSearchTerm) ||
+                               position.includes(currentSearchTerm);
 
-                    document.getElementById('visibleCount').textContent = users.length;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-        }
+                if (matches || currentSearchTerm === '') {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
 
-        function createUserRow(user) {
-            const row = document.createElement('tr');
-            row.className = 'hover:bg-cream-bg transition user-row';
-            row.setAttribute('data-username', user.username);
-            row.setAttribute('data-role', user.role);
-            row.setAttribute('data-employee-name', user.employee.emp_name);
-            row.setAttribute('data-status', user.employee.emp_status);
-
-            const roleColors = {
-                'admin': 'bg-purple-100 text-purple-700',
-                'employee': 'bg-caramel text-white',
-                'inventory': 'bg-blue-100 text-blue-700',
-                'purchasing': 'bg-green-100 text-green-700',
-                'supervisor': 'bg-yellow-100 text-yellow-700'
-            };
-
-            const statusBadge = user.employee.emp_status === 'active' ?
-                '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold">ACTIVE</span>' :
-                '<span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold">INACTIVE</span>';
-
-            const isActive = user.employee.emp_status === 'active';
-
-            row.innerHTML = `
-            <td class="px-6 py-4">
-                <p class="text-sm font-bold text-text-dark">${user.username}</p>
-            </td>
-            <td class="px-6 py-4">
-                <span class="inline-block px-2 py-1 ${roleColors[user.role]} text-xs font-bold capitalize">
-                    ${user.role.replace('_', ' ')}
-                </span>
-            </td>
-            <td class="px-6 py-4">
-                <p class="text-sm text-text-dark">${user.employee.emp_name}</p>
-                <p class="text-xs text-text-muted">${user.employee.emp_position}</p>
-            </td>
-            <td class="px-6 py-4">
-                ${statusBadge}
-            </td>
-            <td class="px-6 py-4">
-                <div class="flex space-x-2">
-                    <button class="edit-btn px-3 py-1 bg-blue-500 text-white text-xs font-semibold hover:bg-blue-600 transition"
-                        data-user-id="${user.user_id}" data-username="${user.username}">
-                        Edit
-                    </button>
-                    <button class="change-password-btn px-3 py-1 bg-amber-500 text-white text-xs font-semibold hover:bg-amber-600 transition"
-                        data-user-id="${user.user_id}" data-username="${user.username}">
-                        Change Password
-                    </button>
-                    ${isActive ? 
-                        `<button class="deactivate-btn px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition"
-                                data-user-id="${user.user_id}" data-username="${user.username}">
-                                Deactivate
-                            </button>` :
-                        `<button class="activate-btn px-3 py-1 bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition"
-                                data-user-id="${user.user_id}" data-username="${user.username}">
-                                Activate
-                            </button>`
-                    }
-                    <button class="delete-btn px-3 py-1 bg-red-700 text-white text-xs font-semibold hover:bg-red-800 transition"
-                        data-user-id="${user.user_id}" data-username="${user.username}">
-                        Delete
-                    </button>
-                </div>
-            </td>
-        `;
-
-            return row;
+            document.getElementById('visibleCount').textContent = visibleCount;
         }
 
         // Sort functionality
-        function sortTable(criteria) {
+        let currentSort = {
+            field: 'username',
+            direction: 'asc'
+        };
+
+        function sortTable(field) {
             const tbody = document.getElementById('usersTableBody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+
+            // Toggle direction if same field
+            if (currentSort.field === field) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.field = field;
+                currentSort.direction = 'asc';
+            }
 
             rows.sort((a, b) => {
                 let aValue, bValue;
 
-                switch (criteria) {
-                    case 'username_asc':
+                switch (field) {
+                    case 'username':
                         aValue = a.getAttribute('data-username').toLowerCase();
                         bValue = b.getAttribute('data-username').toLowerCase();
-                        return aValue.localeCompare(bValue);
-                    case 'username_desc':
-                        aValue = a.getAttribute('data-username').toLowerCase();
-                        bValue = b.getAttribute('data-username').toLowerCase();
-                        return bValue.localeCompare(aValue);
+                        break;
                     case 'role':
                         aValue = a.getAttribute('data-role').toLowerCase();
                         bValue = b.getAttribute('data-role').toLowerCase();
-                        return aValue.localeCompare(bValue);
+                        break;
+                    case 'employee_name':
+                        aValue = a.getAttribute('data-employee-name').toLowerCase();
+                        bValue = b.getAttribute('data-employee-name').toLowerCase();
+                        break;
                     case 'status':
                         aValue = a.getAttribute('data-status').toLowerCase();
                         bValue = b.getAttribute('data-status').toLowerCase();
-                        return aValue.localeCompare(bValue);
+                        break;
                     default:
                         return 0;
+                }
+
+                if (currentSort.direction === 'asc') {
+                    return aValue.localeCompare(bValue);
+                } else {
+                    return bValue.localeCompare(aValue);
                 }
             });
 
             // Remove existing rows and append sorted rows
             rows.forEach(row => tbody.appendChild(row));
+
+            // Update sort indicators
+            updateSortIndicators(field, currentSort.direction);
+        }
+
+        function updateSortIndicators(field, direction) {
+            // Remove all sort indicators
+            document.querySelectorAll('th i').forEach(icon => {
+                icon.className = 'fas fa-sort ml-1 text-xs';
+            });
+
+            // Add active sort indicator
+            const header = document.querySelector(`th[onclick="sortTable('${field}')"]`);
+            if (header) {
+                const icon = header.querySelector('i');
+                if (icon) {
+                    icon.className = direction === 'asc' ? 
+                        'fas fa-sort-up ml-1 text-xs' : 
+                        'fas fa-sort-down ml-1 text-xs';
+                }
+            }
         }
 
         // Utility Functions

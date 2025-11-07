@@ -10,26 +10,16 @@
         <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
             <!-- Employees Table -->
             <div class="xl:col-span-3">
-                <div class="bg-white border-2 border-border-soft rounded-lg">
-                    <div class="px-6 py-4 border-b-2 border-border-soft bg-cream-bg">
+                <div class="bg-white border border-gray-200 rounded-lg">
+                    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <h3 class="font-display text-xl font-bold text-text-dark">All Employees
-                                ({{ $employees->count() }})</h3>
+                            <h3 class="text-xl font-semibold text-gray-900">All Employees ({{ $employees->count() }})</h3>
                             <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                                <select
-                                    class="border border-border-soft rounded px-3 py-2 text-sm focus:outline-none focus:border-chocolate transition bg-white w-full sm:w-auto"
-                                    id="sortSelect">
-                                    <option value="name_asc">Name A-Z</option>
-                                    <option value="name_desc">Name Z-A</option>
-                                    <option value="position">Position</option>
-                                    <option value="status">Status</option>
-                                </select>
-
                                 <div class="relative w-full sm:w-64">
                                     <input type="text" placeholder="Search employees..."
-                                        class="pl-9 pr-4 py-2 border border-border-soft rounded text-sm focus:outline-none focus:border-chocolate transition w-full"
+                                        class="pl-9 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition w-full"
                                         id="searchInput">
-                                    <i class="fas fa-search absolute left-3 top-3 text-text-muted text-xs"></i>
+                                    <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
                                 </div>
                             </div>
                         </div>
@@ -38,31 +28,31 @@
                     <div class="overflow-x-auto">
                         <table class="w-full min-w-[800px]">
                             <thead>
-                                <tr class="bg-gray-50 border-b border-border-soft">
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100 sort-header"
+                                <tr class="bg-gray-50 border-b border-gray-200">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100 sort-header"
                                         data-sort="name">
                                         Employee
                                     </th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100 sort-header"
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100 sort-header"
                                         data-sort="position">
                                         Position
                                     </th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100 sort-header"
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100 sort-header"
                                         data-sort="contact">
                                         Contact
                                     </th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase cursor-pointer hover:bg-gray-100 sort-header"
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100 sort-header"
                                         data-sort="status">
                                         Status
                                     </th>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-text-muted uppercase w-32">
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase w-32">
                                         Actions
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-border-soft" id="employeesTable">
+                            <tbody class="divide-y divide-gray-200" id="employeesTable">
                                 @forelse($employees as $employee)
-                                    <tr class="employee-row hover:bg-cream-bg transition-colors"
+                                    <tr class="employee-row hover:bg-gray-50 transition-colors"
                                         data-name="{{ strtolower($employee->emp_name) }}"
                                         data-position="{{ strtolower($employee->emp_position) }}"
                                         data-status="{{ $employee->emp_status }}"
@@ -70,23 +60,22 @@
                                         <td class="px-4 py-3">
                                             <div class="flex items-center">
                                                 <div
-                                                    class="w-10 h-10 bg-caramel flex items-center justify-center rounded-full flex-shrink-0 mr-3">
-                                                    <span
-                                                        class="text-white text-sm font-bold">{{ $employee->initials }}</span>
+                                                    class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded-full flex-shrink-0 mr-3">
+                                                    <span class="text-gray-600 text-sm font-semibold">{{ $employee->initials }}</span>
                                                 </div>
                                                 <div class="min-w-0 flex-1">
-                                                    <p class="text-sm font-semibold text-text-dark truncate">
+                                                    <p class="text-sm font-semibold text-gray-900 truncate">
                                                         {{ $employee->emp_name }}</p>
-                                                    <p class="text-xs text-text-muted truncate">{{ $employee->emp_email }}
+                                                    <p class="text-xs text-gray-500 truncate">{{ $employee->emp_email }}
                                                     </p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-4 py-3">
-                                            <div class="text-sm text-text-dark">{{ $employee->emp_position }}</div>
+                                            <div class="text-sm text-gray-900">{{ $employee->emp_position }}</div>
                                         </td>
                                         <td class="px-4 py-3">
-                                            <div class="text-sm text-text-dark">{{ $employee->emp_contact }}</div>
+                                            <div class="text-sm text-gray-900">{{ $employee->emp_contact }}</div>
                                         </td>
                                         <td class="px-4 py-3">
                                             <span
@@ -97,18 +86,18 @@
                                         <td class="px-4 py-3">
                                             <div class="flex items-center space-x-2">
                                                 <button
-                                                    class="p-2 text-caramel hover:bg-caramel hover:text-white rounded transition-colors edit-btn"
+                                                    class="p-2 text-gray-600 hover:bg-gray-200 rounded transition-colors edit-btn"
                                                     title="Edit" data-employee-id="{{ $employee->emp_id }}"
                                                     data-employee-name="{{ $employee->emp_name }}">
                                                     <i class="fas fa-edit text-sm"></i>
                                                 </button>
                                                 <button
-                                                    class="p-2 text-chocolate hover:bg-chocolate hover:text-white rounded transition-colors view-btn"
+                                                    class="p-2 text-gray-600 hover:bg-gray-200 rounded transition-colors view-btn"
                                                     title="View" data-employee-id="{{ $employee->emp_id }}">
                                                     <i class="fas fa-eye text-sm"></i>
                                                 </button>
                                                 <button
-                                                    class="p-2 text-red-500 hover:bg-red-500 hover:text-white rounded transition-colors delete-btn"
+                                                    class="p-2 text-red-600 hover:bg-red-100 rounded transition-colors delete-btn"
                                                     title="Delete" data-employee-id="{{ $employee->emp_id }}"
                                                     data-employee-name="{{ $employee->emp_name }}">
                                                     <i class="fas fa-trash text-sm"></i>
@@ -118,7 +107,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="5" class="px-6 py-12 text-center text-text-muted">
+                                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">
                                             <i class="fas fa-users text-4xl mb-3 opacity-50"></i>
                                             <p>No employees found. Click "Add New Employee" to get started.</p>
                                         </td>
@@ -128,8 +117,8 @@
                         </table>
                     </div>
 
-                    <div class="px-6 py-4 border-t border-border-soft bg-cream-bg">
-                        <p class="text-sm text-text-muted">Showing <span id="visibleCount">{{ $employees->count() }}</span>
+                    <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                        <p class="text-sm text-gray-500">Showing <span id="visibleCount">{{ $employees->count() }}</span>
                             of {{ $employees->count() }} employees</p>
                     </div>
                 </div>
@@ -138,19 +127,19 @@
             <!-- Sidebar -->
             <div class="xl:col-span-1 space-y-6">
                 <!-- Quick Actions -->
-                <div class="bg-white border-2 border-border-soft rounded-lg p-6">
-                    <h3 class="font-display text-xl font-bold text-text-dark mb-6">Quick Actions</h3>
+                <div class="bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h3>
                     <div class="space-y-3">
                         <button
-                            class="w-full p-3 bg-caramel text-white hover:bg-caramel-dark transition text-center font-semibold rounded-lg hover-lift flex items-center justify-center"
+                            class="w-full px-4 py-3 bg-gray-900 text-white hover:bg-gray-800 transition text-center text-sm font-medium rounded flex items-center justify-center"
                             id="addEmployeeBtn">
                             <i class="fas fa-user-plus mr-2"></i>
                             Add Employee
                         </button>
                         <button
-                            class="w-full p-3 border-2 border-border-soft hover:border-chocolate hover:bg-cream-bg transition text-center font-semibold text-text-dark rounded-lg hover-lift flex items-center justify-center"
+                            class="w-full px-4 py-3 border border-gray-300 hover:bg-gray-50 transition text-center text-sm font-medium text-gray-700 rounded flex items-center justify-center"
                             id="generateReportBtn">
-                            <i class="fas fa-chart-bar mr-2 text-chocolate"></i>
+                            <i class="fas fa-chart-bar mr-2"></i>
                             Reports
                         </button>
                     </div>
@@ -161,9 +150,9 @@
         <!-- Bottom Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Recent Hires -->
-            <div class="bg-white border-2 border-border-soft rounded-lg p-6">
-                <h3 class="font-display text-xl font-bold text-text-dark mb-6 flex items-center">
-                    <i class="fas fa-user-clock text-caramel mr-2"></i>
+            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <i class="fas fa-user-clock text-gray-600 mr-2"></i>
                     Recent Hires
                 </h3>
                 <div class="space-y-4">
@@ -171,22 +160,22 @@
                         $recentHires = $employees->sortByDesc('created_at')->take(5);
                     @endphp
                     @forelse($recentHires as $employee)
-                        <div class="flex items-center justify-between p-3 bg-cream-bg rounded-lg">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                             <div class="flex items-center min-w-0">
                                 <div
-                                    class="w-10 h-10 bg-caramel flex items-center justify-center rounded-full flex-shrink-0 mr-3">
-                                    <span class="text-white text-sm font-bold">{{ $employee->initials }}</span>
+                                    class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded-full flex-shrink-0 mr-3">
+                                    <span class="text-gray-600 text-sm font-semibold">{{ $employee->initials }}</span>
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-sm font-semibold text-text-dark truncate">{{ $employee->emp_name }}</p>
-                                    <p class="text-xs text-text-muted truncate">{{ $employee->emp_position }}</p>
+                                    <p class="text-sm font-semibold text-gray-900 truncate">{{ $employee->emp_name }}</p>
+                                    <p class="text-xs text-gray-500 truncate">{{ $employee->emp_position }}</p>
                                 </div>
                             </div>
                             <span
-                                class="text-xs text-text-muted whitespace-nowrap ml-2">{{ $employee->created_at->diffForHumans() }}</span>
+                                class="text-xs text-gray-500 whitespace-nowrap ml-2">{{ $employee->created_at->diffForHumans() }}</span>
                         </div>
                     @empty
-                        <div class="text-center py-8 text-text-muted">
+                        <div class="text-center py-8 text-gray-500">
                             <i class="fas fa-user-plus text-4xl mb-3 opacity-50"></i>
                             <p>No recent hires</p>
                         </div>
@@ -195,9 +184,9 @@
             </div>
 
             <!-- Employee Status Overview -->
-            <div class="bg-white border-2 border-border-soft rounded-lg p-6">
-                <h3 class="font-display text-xl font-bold text-text-dark mb-6 flex items-center">
-                    <i class="fas fa-chart-pie text-chocolate mr-2"></i>
+            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                <h3 class="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                    <i class="fas fa-chart-pie text-gray-600 mr-2"></i>
                     Employee Status Overview
                 </h3>
                 <div class="space-y-4">
@@ -211,27 +200,27 @@
                             <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
                                 <i class="fas fa-check text-white text-xs"></i>
                             </div>
-                            <span class="text-sm font-bold text-text-dark">Active Employees</span>
+                            <span class="text-sm font-semibold text-gray-900">Active Employees</span>
                         </div>
-                        <span class="text-lg font-bold text-text-dark">{{ $activeEmployees }}</span>
+                        <span class="text-lg font-semibold text-gray-900">{{ $activeEmployees }}</span>
                     </div>
                     <div class="flex items-center justify-between p-4 bg-red-50 rounded-lg">
                         <div class="flex items-center">
                             <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center mr-3">
                                 <i class="fas fa-times text-white text-xs"></i>
                             </div>
-                            <span class="text-sm font-bold text-text-dark">Inactive Employees</span>
+                            <span class="text-sm font-semibold text-gray-900">Inactive Employees</span>
                         </div>
-                        <span class="text-lg font-bold text-text-dark">{{ $inactiveEmployees }}</span>
+                        <span class="text-lg font-semibold text-gray-900">{{ $inactiveEmployees }}</span>
                     </div>
                     <div class="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
                         <div class="flex items-center">
                             <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mr-3">
                                 <i class="fas fa-bread-slice text-white text-xs"></i>
                             </div>
-                            <span class="text-sm font-bold text-text-dark">Bakers</span>
+                            <span class="text-sm font-semibold text-gray-900">Bakers</span>
                         </div>
-                        <span class="text-lg font-bold text-text-dark">{{ $bakersCount }}</span>
+                        <span class="text-lg font-semibold text-gray-900">{{ $bakersCount }}</span>
                     </div>
                 </div>
             </div>
@@ -241,10 +230,10 @@
     <!-- Add Employee Modal -->
     <div id="addEmployeeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b-2 border-border-soft bg-cream-bg rounded-t-lg">
+            <div class="p-6 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-display text-2xl font-bold text-text-dark">Add New Employee</h3>
-                    <button class="text-text-muted hover:text-text-dark transition-colors close-add-modal">
+                    <h3 class="text-2xl font-semibold text-gray-900">Add New Employee</h3>
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors close-add-modal">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
@@ -254,16 +243,14 @@
                 <div class="p-6 space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="emp_name" class="block text-sm font-medium text-text-dark mb-2">Full Name
-                                *</label>
+                            <label for="emp_name" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                             <input type="text" id="emp_name" name="emp_name" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                         </div>
                         <div>
-                            <label for="emp_position" class="block text-sm font-medium text-text-dark mb-2">Position
-                                *</label>
+                            <label for="emp_position" class="block text-sm font-medium text-gray-700 mb-2">Position *</label>
                             <select id="emp_position" name="emp_position" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                                 <option value="">Select Position</option>
                                 @foreach ($positions as $position)
                                     <option value="{{ $position }}">{{ $position }}</option>
@@ -271,25 +258,24 @@
                             </select>
                         </div>
                         <div>
-                            <label for="emp_email" class="block text-sm font-medium text-text-dark mb-2">Email *</label>
+                            <label for="emp_email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                             <input type="email" id="emp_email" name="emp_email" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                         </div>
                         <div>
-                            <label for="emp_contact" class="block text-sm font-medium text-text-dark mb-2">Contact Number
-                                *</label>
+                            <label for="emp_contact" class="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
                             <input type="text" id="emp_contact" name="emp_contact" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                         </div>
                     </div>
                 </div>
-                <div class="p-6 border-t-2 border-border-soft bg-cream-bg rounded-b-lg flex justify-end space-x-3">
+                <div class="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                     <button type="button"
-                        class="px-4 py-2 border-2 border-border-soft text-text-dark hover:bg-gray-50 rounded transition-colors close-add-modal">
+                        class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded transition-colors close-add-modal">
                         Cancel
                     </button>
                     <button type="submit"
-                        class="px-4 py-2 bg-caramel text-white hover:bg-caramel-dark rounded transition-colors">
+                        class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded transition-colors">
                         <i class="fas fa-save mr-2"></i>Save Employee
                     </button>
                 </div>
@@ -300,10 +286,10 @@
     <!-- Edit Employee Modal -->
     <div id="editEmployeeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b-2 border-border-soft bg-cream-bg rounded-t-lg">
+            <div class="p-6 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-display text-2xl font-bold text-text-dark">Edit Employee</h3>
-                    <button class="text-text-muted hover:text-text-dark transition-colors close-edit-modal">
+                    <h3 class="text-2xl font-semibold text-gray-900">Edit Employee</h3>
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors close-edit-modal">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
@@ -314,16 +300,14 @@
                 <div class="p-6 space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label for="edit_emp_name" class="block text-sm font-medium text-text-dark mb-2">Full Name
-                                *</label>
+                            <label for="edit_emp_name" class="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                             <input type="text" id="edit_emp_name" name="emp_name" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                         </div>
                         <div>
-                            <label for="edit_emp_position" class="block text-sm font-medium text-text-dark mb-2">Position
-                                *</label>
+                            <label for="edit_emp_position" class="block text-sm font-medium text-gray-700 mb-2">Position *</label>
                             <select id="edit_emp_position" name="emp_position" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                                 <option value="">Select Position</option>
                                 @foreach ($positions as $position)
                                     <option value="{{ $position }}">{{ $position }}</option>
@@ -331,35 +315,32 @@
                             </select>
                         </div>
                         <div>
-                            <label for="edit_emp_email" class="block text-sm font-medium text-text-dark mb-2">Email
-                                *</label>
+                            <label for="edit_emp_email" class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                             <input type="email" id="edit_emp_email" name="emp_email" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                         </div>
                         <div>
-                            <label for="edit_emp_contact" class="block text-sm font-medium text-text-dark mb-2">Contact
-                                Number *</label>
+                            <label for="edit_emp_contact" class="block text-sm font-medium text-gray-700 mb-2">Contact Number *</label>
                             <input type="text" id="edit_emp_contact" name="emp_contact" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                         </div>
                         <div>
-                            <label for="edit_emp_status" class="block text-sm font-medium text-text-dark mb-2">Status
-                                *</label>
+                            <label for="edit_emp_status" class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
                             <select id="edit_emp_status" name="emp_status" required
-                                class="w-full px-3 py-2 border border-border-soft rounded focus:outline-none focus:border-chocolate transition">
+                                class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <div class="p-6 border-t-2 border-border-soft bg-cream-bg rounded-b-lg flex justify-end space-x-3">
+                <div class="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                     <button type="button"
-                        class="px-4 py-2 border-2 border-border-soft text-text-dark hover:bg-gray-50 rounded transition-colors close-edit-modal">
+                        class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded transition-colors close-edit-modal">
                         Cancel
                     </button>
                     <button type="submit"
-                        class="px-4 py-2 bg-caramel text-white hover:bg-caramel-dark rounded transition-colors">
+                        class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded transition-colors">
                         <i class="fas fa-save mr-2"></i>Update Employee
                     </button>
                 </div>
@@ -370,10 +351,10 @@
     <!-- View Employee Modal -->
     <div id="viewEmployeeModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <div class="p-6 border-b-2 border-border-soft bg-cream-bg rounded-t-lg">
+            <div class="p-6 border-b border-gray-200 bg-gray-50 rounded-t-lg">
                 <div class="flex items-center justify-between">
-                    <h3 class="font-display text-2xl font-bold text-text-dark">Employee Details</h3>
-                    <button class="text-text-muted hover:text-text-dark transition-colors close-modal">
+                    <h3 class="text-2xl font-semibold text-gray-900">Employee Details</h3>
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors close-modal">
                         <i class="fas fa-times text-xl"></i>
                     </button>
                 </div>
@@ -381,9 +362,9 @@
             <div class="p-6" id="employeeDetailsContent">
                 <!-- Content will be loaded via JavaScript -->
             </div>
-            <div class="p-6 border-t-2 border-border-soft bg-cream-bg rounded-b-lg flex justify-end space-x-3">
+            <div class="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                 <button
-                    class="px-4 py-2 border-2 border-border-soft text-text-dark hover:bg-gray-50 rounded transition-colors close-modal">
+                    class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded transition-colors close-modal">
                     Close
                 </button>
             </div>
@@ -394,25 +375,25 @@
     <div id="deleteEmployeeModal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white rounded-lg w-full max-w-md mx-4">
-            <div class="p-6 border-b-2 border-border-soft bg-red-50 rounded-t-lg">
+            <div class="p-6 border-b border-gray-200 bg-red-50 rounded-t-lg">
                 <div class="flex items-center">
                     <div class="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center mr-3">
                         <i class="fas fa-exclamation-triangle text-white"></i>
                     </div>
-                    <h3 class="font-display text-xl font-bold text-text-dark">Confirm Deletion</h3>
+                    <h3 class="text-xl font-semibold text-gray-900">Confirm Deletion</h3>
                 </div>
             </div>
             <div class="p-6">
-                <p class="text-text-dark mb-4">Are you sure you want to delete <span id="deleteEmployeeName"
+                <p class="text-gray-900 mb-4">Are you sure you want to delete <span id="deleteEmployeeName"
                         class="font-semibold"></span>? This action cannot be undone.</p>
-                <p class="text-sm text-text-muted">This will permanently remove the employee record.</p>
+                <p class="text-sm text-gray-500">This will permanently remove the employee record.</p>
             </div>
-            <div class="p-6 border-t-2 border-border-soft bg-cream-bg rounded-b-lg flex justify-end space-x-3">
+            <div class="p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
                 <button
-                    class="px-4 py-2 border-2 border-border-soft text-text-dark hover:bg-gray-50 rounded transition-colors close-delete-modal">
+                    class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded transition-colors close-delete-modal">
                     Cancel
                 </button>
-                <button class="px-4 py-2 bg-red-500 text-white hover:bg-red-600 rounded transition-colors"
+                <button class="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded transition-colors"
                     id="confirmDeleteBtn">
                     <i class="fas fa-trash mr-2"></i>Delete Employee
                 </button>
@@ -566,29 +547,29 @@
                     const content = `
                     <div class="space-y-6">
                         <div class="flex items-center space-x-4">
-                            <div class="w-20 h-20 bg-caramel flex items-center justify-center rounded-full">
-                                <span class="text-white text-2xl font-bold">${employee.initials || 'NA'}</span>
+                            <div class="w-20 h-20 bg-gray-100 flex items-center justify-center rounded-full">
+                                <span class="text-gray-600 text-2xl font-semibold">${employee.initials || 'NA'}</span>
                             </div>
                             <div>
-                                <h4 class="text-xl font-bold text-text-dark">${employee.emp_name}</h4>
-                                <p class="text-text-muted">${employee.emp_position}</p>
+                                <h4 class="text-xl font-semibold text-gray-900">${employee.emp_name}</h4>
+                                <p class="text-gray-500">${employee.emp_position}</p>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <h5 class="font-semibold text-text-dark mb-3">Personal Information</h5>
+                                <h5 class="font-semibold text-gray-900 mb-3">Personal Information</h5>
                                 <div class="space-y-2">
                                     <div>
-                                        <label class="text-xs text-text-muted uppercase tracking-wider">Email</label>
-                                        <p class="text-text-dark">${employee.emp_email}</p>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Email</label>
+                                        <p class="text-gray-900">${employee.emp_email}</p>
                                     </div>
                                     <div>
-                                        <label class="text-xs text-text-muted uppercase tracking-wider">Phone</label>
-                                        <p class="text-text-dark">${employee.emp_contact}</p>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Phone</label>
+                                        <p class="text-gray-900">${employee.emp_contact}</p>
                                     </div>
                                     <div>
-                                        <label class="text-xs text-text-muted uppercase tracking-wider">Status</label>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Status</label>
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${employee.emp_status === 'active' ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'}">
                                             ${employee.emp_status === 'active' ? 'Active' : 'Inactive'}
                                         </span>
@@ -597,19 +578,19 @@
                             </div>
 
                             <div>
-                                <h5 class="font-semibold text-text-dark mb-3">Employment Details</h5>
+                                <h5 class="font-semibold text-gray-900 mb-3">Employment Details</h5>
                                 <div class="space-y-2">
                                     <div>
-                                        <label class="text-xs text-text-muted uppercase tracking-wider">Employee ID</label>
-                                        <p class="text-text-dark">EMP-${employee.emp_id.toString().padStart(4, '0')}</p>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Employee ID</label>
+                                        <p class="text-gray-900">EMP-${employee.emp_id.toString().padStart(4, '0')}</p>
                                     </div>
                                     <div>
-                                        <label class="text-xs text-text-muted uppercase tracking-wider">Hire Date</label>
-                                        <p class="text-text-dark">${new Date(employee.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Hire Date</label>
+                                        <p class="text-gray-900">${new Date(employee.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                     </div>
                                     <div>
-                                        <label class="text-xs text-text-muted uppercase tracking-wider">Position</label>
-                                        <p class="text-text-dark">${employee.emp_position}</p>
+                                        <label class="text-xs text-gray-500 uppercase tracking-wider">Position</label>
+                                        <p class="text-gray-900">${employee.emp_position}</p>
                                     </div>
                                 </div>
                             </div>
@@ -817,77 +798,4 @@
                 });
         });
     </script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
-        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
-
-        .font-display {
-            font-family: 'Playfair Display', serif;
-        }
-
-        .cream-bg {
-            background-color: #faf7f3;
-        }
-
-        .text-text-dark {
-            color: #1a1410;
-        }
-
-        .text-text-muted {
-            color: #8b7355;
-        }
-
-        .bg-caramel {
-            background-color: #c48d3f;
-        }
-
-        .bg-caramel-dark {
-            background-color: #a67332;
-        }
-
-        .bg-chocolate {
-            background-color: #3d2817;
-        }
-
-        .bg-chocolate-dark {
-            background-color: #2a1c10;
-        }
-
-        .border-border-soft {
-            border-color: #e8dfd4;
-        }
-
-        .hover-lift:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .min-w-0 {
-            min-width: 0;
-        }
-
-        .employee-row:hover {
-            background-color: #faf7f3;
-            transform: translateY(-1px);
-            transition: all 0.2s ease;
-        }
-
-        #viewEmployeeModal,
-        #deleteEmployeeModal,
-        #addEmployeeModal,
-        #editEmployeeModal {
-            animation: fadeIn 0.2s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-    </style>
 @endsection
