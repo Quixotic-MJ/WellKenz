@@ -3,9 +3,14 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\SupervisorRequisitionController;
+use App\Http\Controllers\RequisitionController;
+use App\Http\Controllers\ItemController;
+use App\Http\Controllers\ItemRequestController;
+use App\Http\Controllers\InventoryController;
+use Illuminate\Support\Facades\DB;
 
 // Public routes
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -14,6 +19,29 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Role-based middleware groups
 Route::middleware(['auth'])->group(function () {
+    // Common routes accessible to all authenticated users
+    Route::prefix('items')->group(function () {
+        Route::get('/requisition', [ItemController::class, 'getItemsForRequisition'])->name('items.requisition');
+        Route::get('/category/{categoryId}', [ItemController::class, 'getItemsByCategory'])->name('items.by_category');
+        Route::get('/search', [ItemController::class, 'searchItems'])->name('items.search');
+        Route::get('/low-stock', [ItemController::class, 'getLowStock'])->name('items.low_stock');
+        Route::get('/{id}', [ItemController::class, 'getItemDetails'])->name('items.details');
+        Route::get('/inventory/items', [RequisitionController::class, 'getInventoryItems'])->name('items.inventory');
+    });
+
+    // Item Request Routes - Updated with complete CRUD
+    Route::prefix('item-requests')->group(function () {
+        // Create and view
+        Route::get('/create', [ItemRequestController::class, 'create'])->name('item_requests.create');
+        Route::post('/', [ItemRequestController::class, 'store'])->name('item_requests.store');
+        Route::get('/my-requests', [ItemRequestController::class, 'getMyRequests'])->name('item_requests.my_requests');
+        Route::get('/{id}', [ItemRequestController::class, 'show'])->name('item_requests.show');
+        
+        // Approval routes (for supervisors/admins)
+        Route::get('/pending', [ItemRequestController::class, 'getPendingRequests'])->name('item_requests.pending');
+        Route::post('/{id}/approve', [ItemRequestController::class, 'approve'])->name('item_requests.approve');
+        Route::post('/{id}/reject', [ItemRequestController::class, 'reject'])->name('item_requests.reject');
+    });
 
     // Notification routes
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
@@ -21,38 +49,44 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('notifications.unreadCount');
 
-    // Employee CRUD routes
-    Route::prefix('employees')->group(function () {
-        Route::get('/', [EmployeeController::class, 'index'])->name('employees.index');
-        Route::post('/', [EmployeeController::class, 'store'])->name('employees.store');
-        Route::get('/{id}', [EmployeeController::class, 'show'])->name('employees.show');
-        Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
-        Route::put('/{id}', [EmployeeController::class, 'update'])->name('employees.update');
-        Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
-        Route::post('/{id}/toggle-status', [EmployeeController::class, 'toggleStatus'])->name('employees.toggleStatus');
+    // Requisition Routes
+    Route::prefix('requisitions')->group(function () {
+        // Create and store requisitions
+        Route::get('/create', [RequisitionController::class, 'create'])->name('requisitions.create');
+        Route::post('/', [RequisitionController::class, 'store'])->name('requisitions.store');
+        
+        // View requisitions
+        Route::get('/my-requisitions', [RequisitionController::class, 'getMyRequisitions'])->name('requisitions.my_requisitions');
+        Route::get('/{id}', [RequisitionController::class, 'getRequisitionDetails'])->name('requisitions.show');
+        
+        // Management routes
+        Route::post('/{id}/status', [RequisitionController::class, 'updateStatus'])->name('requisitions.update_status');
+        Route::delete('/{id}', [RequisitionController::class, 'destroy'])->name('requisitions.destroy');
+        
+        // Admin/Supervisor routes
+        Route::get('/', [RequisitionController::class, 'getAllRequisitions'])->name('requisitions.index');
     });
 
-    // User Management routes
-    Route::prefix('users')->group(function () {
+    // User Management routes (Admin only)
+    Route::middleware(['role:admin'])->prefix('users')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('users.index');
         Route::post('/', [UserController::class, 'store'])->name('users.store');
         Route::get('/{id}', [UserController::class, 'show'])->name('users.show');
         Route::get('/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
-        Route::post('/{id}', [UserController::class, 'update'])->name('users.update'); // Changed to POST
-        Route::post('/{id}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword'); // Changed to POST
-        Route::post('/{id}', [UserController::class, 'destroy'])->name('users.destroy'); // Changed to POST
+        Route::post('/{id}', [UserController::class, 'update'])->name('users.update');
+        Route::post('/{id}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword');
+        Route::delete('/{id}', [UserController::class, 'destroy'])->name('users.destroy');
         Route::post('/{id}/reset-password', [UserController::class, 'resetPassword'])->name('users.resetPassword');
         Route::post('/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggleStatus');
         Route::get('/search', [UserController::class, 'search'])->name('users.search');
     });
 
-    // Admin routes (role: admin)
+    // Dashboard and specific role routes
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/Admin_dashboard', function () {
             return view('Admin.dashboard');
         })->name('Admin_dashboard');
 
-        Route::get('/Admin_Employee_Management', [EmployeeController::class, 'index'])->name('Admin_Employee_Management');
         Route::get('/Admin_User_Management', [UserController::class, 'index'])->name('Admin_User_Management');
         Route::get('/Admin_Item_Request', function () {
             return view('Admin.Requisition.item_request');
@@ -80,20 +114,15 @@ Route::middleware(['auth'])->group(function () {
         })->name('Admin_Notification');
     });
 
-    // Employee routes (role: employee)
     Route::middleware(['role:employee'])->group(function () {
         Route::get('/Staff_dashboard', function () {
             return view('Employee.dashboard');
         })->name('Staff_dashboard');
-        Route::get('/Staff_Create_Requisition', function () {
-            return view('Employee.Requisition.create_requisition');
-        })->name('Staff_Create_Requisition');
+        Route::get('/Staff_Create_Requisition', [RequisitionController::class, 'create'])->name('Staff_Create_Requisition');
         Route::get('/Staff_Requisition_Record', function () {
             return view('Employee.Requisition.my_requisition');
         })->name('Staff_Requisition_Record');
-        Route::get('/Staff_Item_Request', function () {
-            return view('Employee.item_request');
-        })->name('Staff_Item_Request');
+        Route::get('/Staff_Item_Request', [ItemRequestController::class, 'create'])->name('Staff_Item_Request');
         Route::get('/Staff_Reciept', function () {
             return view('Employee.acknowledgement_receipt');
         })->name('Staff_Reciept');
@@ -102,7 +131,6 @@ Route::middleware(['auth'])->group(function () {
         })->name('Staff_Notification');
     });
 
-    // Inventory Staff routes (role: inventory)
     Route::middleware(['role:inventory'])->group(function () {
         Route::get('/Inventory_Dashboard', function () {
             return view('Inventory.dashboard');
@@ -127,7 +155,6 @@ Route::middleware(['auth'])->group(function () {
         })->name('Inventory_Stock_out');
     });
 
-    // Purchasing Officer routes (role: purchasing)
     Route::middleware(['role:purchasing'])->group(function () {
         Route::get('/Purchasing_dashboard', function () {
             return view('Purchasing.dashboard');
@@ -152,7 +179,6 @@ Route::middleware(['auth'])->group(function () {
         })->name('Purchasing_Supplier');
     });
 
-    // Supervisor routes (role: supervisor)
     Route::middleware(['role:supervisor'])->group(function () {
         Route::get('/Supervisor_Dashboard', function () {
             return view('Supervisor.dashboard');
@@ -176,4 +202,32 @@ Route::middleware(['auth'])->group(function () {
             return view('Supervisor.notification');
         })->name('Supervisor_Notification');
     });
+});
+
+// API Routes for AJAX calls
+Route::middleware(['auth'])->prefix('api')->group(function () {
+    // Item API routes
+    Route::get('/items/requisition', [ItemController::class, 'getItemsForRequisition']);
+    Route::get('/items/{id}', [ItemController::class, 'getItemDetails']);
+    Route::get('/items/category/{categoryId}', [ItemController::class, 'getItemsByCategory']);
+    Route::get('/items/search', [ItemController::class, 'searchItems']);
+    
+    // Requisition API routes
+    Route::post('/requisitions', [RequisitionController::class, 'store']);
+    Route::get('/requisitions/my', [RequisitionController::class, 'getMyRequisitions']);
+    Route::get('/requisitions/all', [RequisitionController::class, 'getAllRequisitions']);
+    Route::get('/requisitions/{id}', [RequisitionController::class, 'getRequisitionDetails']);
+    Route::post('/requisitions/{id}/status', [RequisitionController::class, 'updateStatus']);
+    Route::delete('/requisitions/{id}', [RequisitionController::class, 'destroy']);
+    
+    // Item Request API routes
+    Route::post('/item-requests', [ItemRequestController::class, 'store']);
+    Route::get('/item-requests/my', [ItemRequestController::class, 'getMyRequests']);
+    Route::get('/item-requests/{id}', [ItemRequestController::class, 'show']);
+    Route::get('/item-requests/pending', [ItemRequestController::class, 'getPendingRequests']);
+    Route::post('/item-requests/{id}/approve', [ItemRequestController::class, 'approve']);
+    Route::post('/item-requests/{id}/reject', [ItemRequestController::class, 'reject']);
+    
+    // Inventory API routes
+    Route::get('/inventory/items', [RequisitionController::class, 'getInventoryItems']);
 });

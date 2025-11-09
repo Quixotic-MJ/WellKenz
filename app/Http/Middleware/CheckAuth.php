@@ -15,6 +15,13 @@ class CheckAuth
             return redirect()->route('login');
         }
 
+        // Check if user is active
+        $user = Auth::user();
+        if ($user->status !== 'active') {
+            Auth::logout();
+            return redirect()->route('login')->with('error', 'Your account has been deactivated. Please contact administrator.');
+        }
+
         return $next($request);
     }
 }

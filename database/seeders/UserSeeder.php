@@ -10,65 +10,140 @@ class UserSeeder extends Seeder
 {
     public function run()
     {
-        DB::table('users')->delete();
+        // Don't delete users if they have associated notifications or other data
+        // DB::table('users')->delete();
 
         $users = [
             [
                 'username' => 'admin',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'admin',
-                'emp_id' => 1,
+                'name' => 'Maria Santos',
+                'position' => 'System Administrator',
+                'email' => 'maria.santos@wellkenz.com',
+                'contact' => '09123456789',
+                'status' => 'active',
             ],
             [
                 'username' => 'baker1',
                 'password' => Hash::make('password'),
                 'role' => 'employee',
-                'emp_id' => 2,
+                'name' => 'Juan Dela Cruz',
+                'position' => 'Head Baker',
+                'email' => 'juan.delacruz@wellkenz.com',
+                'contact' => '09123456780',
+                'status' => 'active',
             ],
             [
                 'username' => 'baker2',
                 'password' => Hash::make('password'),
                 'role' => 'employee',
-                'emp_id' => 3,
+                'name' => 'Ana Reyes',
+                'position' => 'Assistant Baker',
+                'email' => 'ana.reyes@wellkenz.com',
+                'contact' => '09123456781',
+                'status' => 'active',
             ],
             [
                 'username' => 'inventory',
                 'password' => Hash::make('password'),
                 'role' => 'inventory',
-                'emp_id' => 4,
+                'name' => 'Carlos Garcia',
+                'position' => 'Inventory Manager',
+                'email' => 'carlos.garcia@wellkenz.com',
+                'contact' => '09123456782',
+                'status' => 'active',
             ],
             [
                 'username' => 'purchasing',
                 'password' => Hash::make('password'),
                 'role' => 'purchasing',
-                'emp_id' => 5,
+                'name' => 'Elena Torres',
+                'position' => 'Purchasing Officer',
+                'email' => 'elena.torres@wellkenz.com',
+                'contact' => '09123456783',
+                'status' => 'active',
             ],
             [
                 'username' => 'supervisor',
                 'password' => Hash::make('password'),
                 'role' => 'supervisor',
-                'emp_id' => 6,
+                'name' => 'Roberto Lim',
+                'position' => 'Production Supervisor',
+                'email' => 'roberto.lim@wellkenz.com',
+                'contact' => '09123456784',
+                'status' => 'active',
+            ],
+            // Additional users for better testing
+            [
+                'username' => 'baker3',
+                'password' => Hash::make('password'),
+                'role' => 'employee',
+                'name' => 'Liza Mendoza',
+                'position' => 'Pastry Chef',
+                'email' => 'liza.mendoza@wellkenz.com',
+                'contact' => '09123456785',
+                'status' => 'active',
+            ],
+            [
+                'username' => 'inventory2',
+                'password' => Hash::make('password'),
+                'role' => 'inventory',
+                'name' => 'Miguel Ramos',
+                'position' => 'Inventory Assistant',
+                'email' => 'miguel.ramos@wellkenz.com',
+                'contact' => '09123456786',
+                'status' => 'active',
+            ],
+            [
+                'username' => 'purchasing2',
+                'password' => Hash::make('password'),
+                'role' => 'purchasing',
+                'name' => 'Sofia Chen',
+                'position' => 'Purchasing Assistant',
+                'email' => 'sofia.chen@wellkenz.com',
+                'contact' => '09123456787',
+                'status' => 'active',
             ],
         ];
 
         foreach ($users as $user) {
-            DB::table('users')->insert([
-                'username' => $user['username'],
-                'password' => $user['password'],
-                'role' => $user['role'],
-                'emp_id' => $user['emp_id'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // Only insert if user doesn't already exist
+            $existingUser = DB::table('users')
+                ->where('username', $user['username'])
+                ->first();
+
+            if (!$existingUser) {
+                DB::table('users')->insert(array_merge($user, [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]));
+            } else {
+                // Update existing user with new columns if needed
+                DB::table('users')
+                    ->where('username', $user['username'])
+                    ->update([
+                        'name' => $user['name'],
+                        'position' => $user['position'],
+                        'email' => $user['email'],
+                        'contact' => $user['contact'],
+                        'status' => $user['status'],
+                        'updated_at' => now(),
+                    ]);
+            }
         }
 
         $this->command->info('Users seeded successfully!');
-        $this->command->info('Test Accounts:');
-        $this->command->info('Admin: admin / password');
-        $this->command->info('Baker 1: baker1 / password');
-        $this->command->info('Baker 2: baker2 / password');
-        $this->command->info('Inventory: inventory / password');
-        $this->command->info('Purchasing: purchasing / password');
-        $this->command->info('Supervisor: supervisor / password');
+        $this->command->info('=== Test Accounts ===');
+        $this->command->info('Admin: admin / password (Maria Santos)');
+        $this->command->info('Head Baker: baker1 / password (Juan Dela Cruz)');
+        $this->command->info('Assistant Baker: baker2 / password (Ana Reyes)');
+        $this->command->info('Pastry Chef: baker3 / password (Liza Mendoza)');
+        $this->command->info('Inventory Manager: inventory / password (Carlos Garcia)');
+        $this->command->info('Inventory Assistant: inventory2 / password (Miguel Ramos)');
+        $this->command->info('Purchasing Officer: purchasing / password (Elena Torres)');
+        $this->command->info('Purchasing Assistant: purchasing2 / password (Sofia Chen)');
+        $this->command->info('Supervisor: supervisor / password (Roberto Lim)');
+        $this->command->info('=====================');
     }
 }

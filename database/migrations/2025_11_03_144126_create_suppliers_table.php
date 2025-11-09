@@ -15,6 +15,7 @@ return new class extends Migration
             $table->text('sup_address')->nullable();
             $table->string('contact_person')->nullable();
             $table->string('contact_number')->nullable();
+            $table->string('sup_status')->default('active'); // Added column
             $table->timestamps();
         });
     }

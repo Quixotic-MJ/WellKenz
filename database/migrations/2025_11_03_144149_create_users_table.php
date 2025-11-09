@@ -13,7 +13,11 @@ return new class extends Migration
             $table->string('username')->unique();
             $table->string('password');
             $table->enum('role', ['admin', 'employee', 'inventory', 'purchasing', 'supervisor'])->default('employee');
-            $table->foreignId('emp_id')->constrained('employees', 'emp_id');
+            $table->string('name');
+            $table->string('position');
+            $table->string('email')->unique();
+            $table->string('contact');
+            $table->enum('status', ['active', 'inactive'])->default('active');
             $table->timestamps();
         });
     }

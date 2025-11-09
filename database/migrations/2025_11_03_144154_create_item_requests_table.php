@@ -15,9 +15,15 @@ return new class extends Migration
             $table->integer('item_req_quantity');
             $table->text('item_req_description')->nullable();
             $table->enum('item_req_status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->foreignId('emp_id')->constrained('employees', 'emp_id');
+            $table->foreignId('requested_by')->constrained('users', 'user_id');
             $table->foreignId('approved_by')->nullable()->constrained('users', 'user_id');
             $table->timestamps();
+            
+            // Indexes for better performance
+            $table->index('item_req_status');
+            $table->index('requested_by');
+            $table->index('approved_by');
+            $table->index('created_at');
         });
     }
 

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\Employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -13,23 +12,15 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::with('employee')->get();
-        $employees = Employee::where('emp_status', 'active')
-            ->whereDoesntHave('user')
-            ->get();
-
+        $users = User::all();
+        
         $totalUsers = User::count();
-        $activeUsers = User::whereHas('employee', function ($query) {
-            $query->where('emp_status', 'active');
-        })->count();
+        $activeUsers = User::where('status', 'active')->count();
         $adminsCount = User::where('role', 'admin')->count();
-        $inactiveUsers = User::whereHas('employee', function ($query) {
-            $query->where('emp_status', 'inactive');
-        })->count();
+        $inactiveUsers = User::where('status', 'inactive')->count();
 
-        return view('Admin.Management.user_management', compact(
+        return view('Admin.user_management', compact(
             'users',
-            'employees',
             'totalUsers',
             'activeUsers',
             'adminsCount',
@@ -39,13 +30,13 @@ class UserController extends Controller
 
     public function show($id)
     {
-        $user = User::with('employee')->findOrFail($id);
+        $user = User::findOrFail($id);
         return response()->json($user);
     }
 
     public function edit($id)
     {
-        $user = User::with('employee')->findOrFail($id);
+        $user = User::findOrFail($id);
         return response()->json($user);
     }
 
@@ -55,7 +46,10 @@ class UserController extends Controller
             'username' => 'required|unique:users,username|max:50',
             'password' => 'required|min:6|confirmed',
             'role' => 'required|in:admin,employee,inventory,purchasing,supervisor',
-            'emp_id' => 'required|exists:employees,emp_id|unique:users,emp_id',
+            'name' => 'required|string|max:100',
+            'position' => 'required|string|max:100',
+            'email' => 'required|email|unique:users,email',
+            'contact' => 'required|string|max:20',
         ]);
 
         try {
@@ -65,7 +59,11 @@ class UserController extends Controller
                 'username' => $validated['username'],
                 'password' => Hash::make($validated['password']),
                 'role' => $validated['role'],
-                'emp_id' => $validated['emp_id'],
+                'name' => $validated['name'],
+                'position' => $validated['position'],
+                'email' => $validated['email'],
+                'contact' => $validated['contact'],
+                'status' => 'active', // Default status
             ]);
 
             DB::commit();
@@ -73,7 +71,7 @@ class UserController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'User created successfully!',
-                'user' => $user->load('employee')
+                'user' => $user
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -95,7 +93,14 @@ class UserController extends Controller
                 Rule::unique('users', 'username')->ignore($user->user_id, 'user_id')
             ],
             'role' => 'required|in:admin,employee,inventory,purchasing,supervisor',
-            // Remove emp_id validation since we're not allowing it to be changed
+            'name' => 'required|string|max:100',
+            'position' => 'required|string|max:100',
+            'email' => [
+                'required',
+                'email',
+                Rule::unique('users', 'email')->ignore($user->user_id, 'user_id')
+            ],
+            'contact' => 'required|string|max:20',
         ]);
 
         try {
@@ -104,7 +109,10 @@ class UserController extends Controller
             $user->update([
                 'username' => $validated['username'],
                 'role' => $validated['role'],
-                // Don't update emp_id since we're not allowing it to be changed
+                'name' => $validated['name'],
+                'position' => $validated['position'],
+                'email' => $validated['email'],
+                'contact' => $validated['contact'],
             ]);
 
             DB::commit();
@@ -112,7 +120,7 @@ class UserController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'User updated successfully!',
-                'user' => $user->load('employee')
+                'user' => $user
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -159,6 +167,7 @@ class UserController extends Controller
             $user = User::findOrFail($id);
 
             // Check if user has related records
+            // Note: You'll need to update these relationships in your User model
             if (
                 $user->requisitions()->exists() ||
                 $user->approvedRequisitions()->exists() ||
@@ -200,7 +209,7 @@ class UserController extends Controller
             ]);
 
             // In a real application, you would send this via email
-            // Mail::to($user->employee->emp_email)->send(new PasswordResetMail($tempPassword));
+            // Mail::to($user->email)->send(new PasswordResetMail($tempPassword));
 
             return response()->json([
                 'success' => true,
@@ -218,14 +227,14 @@ class UserController extends Controller
     public function toggleStatus($id)
     {
         try {
-            $user = User::with('employee')->findOrFail($id);
+            $user = User::findOrFail($id);
 
             DB::beginTransaction();
 
-            $newStatus = $user->employee->emp_status === 'active' ? 'inactive' : 'active';
+            $newStatus = $user->status === 'active' ? 'inactive' : 'active';
 
-            $user->employee->update([
-                'emp_status' => $newStatus
+            $user->update([
+                'status' => $newStatus
             ]);
 
             DB::commit();
@@ -248,12 +257,12 @@ class UserController extends Controller
     {
         $search = $request->get('search', '');
 
-        $users = User::with('employee')
-            ->where('username', 'like', "%{$search}%")
-            ->orWhereHas('employee', function ($query) use ($search) {
-                $query->where('emp_name', 'like', "%{$search}%")
-                    ->orWhere('emp_position', 'like', "%{$search}%");
-            })
+        $users = User::where('username', 'like', "%{$search}%")
+            ->orWhere('name', 'like', "%{$search}%")
+            ->orWhere('position', 'like', "%{$search}%")
+            ->orWhere('email', 'like', "%{$search}%")
+            ->orWhere('contact', 'like', "%{$search}%")
+            ->orWhere('role', 'like', "%{$search}%")
             ->get();
 
         return response()->json($users);

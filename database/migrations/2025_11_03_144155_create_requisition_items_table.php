@@ -12,9 +12,15 @@ return new class extends Migration
             $table->id('req_item_id');
             $table->integer('req_item_quantity');
             $table->enum('req_item_status', ['pending', 'partially_fulfilled', 'fulfilled'])->default('pending');
-            $table->foreignId('req_id')->constrained('requisitions', 'req_id');
+            $table->string('item_unit');
+            $table->foreignId('req_id')->constrained('requisitions', 'req_id')->onDelete('cascade');
             $table->foreignId('item_id')->constrained('items', 'item_id');
             $table->timestamps();
+            
+            // Indexes
+            $table->index('req_id');
+            $table->index('item_id');
+            $table->index('req_item_status');
         });
     }
 

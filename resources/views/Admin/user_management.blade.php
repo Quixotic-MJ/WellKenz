@@ -54,11 +54,13 @@
                     <div class="flex items-center space-x-4">
                         <!-- Search Input -->
                         <div class="relative">
-                            <input type="text" id="searchInput" placeholder="Search users..." onkeyup="searchUsers(this.value)"
+                            <input type="text" id="searchInput" placeholder="Search users..."
+                                onkeyup="searchUsers(this.value)"
                                 class="pl-9 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition w-64"
-                                onfocus="this.placeholder='Search by username, role, name...'">
+                                onfocus="this.placeholder='Search by username, name, role...'">
                             <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
-                            <button type="button" onclick="clearSearch()" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 hidden" id="clearSearchBtn">
+                            <button type="button" onclick="clearSearch()"
+                                class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 hidden" id="clearSearchBtn">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -75,12 +77,16 @@
                                 Username <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                                onclick="sortTable('role')">
-                                Role <i class="fas fa-sort ml-1 text-xs"></i>
+                                onclick="sortTable('name')">
+                                Name <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                                onclick="sortTable('employee_name')">
-                                Employee Name <i class="fas fa-sort ml-1 text-xs"></i>
+                                onclick="sortTable('position')">
+                                Position <i class="fas fa-sort ml-1 text-xs"></i>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                                onclick="sortTable('role')">
+                                Role <i class="fas fa-sort ml-1 text-xs"></i>
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
                                 onclick="sortTable('status')">
@@ -91,14 +97,23 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200" id="usersTableBody">
                         @foreach ($users as $user)
-                            <tr class="hover:bg-gray-50 transition user-row" 
-                                data-username="{{ strtolower($user->username) }}"
-                                data-role="{{ strtolower($user->role) }}" 
-                                data-employee-name="{{ strtolower($user->employee->emp_name) }}"
-                                data-status="{{ strtolower($user->employee->emp_status) }}"
-                                data-position="{{ strtolower($user->employee->emp_position) }}">
+                            <tr class="hover:bg-gray-50 transition user-row"
+                                data-username="{{ strtolower($user->username) }}" 
+                                data-name="{{ strtolower($user->name) }}"
+                                data-position="{{ strtolower($user->position) }}"
+                                data-role="{{ strtolower($user->role) }}"
+                                data-status="{{ strtolower($user->status) }}"
+                                data-email="{{ strtolower($user->email) }}">
                                 <td class="px-6 py-4">
                                     <p class="text-sm font-semibold text-gray-900">{{ $user->username }}</p>
+                                    <p class="text-xs text-gray-500">{{ $user->email }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <p class="text-sm text-gray-900">{{ $user->name }}</p>
+                                    <p class="text-xs text-gray-500">{{ $user->contact }}</p>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <p class="text-sm text-gray-900">{{ $user->position }}</p>
                                 </td>
                                 <td class="px-6 py-4">
                                     @php
@@ -111,54 +126,58 @@
                                         ];
                                         $color = $roleColors[$user->role] ?? 'bg-gray-100 text-gray-700';
                                     @endphp
-                                    <span class="inline-block px-2 py-1 {{ $color }} text-xs font-semibold capitalize rounded">
-                                        {{ str_replace('_', ' ', $user->role) }}
+                                    <span
+                                        class="inline-block px-2 py-1 {{ $color }} text-xs font-semibold capitalize rounded">
+                                        {{ $user->role_display }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4">
-                                    <p class="text-sm text-gray-900">{{ $user->employee->emp_name }}</p>
-                                    <p class="text-xs text-gray-500">{{ $user->employee->emp_position }}</p>
-                                </td>
-                                <td class="px-6 py-4">
-                                    @if ($user->employee->emp_status === 'active')
-                                        <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
+                                    @if ($user->status === 'active')
+                                        <span
+                                            class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">
                                             ACTIVE
                                         </span>
                                     @else
-                                        <span class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
+                                        <span
+                                            class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">
                                             INACTIVE
                                         </span>
                                     @endif
                                 </td>
                                 <td class="px-6 py-4">
-                                    <div class="flex space-x-2">
+                                    <div class="flex items-center space-x-2">
                                         <button
-                                            class="edit-btn px-3 py-1 bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition rounded"
-                                            data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
-                                            Edit
+                                            class="p-2 text-blue-600 hover:bg-blue-100 rounded transition-colors edit-btn"
+                                            title="Edit User" data-user-id="{{ $user->user_id }}"
+                                            data-username="{{ $user->username }}">
+                                            <i class="fas fa-edit text-sm"></i>
                                         </button>
                                         <button
-                                            class="change-password-btn px-3 py-1 bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition rounded"
-                                            data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
-                                            Change Password
+                                            class="p-2 text-amber-600 hover:bg-amber-100 rounded transition-colors change-password-btn"
+                                            title="Change Password" data-user-id="{{ $user->user_id }}"
+                                            data-username="{{ $user->username }}">
+                                            <i class="fas fa-key text-sm"></i>
                                         </button>
-                                        @if ($user->employee->emp_status === 'active')
+                                        @if ($user->status === 'active')
                                             <button
-                                                class="deactivate-btn px-3 py-1 bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition rounded"
-                                                data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
-                                                Deactivate
+                                                class="p-2 text-red-600 hover:bg-red-100 rounded transition-colors deactivate-btn"
+                                                title="Deactivate User" data-user-id="{{ $user->user_id }}"
+                                                data-username="{{ $user->username }}">
+                                                <i class="fas fa-user-slash text-sm"></i>
                                             </button>
                                         @else
                                             <button
-                                                class="activate-btn px-3 py-1 bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition rounded"
-                                                data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
-                                                Activate
+                                                class="p-2 text-green-600 hover:bg-green-100 rounded transition-colors activate-btn"
+                                                title="Activate User" data-user-id="{{ $user->user_id }}"
+                                                data-username="{{ $user->username }}">
+                                                <i class="fas fa-user-check text-sm"></i>
                                             </button>
                                         @endif
                                         <button
-                                            class="delete-btn px-3 py-1 bg-red-800 text-white text-xs font-medium hover:bg-red-900 transition rounded"
-                                            data-user-id="{{ $user->user_id }}" data-username="{{ $user->username }}">
-                                            Delete
+                                            class="p-2 text-red-800 hover:bg-red-100 rounded transition-colors delete-btn"
+                                            title="Delete User" data-user-id="{{ $user->user_id }}"
+                                            data-username="{{ $user->username }}">
+                                            <i class="fas fa-trash text-sm"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -212,17 +231,34 @@
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Employee</label>
-                        <select name="emp_id" required
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400">
-                            <option value="">Select Employee</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->emp_id }}">
-                                    {{ $employee->emp_name }} - {{ $employee->emp_position }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input type="text" name="name" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter full name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Position</label>
+                            <input type="text" name="position" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter position">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input type="email" name="email" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter email">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                            <input type="text" name="contact" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter contact number">
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -245,7 +281,8 @@
                             class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                             Cancel
                         </button>
-                        <button type="submit" class="px-6 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
+                        <button type="submit"
+                            class="px-6 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
                             Add User
                         </button>
                     </div>
@@ -268,15 +305,7 @@
             <div class="p-6">
                 <form id="editUserForm" class="space-y-4">
                     @csrf
-                    @method('PUT')
                     <input type="hidden" name="user_id" id="edit_user_id">
-
-                    <!-- Display employee info (read-only) -->
-                    <div class="bg-gray-50 p-4 rounded border border-gray-200">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Associated Employee</label>
-                        <p class="text-sm text-gray-900" id="edit_employee_display"></p>
-                        <p class="text-xs text-gray-500 mt-1">Employee association cannot be changed</p>
-                    </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -299,12 +328,43 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                            <input type="text" name="name" id="edit_name" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter full name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Position</label>
+                            <input type="text" name="position" id="edit_position" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter position">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                            <input type="email" name="email" id="edit_email" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter email">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                            <input type="text" name="contact" id="edit_contact" required
+                                class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
+                                placeholder="Enter contact number">
+                        </div>
+                    </div>
+
                     <div class="flex justify-end space-x-3 pt-4">
                         <button type="button" onclick="closeEditUserModal()"
                             class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                             Cancel
                         </button>
-                        <button type="submit" class="px-6 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
+                        <button type="submit"
+                            class="px-6 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
                             Update User
                         </button>
                     </div>
@@ -323,7 +383,6 @@
             <div class="p-6">
                 <form id="changePasswordForm" class="space-y-4">
                     @csrf
-                    @method('PUT')
                     <input type="hidden" name="user_id" id="change_password_user_id">
                     <p class="text-gray-900 mb-4">Change password for <span id="changePasswordUsername"
                             class="font-semibold"></span></p>
@@ -347,7 +406,8 @@
                             class="px-6 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                             Cancel
                         </button>
-                        <button type="submit" class="px-6 py-2 bg-amber-600 text-white hover:bg-amber-700 transition rounded">
+                        <button type="submit"
+                            class="px-6 py-2 bg-amber-600 text-white hover:bg-amber-700 transition rounded">
                             Change Password
                         </button>
                     </div>
@@ -558,7 +618,7 @@
         function clearSearch() {
             const searchInput = document.getElementById('searchInput');
             const clearBtn = document.getElementById('clearSearchBtn');
-            
+
             searchInput.value = '';
             clearBtn.classList.add('hidden');
             searchUsers('');
@@ -617,12 +677,10 @@
                     document.getElementById('edit_user_id').value = user.user_id;
                     document.getElementById('edit_username').value = user.username;
                     document.getElementById('edit_role').value = user.role;
-
-                    // Display employee information
-                    if (user.employee) {
-                        document.getElementById('edit_employee_display').textContent = 
-                            `${user.employee.emp_name} - ${user.employee.emp_position}`;
-                    }
+                    document.getElementById('edit_name').value = user.name;
+                    document.getElementById('edit_position').value = user.position;
+                    document.getElementById('edit_email').value = user.email;
+                    document.getElementById('edit_contact').value = user.contact;
                 })
                 .catch(error => {
                     console.error('Error:', error);
@@ -697,11 +755,10 @@
 
             // Create form data with CSRF token
             const formData = new FormData();
-            formData.append('_method', 'DELETE');
             formData.append('_token', getCsrfToken());
 
             fetch(`/users/${currentUserId}`, {
-                    method: 'POST', // Use POST method for DELETE with _method parameter
+                    method: 'POST',
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -811,7 +868,7 @@
             const formData = new FormData(this);
 
             fetch(`/users/${currentUserId}`, {
-                    method: 'POST', // Use POST method for PUT with _method parameter
+                    method: 'POST',
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -842,7 +899,7 @@
             const formData = new FormData(this);
 
             fetch(`/users/${currentUserId}/password`, {
-                    method: 'POST', // Use POST method for PUT with _method parameter
+                    method: 'POST',
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
@@ -864,7 +921,7 @@
                 });
         }
 
-        // Search functionality - Fixed version
+        // Search functionality - Updated for new fields
         function searchUsers(query) {
             currentSearchTerm = query.toLowerCase().trim();
             const rows = document.querySelectorAll('.user-row');
@@ -882,17 +939,19 @@
 
             rows.forEach(row => {
                 const username = row.getAttribute('data-username').toLowerCase();
-                const role = row.getAttribute('data-role').toLowerCase();
-                const employeeName = row.getAttribute('data-employee-name').toLowerCase();
-                const status = row.getAttribute('data-status').toLowerCase();
+                const name = row.getAttribute('data-name').toLowerCase();
                 const position = row.getAttribute('data-position').toLowerCase();
+                const role = row.getAttribute('data-role').toLowerCase();
+                const status = row.getAttribute('data-status').toLowerCase();
+                const email = row.getAttribute('data-email').toLowerCase();
 
                 // Search in multiple fields
-                const matches = username.includes(currentSearchTerm) || 
-                               role.includes(currentSearchTerm) || 
-                               employeeName.includes(currentSearchTerm) ||
-                               status.includes(currentSearchTerm) ||
-                               position.includes(currentSearchTerm);
+                const matches = username.includes(currentSearchTerm) ||
+                    name.includes(currentSearchTerm) ||
+                    position.includes(currentSearchTerm) ||
+                    role.includes(currentSearchTerm) ||
+                    status.includes(currentSearchTerm) ||
+                    email.includes(currentSearchTerm);
 
                 if (matches || currentSearchTerm === '') {
                     row.style.display = '';
@@ -905,7 +964,7 @@
             document.getElementById('visibleCount').textContent = visibleCount;
         }
 
-        // Sort functionality
+        // Sort functionality - Updated for new fields
         let currentSort = {
             field: 'username',
             direction: 'asc'
@@ -931,13 +990,17 @@
                         aValue = a.getAttribute('data-username').toLowerCase();
                         bValue = b.getAttribute('data-username').toLowerCase();
                         break;
+                    case 'name':
+                        aValue = a.getAttribute('data-name').toLowerCase();
+                        bValue = b.getAttribute('data-name').toLowerCase();
+                        break;
+                    case 'position':
+                        aValue = a.getAttribute('data-position').toLowerCase();
+                        bValue = b.getAttribute('data-position').toLowerCase();
+                        break;
                     case 'role':
                         aValue = a.getAttribute('data-role').toLowerCase();
                         bValue = b.getAttribute('data-role').toLowerCase();
-                        break;
-                    case 'employee_name':
-                        aValue = a.getAttribute('data-employee-name').toLowerCase();
-                        bValue = b.getAttribute('data-employee-name').toLowerCase();
                         break;
                     case 'status':
                         aValue = a.getAttribute('data-status').toLowerCase();
@@ -972,8 +1035,8 @@
             if (header) {
                 const icon = header.querySelector('i');
                 if (icon) {
-                    icon.className = direction === 'asc' ? 
-                        'fas fa-sort-up ml-1 text-xs' : 
+                    icon.className = direction === 'asc' ?
+                        'fas fa-sort-up ml-1 text-xs' :
                         'fas fa-sort-down ml-1 text-xs';
                 }
             }

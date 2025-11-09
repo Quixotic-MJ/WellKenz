@@ -19,6 +19,12 @@ return new class extends Migration
             $table->foreignId('requested_by')->constrained('users', 'user_id');
             $table->foreignId('approved_by')->nullable()->constrained('users', 'user_id');
             $table->timestamps();
+            
+            // Indexes
+            $table->index('req_status');
+            $table->index('req_priority');
+            $table->index('req_date');
+            $table->index('requested_by');
         });
     }
 

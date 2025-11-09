@@ -24,13 +24,20 @@ class AuthController extends Controller
         // Attempt to find user by username
         $user = User::where('username', $credentials['username'])->first();
 
-        // Check if user exists and password is correct
+        // Check if user exists, password is correct, and user is active
         if ($user && Hash::check($credentials['password'], $user->password)) {
+            // Check if user is active
+            if ($user->status !== 'active') {
+                return back()->with('error', 'Your account has been deactivated. Please contact administrator.')->withInput();
+            }
+            
             // Manually log in the user
             Auth::login($user);
             
             // Store role in session for individual middleware
             session(['role' => $user->role]);
+            session(['user_name' => $user->name]);
+            session(['user_position' => $user->position]);
             
             // Redirect based on user role
             return $this->redirectToDashboard($user->role);

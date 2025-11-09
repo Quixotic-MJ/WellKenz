@@ -12,11 +12,19 @@ class CheckRole
     public function handle(Request $request, Closure $next, string $role): Response
     {
         if (!Auth::check()) {
-            return redirect()->route('login');
+            return redirect()->route('login')->with('error', 'Please log in to access this page.');
         }
 
-        if (Auth::user()->role !== $role) {
-            abort(403, 'Unauthorized access.');
+        $user = Auth::user();
+
+        // Check if user is active
+        if ($user->status !== 'active') {
+            Auth::logout();
+            return redirect()->route('login')->with('error', 'Your account has been deactivated. Please contact administrator.');
+        }
+
+        if ($user->role !== $role) {
+            abort(403, 'Unauthorized access. Required role: ' . $role);
         }
 
         return $next($request);

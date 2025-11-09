@@ -6,586 +6,605 @@
 
 @section('content')
 <div class="space-y-6">
-    <!-- Header Card -->
-    <div class="bg-white border-2 border-border-soft p-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="font-display text-3xl font-bold text-text-dark">My Baking Requisitions</h1>
-                <p class="text-text-muted mt-2">Track all your submitted ingredient and supply requests.</p>
+    <!-- Messages -->
+    <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded"></div>
+    <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-semibold text-gray-900">My Requisitions</h1>
+            <p class="text-gray-500 mt-2">Track all your submitted requisitions and their status</p>
+        </div>
+        <a href="{{ route('requisitions.create') }}" 
+           class="px-4 py-2 bg-gray-800 text-white hover:bg-gray-700 text-sm font-medium rounded">
+            <i class="fas fa-plus mr-2"></i>New Requisition
+        </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-blue-100 rounded flex items-center justify-center">
+                    <i class="fas fa-clipboard-list text-blue-600 text-lg"></i>
+                </div>
             </div>
-            <div class="text-right">
-                <p class="text-sm text-text-dark font-semibold">{{ date('F j, Y') }}</p>
-                <p class="text-xs text-text-muted mt-1">{{ date('l') }}</p>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Requisitions</p>
+            <p class="text-3xl font-bold text-gray-900 mt-2" id="totalCount">0</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-amber-100 rounded flex items-center justify-center">
+                    <i class="fas fa-clock text-amber-600 text-lg"></i>
+                </div>
             </div>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Pending</p>
+            <p class="text-3xl font-bold text-gray-900 mt-2" id="pendingCount">0</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-green-100 rounded flex items-center justify-center">
+                    <i class="fas fa-check-circle text-green-600 text-lg"></i>
+                </div>
+            </div>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Approved</p>
+            <p class="text-3xl font-bold text-gray-900 mt-2" id="approvedCount">0</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-red-100 rounded flex items-center justify-center">
+                    <i class="fas fa-times-circle text-red-600 text-lg"></i>
+                </div>
+            </div>
+            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Rejected</p>
+            <p class="text-3xl font-bold text-gray-900 mt-2" id="rejectedCount">0</p>
         </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-caramel flex items-center justify-center">
-                    <i class="fas fa-clipboard-list text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Total Requisitions</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">24</p>
-        </div>
-
-        <div class="bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-chocolate flex items-center justify-center">
-                    <i class="fas fa-clock text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Pending</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">5</p>
-        </div>
-
-        <div class="bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-caramel flex items-center justify-center">
-                    <i class="fas fa-check-circle text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Approved</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">16</p>
-        </div>
-
-        <div class="bg-white border-2 border-red-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-red-500 flex items-center justify-center">
-                    <i class="fas fa-times-circle text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Rejected</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">3</p>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <!-- Requisitions List -->
-        <div class="lg:col-span-3 bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="font-display text-xl font-bold text-text-dark">My Submitted Requisitions</h3>
-                <div class="flex space-x-2">
-                    <select class="px-3 py-2 border border-border-soft rounded text-sm">
-                        <option>All Status</option>
-                        <option>Pending</option>
-                        <option>Approved</option>
-                        <option>Rejected</option>
-                        <option>Delivered</option>
-                    </select>
-                    <input type="text" placeholder="Search requisitions..." class="px-3 py-2 border border-border-soft rounded text-sm">
-                </div>
-            </div>
-            
-            <!-- Requisitions Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead>
-                        <tr class="border-b border-border-soft">
-                            <th class="text-left py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Requisition Details</th>
-                            <th class="text-left py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Items</th>
-                            <th class="text-left py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Submitted</th>
-                            <th class="text-left py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Needed By</th>
-                            <th class="text-left py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Status</th>
-                            <th class="text-left py-3 text-xs font-bold text-text-muted uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border-soft">
-                        <!-- Pending Requisition -->
-                        <tr class="hover:bg-cream-bg">
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm font-bold text-text-dark">Chocolate Chip Cookies - Bulk</p>
-                                    <p class="text-xs text-text-muted">REQ-BAKE-0245 • Weekend Special</p>
-                                    <div class="flex items-center text-xs text-text-muted">
-                                        <i class="fas fa-user mr-1"></i>
-                                        <span>Current Approver: Sarah Johnson</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Flour (25kg), Chocolate Chips (15kg)</p>
-                                    <p class="text-xs text-text-muted">Butter (10kg), Vanilla Extract (2L)</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Today, 07:30 AM</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Tomorrow</p>
-                                    <div class="flex items-center text-xs text-red-600 font-bold">
-                                        <i class="fas fa-exclamation-circle mr-1"></i>
-                                        <span>URGENT</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="flex items-center">
-                                    <span class="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded flex items-center">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        PENDING
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <button class="text-xs text-caramel hover:text-caramel-dark font-bold flex items-center">
-                                    <i class="fas fa-eye mr-1"></i>
-                                    View Details
-                                </button>
-                            </td>
-                        </tr>
-
-                        <!-- Approved Requisition -->
-                        <tr class="hover:bg-cream-bg">
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm font-bold text-text-dark">Birthday Cake Supplies</p>
-                                    <p class="text-xs text-text-muted">REQ-BAKE-0244 • Custom Order #789</p>
-                                    <div class="flex items-center text-xs text-green-600">
-                                        <i class="fas fa-check-circle mr-1"></i>
-                                        <span>Approved by: Michael Chen</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Cake Flour (5kg), Food Coloring</p>
-                                    <p class="text-xs text-text-muted">Fondant (3kg), Sprinkles (500g)</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Yesterday</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Today</p>
-                                    <div class="flex items-center text-xs text-green-600 font-bold">
-                                        <i class="fas fa-check-circle mr-1"></i>
-                                        <span>ON TIME</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="flex items-center">
-                                    <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded flex items-center">
-                                        <i class="fas fa-check mr-1"></i>
-                                        APPROVED
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <button class="text-xs text-caramel hover:text-caramel-dark font-bold flex items-center">
-                                    <i class="fas fa-truck mr-1"></i>
-                                    Track Delivery
-                                </button>
-                            </td>
-                        </tr>
-
-                        <!-- Approved Requisition -->
-                        <tr class="hover:bg-cream-bg">
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm font-bold text-text-dark">Bread Production - Daily</p>
-                                    <p class="text-xs text-text-muted">REQ-BAKE-0243 • Regular Production</p>
-                                    <div class="flex items-center text-xs text-green-600">
-                                        <i class="fas fa-sync-alt mr-1"></i>
-                                        <span>Auto-approved (Recurring)</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Bread Flour (50kg), Yeast (2kg)</p>
-                                    <p class="text-xs text-text-muted">Salt (5kg), Olive Oil (5L)</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Nov 25, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Nov 26, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="flex items-center">
-                                    <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded flex items-center">
-                                        <i class="fas fa-check mr-1"></i>
-                                        APPROVED
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <button class="text-xs text-caramel hover:text-caramel-dark font-bold flex items-center">
-                                    <i class="fas fa-file-invoice mr-1"></i>
-                                    View Order
-                                </button>
-                            </td>
-                        </tr>
-
-                        <!-- Rejected Requisition -->
-                        <tr class="hover:bg-cream-bg">
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm font-bold text-text-dark">Premium Almond Flour</p>
-                                    <p class="text-xs text-text-muted">REQ-BAKE-0242 • Recipe Development</p>
-                                    <div class="flex items-center text-xs text-red-600">
-                                        <i class="fas fa-times-circle mr-1"></i>
-                                        <span>Rejected by: David Wilson</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Premium Almond Flour (10kg)</p>
-                                    <p class="text-xs text-text-muted">Specialty ingredient request</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Nov 24, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Dec 1, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="flex items-center">
-                                    <span class="px-3 py-1 bg-red-100 text-red-800 text-xs font-bold rounded flex items-center">
-                                        <i class="fas fa-times mr-1"></i>
-                                        REJECTED
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <button class="text-xs text-caramel hover:text-caramel-dark font-bold flex items-center">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    View Reason
-                                </button>
-                            </td>
-                        </tr>
-
-                        <!-- Pending Requisition -->
-                        <tr class="hover:bg-cream-bg">
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm font-bold text-text-dark">Specialty Pastry Ingredients</p>
-                                    <p class="text-xs text-text-muted">REQ-BAKE-0241 • Seasonal Menu</p>
-                                    <div class="flex items-center text-xs text-text-muted">
-                                        <i class="fas fa-user mr-1"></i>
-                                        <span>Current Approver: Lisa Rodriguez</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Almond Flour (10kg), Chocolate</p>
-                                    <p class="text-xs text-text-muted">Fresh Berries (6kg), Specialty Items</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Nov 24, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Dec 1, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="flex items-center">
-                                    <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded flex items-center">
-                                        <i class="fas fa-search mr-1"></i>
-                                        UNDER REVIEW
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <button class="text-xs text-caramel hover:text-caramel-dark font-bold flex items-center">
-                                    <i class="fas fa-sync-alt mr-1"></i>
-                                    Check Status
-                                </button>
-                            </td>
-                        </tr>
-
-                        <!-- Delivered Requisition -->
-                        <tr class="hover:bg-cream-bg">
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm font-bold text-text-dark">Packaging Materials</p>
-                                    <p class="text-xs text-text-muted">REQ-BAKE-0240 • Monthly Restock</p>
-                                    <div class="flex items-center text-xs text-green-600">
-                                        <i class="fas fa-truck mr-1"></i>
-                                        <span>Delivered: Today, 08:45 AM</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Cake Boxes (200), Cookie Bags</p>
-                                    <p class="text-xs text-text-muted">Ribbon (50m), Labels (1000)</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Nov 22, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="space-y-1">
-                                    <p class="text-sm text-text-dark font-medium">Nov 25, 2024</p>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <div class="flex items-center">
-                                    <span class="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded flex items-center">
-                                        <i class="fas fa-box mr-1"></i>
-                                        DELIVERED
-                                    </span>
-                                </div>
-                            </td>
-                            <td class="py-4">
-                                <button class="text-xs text-caramel hover:text-caramel-dark font-bold flex items-center">
-                                    <i class="fas fa-check-double mr-1"></i>
-                                    Acknowledge
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="flex items-center justify-between mt-6">
-                <p class="text-sm text-text-muted">Showing 1-6 of 24 requisitions</p>
-                <div class="flex space-x-2">
-                    <button class="px-3 py-1 border border-border-soft rounded text-sm text-text-muted hover:bg-cream-bg flex items-center">
-                        <i class="fas fa-chevron-left mr-1"></i>
-                        Previous
-                    </button>
-                    <button class="px-3 py-1 bg-caramel text-white rounded text-sm">
-                        1
-                    </button>
-                    <button class="px-3 py-1 border border-border-soft rounded text-sm text-text-muted hover:bg-cream-bg">
-                        2
-                    </button>
-                    <button class="px-3 py-1 border border-border-soft rounded text-sm text-text-muted hover:bg-cream-bg">
-                        3
-                    </button>
-                    <button class="px-3 py-1 border border-border-soft rounded text-sm text-text-muted hover:bg-cream-bg flex items-center">
-                        Next
-                        <i class="fas fa-chevron-right ml-1"></i>
-                    </button>
+    <!-- Requisitions List -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900">My Requisitions</h3>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="text" id="searchRequisitions" placeholder="Search requisitions..."
+                        class="pl-9 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition w-64">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Filters & Quick Actions -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6">Filters & Actions</h3>
-            
-            <!-- Status Filter -->
-            <div class="mb-6">
-                <h4 class="font-display text-sm font-bold text-text-dark mb-3">Filter by Status</h4>
-                <div class="space-y-2">
-                    <label class="flex items-center">
-                        <input type="checkbox" class="rounded border-border-soft text-caramel focus:ring-caramel" checked>
-                        <span class="ml-2 text-sm text-text-dark">All Status</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="checkbox" class="rounded border-border-soft text-caramel focus:ring-caramel">
-                        <span class="ml-2 text-sm text-text-dark">Pending</span>
-                        <span class="ml-auto text-xs text-text-muted">5</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="checkbox" class="rounded border-border-soft text-caramel focus:ring-caramel" checked>
-                        <span class="ml-2 text-sm text-text-dark">Approved</span>
-                        <span class="ml-auto text-xs text-text-muted">16</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="checkbox" class="rounded border-border-soft text-caramel focus:ring-caramel">
-                        <span class="ml-2 text-sm text-text-dark">Rejected</span>
-                        <span class="ml-auto text-xs text-text-muted">3</span>
-                    </label>
-                    <label class="flex items-center">
-                        <input type="checkbox" class="rounded border-border-soft text-caramel focus:ring-caramel">
-                        <span class="ml-2 text-sm text-text-dark">Delivered</span>
-                        <span class="ml-auto text-xs text-text-muted">8</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Date Filter -->
-            <div class="mb-6">
-                <h4 class="font-display text-sm font-bold text-text-dark mb-3">Filter by Date</h4>
-                <div class="space-y-2">
-                    <select class="w-full px-3 py-2 border border-border-soft rounded text-sm">
-                        <option>All Time</option>
-                        <option>Today</option>
-                        <option>This Week</option>
-                        <option>This Month</option>
-                        <option>Last 30 Days</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Status Summary -->
-            <div class="pt-6 border-t border-border-soft">
-                <h4 class="font-display text-sm font-bold text-text-dark mb-3">Status Summary</h4>
-                <div class="space-y-3">
-                    <div>
-                        <div class="flex justify-between mb-1">
-                            <span class="text-xs text-text-muted">Approved</span>
-                            <span class="text-xs font-bold text-text-dark">67%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-green-600 h-2 rounded-full" style="width: 67%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between mb-1">
-                            <span class="text-xs text-text-muted">Pending</span>
-                            <span class="text-xs font-bold text-text-dark">21%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-yellow-500 h-2 rounded-full" style="width: 21%"></div>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="flex justify-between mb-1">
-                            <span class="text-xs text-text-muted">Rejected</span>
-                            <span class="text-xs font-bold text-text-dark">12%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-red-600 h-2 rounded-full" style="width: 12%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Activity -->
-            <div class="pt-6 border-t border-border-soft">
-                <h4 class="font-display text-sm font-bold text-text-dark mb-3">Recent Activity</h4>
-                <div class="space-y-3">
-                    <div class="flex items-center text-xs">
-                        <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                        <span class="text-text-dark">REQ-BAKE-0244 approved</span>
-                        <span class="text-text-muted ml-auto">2h ago</span>
-                    </div>
-                    <div class="flex items-center text-xs">
-                        <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                        <span class="text-text-dark">REQ-BAKE-0245 submitted</span>
-                        <span class="text-text-muted ml-auto">4h ago</span>
-                    </div>
-                    <div class="flex items-center text-xs">
-                        <div class="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
-                        <span class="text-text-dark">REQ-BAKE-0242 rejected</span>
-                        <span class="text-text-muted ml-auto">1d ago</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quick Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Approval Rate -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h4 class="font-display text-lg font-bold text-text-dark mb-4">Approval Rate</h4>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-3xl font-bold text-text-dark">79%</p>
-                    <p class="text-xs text-text-muted mt-1">16 out of 21 decisions</p>
-                </div>
-                <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
-                    <i class="fas fa-chart-line text-green-600 text-2xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Average Approval Time -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h4 class="font-display text-lg font-bold text-text-dark mb-4">Avg. Approval Time</h4>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-3xl font-bold text-text-dark">1.5</p>
-                    <p class="text-xs text-text-muted mt-1">business days</p>
-                </div>
-                <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-                    <i class="fas fa-clock text-blue-600 text-2xl"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Value -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h4 class="font-display text-lg font-bold text-text-dark mb-4">Total Value</h4>
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-3xl font-bold text-text-dark">$8,450</p>
-                    <p class="text-xs text-text-muted mt-1">across all requisitions</p>
-                </div>
-                <div class="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center">
-                    <i class="fas fa-dollar-sign text-purple-600 text-2xl"></i>
-                </div>
-            </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reference</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Purpose</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Items</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Priority</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="requisitionsTable">
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-3 opacity-50"></i>
+                            <p>Loading requisitions...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
-    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+<!-- Requisition Details Modal -->
+<div id="requisitionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-6xl w-full max-h-[90vh] overflow-y-auto rounded-lg">
+        <div class="p-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-gray-800">Requisition Details</h3>
+                <button onclick="closeRequisitionModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="p-6" id="requisitionDetails">
+            <!-- Details will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadMyRequisitions();
+    loadStats();
+
+    // Search functionality
+    document.getElementById('searchRequisitions').addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#requisitionsTable tr');
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchTerm)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+function loadMyRequisitions() {
+    fetch('{{ route("requisitions.my_requisitions") }}', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.status);
+        }
+        return response.json();
+    })
+    .then(requisitions => {
+        console.log('Requisitions loaded:', requisitions);
+        const tbody = document.getElementById('requisitionsTable');
+        tbody.innerHTML = '';
+
+        if (!requisitions || requisitions.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                        <i class="fas fa-file-alt text-4xl mb-3 opacity-50"></i>
+                        <p>No requisitions found. <a href="{{ route('requisitions.create') }}" class="text-blue-600 hover:text-blue-800">Create your first requisition</a></p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        requisitions.forEach(requisition => {
+            const priorityColors = {
+                'low': 'bg-green-100 text-green-800',
+                'medium': 'bg-yellow-100 text-yellow-800',
+                'high': 'bg-red-100 text-red-800'
+            };
+
+            const statusColors = {
+                'pending': 'bg-amber-100 text-amber-800',
+                'approved': 'bg-green-100 text-green-800',
+                'rejected': 'bg-red-100 text-red-800',
+                'completed': 'bg-blue-100 text-blue-800',
+                'processing': 'bg-purple-100 text-purple-800'
+            };
+
+            const priorityColor = priorityColors[requisition.req_priority] || 'bg-gray-100 text-gray-800';
+            const statusColor = statusColors[requisition.req_status] || 'bg-gray-100 text-gray-800';
+            
+            // Format date
+            const date = new Date(requisition.created_at);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+
+            // Count total items
+            const totalItems = requisition.items ? requisition.items.length : 0;
+
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50 transition';
+            row.innerHTML = `
+                <td class="px-6 py-4">
+                    <p class="text-sm font-semibold text-gray-900">${requisition.req_ref || 'N/A'}</p>
+                </td>
+                <td class="px-6 py-4">
+                    <p class="text-sm text-gray-900 truncate max-w-xs" title="${requisition.req_purpose || ''}">
+                        ${requisition.req_purpose ? requisition.req_purpose.substring(0, 50) + (requisition.req_purpose.length > 50 ? '...' : '') : 'No purpose provided'}
+                    </p>
+                </td>
+                <td class="px-6 py-4">
+                    <p class="text-sm text-gray-900">${totalItems} items</p>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="inline-block px-2 py-1 ${priorityColor} text-xs font-semibold capitalize rounded">
+                        ${requisition.req_priority || 'Not set'}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="inline-block px-2 py-1 ${statusColor} text-xs font-semibold capitalize rounded">
+                        ${requisition.req_status || 'pending'}
+                    </span>
+                </td>
+                <td class="px-6 py-4">
+                    <p class="text-sm text-gray-900">${formattedDate}</p>
+                </td>
+                <td class="px-6 py-4">
+                    <button onclick="viewRequisition(${requisition.req_id})"
+                        class="px-3 py-1 bg-gray-600 text-white text-xs font-medium hover:bg-gray-700 transition rounded">
+                        View Details
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    })
+    .catch(error => {
+        console.error('Error loading requisitions:', error);
+        const tbody = document.getElementById('requisitionsTable');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                    <i class="fas fa-exclamation-triangle text-2xl mb-3 text-red-500"></i>
+                    <p>Error loading requisitions. Please try again.</p>
+                    <p class="text-xs text-gray-400 mt-1">${error.message}</p>
+                    <button onclick="loadMyRequisitions()" class="mt-2 px-4 py-2 bg-gray-800 text-white text-sm rounded hover:bg-gray-700">
+                        Retry
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+function loadStats() {
+    fetch('{{ route("requisitions.my_requisitions") }}', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(requisitions => {
+        // Check if requisitions is an array
+        if (!Array.isArray(requisitions)) {
+            console.error('Expected array but got:', requisitions);
+            return;
+        }
+
+        const stats = {
+            total: requisitions.length,
+            pending: requisitions.filter(r => r.req_status === 'pending').length,
+            approved: requisitions.filter(r => r.req_status === 'approved').length,
+            rejected: requisitions.filter(r => r.req_status === 'rejected').length
+        };
+
+        document.getElementById('totalCount').textContent = stats.total;
+        document.getElementById('pendingCount').textContent = stats.pending;
+        document.getElementById('approvedCount').textContent = stats.approved;
+        document.getElementById('rejectedCount').textContent = stats.rejected;
+    })
+    .catch(error => {
+        console.error('Error loading stats:', error);
+        // Set default values on error
+        document.getElementById('totalCount').textContent = '0';
+        document.getElementById('pendingCount').textContent = '0';
+        document.getElementById('approvedCount').textContent = '0';
+        document.getElementById('rejectedCount').textContent = '0';
+    });
+}
+
+function viewRequisition(requisitionId) {
+    console.log('Loading requisition details for ID:', requisitionId);
     
-    .font-display {
-        font-family: 'Playfair Display', serif;
+    fetch(`/requisitions/${requisitionId}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(requisition => {
+        console.log('Requisition details loaded:', requisition);
+        showRequisitionDetails(requisition);
+    })
+    .catch(error => {
+        console.error('Error loading requisition details:', error);
+        showMessage('Error loading requisition details: ' + error.message, 'error');
+    });
+}
+
+function showRequisitionDetails(requisition) {
+    const modal = document.getElementById('requisitionModal');
+    const detailsDiv = document.getElementById('requisitionDetails');
+
+    // Format dates
+    const createdDate = new Date(requisition.created_at);
+    const formattedCreatedDate = createdDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+
+    const approvedDate = requisition.approved_date ? new Date(requisition.approved_date) : null;
+    const formattedApprovedDate = approvedDate ? approvedDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    }) : 'Not approved yet';
+
+    // Status badge
+    const statusColors = {
+        'pending': 'bg-amber-100 text-amber-800 border-amber-200',
+        'approved': 'bg-green-100 text-green-800 border-green-200',
+        'rejected': 'bg-red-100 text-red-800 border-red-200',
+        'completed': 'bg-blue-100 text-blue-800 border-blue-200'
+    };
+
+    const statusColor = statusColors[requisition.req_status] || 'bg-gray-100 text-gray-800 border-gray-200';
+
+    // Priority badge
+    const priorityColors = {
+        'low': 'bg-green-100 text-green-800 border-green-200',
+        'medium': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        'high': 'bg-red-100 text-red-800 border-red-200'
+    };
+
+    const priorityColor = priorityColors[requisition.req_priority] || 'bg-gray-100 text-gray-800 border-gray-200';
+
+    // Build items list
+    let itemsHtml = '';
+    let totalItems = 0;
+    let totalQuantity = 0;
+
+    if (requisition.items && requisition.items.length > 0) {
+        requisition.items.forEach((item, index) => {
+            const itemName = item.item ? item.item.item_name : 'Item not found';
+            const itemCode = item.item ? item.item.item_code : 'N/A';
+            const itemCategory = item.item && item.item.category ? item.item.category.cat_name : 'Uncategorized';
+            
+            itemsHtml += `
+                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm text-gray-900">${index + 1}</td>
+                    <td class="px-4 py-3">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">${escapeHtml(itemName)}</p>
+                            <p class="text-xs text-gray-500">Code: ${escapeHtml(itemCode)}</p>
+                            <p class="text-xs text-gray-500">Category: ${escapeHtml(itemCategory)}</p>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900 font-semibold">${item.req_item_quantity || '0'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900">${escapeHtml(item.item_unit || 'N/A')}</td>
+                    <td class="px-4 py-3 text-sm">
+                        <span class="inline-block px-2 py-1 ${getItemStatusColor(item.req_item_status)} text-xs font-semibold capitalize rounded">
+                            ${item.req_item_status || 'pending'}
+                        </span>
+                    </td>
+                </tr>
+            `;
+            totalItems++;
+            totalQuantity += parseInt(item.req_item_quantity) || 0;
+        });
+    } else {
+        itemsHtml = `
+            <tr>
+                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                    <i class="fas fa-box-open text-3xl mb-2 opacity-50"></i>
+                    <p>No items found for this requisition</p>
+                </td>
+            </tr>
+        `;
     }
 
-    .cream-bg {
-        background-color: #faf7f3;
+    detailsDiv.innerHTML = `
+        <div class="space-y-6">
+            <!-- Header Section -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">${requisition.req_ref || 'N/A'}</h2>
+                        <p class="text-gray-600">Submitted on ${formattedCreatedDate}</p>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="inline-block px-3 py-1 ${statusColor} text-sm font-semibold capitalize rounded border">
+                            ${requisition.req_status || 'pending'}
+                        </span>
+                        <span class="inline-block px-3 py-1 ${priorityColor} text-sm font-semibold capitalize rounded border">
+                            ${requisition.req_priority || 'Not set'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Basic Information Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-blue-100 rounded flex items-center justify-center mr-3">
+                            <i class="fas fa-cube text-blue-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Total Items</p>
+                            <p class="text-lg font-semibold text-gray-900">${totalItems}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-green-100 rounded flex items-center justify-center mr-3">
+                            <i class="fas fa-boxes text-green-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Total Quantity</p>
+                            <p class="text-lg font-semibold text-gray-900">${totalQuantity}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-purple-100 rounded flex items-center justify-center mr-3">
+                            <i class="fas fa-user text-purple-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Requested By</p>
+                            <p class="text-lg font-semibold text-gray-900">${requisition.requester ? requisition.requester.name : 'N/A'}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-amber-100 rounded flex items-center justify-center mr-3">
+                            <i class="fas fa-calendar-check text-amber-600"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500">Approved Date</p>
+                            <p class="text-sm font-semibold text-gray-900">${formattedApprovedDate}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Purpose Section -->
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-gray-500 mb-2">Purpose / Remarks</h4>
+                <p class="text-gray-900 bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap">${escapeHtml(requisition.req_purpose || 'No purpose provided')}</p>
+            </div>
+
+            <!-- Items Section -->
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-lg font-semibold text-gray-900">Requested Items</h4>
+                    <span class="px-3 py-1 bg-gray-100 text-gray-700 text-sm font-medium rounded">
+                        ${totalItems} items • ${totalQuantity} total quantity
+                    </span>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full border border-gray-200 rounded">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">#</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Item Details</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Quantity</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Unit</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            ${itemsHtml}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Progress Tracking -->
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <h4 class="text-lg font-semibold text-gray-900 mb-4">Progress Tracking</h4>
+                <div class="space-y-4">
+                    ${getProgressSteps(requisition.req_status)}
+                </div>
+            </div>
+        </div>
+    `;
+
+    modal.classList.remove('hidden');
+}
+
+function getItemStatusColor(status) {
+    const colors = {
+        'pending': 'bg-amber-100 text-amber-800',
+        'partially_fulfilled': 'bg-blue-100 text-blue-800',
+        'fulfilled': 'bg-green-100 text-green-800',
+        'cancelled': 'bg-red-100 text-red-800'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+}
+
+function getProgressSteps(status) {
+    const steps = [
+        { id: 'submitted', label: 'Submitted', description: 'Requisition has been submitted for review' },
+        { id: 'under_review', label: 'Under Review', description: 'Being reviewed by supervisor/manager' },
+        { id: 'approved', label: 'Approved', description: 'Approved by management' },
+        { id: 'processing', label: 'Processing', description: 'Being processed by purchasing department' },
+        { id: 'completed', label: 'Completed', description: 'Items delivered or ready for pickup' }
+    ];
+
+    let currentStepIndex = 0;
+    switch(status) {
+        case 'pending': currentStepIndex = 0; break;
+        case 'under_review': currentStepIndex = 1; break;
+        case 'approved': currentStepIndex = 2; break;
+        case 'processing': currentStepIndex = 3; break;
+        case 'completed': currentStepIndex = 4; break;
+        default: currentStepIndex = 0;
     }
-    
-    .text-text-dark {
-        color: #1a1410;
+
+    return steps.map((step, index) => `
+        <div class="flex items-center">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center 
+                ${index <= currentStepIndex ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'} 
+                ${index === currentStepIndex ? 'ring-2 ring-green-200' : ''}">
+                ${index < currentStepIndex ? '<i class="fas fa-check text-sm"></i>' : (index + 1)}
+            </div>
+            <div class="ml-4 flex-1">
+                <p class="text-sm font-medium ${index <= currentStepIndex ? 'text-gray-900' : 'text-gray-500'}">
+                    ${step.label}
+                </p>
+                <p class="text-xs text-gray-500">${step.description}</p>
+            </div>
+            ${index < steps.length - 1 ? `
+                <div class="flex-1 ml-4">
+                    <div class="h-0.5 ${index < currentStepIndex ? 'bg-green-600' : 'bg-gray-300'}"></div>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+function closeRequisitionModal() {
+    document.getElementById('requisitionModal').classList.add('hidden');
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showMessage(message, type) {
+    const messageDiv = type === 'success' ?
+        document.getElementById('successMessage') :
+        document.getElementById('errorMessage');
+
+    if (messageDiv) {
+        messageDiv.textContent = message;
+        messageDiv.classList.remove('hidden');
+
+        setTimeout(() => {
+            messageDiv.classList.add('hidden');
+        }, 5000);
     }
-    
-    .text-text-muted {
-        color: #8b7355;
-    }
-    
-    .bg-chocolate {
-        background-color: #3d2817;
-    }
-    
-    .hover\:bg-chocolate-dark:hover {
-        background-color: #2a1a0f;
-    }
-    
-    .bg-caramel {
-        background-color: #c48d3f;
-    }
-    
-    .hover\:bg-caramel-dark:hover {
-        background-color: #a67332;
-    }
-    
-    .border-border-soft {
-        border-color: #e8dfd4;
-    }
-</style>
+}
+</script>
 @endsection

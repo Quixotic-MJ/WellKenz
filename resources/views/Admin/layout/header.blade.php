@@ -98,26 +98,26 @@
                         <span class="text-white text-sm font-bold">
                             @php
                                 $user = Auth::user();
-                                $employee = $user->employee ?? null;
-                                if($employee) {
-                                    $names = explode(' ', $employee->emp_name);
-                                    $initials = '';
+                                $initials = '';
+                                if($user->name) {
+                                    $names = explode(' ', $user->name);
                                     foreach ($names as $name) {
                                         $initials .= strtoupper(substr($name, 0, 1));
                                     }
                                     echo substr($initials, 0, 2);
                                 } else {
-                                    echo 'U';
+                                    // Fallback to username first letter
+                                    echo strtoupper(substr($user->username, 0, 1));
                                 }
                             @endphp
                         </span>
                     </div>
                     <div class="hidden lg:block text-left pr-1">
                         <p class="text-sm font-semibold text-text-dark leading-none">
-                            {{ $employee->emp_name ?? 'User' }}
+                            {{ $user->name ?? $user->username }}
                         </p>
                         <p class="text-xs text-text-muted leading-none mt-0.5">
-                            {{ $employee->emp_position ?? 'Employee' }}
+                            {{ $user->position ?? $user->role_display }}
                         </p>
                     </div>
                     <i class="fas fa-chevron-down text-text-muted text-xs hidden lg:block"></i>
@@ -130,27 +130,35 @@
                             <div class="w-10 h-10 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
                                 <span class="text-white text-base font-bold">
                                     @php
-                                        if($employee) {
-                                            $names = explode(' ', $employee->emp_name);
-                                            $initials = '';
+                                        $initials = '';
+                                        if($user->name) {
+                                            $names = explode(' ', $user->name);
                                             foreach ($names as $name) {
                                                 $initials .= strtoupper(substr($name, 0, 1));
                                             }
                                             echo substr($initials, 0, 2);
                                         } else {
-                                            echo 'U';
+                                            echo strtoupper(substr($user->username, 0, 1));
                                         }
                                     @endphp
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-text-dark">{{ $employee->emp_name ?? 'User' }}</p>
-                                <p class="text-xs text-text-muted">{{ $employee->emp_position ?? 'Employee' }}</p>
+                                <p class="text-sm font-bold text-text-dark">{{ $user->name ?? $user->username }}</p>
+                                <p class="text-xs text-text-muted">{{ $user->position ?? $user->role_display }}</p>
                             </div>
                         </div>
                         <p class="text-xs text-text-muted mt-2 border-t border-border-soft pt-2 truncate">
-                            {{ $user->username }} • {{ ucfirst($user->role) }}
+                            {{ $user->username }} • {{ $user->role_display }}
                         </p>
+                        <p class="text-xs text-text-muted truncate">
+                            {{ $user->email }}
+                        </p>
+                        <div class="flex items-center mt-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $user->status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                {{ ucfirst($user->status) }}
+                            </span>
+                        </div>
                     </div>
                     <div class="p-2">
                         <a href="#" class="flex items-center space-x-3 px-3 py-2 text-sm text-text-dark hover:bg-cream-bg transition rounded-md">
