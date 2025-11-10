@@ -48,6 +48,7 @@
                 <!-- Purchasing -->
                 <li>
                     <a href="{{ route('Supervisor_Item_Request') }}"
+                        id="menu-item-request"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Item_Request') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-boxes w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>

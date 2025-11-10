@@ -32,7 +32,8 @@ class ItemController extends Controller
                     'i.item_unit',
                     'i.item_stock',
                     'i.cat_id',
-                    'c.cat_name'
+                    'c.cat_name',
+                    'i.is_custom'        // ← NEW
                 )
                 ->orderBy('i.item_name')
                 ->get();
@@ -74,7 +75,8 @@ class ItemController extends Controller
                     'i.min_stock_level',
                     'i.max_stock_level',
                     'i.cat_id',
-                    'c.cat_name'
+                    'c.cat_name',
+                    'i.is_custom'        // ← NEW
                 )
                 ->first();
 
@@ -105,7 +107,8 @@ class ItemController extends Controller
             'item_expire_date' => 'nullable|date',
             'reorder_level' => 'nullable|numeric|min:0',
             'min_stock_level' => 'nullable|numeric|min:0',
-            'max_stock_level' => 'nullable|numeric|min:0'
+            'max_stock_level' => 'nullable|numeric|min:0',
+            'is_custom' => 'nullable|boolean'        // ← NEW
         ]);
 
         if ($validator->fails()) {
@@ -131,6 +134,7 @@ class ItemController extends Controller
             $item->min_stock_level = $request->min_stock_level ?? 0;
             $item->max_stock_level = $request->max_stock_level;
             $item->is_active = true;
+            $item->is_custom = $request->boolean('is_custom');        // ← NEW
             $item->save();
 
             DB::commit();
@@ -165,7 +169,8 @@ class ItemController extends Controller
             'item_expire_date' => 'nullable|date',
             'reorder_level' => 'required|numeric|min:0',
             'min_stock_level' => 'required|numeric|min:0',
-            'max_stock_level' => 'nullable|numeric|min:0'
+            'max_stock_level' => 'nullable|numeric|min:0',
+            'is_custom' => 'nullable|boolean'        // ← NEW
         ]);
 
         if ($validator->fails()) {
@@ -197,6 +202,7 @@ class ItemController extends Controller
             $item->reorder_level = $request->reorder_level;
             $item->min_stock_level = $request->min_stock_level;
             $item->max_stock_level = $request->max_stock_level;
+            $item->is_custom = $request->boolean('is_custom');        // ← NEW
             $item->save();
 
             DB::commit();
@@ -343,7 +349,8 @@ class ItemController extends Controller
                     'i.item_unit',
                     'i.item_stock',
                     'i.reorder_level',
-                    'c.cat_name'
+                    'c.cat_name',
+                    'i.is_custom'        // ← NEW
                 )
                 ->orderBy('i.item_stock')
                 ->get();
@@ -375,7 +382,8 @@ class ItemController extends Controller
                     'i.item_unit',
                     'i.item_stock',
                     'i.cat_id',
-                    'c.cat_name'
+                    'c.cat_name',
+                    'i.is_custom'        // ← NEW
                 )
                 ->orderBy('i.item_name')
                 ->get();
@@ -412,7 +420,8 @@ class ItemController extends Controller
                     'i.item_unit',
                     'i.item_stock',
                     'i.cat_id',
-                    'c.cat_name'
+                    'c.cat_name',
+                    'i.is_custom'        // ← NEW
                 )
                 ->orderBy('i.item_name')
                 ->get();
@@ -445,7 +454,8 @@ class ItemController extends Controller
                     'item_name',
                     'item_unit',
                     'item_stock',
-                    'item_expire_date'
+                    'item_expire_date',
+                    'is_custom'        // ← NEW
                 )
                 ->orderBy('item_expire_date')
                 ->get();
@@ -479,7 +489,8 @@ class ItemController extends Controller
                     'i.min_stock_level',
                     'i.max_stock_level',
                     'i.cat_id',
-                    'c.cat_name'
+                    'c.cat_name',
+                    'i.is_custom'        // ← NEW
                 )
                 ->first();
 

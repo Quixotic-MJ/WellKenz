@@ -17,6 +17,7 @@ return new class extends Migration
             $table->enum('item_req_status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->foreignId('requested_by')->constrained('users', 'user_id');
             $table->foreignId('approved_by')->nullable()->constrained('users', 'user_id');
+            $table->text('item_req_reject_reason')->nullable()->after('approved_by'); // Added reject reason column
             $table->timestamps();
             
             // Indexes for better performance

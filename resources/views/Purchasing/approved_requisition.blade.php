@@ -1,257 +1,213 @@
 @extends('Purchasing.layout.app')
-
-@section('title', 'Dashboard - WellKenz ERP')
-
-@section('breadcrumb', 'Dashboard')
+@section('title','Approved Requisitions')
+@section('breadcrumb','Create Purchase Order')
 
 @section('content')
-<div class="space-y-6">
-    <!-- Welcome Card -->
-    <div class="bg-white border-2 border-border-soft p-8">
-        <div class="flex items-center justify-between">
+
+@php
+/* ----------  DATA  ---------- */
+$approvedReqs = \App\Models\Requisition::with(['requester','items.item'])
+                ->where('req_status','approved')
+                ->latest()
+                ->limit(20)
+                ->get();
+$pos          = \App\Models\PurchaseOrder::with(['supplier','requisition'])->latest()->limit(20)->get();
+$suppliers    = \App\Models\Supplier::where('sup_status','active')->get();
+@endphp
+
+<div class="space-y-8">
+    {{-- HEADER --}}
+    <div class="bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-2xl p-6 shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-                <h1 class="font-display text-3xl font-bold text-text-dark">Good morning, Procurement Team</h1>
-                <p class="text-text-muted mt-2">Supervisor-approved requisitions awaiting your action.</p>
+                <h1 class="text-3xl font-bold">Purchasing Dashboard</h1>
+                <p class="text-sm opacity-80 mt-1">Supervisor-approved requisitions → Purchase Orders</p>
             </div>
-            <div class="text-right">
-                <p class="text-sm text-text-dark font-semibold">{{ date('F j, Y') }}</p>
-                <p class="text-xs text-text-muted mt-1">{{ date('l') }}</p>
-            </div>
+            <a href="{{ route('Purchasing_dashboard') }}" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition">Refresh</a>
         </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-caramel flex items-center justify-center">
-                    <i class="fas fa-clipboard-check text-white text-lg"></i>
+    {{-- KPI CARDS --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
+        @foreach([
+            ['title'=>'Approved Req','value'=>$approvedReqs->count(),'icon'=>'fas fa-clipboard-check','bg'=>'bg-green-500'],
+            ['title'=>'Total POs','value'=>$pos->count(),'icon'=>'fas fa-file-invoice-dollar','bg'=>'bg-blue-500'],
+            ['title'=>'Active Suppliers','value'=>$suppliers->count(),'icon'=>'fas fa-users','bg'=>'bg-gray-600'],
+            ['title'=>'Low-Stock Items','value'=>DB::table('items')->whereRaw('item_stock <= reorder_level')->where('is_active',true)->count(),'icon'=>'fas fa-exclamation-triangle','bg'=>'bg-red-500','url'=>route('items.low_stock')]
+        ] as $kpi)
+        <a @if(isset($kpi['url'])) href="{{ $kpi['url'] }}" @endif class="block group">
+            <div class="{{ $kpi['bg'] }} text-white rounded-2xl p-5 shadow hover:shadow-xl transition">
+                <div class="flex items-center justify-between">
+                    <div><p class="text-xs uppercase tracking-wider opacity-80">{{ $kpi['title'] }}</p><p class="text-3xl font-bold mt-1">{{ $kpi['value'] }}</p></div>
+                    <i class="{{ $kpi['icon'] }} text-2xl opacity-80"></i>
                 </div>
             </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Approved Requisitions</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">42</p>
-        </div>
-
-        <div class="bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-chocolate flex items-center justify-center">
-                    <i class="fas fa-file-invoice-dollar text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">POs to Create</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">28</p>
-        </div>
-
-        <div class="bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-caramel flex items-center justify-center">
-                    <i class="fas fa-handshake text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Supplier Quotes</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">15</p>
-        </div>
-
-        <div class="bg-white border-2 border-red-200 p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-red-500 flex items-center justify-center">
-                    <i class="fas fa-exclamation-circle text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Urgent Items</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">7</p>
-        </div>
+        </a>
+        @endforeach
     </div>
 
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Supervisor Approved Requisitions -->
-        <div class="lg:col-span-2 bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="font-display text-xl font-bold text-text-dark">Supervisor Approved Requisitions</h3>
-                <a href="#" class="text-xs font-bold text-caramel hover:text-caramel-dark uppercase tracking-wider">View All</a>
+    {{-- APPROVED REQUISITIONS → CREATE PO --}}
+    <div class="bg-white rounded-2xl shadow p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-xl font-bold text-gray-800">Approved Requisitions</h2>
+            <span class="text-sm text-gray-500">Click card to create PO</span>
+        </div>
+        @if($approvedReqs->isEmpty())
+            <p class="text-gray-500 text-sm">No approved requisitions awaiting PO.</p>
+        @else
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                @foreach($approvedReqs as $req)
+                <a href="{{ route('purchase_orders.create',$req->req_id) }}" class="block border border-gray-200 rounded-xl p-4 hover:shadow transition">
+                    <div class="flex items-start justify-between mb-2">
+                        <p class="font-semibold text-gray-800">{{ $req->req_ref }}</p>
+                        <span class="px-2 py-1 text-xs rounded {{ $req->req_priority=='high' ? 'bg-red-100 text-red-700' : ($req->req_priority=='medium' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700') }}">{{ ucfirst($req->req_priority) }}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-1">By: {{ $req->requester->name }} · {{ $req->requester->position }}</p>
+                    <p class="text-xs text-gray-500 mb-3 line-clamp-2">{{ $req->req_purpose }}</p>
+                    <div class="text-xs text-gray-400">{{ $req->created_at->diffForHumans() }}</div>
+                </a>
+                @endforeach
             </div>
-            
+        @endif
+    </div>
+
+    {{-- RECENT POS --}}
+    <div class="bg-white rounded-2xl shadow p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-xl font-bold text-gray-800">Recent Purchase Orders</h2>
+            <a href="{{ route('purchase_orders.print',$pos->first()->po_id ?? 0) }}" target="_blank" class="px-3 py-1.5 bg-gray-800 text-white text-xs rounded hover:bg-gray-700">Print Latest</a>
+        </div>
+        @if($pos->isEmpty())
+            <p class="text-gray-500 text-sm">No purchase orders yet.</p>
+        @else
             <div class="space-y-4">
-                <div class="flex items-start justify-between p-4 border-l-4 border-green-500 bg-green-50">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">Raw Materials - Production Batch #245</p>
-                        <p class="text-xs text-text-muted mt-1">Manufacturing Dept • REQ-MFG-2024-0015 • $45,800</p>
-                        <p class="text-xs text-text-muted mt-1">Approved by: Sarah Johnson • 2 days ago</p>
+                @foreach($pos as $po)
+                <div class="flex items-center justify-between p-4 border border-gray-200 rounded-xl hover:shadow transition">
+                    <div>
+                        <p class="font-semibold text-gray-800">{{ $po->po_ref }}</p>
+                        <p class="text-sm text-gray-600">{{ $po->supplier->sup_name }}</p>
+                        <p class="text-xs text-gray-400">Linked: {{ $po->requisition->req_ref }}</p>
                     </div>
-                    <span class="px-3 py-1 bg-green-600 text-white text-xs font-bold">READY FOR PROCUREMENT</span>
-                </div>
-
-                <div class="flex items-start justify-between p-4 border-l-4 border-green-500 bg-green-50">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">IT Equipment - Workstation Upgrades</p>
-                        <p class="text-xs text-text-muted mt-1">IT Department • REQ-IT-2024-0034 • $22,150</p>
-                        <p class="text-xs text-text-muted mt-1">Approved by: Michael Chen • 1 day ago</p>
+                    <div class="text-right">
+                        <p class="font-semibold text-gray-800">₱{{ number_format($po->total_amount,2) }}</p>
+                        <span class="text-xs px-2 py-1 rounded bg-amber-100 text-amber-700">{{ ucfirst($po->po_status) }}</span>
+                        <div class="mt-2 flex gap-2">
+                            <a href="{{ route('purchase_orders.print',$po->po_id) }}" target="_blank" class="px-3 py-1 bg-gray-800 text-white text-xs rounded hover:bg-gray-700">Print</a>
+                        </div>
                     </div>
-                    <span class="px-3 py-1 bg-green-600 text-white text-xs font-bold">READY FOR PROCUREMENT</span>
                 </div>
-
-                <div class="flex items-start justify-between p-4 border-l-4 border-blue-500 bg-blue-50">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">Office Furniture - New Hire Setup</p>
-                        <p class="text-xs text-text-muted mt-1">HR Department • REQ-HR-2024-0078 • $8,450</p>
-                        <p class="text-xs text-text-muted mt-1">Approved by: David Wilson • 4 hours ago</p>
-                    </div>
-                    <span class="px-3 py-1 bg-blue-600 text-white text-xs font-bold">AWAITING QUOTES</span>
-                </div>
-
-                <div class="flex items-start justify-between p-4 border-l-4 border-orange-500 bg-orange-50">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">Safety Equipment - Emergency Restock</p>
-                        <p class="text-xs text-text-muted mt-1">Operations Dept • REQ-OPS-2024-0092 • $12,300</p>
-                        <p class="text-xs text-text-muted mt-1">Approved by: Maria Rodriguez • 3 days ago • URGENT</p>
-                    </div>
-                    <span class="px-3 py-1 bg-orange-600 text-white text-xs font-bold">PRIORITY PROCUREMENT</span>
-                </div>
+                @endforeach
             </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6">Procurement Actions</h3>
-            
-            <div class="space-y-3">
-                <button class="w-full p-4 bg-caramel text-white hover:bg-caramel-dark transition text-center font-semibold">
-                    <i class="fas fa-file-purchase-order mr-2"></i>
-                    Process Requisition
-                </button>
-
-                <button class="w-full p-4 bg-chocolate text-white hover:bg-chocolate-dark transition text-center font-semibold">
-                    <i class="fas fa-quote-right mr-2"></i>
-                    Request Quotes
-                </button>
-
-                <button class="w-full p-4 border-2 border-border-soft hover:border-chocolate hover:bg-cream-bg transition text-center font-semibold text-text-dark">
-                    <i class="fas fa-truck mr-2 text-chocolate"></i>
-                    Track Orders
-                </button>
-
-                <button class="w-full p-4 border-2 border-border-soft hover:border-chocolate hover:bg-cream-bg transition text-center font-semibold text-text-dark">
-                    <i class="fas fa-users mr-2 text-chocolate"></i>
-                    Supplier Contacts
-                </button>
-            </div>
-        </div>
+        @endif
     </div>
 
-    <!-- Bottom Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Procurement Pipeline -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6">Procurement Pipeline</h3>
-            
-            <div class="space-y-3">
-                <div class="p-4 border-l-4 border-blue-500 bg-blue-50">
-                    <p class="text-sm font-bold text-text-dark">REQ-MFG-2024-0012 • Raw Materials</p>
-                    <p class="text-xs text-text-muted mt-1">3 Quotes Received • Best: Global Materials Inc. • $28,400</p>
-                    <p class="text-xs text-text-muted mt-1">Next Step: Quote Evaluation</p>
-                    <span class="inline-block mt-2 px-2 py-1 bg-blue-600 text-white text-xs font-bold">QUOTE STAGE</span>
-                </div>
-
-                <div class="p-4 border-l-4 border-yellow-500 bg-yellow-50">
-                    <p class="text-sm font-bold text-text-dark">REQ-IT-2024-0028 • Server Equipment</p>
-                    <p class="text-xs text-text-muted mt-1">Quote Approved • Tech Solutions Ltd. • $15,670</p>
-                    <p class="text-xs text-text-muted mt-1">Next Step: Create Purchase Order</p>
-                    <span class="inline-block mt-2 px-2 py-1 bg-yellow-600 text-white text-xs font-bold">APPROVED FOR PO</span>
-                </div>
-
-                <div class="p-4 border-l-4 border-green-500 bg-green-50">
-                    <p class="text-sm font-bold text-text-dark">REQ-OPS-2024-0085 • Maintenance Tools</p>
-                    <p class="text-xs text-text-muted mt-1">PO-2024-0512 Created • Industrial Tools Co. • $7,890</p>
-                    <p class="text-xs text-text-muted mt-1">Next Step: Order Confirmation</p>
-                    <span class="inline-block mt-2 px-2 py-1 bg-green-600 text-white text-xs font-bold">PO ISSUED</span>
-                </div>
-            </div>
+    {{-- SUPPLIER MANAGEMENT --}}
+    <div class="bg-white rounded-2xl shadow p-6">
+        <div class="flex items-center justify-between mb-5">
+            <h2 class="text-xl font-bold text-gray-800">Suppliers</h2>
+            <button onclick="openSupplierModal()" class="px-4 py-2 bg-gray-800 text-white text-sm rounded hover:bg-gray-700">Add Supplier</button>
         </div>
-
-        <!-- Recent Supplier Quotes -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6 flex items-center">
-                <i class="fas fa-file-contract text-caramel mr-2"></i>
-                Recent Supplier Quotes
-            </h3>
-            
-            <div class="space-y-3">
-                <div class="p-4 border-l-4 border-green-500 bg-green-50">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-text-dark">Global Materials Inc.</p>
-                            <p class="text-xs text-text-muted mt-1">Raw Materials • $28,400 • Valid until: 30 days</p>
-                            <p class="text-xs text-text-muted mt-1">For: REQ-MFG-2024-0012</p>
-                        </div>
-                        <span class="px-2 py-1 bg-green-600 text-white text-xs font-bold">BEST QUOTE</span>
-                    </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-yellow-500 bg-yellow-50">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-text-dark">Tech Solutions Ltd.</p>
-                            <p class="text-xs text-text-muted mt-1">IT Equipment • $15,670 • Valid until: 14 days</p>
-                            <p class="text-xs text-text-muted mt-1">For: REQ-IT-2024-0028</p>
-                        </div>
-                        <span class="px-2 py-1 bg-yellow-600 text-white text-xs font-bold">UNDER REVIEW</span>
-                    </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-orange-500 bg-orange-50">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-text-dark">Office Pro Supplies</p>
-                            <p class="text-xs text-text-muted mt-1">Furniture • $9,240 • Valid until: 7 days</p>
-                            <p class="text-xs text-text-muted mt-1">For: REQ-HR-2024-0078 • Expiring Soon</p>
-                        </div>
-                        <span class="px-2 py-1 bg-orange-600 text-white text-xs font-bold">ACTION NEEDED</span>
-                    </div>
-                </div>
-            </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="supplierTable">
+                <thead class="bg-gray-50 text-gray-700 uppercase text-xs"><tr><th>Name</th><th>Email</th><th>Contact Person</th><th>Phone</th><th class="w-24"></th></tr></thead>
+                <tbody>
+                    @foreach($suppliers as $s)
+                    <tr data-id="{{ $s->sup_id }}">
+                        <td class="px-4 py-3 font-semibold">{{ $s->sup_name }}</td>
+                        <td class="px-4 py-3">{{ $s->sup_email }}</td>
+                        <td class="px-4 py-3">{{ $s->contact_person }}</td>
+                        <td class="px-4 py-3">{{ $s->contact_number }}</td>
+                        <td class="px-4 py-3 flex gap-2">
+                            <button onclick="editSupplier({{ $s->sup_id }})" class="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700">Edit</button>
+                            <button onclick="deleteSupplier({{ $s->sup_id }})" class="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">Delete</button>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
-    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
-    
-    .font-display {
-        font-family: 'Playfair Display', serif;
-    }
+{{-- ==========  MODALS  ========== --}}
+{{-- Supplier Modal --}}
+<div id="supplierModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4" id="supplierModalTitle">Add Supplier</h3>
+        <form id="supplierForm" class="space-y-4">
+            @csrf
+            <input type="hidden" id="sup_id">
+            <input type="text" id="sup_name" placeholder="Supplier name" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input type="email" id="sup_email" placeholder="Email" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input type="text" id="sup_address" placeholder="Address" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input type="text" id="contact_person" placeholder="Contact person" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <input type="text" id="contact_number" placeholder="Phone" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400">
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeSupplierModal()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-    .cream-bg {
-        background-color: #faf7f3;
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+/* ==========  SUPPLIER AJAX  ========== */
+function openSupplierModal(id=null){
+    $('#supplierModal').removeClass('hidden');
+    if(id){
+        const row = $(`tr[data-id="${id}"]`);
+        $('#sup_id').val(id);
+        $('#sup_name').val(row.find('td:eq(0)').text().trim());
+        $('#sup_email').val(row.find('td:eq(1)').text().trim());
+        $('#contact_person').val(row.find('td:eq(2)').text().trim());
+        $('#contact_number').val(row.find('td:eq(3)').text().trim());
+        $('#supplierModalTitle').text('Edit Supplier');
+    }else{
+        $('#supplierForm')[0].reset();
+        $('#sup_id').val('');
+        $('#supplierModalTitle').text('Add Supplier');
     }
-    
-    .text-text-dark {
-        color: #1a1410;
-    }
-    
-    .text-text-muted {
-        color: #8b7355;
-    }
-    
-    .bg-chocolate {
-        background-color: #3d2817;
-    }
-    
-    .hover\:bg-chocolate-dark:hover {
-        background-color: #2a1a0f;
-    }
-    
-    .bg-caramel {
-        background-color: #c48d3f;
-    }
-    
-    .hover\:bg-caramel-dark:hover {
-        background-color: #a67332;
-    }
-    
-    .border-border-soft {
-        border-color: #e8dfd4;
-    }
-</style>
+}
+function closeSupplierModal(){
+    $('#supplierModal').addClass('hidden');
+}
+$('#supplierForm').on('submit', function(e){
+    e.preventDefault();
+    const id = $('#sup_id').val();
+    const url = id ? `/purchasing/supplier/${id}` : '{{ route("supplier.store") }}';
+    const method = id ? 'PUT' : 'POST';
+    $.ajax({
+        url: url,
+        method: method,
+        data: $(this).serialize(),
+        success: res => {
+            Swal.fire({icon:'success', title:'Saved', timer:1200, showConfirmButton:false});
+            location.reload();
+        },
+        error: xhr => Swal.fire({icon:'error', title:'Error', text: xhr.responseJSON?.message || 'Save failed'})
+    });
+});
+function deleteSupplier(id){
+    Swal.fire({
+        title: 'Delete supplier?',
+        text: 'You will not be able to revert this!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Delete'
+    }).then(result => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/purchasing/supplier/${id}`,
+                method: 'DELETE',
+                success: () => location.reload(),
+                error: () => Swal.fire({icon:'error', title:'Failed', text:'Could not delete supplier'})
+            });
+        }
+    });
+}
+</script>
 @endsection

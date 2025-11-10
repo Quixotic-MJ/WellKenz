@@ -23,20 +23,24 @@ class Item extends Model
         'reorder_level',
         'min_stock_level',
         'max_stock_level',
-        'is_active'
+        'is_active',
+        'is_custom'        // ← NEW
     ];
 
     protected $casts = [
-        'item_stock' => 'decimal:3',
-        'reorder_level' => 'decimal:3',
-        'min_stock_level' => 'decimal:3',
-        'max_stock_level' => 'decimal:3',
-        'item_expire_date' => 'date',
-        'is_active' => 'boolean',
-        'last_updated' => 'datetime'
+        'item_stock'        => 'decimal:3',
+        'reorder_level'     => 'decimal:3',
+        'min_stock_level'   => 'decimal:3',
+        'max_stock_level'   => 'decimal:3',
+        'item_expire_date'  => 'date',
+        'is_active'         => 'boolean',
+        'is_custom'         => 'boolean',   // ← NEW
+        'last_updated'      => 'datetime'
     ];
 
-    // Relationships
+    /* --------------------------------------------------------------------------
+     *  RELATIONSHIPS
+     * -------------------------------------------------------------------------- */
     public function category()
     {
         return $this->belongsTo(Category::class, 'cat_id', 'cat_id');
@@ -47,7 +51,9 @@ class Item extends Model
         return $this->hasMany(RequisitionItem::class, 'item_id');
     }
 
-    // Accessors
+    /* --------------------------------------------------------------------------
+     *  ACCESSORS / MUTATORS
+     * -------------------------------------------------------------------------- */
     public function getNameAttribute()
     {
         return $this->item_name;
@@ -63,7 +69,9 @@ class Item extends Model
         return $this->item_code;
     }
 
-    // Scopes
+    /* --------------------------------------------------------------------------
+     *  SCOPES
+     * -------------------------------------------------------------------------- */
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -80,7 +88,14 @@ class Item extends Model
                     ->where('item_stock', '>', 0);
     }
 
-    // Helpers
+    public function scopeCustom($query, bool $custom = true)   // ← NEW
+    {
+        return $query->where('is_custom', $custom);
+    }
+
+    /* --------------------------------------------------------------------------
+     *  HELPERS
+     * -------------------------------------------------------------------------- */
     public function hasSufficientStock($quantity)
     {
         return $this->item_stock >= $quantity;

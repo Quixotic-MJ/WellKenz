@@ -24,6 +24,7 @@ class ItemSeeder extends Seeder
                 'min_stock_level' => 20,
                 'max_stock_level' => 200,
                 'is_active' => true,
+                'is_custom' => false,        // NEW
                 'last_updated' => now(),
             ],
             [
@@ -38,6 +39,7 @@ class ItemSeeder extends Seeder
                 'min_stock_level' => 3,
                 'max_stock_level' => 50,
                 'is_active' => true,
+                'is_custom' => false,        // NEW
                 'last_updated' => now(),
             ],
             [
@@ -52,6 +54,7 @@ class ItemSeeder extends Seeder
                 'min_stock_level' => 5,
                 'max_stock_level' => 80,
                 'is_active' => true,
+                'is_custom' => false,        // NEW
                 'last_updated' => now(),
             ],
 
@@ -68,6 +71,7 @@ class ItemSeeder extends Seeder
                 'min_stock_level' => 15,
                 'max_stock_level' => 200,
                 'is_active' => true,
+                'is_custom' => false,        // NEW
                 'last_updated' => now(),
             ],
             [
@@ -82,6 +86,7 @@ class ItemSeeder extends Seeder
                 'min_stock_level' => 10,
                 'max_stock_level' => 150,
                 'is_active' => true,
+                'is_custom' => false,        // NEW
                 'last_updated' => now(),
             ],
 
@@ -98,6 +103,7 @@ class ItemSeeder extends Seeder
                 'min_stock_level' => 50,
                 'max_stock_level' => 1000,
                 'is_active' => true,
+                'is_custom' => false,        // NEW
                 'last_updated' => now(),
             ],
             [
@@ -112,24 +118,18 @@ class ItemSeeder extends Seeder
                 'min_stock_level' => 10,
                 'max_stock_level' => 200,
                 'is_active' => true,
+                'is_custom' => false,        // NEW
                 'last_updated' => now(),
             ],
         ];
 
         foreach ($items as $item) {
-            $existingItem = DB::table('items')
-                ->where('item_code', $item['item_code'])
-                ->first();
-
-            if (!$existingItem) {
-                DB::table('items')->insert($item);
-            } else {
-                DB::table('items')
-                    ->where('item_code', $item['item_code'])
-                    ->update($item);
-            }
+            DB::table('items')->updateOrInsert(
+                ['item_code' => $item['item_code']],
+                $item
+            );
         }
 
-        $this->command->info('Items seeded successfully with stock data!');
+        $this->command->info('Items seeded successfully with is_custom flag!');
     }
 }
