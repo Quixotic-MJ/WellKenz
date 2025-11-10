@@ -139,7 +139,7 @@
     <div class="bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-lg">
         <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
-                <h3 class="text-2xl font-semibold text-gray-900">Review Requisition</h3>
+                <h3 class="text-2xl font-semibold text-gray-900" id="modalTitle">Review Requisition</h3>
                 <button onclick="closeApprovalModal()" class="text-gray-500 hover:text-gray-700">
                     <i class="fas fa-times text-xl"></i>
                 </button>
@@ -151,7 +151,7 @@
         </div>
 
         <!-- Approval Form -->
-        <div class="p-6 border-t border-gray-200">
+        <div class="p-6 border-t border-gray-200" id="approvalFormSection">
             <form id="approvalForm">
                 @csrf
                 <input type="hidden" id="requisitionId" name="requisition_id">
@@ -178,25 +178,39 @@
                             placeholder="Please provide a reason for rejecting this requisition..." required></textarea>
                     </div>
 
-                    <div id="remarksSection" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Additional Remarks (Optional)</label>
-                        <textarea id="remarks" name="remarks" rows="2"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
-                            placeholder="Any additional comments..."></textarea>
-                    </div>
-
                     <div class="flex justify-end space-x-3">
                         <button type="button" onclick="closeApprovalModal()"
                             class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
                             Cancel
                         </button>
-                        <button type="submit"
+                        <button type="submit" id="submitDecisionBtn"
                             class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
                             Submit Decision
                         </button>
                     </div>
                 </div>
             </form>
+        </div>
+
+        <!-- View Only Section (for processed requisitions) -->
+        <div class="p-6 border-t border-gray-200 hidden" id="viewOnlySection">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-400 text-lg"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h4 class="text-sm font-semibold text-blue-800">Requisition Already Processed</h4>
+                        <p class="text-sm text-blue-700 mt-1">This requisition has already been processed and cannot be modified.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button type="button" onclick="closeApprovalModal()"
+                    class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
+                    Close
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -236,15 +250,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('input[name="decision"]').forEach(radio => {
         radio.addEventListener('change', function() {
             const rejectReasonSection = document.getElementById('rejectReasonSection');
-            const remarksSection = document.getElementById('remarksSection');
             
             if (this.value === 'reject') {
                 rejectReasonSection.classList.remove('hidden');
-                remarksSection.classList.remove('hidden');
                 document.getElementById('req_reject_reason').required = true;
             } else {
                 rejectReasonSection.classList.add('hidden');
-                remarksSection.classList.remove('hidden');
                 document.getElementById('req_reject_reason').required = false;
             }
         });
@@ -258,7 +269,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const decision = formData.get('decision');
         const requisitionId = formData.get('requisition_id');
         const rejectReason = formData.get('req_reject_reason');
-        const remarks = formData.get('remarks');
 
         const url = `/supervisor/requisitions/${requisitionId}/status`;
 
@@ -268,12 +278,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Disable submit button to prevent multiple submissions
+        const submitBtn = document.getElementById('submitDecisionBtn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+
         fetch(url, {
             method: 'POST',
             body: JSON.stringify({
                 req_status: decision === 'approve' ? 'approved' : 'rejected',
                 req_reject_reason: rejectReason,
-                remarks: remarks,
                 _token: '{{ csrf_token() }}'
             }),
             headers: {
@@ -300,11 +314,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadStats();
             } else {
                 showMessage(data.message || 'Error processing requisition', 'error');
+                // Re-enable submit button on error
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Submit Decision';
             }
         })
         .catch(error => {
             console.error('Error:', error);
             showMessage('Error processing requisition: ' + error.message, 'error');
+            // Re-enable submit button on error
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Submit Decision';
         });
     });
 });
@@ -389,6 +409,28 @@ function loadRequisitions() {
             const priorityColor = priorityColors[requisition.req_priority] || 'bg-gray-100 text-gray-800';
             const statusColor = statusColors[requisition.req_status] || 'bg-gray-100 text-gray-800';
 
+            // Determine button text and actions based on status
+            let actionButtons = '';
+            if (requisition.req_status === 'pending') {
+                actionButtons = `
+                    <button onclick="reviewRequisition(${requisition.req_id})"
+                        class="px-3 py-1 bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition rounded">
+                        Review
+                    </button>
+                    <button onclick="quickApprove(${requisition.req_id})"
+                        class="px-3 py-1 bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition rounded">
+                        Quick Approve
+                    </button>
+                `;
+            } else {
+                actionButtons = `
+                    <button onclick="reviewRequisition(${requisition.req_id})"
+                        class="px-3 py-1 bg-gray-600 text-white text-xs font-medium hover:bg-gray-700 transition rounded">
+                        View Details
+                    </button>
+                `;
+            }
+
             const row = `
                 <tr class="hover:bg-gray-50 transition">
                     <td class="px-6 py-4">
@@ -419,16 +461,7 @@ function loadRequisitions() {
                     </td>
                     <td class="px-6 py-4">
                         <div class="flex space-x-2">
-                            <button onclick="reviewRequisition(${requisition.req_id})"
-                                class="px-3 py-1 bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition rounded">
-                                ${requisition.req_status === 'pending' ? 'Review' : 'View'}
-                            </button>
-                            ${requisition.req_status === 'pending' ? `
-                            <button onclick="quickApprove(${requisition.req_id})"
-                                class="px-3 py-1 bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition rounded">
-                                Approve
-                            </button>
-                            ` : ''}
+                            ${actionButtons}
                         </div>
                     </td>
                 </tr>
@@ -548,6 +581,27 @@ function reviewRequisition(requisitionId) {
         }
 
         const requisition = data;
+        currentRequisition = requisition;
+
+        // Update modal title based on status
+        const modalTitle = document.getElementById('modalTitle');
+        if (requisition.req_status === 'pending') {
+            modalTitle.textContent = 'Review Requisition';
+        } else {
+            modalTitle.textContent = 'Requisition Details';
+        }
+
+        // Show/hide form based on status
+        const approvalFormSection = document.getElementById('approvalFormSection');
+        const viewOnlySection = document.getElementById('viewOnlySection');
+        
+        if (requisition.req_status === 'pending') {
+            approvalFormSection.classList.remove('hidden');
+            viewOnlySection.classList.add('hidden');
+        } else {
+            approvalFormSection.classList.add('hidden');
+            viewOnlySection.classList.remove('hidden');
+        }
 
         document.getElementById('requisitionDetails').innerHTML = `
             <div class="space-y-6">
@@ -581,10 +635,38 @@ function reviewRequisition(requisitionId) {
                     <p class="text-gray-900 bg-gray-50 p-3 rounded">${requisition.req_purpose}</p>
                 </div>
 
-                ${requisition.req_reject_reason ? `
+                ${requisition.req_status === 'rejected' && requisition.req_reject_reason ? `
                 <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <label class="block text-sm font-medium text-red-700 mb-2">Rejection Reason</label>
-                    <p class="text-red-800">${requisition.req_reject_reason}</p>
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-times-circle text-red-400 text-lg mt-1"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-semibold text-red-800 mb-1">Rejection Reason</h4>
+                            <p class="text-red-700 whitespace-pre-wrap">${requisition.req_reject_reason}</p>
+                            ${requisition.approver ? `
+                                <p class="text-xs text-red-600 mt-2">
+                                    Rejected by: ${requisition.approver.name} on ${new Date(requisition.approved_date).toLocaleDateString()}
+                                </p>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                ${requisition.req_status === 'approved' && requisition.approver ? `
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle text-green-400 text-lg mt-1"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h4 class="text-sm font-semibold text-green-800 mb-1">Approval Information</h4>
+                            <p class="text-green-700">
+                                Approved by: ${requisition.approver.name} on ${new Date(requisition.approved_date).toLocaleDateString()}
+                            </p>
+                        </div>
+                    </div>
                 </div>
                 ` : ''}
 
@@ -684,7 +766,11 @@ function closeApprovalModal() {
     document.getElementById('approvalModal').classList.add('hidden');
     document.getElementById('approvalForm').reset();
     document.getElementById('rejectReasonSection').classList.add('hidden');
-    document.getElementById('remarksSection').classList.add('hidden');
+    
+    // Reset submit button
+    const submitBtn = document.getElementById('submitDecisionBtn');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = 'Submit Decision';
 }
 
 function clearFilters() {
