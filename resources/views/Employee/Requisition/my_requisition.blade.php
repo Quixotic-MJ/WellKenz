@@ -75,6 +75,9 @@
                         class="pl-9 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition w-64">
                     <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
                 </div>
+                <button onclick="loadMyRequisitions()" class="px-4 py-2 bg-gray-800 text-white hover:bg-gray-700 text-sm font-medium rounded">
+                    <i class="fas fa-refresh mr-2"></i>Refresh
+                </button>
             </div>
         </div>
 
@@ -123,9 +126,17 @@
 </div>
 
 <script>
+let refreshInterval;
+
 document.addEventListener('DOMContentLoaded', function() {
     loadMyRequisitions();
     loadStats();
+
+    // Start auto-refresh every 30 seconds for live updates
+    refreshInterval = setInterval(() => {
+        loadMyRequisitions();
+        loadStats();
+    }, 30000);
 
     // Search functionality
     document.getElementById('searchRequisitions').addEventListener('input', function(e) {
@@ -149,7 +160,8 @@ function loadMyRequisitions() {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
+        },
+        cache: 'no-cache' // Prevent caching for live updates
     })
     .then(response => {
         if (!response.ok) {
@@ -203,6 +215,10 @@ function loadMyRequisitions() {
             // Count total items
             const totalItems = requisition.items ? requisition.items.length : 0;
 
+            // Add rejection indicator
+            const rejectionBadge = requisition.req_status === 'rejected' && requisition.req_reject_reason ? 
+                `<i class="fas fa-exclamation-circle text-red-500 ml-1" title="Rejected with reason"></i>` : '';
+
             const row = document.createElement('tr');
             row.className = 'hover:bg-gray-50 transition';
             row.innerHTML = `
@@ -223,9 +239,12 @@ function loadMyRequisitions() {
                     </span>
                 </td>
                 <td class="px-6 py-4">
-                    <span class="inline-block px-2 py-1 ${statusColor} text-xs font-semibold capitalize rounded">
-                        ${requisition.req_status || 'pending'}
-                    </span>
+                    <div class="flex items-center">
+                        <span class="inline-block px-2 py-1 ${statusColor} text-xs font-semibold capitalize rounded">
+                            ${requisition.req_status || 'pending'}
+                        </span>
+                        ${rejectionBadge}
+                    </div>
                 </td>
                 <td class="px-6 py-4">
                     <p class="text-sm text-gray-900">${formattedDate}</p>
@@ -264,7 +283,8 @@ function loadStats() {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
+        },
+        cache: 'no-cache'
     })
     .then(response => {
         if (!response.ok) {
@@ -309,7 +329,8 @@ function viewRequisition(requisitionId) {
             'X-Requested-With': 'XMLHttpRequest',
             'Accept': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
+        },
+        cache: 'no-cache'
     })
     .then(response => {
         if (!response.ok) {
@@ -320,11 +341,59 @@ function viewRequisition(requisitionId) {
     .then(requisition => {
         console.log('Requisition details loaded:', requisition);
         showRequisitionDetails(requisition);
+        
+        // Start auto-refresh for this specific requisition
+        startRequisitionAutoRefresh(requisitionId);
     })
     .catch(error => {
         console.error('Error loading requisition details:', error);
         showMessage('Error loading requisition details: ' + error.message, 'error');
     });
+}
+
+let requisitionRefreshInterval;
+
+function startRequisitionAutoRefresh(requisitionId) {
+    // Clear any existing interval
+    if (requisitionRefreshInterval) {
+        clearInterval(requisitionRefreshInterval);
+    }
+    
+    // Refresh requisition details every 15 seconds
+    requisitionRefreshInterval = setInterval(() => {
+        fetch(`/requisitions/${requisitionId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            cache: 'no-cache'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Network response was not ok: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(requisition => {
+            // Only update if modal is still open
+            const modal = document.getElementById('requisitionModal');
+            if (!modal.classList.contains('hidden')) {
+                showRequisitionDetails(requisition);
+                console.log('Requisition details auto-refreshed');
+            }
+        })
+        .catch(error => {
+            console.error('Error auto-refreshing requisition:', error);
+        });
+    }, 15000);
+}
+
+function stopRequisitionAutoRefresh() {
+    if (requisitionRefreshInterval) {
+        clearInterval(requisitionRefreshInterval);
+        requisitionRefreshInterval = null;
+    }
 }
 
 function showRequisitionDetails(requisition) {
@@ -355,7 +424,8 @@ function showRequisitionDetails(requisition) {
         'pending': 'bg-amber-100 text-amber-800 border-amber-200',
         'approved': 'bg-green-100 text-green-800 border-green-200',
         'rejected': 'bg-red-100 text-red-800 border-red-200',
-        'completed': 'bg-blue-100 text-blue-800 border-blue-200'
+        'completed': 'bg-blue-100 text-blue-800 border-blue-200',
+        'processing': 'bg-purple-100 text-purple-800 border-purple-200'
     };
 
     const statusColor = statusColors[requisition.req_status] || 'bg-gray-100 text-gray-800 border-gray-200';
@@ -379,6 +449,8 @@ function showRequisitionDetails(requisition) {
             const itemName = item.item ? item.item.item_name : 'Item not found';
             const itemCode = item.item ? item.item.item_code : 'N/A';
             const itemCategory = item.item && item.item.category ? item.item.category.cat_name : 'Uncategorized';
+            const currentStock = item.item ? item.item.item_stock : 0;
+            const isLowStock = currentStock < (item.req_item_quantity || 0);
             
             itemsHtml += `
                 <tr class="border-b border-gray-200 hover:bg-gray-50">
@@ -393,9 +465,14 @@ function showRequisitionDetails(requisition) {
                     <td class="px-4 py-3 text-sm text-gray-900 font-semibold">${item.req_item_quantity || '0'}</td>
                     <td class="px-4 py-3 text-sm text-gray-900">${escapeHtml(item.item_unit || 'N/A')}</td>
                     <td class="px-4 py-3 text-sm">
-                        <span class="inline-block px-2 py-1 ${getItemStatusColor(item.req_item_status)} text-xs font-semibold capitalize rounded">
-                            ${item.req_item_status || 'pending'}
-                        </span>
+                        <div class="flex flex-col space-y-1">
+                            <span class="inline-block px-2 py-1 ${getItemStatusColor(item.req_item_status)} text-xs font-semibold capitalize rounded">
+                                ${item.req_item_status || 'pending'}
+                            </span>
+                            <span class="text-xs ${isLowStock ? 'text-amber-600' : 'text-gray-500'}">
+                                Stock: ${currentStock}
+                            </span>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -413,6 +490,43 @@ function showRequisitionDetails(requisition) {
         `;
     }
 
+    // Rejection reason section
+    const rejectionSection = requisition.req_status === 'rejected' && requisition.req_reject_reason ? `
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-times-circle text-red-400 text-lg mt-1"></i>
+                </div>
+                <div class="ml-3">
+                    <h4 class="text-sm font-semibold text-red-800 mb-1">Rejection Reason</h4>
+                    <p class="text-red-700 whitespace-pre-wrap">${escapeHtml(requisition.req_reject_reason)}</p>
+                    ${requisition.approver ? `
+                        <p class="text-xs text-red-600 mt-2">
+                            Rejected by: ${escapeHtml(requisition.approver.name)} on ${formattedApprovedDate}
+                        </p>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    ` : '';
+
+    // Approval info section
+    const approvalSection = requisition.req_status === 'approved' && requisition.approver ? `
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle text-green-400 text-lg mt-1"></i>
+                </div>
+                <div class="ml-3">
+                    <h4 class="text-sm font-semibold text-green-800 mb-1">Approval Information</h4>
+                    <p class="text-green-700">
+                        Approved by: ${escapeHtml(requisition.approver.name)} on ${formattedApprovedDate}
+                    </p>
+                </div>
+            </div>
+        </div>
+    ` : '';
+
     detailsDiv.innerHTML = `
         <div class="space-y-6">
             <!-- Header Section -->
@@ -421,6 +535,7 @@ function showRequisitionDetails(requisition) {
                     <div>
                         <h2 class="text-xl font-bold text-gray-900">${requisition.req_ref || 'N/A'}</h2>
                         <p class="text-gray-600">Submitted on ${formattedCreatedDate}</p>
+                        <p class="text-sm text-gray-500 mt-1">Last updated: ${new Date().toLocaleTimeString()}</p>
                     </div>
                     <div class="flex items-center space-x-3">
                         <span class="inline-block px-3 py-1 ${statusColor} text-sm font-semibold capitalize rounded border">
@@ -432,6 +547,10 @@ function showRequisitionDetails(requisition) {
                     </div>
                 </div>
             </div>
+
+            <!-- Rejection/Approval Information -->
+            ${rejectionSection}
+            ${approvalSection}
 
             <!-- Basic Information Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -474,11 +593,11 @@ function showRequisitionDetails(requisition) {
                 <div class="bg-white border border-gray-200 rounded-lg p-4">
                     <div class="flex items-center">
                         <div class="w-10 h-10 bg-amber-100 rounded flex items-center justify-center mr-3">
-                            <i class="fas fa-calendar-check text-amber-600"></i>
+                            <i class="fas fa-user-check text-amber-600"></i>
                         </div>
                         <div>
-                            <p class="text-sm text-gray-500">Approved Date</p>
-                            <p class="text-sm font-semibold text-gray-900">${formattedApprovedDate}</p>
+                            <p class="text-sm text-gray-500">Approved By</p>
+                            <p class="text-sm font-semibold text-gray-900">${requisition.approver ? requisition.approver.name : 'Pending'}</p>
                         </div>
                     </div>
                 </div>
@@ -488,6 +607,20 @@ function showRequisitionDetails(requisition) {
             <div class="bg-white border border-gray-200 rounded-lg p-4">
                 <h4 class="text-sm font-semibold text-gray-500 mb-2">Purpose / Remarks</h4>
                 <p class="text-gray-900 bg-gray-50 border border-gray-200 rounded p-3 whitespace-pre-wrap">${escapeHtml(requisition.req_purpose || 'No purpose provided')}</p>
+            </div>
+
+            <!-- Progress Tracking -->
+            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-lg font-semibold text-gray-900">Progress Tracking</h4>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-gray-500">Auto-updating</span>
+                        <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    ${getProgressSteps(requisition)}
+                </div>
             </div>
 
             <!-- Items Section -->
@@ -507,21 +640,13 @@ function showRequisitionDetails(requisition) {
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Item Details</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Quantity</th>
                                 <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Unit</th>
-                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status & Stock</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                             ${itemsHtml}
                         </tbody>
                     </table>
-                </div>
-            </div>
-
-            <!-- Progress Tracking -->
-            <div class="bg-white border border-gray-200 rounded-lg p-4">
-                <h4 class="text-lg font-semibold text-gray-900 mb-4">Progress Tracking</h4>
-                <div class="space-y-4">
-                    ${getProgressSteps(requisition.req_status)}
                 </div>
             </div>
         </div>
@@ -540,49 +665,104 @@ function getItemStatusColor(status) {
     return colors[status] || 'bg-gray-100 text-gray-800';
 }
 
-function getProgressSteps(status) {
+function getProgressSteps(requisition) {
     const steps = [
-        { id: 'submitted', label: 'Submitted', description: 'Requisition has been submitted for review' },
-        { id: 'under_review', label: 'Under Review', description: 'Being reviewed by supervisor/manager' },
-        { id: 'approved', label: 'Approved', description: 'Approved by management' },
-        { id: 'processing', label: 'Processing', description: 'Being processed by purchasing department' },
-        { id: 'completed', label: 'Completed', description: 'Items delivered or ready for pickup' }
+        { 
+            id: 'submitted', 
+            label: 'Submitted', 
+            description: 'Requisition has been submitted for review',
+            icon: 'fas fa-paper-plane',
+            status: 'completed'
+        },
+        { 
+            id: 'under_review', 
+            label: 'Under Review', 
+            description: 'Being reviewed by supervisor/manager',
+            icon: 'fas fa-search',
+            status: requisition.req_status === 'pending' ? 'current' : 
+                   (requisition.req_status === 'rejected' ? 'cancelled' : 'completed')
+        },
+        { 
+            id: 'approved', 
+            label: 'Approved', 
+            description: 'Approved by management',
+            icon: 'fas fa-check-circle',
+            status: requisition.req_status === 'approved' || requisition.req_status === 'completed' ? 'completed' :
+                   (requisition.req_status === 'rejected' ? 'cancelled' : 'pending')
+        },
+        { 
+            id: 'processing', 
+            label: 'Processing', 
+            description: 'Being processed by purchasing department',
+            icon: 'fas fa-cogs',
+            status: requisition.req_status === 'completed' ? 'completed' : 'pending'
+        },
+        { 
+            id: 'completed', 
+            label: 'Completed', 
+            description: 'Items delivered or ready for pickup',
+            icon: 'fas fa-clipboard-check',
+            status: requisition.req_status === 'completed' ? 'completed' : 'pending'
+        }
     ];
 
-    let currentStepIndex = 0;
-    switch(status) {
-        case 'pending': currentStepIndex = 0; break;
-        case 'under_review': currentStepIndex = 1; break;
-        case 'approved': currentStepIndex = 2; break;
-        case 'processing': currentStepIndex = 3; break;
-        case 'completed': currentStepIndex = 4; break;
-        default: currentStepIndex = 0;
+    // Update step statuses based on requisition status
+    if (requisition.req_status === 'rejected') {
+        steps.forEach(step => {
+            if (step.id === 'under_review') {
+                step.status = 'cancelled';
+                step.description = 'Requisition was rejected';
+            } else if (step.id !== 'submitted') {
+                step.status = 'cancelled';
+            }
+        });
     }
 
-    return steps.map((step, index) => `
-        <div class="flex items-center">
-            <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center 
-                ${index <= currentStepIndex ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-500'} 
-                ${index === currentStepIndex ? 'ring-2 ring-green-200' : ''}">
-                ${index < currentStepIndex ? '<i class="fas fa-check text-sm"></i>' : (index + 1)}
-            </div>
-            <div class="ml-4 flex-1">
-                <p class="text-sm font-medium ${index <= currentStepIndex ? 'text-gray-900' : 'text-gray-500'}">
-                    ${step.label}
-                </p>
-                <p class="text-xs text-gray-500">${step.description}</p>
-            </div>
-            ${index < steps.length - 1 ? `
-                <div class="flex-1 ml-4">
-                    <div class="h-0.5 ${index < currentStepIndex ? 'bg-green-600' : 'bg-gray-300'}"></div>
+    return steps.map((step, index) => {
+        const stepClass = {
+            'completed': 'bg-green-600 text-white',
+            'current': 'bg-blue-600 text-white ring-2 ring-blue-200',
+            'cancelled': 'bg-red-600 text-white',
+            'pending': 'bg-gray-300 text-gray-500'
+        }[step.status] || 'bg-gray-300 text-gray-500';
+
+        const lineClass = index < steps.length - 1 ? 
+            (step.status === 'completed' ? 'bg-green-600' : 
+             step.status === 'cancelled' ? 'bg-red-600' : 'bg-gray-300') : '';
+
+        return `
+            <div class="flex items-center">
+                <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${stepClass}">
+                    ${step.status === 'completed' ? '<i class="fas fa-check text-sm"></i>' : 
+                      step.status === 'cancelled' ? '<i class="fas fa-times text-sm"></i>' : 
+                      `<i class="${step.icon} text-sm"></i>`}
                 </div>
-            ` : ''}
-        </div>
-    `).join('');
+                <div class="ml-4 flex-1">
+                    <p class="text-sm font-medium ${step.status !== 'pending' ? 'text-gray-900' : 'text-gray-500'}">
+                        ${step.label}
+                    </p>
+                    <p class="text-xs ${step.status === 'cancelled' ? 'text-red-600' : 'text-gray-500'}">
+                        ${step.description}
+                    </p>
+                    ${step.status === 'current' ? `
+                        <p class="text-xs text-blue-600 mt-1 font-medium">
+                            <i class="fas fa-sync-alt fa-spin mr-1"></i>Currently in progress
+                        </p>
+                    ` : ''}
+                </div>
+                ${index < steps.length - 1 ? `
+                    <div class="flex-1 ml-4">
+                        <div class="h-0.5 ${lineClass}"></div>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }).join('');
 }
 
 function closeRequisitionModal() {
     document.getElementById('requisitionModal').classList.add('hidden');
+    stopRequisitionAutoRefresh();
 }
 
 function escapeHtml(text) {
@@ -606,5 +786,15 @@ function showMessage(message, type) {
         }, 5000);
     }
 }
+
+// Clean up intervals when page is unloaded
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+    if (requisitionRefreshInterval) {
+        clearInterval(requisitionRefreshInterval);
+    }
+});
 </script>
 @endsection

@@ -3,13 +3,10 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\SupervisorRequisitionController;
 use App\Http\Controllers\RequisitionController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemRequestController;
-use App\Http\Controllers\InventoryController;
 use Illuminate\Support\Facades\DB;
 
 // Public routes
@@ -36,7 +33,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [ItemRequestController::class, 'store'])->name('item_requests.store');
         Route::get('/my-requests', [ItemRequestController::class, 'getMyRequests'])->name('item_requests.my_requests');
         Route::get('/{id}', [ItemRequestController::class, 'show'])->name('item_requests.show');
-        
+
         // Approval routes (for supervisors/admins)
         Route::get('/pending', [ItemRequestController::class, 'getPendingRequests'])->name('item_requests.pending');
         Route::post('/{id}/approve', [ItemRequestController::class, 'approve'])->name('item_requests.approve');
@@ -54,17 +51,25 @@ Route::middleware(['auth'])->group(function () {
         // Create and store requisitions
         Route::get('/create', [RequisitionController::class, 'create'])->name('requisitions.create');
         Route::post('/', [RequisitionController::class, 'store'])->name('requisitions.store');
-        
+
         // View requisitions
         Route::get('/my-requisitions', [RequisitionController::class, 'getMyRequisitions'])->name('requisitions.my_requisitions');
         Route::get('/{id}', [RequisitionController::class, 'getRequisitionDetails'])->name('requisitions.show');
-        
+
         // Management routes
         Route::post('/{id}/status', [RequisitionController::class, 'updateStatus'])->name('requisitions.update_status');
         Route::delete('/{id}', [RequisitionController::class, 'destroy'])->name('requisitions.destroy');
-        
+
         // Admin/Supervisor routes
         Route::get('/', [RequisitionController::class, 'getAllRequisitions'])->name('requisitions.index');
+    });
+
+    // Supervisor Requisition Routes
+    Route::prefix('supervisor')->middleware(['auth'])->group(function () {
+        Route::get('/requisitions', [RequisitionController::class, 'getRequisitionsForApproval'])->name('supervisor.requisitions.index');
+        Route::get('/requisitions/stats', [RequisitionController::class, 'getRequisitionStats'])->name('supervisor.requisitions.stats');
+        Route::get('/requisitions/{id}', [RequisitionController::class, 'getRequisitionForReview'])->name('supervisor.requisitions.show');
+        Route::post('/requisitions/{id}/status', [RequisitionController::class, 'updateRequisitionStatus'])->name('supervisor.requisitions.status');
     });
 
     // User Management routes (Admin only)
@@ -211,7 +216,7 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/items/{id}', [ItemController::class, 'getItemDetails']);
     Route::get('/items/category/{categoryId}', [ItemController::class, 'getItemsByCategory']);
     Route::get('/items/search', [ItemController::class, 'searchItems']);
-    
+
     // Requisition API routes
     Route::post('/requisitions', [RequisitionController::class, 'store']);
     Route::get('/requisitions/my', [RequisitionController::class, 'getMyRequisitions']);
@@ -219,7 +224,7 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/requisitions/{id}', [RequisitionController::class, 'getRequisitionDetails']);
     Route::post('/requisitions/{id}/status', [RequisitionController::class, 'updateStatus']);
     Route::delete('/requisitions/{id}', [RequisitionController::class, 'destroy']);
-    
+
     // Item Request API routes
     Route::post('/item-requests', [ItemRequestController::class, 'store']);
     Route::get('/item-requests/my', [ItemRequestController::class, 'getMyRequests']);
@@ -227,7 +232,7 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/item-requests/pending', [ItemRequestController::class, 'getPendingRequests']);
     Route::post('/item-requests/{id}/approve', [ItemRequestController::class, 'approve']);
     Route::post('/item-requests/{id}/reject', [ItemRequestController::class, 'reject']);
-    
+
     // Inventory API routes
     Route::get('/inventory/items', [RequisitionController::class, 'getInventoryItems']);
 });

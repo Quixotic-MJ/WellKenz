@@ -13,7 +13,6 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,    // Must come first
             SupplierSeeder::class,
             ItemSeeder::class,        // Depends on CategorySeeder
-            NotificationSeeder::class,
         ]);
     }
 }

@@ -101,10 +101,10 @@ class User extends Authenticatable
     public function getRoleDisplayAttribute()
     {
         $roleNames = [
-            'admin' => 'Admin',
+            'admin' => 'Administrator',
             'employee' => 'Employee',
-            'inventory' => 'Inventory Staff',
-            'purchasing' => 'Purchase Staff',
+            'inventory' => 'Inventory Manager',
+            'purchasing' => 'Purchasing Officer',
             'supervisor' => 'Supervisor'
         ];
 
@@ -115,14 +115,14 @@ class User extends Authenticatable
     public function getRoleBadgeAttribute()
     {
         $roleColors = [
-            'admin' => 'bg-purple-100 text-purple-700 border-purple-200',
-            'employee' => 'bg-caramel text-white border-caramel-dark',
-            'inventory' => 'bg-blue-100 text-blue-700 border-blue-200',
-            'purchasing' => 'bg-green-100 text-green-700 border-green-200',
-            'supervisor' => 'bg-yellow-100 text-yellow-700 border-yellow-200'
+            'admin' => 'bg-purple-100 text-purple-800 border-purple-200',
+            'employee' => 'bg-blue-100 text-blue-800 border-blue-200',
+            'inventory' => 'bg-green-100 text-green-800 border-green-200',
+            'purchasing' => 'bg-orange-100 text-orange-800 border-orange-200',
+            'supervisor' => 'bg-yellow-100 text-yellow-800 border-yellow-200'
         ];
 
-        return $roleColors[$this->role] ?? 'bg-gray-100 text-gray-700 border-gray-200';
+        return $roleColors[$this->role] ?? 'bg-gray-100 text-gray-800 border-gray-200';
     }
 
     // Check if user is admin
@@ -244,6 +244,24 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    // Check if user can manage categories
+    public function getCanManageCategoriesAttribute()
+    {
+        return in_array($this->role, ['admin', 'inventory']);
+    }
+
+    // Check if user can manage items
+    public function getCanManageItemsAttribute()
+    {
+        return in_array($this->role, ['admin', 'inventory']);
+    }
+
+    // Check if user can view reports
+    public function getCanViewReportsAttribute()
+    {
+        return in_array($this->role, ['admin', 'supervisor']);
+    }
+
     // Scope for active users
     public function scopeActive($query)
     {
@@ -306,13 +324,31 @@ class User extends Authenticatable
     public function hasPermission($permission)
     {
         $permissions = [
+            // View permissions
+            'view_dashboard' => true,
+            'view_requisitions' => $this->can_create_requisitions || $this->can_view_all_requisitions,
             'view_all_requisitions' => $this->can_view_all_requisitions,
+            'view_inventory' => $this->can_manage_inventory || $this->can_create_requisitions,
+            'view_purchasing' => $this->can_manage_purchases,
+            'view_reports' => $this->can_view_reports,
+            
+            // Create permissions
             'create_requisitions' => $this->can_create_requisitions,
+            'create_items' => $this->can_manage_items,
+            'create_categories' => $this->can_manage_categories,
+            
+            // Manage permissions
+            'manage_requisitions' => $this->can_approve_requisitions || $this->can_delete_requisitions,
             'approve_requisitions' => $this->can_approve_requisitions,
+            'delete_requisitions' => $this->can_delete_requisitions,
             'manage_inventory' => $this->can_manage_inventory,
             'manage_purchases' => $this->can_manage_purchases,
             'manage_users' => $this->can_manage_users,
-            'delete_requisitions' => $this->can_delete_requisitions,
+            'manage_items' => $this->can_manage_items,
+            'manage_categories' => $this->can_manage_categories,
+            
+            // System permissions
+            'system_admin' => $this->is_admin,
         ];
 
         return $permissions[$permission] ?? false;
@@ -342,5 +378,110 @@ class User extends Authenticatable
         
         $index = $this->user_id % count($colors);
         return $colors[$index];
+    }
+
+    // Get user's display name with role
+    public function getDisplayNameAttribute()
+    {
+        return "{$this->name} ({$this->role_display})";
+    }
+
+    // Check if user can perform action on resource
+    public function canPerformAction($action, $resource = null)
+    {
+        // Base permission check
+        if (!$this->hasPermission($action)) {
+            return false;
+        }
+
+        // Resource-specific checks
+        if ($resource instanceof Requisition) {
+            return $this->canPerformRequisitionAction($action, $resource);
+        }
+
+        if ($resource instanceof Item) {
+            return $this->canPerformItemAction($action, $resource);
+        }
+
+        return true;
+    }
+
+    // Check requisition-specific permissions
+    protected function canPerformRequisitionAction($action, Requisition $requisition)
+    {
+        switch ($action) {
+            case 'view':
+                // Users can view their own requisitions or if they have view_all permission
+                return $requisition->requested_by === $this->user_id || $this->can_view_all_requisitions;
+            
+            case 'edit':
+            case 'delete':
+                // Users can only edit/delete their own pending requisitions
+                return $requisition->requested_by === $this->user_id && 
+                       $requisition->req_status === 'pending' && 
+                       $this->can_create_requisitions;
+            
+            case 'approve':
+            case 'reject':
+                // Only approvers can approve/reject requisitions
+                return $this->can_approve_requisitions && 
+                       $requisition->req_status === 'pending';
+            
+            default:
+                return true;
+        }
+    }
+
+    // Check item-specific permissions
+    protected function canPerformItemAction($action, Item $item)
+    {
+        switch ($action) {
+            case 'edit':
+            case 'delete':
+            case 'update_stock':
+                return $this->can_manage_inventory;
+            
+            default:
+                return true;
+        }
+    }
+
+    // Get user's activity summary
+    public function getActivitySummary()
+    {
+        return [
+            'requisitions_submitted' => $this->requisitions()->count(),
+            'requisitions_approved' => $this->approvedRequisitions()->count(),
+            'items_requested' => $this->itemRequests()->count(),
+            'join_date' => $this->created_at->format('M Y'),
+        ];
+    }
+
+    // Check if user needs to change password (for first login)
+    public function getNeedsPasswordChangeAttribute()
+    {
+        // Example: Check if password is default or expired
+        return $this->created_at->diffInDays(now()) > 90; // Change every 90 days
+    }
+
+    // Get user's preferred settings
+    public function getSettingsAttribute()
+    {
+        $defaultSettings = [
+            'notifications' => [
+                'email' => true,
+                'push' => true,
+                'requisition_updates' => true,
+                'system_alerts' => true,
+            ],
+            'preferences' => [
+                'items_per_page' => 25,
+                'default_view' => 'table',
+                'theme' => 'light',
+            ]
+        ];
+
+        // In a real application, you'd merge with user-specific settings from database
+        return $defaultSettings;
     }
 }

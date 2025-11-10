@@ -16,6 +16,7 @@ return new class extends Migration
             $table->enum('req_status', ['pending', 'approved', 'rejected', 'completed'])->default('pending');
             $table->date('req_date');
             $table->date('approved_date')->nullable();
+            $table->string('req_reject_reason', 255)->nullable(); // Added reject reason column
             $table->foreignId('requested_by')->constrained('users', 'user_id');
             $table->foreignId('approved_by')->nullable()->constrained('users', 'user_id');
             $table->timestamps();
