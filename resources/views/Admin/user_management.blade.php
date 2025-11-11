@@ -836,7 +836,7 @@
             e.preventDefault();
             const formData = new FormData(this);
 
-            fetch('/users', {
+            fetch('/admin/users', {
                     method: 'POST',
                     body: formData,
                     headers: {

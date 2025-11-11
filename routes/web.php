@@ -8,7 +8,10 @@ use App\Http\Controllers\RequisitionController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\ItemRequestController;
 use App\Http\Controllers\PurchaseOrderController;
-use App\Http\Controllers\SupplierController;        // NEW
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\InventoryController;        //  ← 1.  ADD THIS LINE
+use App\Http\Controllers\StockInController;          //  ← 4.  ADD THIS LINE
+use App\Http\Controllers\AcknowledgementReceiptController;
 use Illuminate\Support\Facades\DB;
 
 /* ----------------------------------------------------------
@@ -108,39 +111,48 @@ Route::middleware(['auth'])->group(function () {
 
     /* ---------- Inventory ---------- */
     Route::middleware(['role:inventory'])->group(function () {
-        Route::get('/Inventory_Dashboard', fn() => view('Inventory.dashboard'))->name('Inventory_Dashboard');
-        Route::get('/Inventory_List', fn() => view('Inventory.inventory_list'))->name('Inventory_List');
-        Route::get('/Inventory_Low_Stock_Alert', fn() => view('Inventory.low_stock_alert'))->name('Inventory_Low_Stock_Alert_notification');
-        Route::get('/Inventory_Notification', fn() => view('Inventory.notification'))->name('Inventory_Notification');
-        Route::get('/Inventory_Report', fn() => view('Inventory.report'))->name('Inventory_Report');
-        Route::get('/Inventory_Stock_in', fn() => view('Inventory.stock_in'))->name('Inventory_Stock_in');
-        Route::get('/Inventory_Stock_out', fn() => view('Inventory.stock_out'))->name('Inventory_Stock_out');
+        Route::get('/Inventory_Dashboard',        fn() => view('Inventory.dashboard'))->name('Inventory_Dashboard');
+        Route::get('/Inventory_List',             [InventoryController::class, 'overview'])->name('Inventory_List');
+        Route::get('/Inventory_Overview',         [InventoryController::class, 'overview'])->name('Inventory_Overview'); //  ← 2.  ADD THIS LINE
+        Route::post('/inventory/items',           [InventoryController::class, 'store'])->name('inventory.store');        //  ← 3.  ADD THIS LINE
+        Route::get('/Inventory_Low_Stock_Alert',  fn() => view('Inventory.low_stock_alert'))->name('Inventory_Low_Stock_Alert_notification');
+        Route::get('/Inventory_Notification',     fn() => view('Inventory.notification'))->name('Inventory_Notification');
+        Route::get('/Inventory_Report',           fn() => view('Inventory.report'))->name('Inventory_Report');
+        Route::get('/Inventory_Stock_in',         [StockInController::class, 'index'])->name('Inventory_Stock_in');
+        Route::post('/stock-in',                   [StockInController::class, 'store'])->name('stock-in.store');
+        Route::post('/stock-in/bulk',   [StockInController::class, 'storeBulk'])->name('stock-in.store-bulk');
+        Route::get('/Inventory_Stock_out',        fn() => view('Inventory.stock_out'))->name('Inventory_Stock_out');
+        Route::get('/Inventory_Receiving',        fn() => view('Inventory.receiving'))->name('Inventory_Receiving');
+        Route::get('/Inventory_API_List', fn() => view('Inventory.inventory_api_list'))->name('Inventory_API_List');
+        Route::get('/Inventory_Transactions_Log', fn() => view('Inventory.transactions_log'))->name('Inventory_Transactions_Log');
+        Route::get('/Inventory_PO_List',          fn() => view('Inventory.po_list'))->name('Inventory_PO_List');
     });
 
     /* ---------- Purchasing ---------- */
     Route::middleware(['role:purchasing'])->group(function () {
         /* Dashboard */
-        Route::get('/Purchasing_dashboard', [PurchaseOrderController::class, 'dashboard'])->name('Purchasing_dashboard');
+        Route::get('/Purchasing_dashboard', fn() => view('Purchasing.dashboard'))->name('Purchasing_dashboard');
 
         /* Screens */
         Route::get('/Purchasing_Purchase_Order', fn() => view('Purchasing.create_purchase_order'))->name('Purchasing_Purchase_Order');
-        Route::get('/Purchasing_Approved_Requisition', fn() => view('Purchasing.approved_requisition'))->name('Purchasing_Approved_Requisition');
+        Route::get('/Purchasing_Approved_Requisition', [PurchaseOrderController::class, 'dashboard'])->name('Purchasing_Approved_Requisition');
         Route::get('/Purchasing_Inventory_overview', fn() => view('Purchasing.inventory_overview'))->name('Purchasing_Inventory_overview');
         Route::get('/Purchasing_Notification', fn() => view('Purchasing.notification'))->name('Purchasing_Notification');
         Route::get('/Purchasing_Report', fn() => view('Purchasing.report'))->name('Purchasing_Report');
         Route::get('/Purchasing_Supplier', fn() => view('Purchasing.supplier'))->name('Purchasing_Supplier');
 
-        /* Purchase Order Resource */
-        Route::prefix('purchase-orders')->group(function () {
-            Route::get('/', [PurchaseOrderController::class, 'index'])->name('purchase_orders.index');
-            Route::get('/create/{requisition}', [PurchaseOrderController::class, 'createFromRequisition'])->name('purchase_orders.create');
-            Route::post('/', [PurchaseOrderController::class, 'store'])->name('purchase_orders.store');
-            Route::get('/print/{po}', [PurchaseOrderController::class, 'print'])->name('purchase_orders.print');
+        /* PO resource */
+        Route::prefix('purchase-orders')->name('purchase_orders.')->controller(PurchaseOrderController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create/{requisition}', 'createFromRequisition')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/print/{po}', 'print')->name('print');
+            Route::get('/kpi', 'kpi')->name('api.kpi');
         });
 
         /* Supplier AJAX CRUD */
         Route::prefix('purchasing/supplier')->name('supplier.')->controller(SupplierController::class)->group(function () {
-            Route::post('/', 'store')->name('store');      // <-- ADD ->name('store')
+            Route::post('/', 'store')->name('store');
             Route::put('/{supplier}', 'update')->name('update');
             Route::delete('/{supplier}', 'destroy')->name('destroy');
         });
@@ -199,4 +211,12 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
 
     /* Inventory */
     Route::get('/inventory/items', [RequisitionController::class, 'getInventoryItems']);
+    Route::get('/inventory/list', [InventoryController::class, 'apiList']);
+    Route::get('/inventory/transactions', [InventoryController::class, 'apiTransactions']);
+    Route::get('/stock-in/po/{id}', [StockInController::class, 'poDetails']);
+    Route::get('/stock-in/po-list', [StockInController::class, 'poList']);
+
+    /* Acknowledgement Receipt (AR) */
+    Route::post('/ar', [AcknowledgementReceiptController::class, 'store']);
+    Route::get('/ar/{id}', [AcknowledgementReceiptController::class, 'show']);
 });

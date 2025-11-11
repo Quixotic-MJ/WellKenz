@@ -181,11 +181,6 @@
                     Create Purchase Order
                 </a>
 
-                <a href="{{ route('Purchasing_Approved_Requisition') }}" class="block w-full p-4 bg-chocolate text-white hover:bg-chocolate-dark transition text-center font-semibold rounded-lg hover-lift">
-                    <i class="fas fa-clipboard-check mr-2"></i>
-                    Approved Requisitions
-                </a>
-
                 <a href="{{ route('Purchasing_Supplier') }}" class="block w-full p-4 border-2 border-border-soft hover:border-chocolate hover:bg-cream-bg transition text-center font-semibold text-text-dark rounded-lg hover-lift">
                     <i class="fas fa-truck mr-2 text-chocolate"></i>
                     Supplier Management

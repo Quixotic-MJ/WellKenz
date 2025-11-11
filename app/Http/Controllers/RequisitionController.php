@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Requisition;
 use App\Models\RequisitionItem;
+use Illuminate\Support\Str;
 
 class RequisitionController extends Controller
 {
@@ -28,7 +29,6 @@ class RequisitionController extends Controller
         Log::info('Requisition submission started', $request->all());
 
         $validator = Validator::make($request->all(), [
-            'req_ref' => 'required|string|max:255|unique:requisitions,req_ref',
             'req_purpose' => 'required|string|min:10',
             'req_priority' => 'required|in:low,medium,high',
             'items' => 'required|array|min:1',
@@ -38,8 +38,7 @@ class RequisitionController extends Controller
             'req_purpose.min' => 'Please provide a more detailed purpose (at least 10 characters).',
             'items.required' => 'Please add at least one item to the requisition.',
             'items.*.quantity.min' => 'Quantity must be at least 1.',
-            'items.*.quantity.max' => 'Quantity cannot exceed 10,000.',
-            'req_ref.unique' => 'This requisition reference already exists. Please try again.'
+            'items.*.quantity.max' => 'Quantity cannot exceed 10,000.'
         ]);
 
         if ($validator->fails()) {
@@ -83,11 +82,12 @@ class RequisitionController extends Controller
 
             // Create requisition using the model instead of DB::table
             $requisition = new Requisition();
-            $requisition->req_ref = $request->req_ref;
+            // Generate server-side requisition reference
+            $requisition->req_ref = 'REQ-'.now()->format('Ymd-His').'-'.Str::upper(Str::random(4));
             $requisition->req_purpose = $request->req_purpose;
             $requisition->req_priority = $request->req_priority;
             $requisition->req_status = 'pending';
-            $requisition->req_date = now()->format('Y-m-d');
+            $requisition->req_date = now();
             $requisition->requested_by = $userId;
             $requisition->save();
 
@@ -119,14 +119,34 @@ class RequisitionController extends Controller
                 $requisitionItem->save();
             }
 
+            // Create notifications to Supervisors about new requisition
+            $supervisors = DB::table('users')->where('role', 'supervisor')->pluck('user_id');
+            $notifPayloads = [];
+            foreach ($supervisors as $supId) {
+                $notifPayloads[] = [
+                    'notif_title'   => 'New Requisition Submitted',
+                    'notif_content' => 'Requisition '.$requisition->req_ref.' submitted by '.$user->name,
+                    'related_id'    => (string)$requisitionId,
+                    'related_type'  => 'Requisition',
+                    'is_read'       => false,
+                    'user_id'       => $supId,
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
+                ];
+            }
+            if (!empty($notifPayloads)) {
+                DB::table('notifications')->insert($notifPayloads);
+            }
+
             DB::commit();
 
             Log::info('Requisition submitted successfully', ['requisition_id' => $requisitionId]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Requisition submitted successfully! Purchasing officers have been notified.',
-                'requisition_id' => $requisitionId
+                'message' => 'Requisition submitted successfully! Supervisors have been notified.',
+                'requisition_id' => $requisitionId,
+                'req_ref' => $requisition->req_ref,
             ]);
 
         } catch (\Exception $e) {
@@ -257,15 +277,24 @@ class RequisitionController extends Controller
 
             $requisition->update($updateData);
 
-            if ($request->remarks) {
-                // Store remarks in a separate table or add a remarks field to requisitions
-                DB::table('requisition_remarks')->insert([
-                    'req_id' => $id,
-                    'remarks' => $request->remarks,
-                    'created_by' => $user->user_id,
-                    'created_at' => now()
-                ]);
-            }
+            // Notify requester of decision
+            $title = $request->req_status === 'approved' ? 'Requisition Approved' : ($request->req_status === 'rejected' ? 'Requisition Rejected' : 'Requisition Updated');
+            $content = 'Your requisition '.$requisition->req_ref.' was '.$request->req_status.
+                       ($request->req_status==='rejected' && ($updateData['req_reject_reason'] ?? null) ? 
+                        (' with reason: '.$updateData['req_reject_reason']) : '');
+            DB::table('notifications')->insert([
+                'notif_title'   => $title,
+                'notif_content' => $content,
+                'related_id'    => (string)$requisition->req_id,
+                'related_type'  => 'Requisition',
+                'is_read'       => false,
+                'user_id'       => $requisition->requested_by,
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ]);
+
+            // Remarks are stored in the requisition record itself or can be added to a separate table if needed
+            // For now, we'll skip storing remarks in a separate table since it doesn't exist
 
             DB::commit();
 
@@ -559,31 +588,36 @@ class RequisitionController extends Controller
 
             // Store reject reason if status is rejected
             if ($request->req_status === 'rejected') {
-                $updateData['req_reject_reason'] = $request->req_reject_reason ?: 
-                    ($request->remarks ?: 'No reason provided');
+                $updateData['req_reject_reason'] = $request->req_reject_reason ?: ($request->remarks ?: 'No reason provided');
             } else {
-                // Clear reject reason if approved
                 $updateData['req_reject_reason'] = null;
             }
 
             $requisition->update($updateData);
 
-            // Store remarks if provided
-            if ($request->remarks) {
-                DB::table('requisition_remarks')->insert([
-                    'req_id' => $id,
-                    'remarks' => $request->remarks,
-                    'created_by' => $user->user_id,
-                    'created_at' => now()
-                ]);
-            }
+            // Notify requester of decision
+            $title = $request->req_status === 'approved' ? 'Requisition Approved' : 'Requisition Rejected';
+            $content = 'Your requisition ' . $requisition->req_ref . ' was ' . $request->req_status
+                     . ($request->req_status === 'rejected' && ($updateData['req_reject_reason'] ?? null)
+                        ? (' with reason: ' . $updateData['req_reject_reason'])
+                        : '');
+            DB::table('notifications')->insert([
+                'notif_title'   => $title,
+                'notif_content' => $content,
+                'related_id'    => (string) $requisition->req_id,
+                'related_type'  => 'Requisition',
+                'is_read'       => false,
+                'user_id'       => $requisition->requested_by,
+                'created_at'    => now(),
+                'updated_at'    => now(),
+            ]);
 
             DB::commit();
 
             $action = $request->req_status === 'approved' ? 'approved' : 'rejected';
             return response()->json([
                 'success' => true,
-                'message' => "Requisition {$action} successfully"
+                'message' => "Requisition {$action} successfully",
             ]);
 
         } catch (\Exception $e) {
@@ -591,7 +625,7 @@ class RequisitionController extends Controller
             Log::error('Error updating requisition status: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating requisition status: ' . $e->getMessage()
+                'message' => 'Error updating requisition status: ' . $e->getMessage(),
             ], 500);
         }
     }

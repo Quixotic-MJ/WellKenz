@@ -27,7 +27,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Requisition Reference</label>
-                            <input type="text" name="req_ref" id="req_ref" readonly class="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-gray-500">
+                            <input type="text" id="req_ref_display" readonly placeholder="Will be generated on submit" class="w-full bg-gray-50 border border-gray-300 rounded px-3 py-2 text-gray-500">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
@@ -198,13 +198,13 @@ function initialisePage(){
     document.getElementById('current_date').value = now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
     document.getElementById('requested_by').value = '{{ Auth::user()->name }}';
     document.getElementById('requesterName').textContent = '{{ Auth::user()->name }}';
-    generateRequisitionReference();
+    // server will generate req_ref on submit
     updateSummary();
+    setReqRefDisplay('Will be generated on submit');
 }
+function setReqRefDisplay(ref){ document.getElementById('req_ref_display').value = ref || 'Will be generated on submit'; }
 function generateRequisitionReference(){
-    const d=new Date();
-    const seq=String(Math.floor(Math.random()*1000)).padStart(4,'0');
-    document.getElementById('req_ref').value=`REQ-${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}-${seq}`;
+    // removed
 }
 function setupEventListeners(){
     const prioritySelect=document.querySelector('select[name="req_priority"]');
@@ -370,7 +370,6 @@ function submitRequisition(){
     if(!purpose||purpose.length<10){showMessage('Enter detailed purpose (≥10 chars)','error');return;}
 
     const payload={
-        req_ref:document.getElementById('req_ref').value,
         req_priority:priority,
         req_purpose:purpose,
         items:selectedItems.map(i=>({item_id:parseInt(i.id),quantity:parseInt(i.quantity),is_custom:i.is_custom||false}))        // ← NEW
@@ -392,13 +391,15 @@ function submitRequisition(){
             return d;
         })
         .then(d=>{
-            showMessage('Requisition submitted! Purchasing officers notified.','success');
+            if(d.req_ref){ setReqRefDisplay(d.req_ref); }
+            showMessage('Requisition submitted! Supervisors notified. Ref: '+(d.req_ref||''),'success');
             setTimeout(()=>{
                 selectedItems=[];updateItemsTable();form.reset();
                 document.getElementById('selectedPriority').textContent='Not set';
-                generateRequisitionReference();updateSummary();
+                setReqRefDisplay('Will be generated on submit'); updateSummary();
             },3000);
         })
+
         .catch(e=>{
             console.error(e);
             showMessage(e.message||'Submission failed','error');

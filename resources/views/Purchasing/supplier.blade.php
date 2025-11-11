@@ -433,4 +433,150 @@
         border-color: #e8dfd4;
     }
 </style>
+    <!-- Functional Suppliers Table -->
+    <div class="bg-white border-2 border-border-soft p-6 mt-6">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-display text-xl font-bold text-text-dark">Suppliers</h3>
+            <button class="px-3 py-2 bg-caramel text-white rounded hover:bg-caramel-dark" onclick="openAddSupplier()">
+                <i class="fas fa-plus mr-1"></i> Add Supplier
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-xs text-gray-600 uppercase">
+                    <tr>
+                        <th class="px-3 py-2 text-left">Name</th>
+                        <th class="px-3 py-2 text-left">Email</th>
+                        <th class="px-3 py-2 text-left">Contact</th>
+                        <th class="px-3 py-2 text-left">Status</th>
+                        <th class="px-3 py-2 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="suppliersBody" class="divide-y divide-gray-200">
+                    @foreach(\App\Models\Supplier::orderBy('sup_name')->get() as $sup)
+                    <tr data-id="{{ $sup->sup_id }}">
+                        <td class="px-3 py-2">{{ $sup->sup_name }}</td>
+                        <td class="px-3 py-2">{{ $sup->sup_email ?? '-' }}</td>
+                        <td class="px-3 py-2">{{ $sup->contact_person ? ($sup->contact_person.' • ') : ''}}{{ $sup->contact_number ?? '' }}</td>
+                        <td class="px-3 py-2">
+                            <span class="px-2 py-1 text-xs rounded {{ $sup->sup_status==='active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700' }}">{{ ucfirst($sup->sup_status) }}</span>
+                        </td>
+                        <td class="px-3 py-2 text-center space-x-2">
+                            <button class="px-2 py-1 text-xs bg-gray-700 text-white rounded" onclick="openEditSupplier({{ $sup->sup_id }})">Edit</button>
+                            <button class="px-2 py-1 text-xs bg-red-600 text-white rounded" onclick="deleteSupplier({{ $sup->sup_id }})">Delete</button>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add/Edit Supplier Modal -->
+    <div id="supplierModal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            <div class="px-4 py-3 border-b flex items-center justify-between">
+                <h4 id="supplierModalTitle" class="text-lg font-semibold">Add Supplier</h4>
+                <button onclick="closeSupplierModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="supplierForm" class="p-4">
+                @csrf
+                <input type="hidden" id="sup_id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">Name</label>
+                        <input type="text" id="sup_name" class="w-full border rounded px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">Email</label>
+                        <input type="email" id="sup_email" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-gray-700 mb-1">Address</label>
+                        <input type="text" id="sup_address" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">Contact Person</label>
+                        <input type="text" id="contact_person" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">Contact Number</label>
+                        <input type="text" id="contact_number" class="w-full border rounded px-3 py-2">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-gray-700 mb-1">Status</label>
+                        <select id="sup_status" class="w-full border rounded px-3 py-2">
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" onclick="closeSupplierModal()" class="px-3 py-2 border rounded">Cancel</button>
+                    <button type="submit" class="px-3 py-2 bg-caramel text-white rounded">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+@push('scripts')
+<script>
+function openAddSupplier(){
+    document.getElementById('supplierModalTitle').textContent = 'Add Supplier';
+    document.getElementById('supplierForm').reset();
+    document.getElementById('sup_id').value = '';
+    document.getElementById('supplierModal').classList.remove('hidden');
+}
+function openEditSupplier(id){
+    const tr = document.querySelector(`tr[data-id="${id}"]`);
+    document.getElementById('supplierModalTitle').textContent = 'Edit Supplier';
+    document.getElementById('sup_id').value = id;
+    document.getElementById('sup_name').value = tr.children[0].textContent.trim();
+    document.getElementById('sup_email').value = tr.children[1].textContent.trim() === '-' ? '' : tr.children[1].textContent.trim();
+    // Address not present in table; leave blank
+    document.getElementById('contact_person').value = '';
+    document.getElementById('contact_number').value = '';
+    const statusBadge = tr.children[3].querySelector('span').textContent.trim().toLowerCase();
+    document.getElementById('sup_status').value = statusBadge === 'active' ? 'active' : 'inactive';
+    document.getElementById('supplierModal').classList.remove('hidden');
+}
+function closeSupplierModal(){ document.getElementById('supplierModal').classList.add('hidden'); }
+
+document.getElementById('supplierForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const id = document.getElementById('sup_id').value;
+    const payload = {
+        sup_name: document.getElementById('sup_name').value.trim(),
+        sup_email: document.getElementById('sup_email').value.trim() || null,
+        sup_address: document.getElementById('sup_address').value.trim() || null,
+        contact_person: document.getElementById('contact_person').value.trim() || null,
+        contact_number: document.getElementById('contact_number').value.trim() || null,
+        sup_status: document.getElementById('sup_status').value
+    };
+    try{
+        let res;
+        if (id){
+            res = await fetch(`{{ url('purchasing/supplier') }}/${id}`, { method:'PUT', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'}, body: JSON.stringify(payload)});
+        }else{
+            res = await fetch(`{{ route('supplier.store') }}`, { method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'}, body: JSON.stringify(payload)});
+        }
+        const data = await res.json();
+        if(!res.ok || data.success===false) throw new Error(data.message || 'Save failed');
+        location.reload();
+    }catch(err){ alert(err.message); }
+});
+
+async function deleteSupplier(id){
+    if(!confirm('Delete this supplier? If referenced by POs, it will be set to inactive.')) return;
+    try{
+        const res = await fetch(`{{ url('purchasing/supplier') }}/${id}`, { method:'DELETE', headers:{'X-CSRF-TOKEN':'{{ csrf_token() }}','Accept':'application/json'} });
+        const data = await res.json();
+        if(!res.ok || data.success===false) throw new Error(data.message || 'Delete failed');
+        alert(data.message || 'Updated');
+        location.reload();
+    }catch(e){ alert(e.message); }
+}
+</script>
+@endpush
 @endsection

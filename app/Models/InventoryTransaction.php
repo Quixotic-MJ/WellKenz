@@ -18,6 +18,7 @@ class InventoryTransaction extends Model
         'trans_quantity',
         'trans_date',
         'trans_remarks',
+        'memo_ref',
         'po_id',
         'trans_by',
         'item_id'
@@ -45,6 +46,12 @@ class InventoryTransaction extends Model
         return $this->belongsTo(PurchaseOrder::class, 'po_id', 'po_id');
     }
 
+    // Relationship with Memo by memo_ref
+    public function memo()
+    {
+        return $this->belongsTo(Memo::class, 'memo_ref', 'memo_ref');
+    }
+
     // Scope for incoming transactions
     public function scopeIncoming($query)
     {
@@ -61,6 +68,18 @@ class InventoryTransaction extends Model
     public function scopeAdjustment($query)
     {
         return $query->where('trans_type', 'adjustment');
+    }
+
+    // Scope for stock-in transactions
+    public function scopeStockIn($query)
+    {
+        return $query->where('trans_type', 'in');
+    }
+
+    // Scope for recent transactions
+    public function scopeRecent($query, $days)
+    {
+        return $query->where('trans_date', '>=', now()->subDays($days));
     }
 
     // Get transaction type badge color

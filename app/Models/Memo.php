@@ -14,39 +14,26 @@ class Memo extends Model
 
     protected $fillable = [
         'memo_ref',
-        'memo_type',
-        'memo_date',
-        'po_id',
+        'memo_remarks',
+        'received_date',
         'received_by',
-        'remarks',
-        'status'
+        'po_ref',
+        'attachment',
     ];
 
     protected $casts = [
-        'memo_date' => 'date',
+        'received_date' => 'date',
     ];
 
-    // Relationship with PurchaseOrder
+    // Relationship with PurchaseOrder by po_ref (string key)
     public function purchaseOrder()
     {
-        return $this->belongsTo(PurchaseOrder::class, 'po_id', 'po_id');
+        return $this->belongsTo(PurchaseOrder::class, 'po_ref', 'po_ref');
     }
 
     // Relationship with User (who received the goods)
     public function receiver()
     {
         return $this->belongsTo(User::class, 'received_by', 'user_id');
-    }
-
-    // Scope for receiving memos
-    public function scopeReceiving($query)
-    {
-        return $query->where('memo_type', 'receiving');
-    }
-
-    // Scope for completed memos
-    public function scopeCompleted($query)
-    {
-        return $query->where('status', 'completed');
     }
 }

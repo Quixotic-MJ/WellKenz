@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'username' => 'baker1',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'employee',
                 'name' => 'Juan Dela Cruz',
                 'position' => 'Head Baker',
@@ -36,7 +36,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'username' => 'baker2',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'employee',
                 'name' => 'Ana Reyes',
                 'position' => 'Assistant Baker',
@@ -46,7 +46,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'username' => 'inventory',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'inventory',
                 'name' => 'Carlos Garcia',
                 'position' => 'Inventory Manager',
@@ -56,7 +56,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'username' => 'purchasing',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'purchasing',
                 'name' => 'Elena Torres',
                 'position' => 'Purchasing Officer',
@@ -66,7 +66,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'username' => 'supervisor',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'supervisor',
                 'name' => 'Roberto Lim',
                 'position' => 'Production Supervisor',
@@ -77,7 +77,7 @@ class UserSeeder extends Seeder
             // Additional users for better testing
             [
                 'username' => 'baker3',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'employee',
                 'name' => 'Liza Mendoza',
                 'position' => 'Pastry Chef',
@@ -87,7 +87,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'username' => 'inventory2',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'inventory',
                 'name' => 'Miguel Ramos',
                 'position' => 'Inventory Assistant',
@@ -97,7 +97,7 @@ class UserSeeder extends Seeder
             ],
             [
                 'username' => 'purchasing2',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('123456'),
                 'role' => 'purchasing',
                 'name' => 'Sofia Chen',
                 'position' => 'Purchasing Assistant',

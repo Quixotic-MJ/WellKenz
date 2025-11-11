@@ -34,16 +34,7 @@
                     </a>
                 </li>
 
-                <!-- Approved Requisitions -->
-                <li>
-                    <a href="{{ route('Purchasing_Approved_Requisition') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Purchasing_Approved_Requisition') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Approved Requisitions</span>
-                    </a>
-                </li>
+              
 
                 <!-- Purchase Order -->
                 <li>
@@ -51,7 +42,7 @@
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Purchasing_Purchase_Order') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-shopping-cart w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase Order</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create Purchase Order</span>
                     </a>
                 </li>
 

@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class Item extends Model
 {
-    use HasFactory, SoftDeletes;
+    use SoftDeletes;
 
     protected $primaryKey = 'item_id';
+    protected $table      = 'items';
 
     protected $fillable = [
         'item_code',
@@ -24,85 +25,37 @@ class Item extends Model
         'min_stock_level',
         'max_stock_level',
         'is_active',
-        'is_custom'        // ← NEW
+        'is_custom',
     ];
 
     protected $casts = [
-        'item_stock'        => 'decimal:3',
-        'reorder_level'     => 'decimal:3',
-        'min_stock_level'   => 'decimal:3',
-        'max_stock_level'   => 'decimal:3',
-        'item_expire_date'  => 'date',
-        'is_active'         => 'boolean',
-        'is_custom'         => 'boolean',   // ← NEW
-        'last_updated'      => 'datetime'
+        'item_stock'       => 'decimal:3',
+        'reorder_level'    => 'decimal:3',
+        'min_stock_level'  => 'decimal:3',
+        'max_stock_level'  => 'decimal:3',
+        'item_expire_date' => 'date',
+        'is_active'        => 'boolean',
+        'is_custom'        => 'boolean',
     ];
 
-    /* --------------------------------------------------------------------------
-     *  RELATIONSHIPS
-     * -------------------------------------------------------------------------- */
+    /* --------------------------------------------------
+     *  Use PostgreSQL function instead of Eloquent
+     * -------------------------------------------------- */
+    public static function allViaFunction()
+    {
+        return collect(DB::select('SELECT * FROM get_all_items()'));
+    }
+
+    public static function lowStockViaFunction()
+    {
+        return collect(DB::select('SELECT * FROM get_low_stock_items()'));
+    }
+
+    /* ---------------------------------------
+     *  Relationships
+     * --------------------------------------- */
     public function category()
     {
         return $this->belongsTo(Category::class, 'cat_id', 'cat_id');
-    }
-
-    public function requisitionItems()
-    {
-        return $this->hasMany(RequisitionItem::class, 'item_id');
-    }
-
-    /* --------------------------------------------------------------------------
-     *  ACCESSORS / MUTATORS
-     * -------------------------------------------------------------------------- */
-    public function getNameAttribute()
-    {
-        return $this->item_name;
-    }
-
-    public function getUnitAttribute()
-    {
-        return $this->item_unit;
-    }
-
-    public function getCodeAttribute()
-    {
-        return $this->item_code;
-    }
-
-    /* --------------------------------------------------------------------------
-     *  SCOPES
-     * -------------------------------------------------------------------------- */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function scopeWithStock($query)
-    {
-        return $query->where('item_stock', '>', 0);
-    }
-
-    public function scopeLowStock($query)
-    {
-        return $query->whereRaw('item_stock <= reorder_level')
-                    ->where('item_stock', '>', 0);
-    }
-
-    public function scopeCustom($query, bool $custom = true)   // ← NEW
-    {
-        return $query->where('is_custom', $custom);
-    }
-
-    /* --------------------------------------------------------------------------
-     *  HELPERS
-     * -------------------------------------------------------------------------- */
-    public function hasSufficientStock($quantity)
-    {
-        return $this->item_stock >= $quantity;
-    }
-
-    public function isLowStock()
-    {
-        return $this->item_stock <= $this->reorder_level;
     }
 }
