@@ -144,6 +144,23 @@ class ItemRequestController extends Controller
     }
 
     /**
+     * Admin index page for item requests
+     */
+    public function adminIndex()
+    {
+        try {
+            $requests = ItemRequest::with(['requester', 'approver'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+
+            return view('Admin.Requisition.item_request', compact('requests'));
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error loading requests: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Get all item requests for supervisors/admins with filtering and pagination
      */
     public function getAllRequests(Request $request)

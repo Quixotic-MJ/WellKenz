@@ -185,4 +185,63 @@ class PurchaseOrderController extends Controller
             ->latest()
             ->paginate(15);
     }
+
+    /* -------------------------------------------------
+     * ADMIN PAGES (LIST, SHOW, STATUS)
+     * -------------------------------------------------*/
+    public function adminIndex()
+    {
+        $purchaseOrders = PurchaseOrder::with(['supplier', 'requisition', 'items'])
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        $totalPOs      = PurchaseOrder::count();
+        $draftCount    = PurchaseOrder::where('po_status', 'draft')->count();
+        $orderedCount  = PurchaseOrder::where('po_status', 'ordered')->count();
+        $deliveredCount= PurchaseOrder::where('po_status', 'delivered')->count();
+        $thisMonthCount= PurchaseOrder::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)->count();
+
+        return view('Admin.Purchasing.Purchase.purchase', compact(
+            'purchaseOrders',
+            'totalPOs',
+            'draftCount',
+            'orderedCount',
+            'deliveredCount',
+            'thisMonthCount'
+        ));
+    }
+
+    public function adminShow(PurchaseOrder $po)
+    {
+        $po->load(['items.item', 'supplier', 'requisition']);
+        return response()->json([
+            'po_id'   => $po->po_id,
+            'po_ref'  => $po->po_ref,
+            'supplier'=> optional($po->supplier)->sup_name,
+            'items'   => $po->items->map(function($pi){
+                return [
+                    'item_name'  => optional($pi->item)->item_name,
+                    'quantity'   => (float) $pi->pi_quantity,
+                    'unit'       => optional($pi->item)->item_unit,
+                    'unit_price' => (float) $pi->pi_unit_price,
+                    'subtotal'   => (float) $pi->pi_subtotal,
+                ];
+            })->values(),
+        ]);
+    }
+
+    public function adminUpdateStatus(Request $request, PurchaseOrder $po)
+    {
+        $request->validate([
+            'po_status' => 'required|in:draft,ordered,delivered',
+        ]);
+
+        $po->update(['po_status' => $request->po_status]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Purchase order status updated successfully.',
+        ]);
+    }
 }

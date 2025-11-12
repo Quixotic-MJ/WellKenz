@@ -73,19 +73,10 @@ class AcknowledgementReceiptController extends Controller
                     'updated_at'    => now(),
                 ]);
 
-                // Update item stock (decrement)
-                DB::update('UPDATE items SET item_stock = item_stock - ? , last_updated = NOW(), updated_at = NOW() WHERE item_id = ?', [
-                    $row['quantity'], $row['item_id']
+                // Update item stock via stored function (decrement)
+                DB::select('SELECT update_item_stock(?, ?, ?)', [
+                    $row['item_id'], -1 * $row['quantity'], 'OUT'
                 ]);
-
-                // If linked to requisition, mark requisition_items as Issued when fully issued
-                if ($request->req_id) {
-                    // Reduce outstanding quantities logic can be added here; for now mark as issued if any issuance exists
-                    DB::table('requisition_items')
-                        ->where('req_id', $request->req_id)
-                        ->where('item_id', $row['item_id'])
-                        ->update(['req_item_status' => 'issued', 'updated_at'=> now()]);
-                }
             }
 
             // Notify employee who received

@@ -39,14 +39,13 @@ Route::middleware(['auth'])->group(function () {
 
     /* ---------- Item Request ---------- */
     Route::prefix('item-requests')->group(function () {
-        Route::get('/create', [ItemRequestController::class, 'create'])->name('item_requests.create');
-        Route::post('/', [ItemRequestController::class, 'store'])->name('item_requests.store');
-        Route::get('/my-requests', [ItemRequestController::class, 'getMyRequests'])->name('item_requests.my_requests');
-        Route::get('/{id}', [ItemRequestController::class, 'show'])->name('item_requests.show');
-
-        Route::get('/pending', [ItemRequestController::class, 'getPendingRequests'])->name('item_requests.pending');
-        Route::post('/{id}/approve', [ItemRequestController::class, 'approve'])->name('item_requests.approve');
-        Route::post('/{id}/reject', [ItemRequestController::class, 'reject'])->name('item_requests.reject');
+        Route::get('/create', [ItemRequestController::class, 'create'])->name('item-requests.create');
+        Route::post('/', [ItemRequestController::class, 'store'])->name('item-requests.store');
+        Route::get('/my-requests', [ItemRequestController::class, 'getMyRequests'])->name('item-requests.my_requests');
+        Route::get('/{id}', [ItemRequestController::class, 'show'])->name('item-requests.show');
+        Route::get('/pending', [ItemRequestController::class, 'getPendingRequests'])->name('item-requests.pending');
+        Route::post('/{id}/approve', [ItemRequestController::class, 'approve'])->name('item-requests.approve');
+        Route::post('/{id}/reject', [ItemRequestController::class, 'reject'])->name('item-requests.reject');
     });
 
     /* ---------- Notification ---------- */
@@ -76,22 +75,68 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
         Route::get('/dashboard', fn() => view('Admin.dashboard'))->name('Admin_dashboard');
         Route::get('/users', [UserController::class, 'index'])->name('Admin_User_Management');
-        Route::get('/item-request', fn() => view('Admin.Requisition.item_request'))->name('Admin_Item_Request');
-        Route::get('/requisition', fn() => view('Admin.Requisition.requisition'))->name('Admin_Requisition');
-        Route::get('/purchase-order', fn() => view('Admin.Purchasing.purchase'))->name('Admin_Purchase_Order');
-        Route::get('/supplier', fn() => view('Admin.Purchasing.supplier'))->name('Admin_Supplier');
-        Route::get('/inventory-transaction', fn() => view('Admin.Inventory.inventory_transaction'))->name('Admin_Inventory_Transaction');
-        Route::get('/inventory', fn() => view('Admin.Inventory.inventory'))->name('Admin_Inventory');
+        Route::get('/item-request', [ItemRequestController::class, 'adminIndex'])->name('Admin_Item_Request');
+        Route::get('/requisition', [RequisitionController::class, 'adminIndex'])->name('Admin_Requisition');
+        Route::get('/purchase-order', [PurchaseOrderController::class, 'adminIndex'])->name('Admin_Purchase_Order');
+        Route::get('/supplier', [SupplierController::class, 'index'])->name('Admin_Supplier');
+        Route::get('/inventory-transaction', [InventoryController::class, 'adminTransactions'])->name('Admin_Inventory_Transaction');
+        Route::get('/inventory', [InventoryController::class, 'adminItemManagement'])->name('Admin_Item_Management');
         Route::get('/report', fn() => view('Admin.report'))->name('Admin_Report');
         Route::get('/notification', fn() => view('Admin.notification'))->name('Admin_Notification');
+
+        /* Admin Purchase Orders */
+        Route::prefix('purchase-orders')->name('admin.purchase_orders.')->controller(PurchaseOrderController::class)->group(function () {
+            Route::get('/', 'adminIndex')->name('index');
+            Route::get('/{po}', 'adminShow')->name('show');
+            Route::post('/{po}/status', 'adminUpdateStatus')->name('status');
+        });
+
+        /* Supplier CRUD */
+        Route::prefix('suppliers')->name('suppliers.')->controller(SupplierController::class)->group(function () {
+            Route::get('/', [SupplierController::class, 'index'])->name('index');
+            Route::post('/', [SupplierController::class, 'store'])->name('supplier.store');
+            Route::get('/{supplier}', 'show')->name('show');
+            Route::put('/{supplier}', [SupplierController::class, 'update'])->name('supplier.update');
+            Route::post('/{supplier}/toggle', 'toggle')->name('supplier.toggle');
+            Route::delete('/{supplier}', 'destroy')->name('destroy');
+        });
+
+        /* Category CRUD */
+        Route::prefix('categories')->name('categories.')->controller(InventoryController::class)->group(function () {
+            Route::post('/', 'storeCategory')->name('store');
+            Route::put('/{category}', 'updateCategory')->name('update');
+            Route::delete('/{category}', 'destroyCategory')->name('destroy');
+        });
+
+        /* Item CRUD */
+        Route::prefix('items')->name('items.')->controller(InventoryController::class)->group(function () {
+            Route::post('/', 'store')->name('store');
+            Route::get('/{item}', 'showItem')->name('show');
+            Route::put('/{item}', 'updateItem')->name('update');
+            Route::delete('/{item}', 'destroyItem')->name('destroy');
+            Route::post('/{item}/stock', 'adjustStock')->name('stock');
+        });
+
+        /* ---------- Item Request ---------- */
+        Route::prefix('item-requests')->name('items-requests.')->controller(ItemRequestController::class)->group(function () {
+            Route::get('/create', 'create')->name('create');
+            Route::post('/',  'store')->name('store');
+            Route::get('/my-requests',  'getMyRequests')->name('my_requests');
+            Route::get('/{id}',  'show')->name('show');
+            Route::get('/pending',  'getPendingRequests')->name('pending');
+            Route::post('/{id}/approve',  'approve')->name('approve');
+            Route::post('/{id}/reject', 'reject')->name('reject');
+        });
+
+
 
         /* User CRUD */
         Route::prefix('users')->group(function () {
             Route::post('/', [UserController::class, 'store'])->name('users.store');
             Route::get('/{id}', [UserController::class, 'show'])->name('users.show');
             Route::get('/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
-            Route::post('/{id}', [UserController::class, 'update'])->name('users.update');
-            Route::post('/{id}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword');
+            Route::match(['post', 'put'], '/{id}', [UserController::class, 'update'])->name('users.update');
+            Route::match(['post', 'put'], '/{id}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword');
             Route::delete('/{id}', [UserController::class, 'destroy'])->name('users.destroy');
             Route::post('/{id}/reset-password', [UserController::class, 'resetPassword'])->name('users.resetPassword');
             Route::post('/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggleStatus');
@@ -152,8 +197,10 @@ Route::middleware(['auth'])->group(function () {
 
         /* Supplier AJAX CRUD */
         Route::prefix('purchasing/supplier')->name('supplier.')->controller(SupplierController::class)->group(function () {
+            Route::get('/{supplier}', 'show')->name('show');
             Route::post('/', 'store')->name('store');
             Route::put('/{supplier}', 'update')->name('update');
+            Route::post('/{supplier}/toggle', 'toggle')->name('toggle');
             Route::delete('/{supplier}', 'destroy')->name('destroy');
         });
     });
@@ -213,6 +260,7 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/inventory/items', [RequisitionController::class, 'getInventoryItems']);
     Route::get('/inventory/list', [InventoryController::class, 'apiList']);
     Route::get('/inventory/transactions', [InventoryController::class, 'apiTransactions']);
+    Route::get('/inventory/transactions/{id}', [InventoryController::class, 'apiTransactionShow']);
     Route::get('/stock-in/po/{id}', [StockInController::class, 'poDetails']);
     Route::get('/stock-in/po-list', [StockInController::class, 'poList']);
 

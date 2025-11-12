@@ -366,13 +366,44 @@ class RequisitionController extends Controller
     }
 
     /**
+     * Admin index page for requisitions
+     */
+    public function adminIndex()
+    {
+        try {
+            $requisitions = Requisition::with(['requester', 'approver'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+
+            // Counts for dynamic header cards
+            $totalCount     = Requisition::count();
+            $pendingCount   = Requisition::where('req_status', 'pending')->count();
+            $approvedCount  = Requisition::where('req_status', 'approved')->count();
+            $rejectedCount  = Requisition::where('req_status', 'rejected')->count();
+            $completedCount = Requisition::where('req_status', 'completed')->count();
+
+            return view('Admin.Requisition.requisition', compact(
+                'requisitions',
+                'totalCount',
+                'pendingCount',
+                'approvedCount',
+                'rejectedCount',
+                'completedCount'
+            ));
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error loading requisitions: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Get all requisitions (for admin/supervisor)
      */
     public function getAllRequisitions()
     {
         try {
             $user = Auth::user();
-            
+
             if (!$user->hasPermission('view_all_requisitions')) {
                 return response()->json(['error' => 'Unauthorized'], 403);
             }

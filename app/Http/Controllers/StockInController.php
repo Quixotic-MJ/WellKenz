@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
-use App\Models\Memo;
 
 class StockInController extends Controller
 {
@@ -84,28 +83,12 @@ class StockInController extends Controller
             'po_id'       => 'nullable|exists:purchase_orders,po_id',
             'expiry_date' => 'nullable|date|after:trans_date',
             'remarks'     => 'nullable|string|max:500',
-            'memo_ref'    => 'nullable|string|max:255',
         ]);
 
         DB::beginTransaction();
         try{
-            // Validate memo_ref belongs to selected PO (if both provided)
-            if ($request->memo_ref && $request->po_id) {
-                $memo = DB::table('memos')->where('memo_ref', $request->memo_ref)->first();
-                $po   = PurchaseOrder::find($request->po_id);
-                if (!$memo) {
-                    return response()->json(['success'=>false,'message'=>'Receiving memo not found.'],422);
-                }
-                if (!$po) {
-                    return response()->json(['success'=>false,'message'=>'Purchase Order not found.'],422);
-                }
-                if ($memo->po_ref !== $po->po_ref) {
-                    return response()->json(['success'=>false,'message'=>'Selected memo does not match the selected PO.'],422);
-                }
-            }
             /* 1. create inventory transaction */
-            $memoPrefix = $request->memo_ref ? ('Memo: '.$request->memo_ref) : null;
-            $remarks = trim(implode(' | ', array_filter([$memoPrefix, $request->remarks], fn($v) => $v)));
+            $remarks = trim(implode(' | ', array_filter([$request->remarks], fn($v) => $v)));
 
             $trans = InventoryTransaction::create([
                 'trans_ref'    => 'TRX-'.now()->format('YmdHis'),
@@ -113,7 +96,6 @@ class StockInController extends Controller
                 'trans_quantity'=> $request->quantity,
                 'trans_date'   => $request->trans_date,
                 'trans_remarks'=> $remarks ?: null,
-                'memo_ref'     => $request->memo_ref ?: null,
                 'po_id'        => $request->po_id,
                 'trans_by'     => Auth::id(),
                 'item_id'      => $request->item_id,
@@ -155,8 +137,6 @@ class StockInController extends Controller
             'rows.*.po_id'          => 'nullable|exists:purchase_orders,po_id',
             'rows.*.damaged'        => 'nullable|boolean',
             'rows.*.remarks'        => 'nullable|string|max:500',
-            'memo_ref'              => 'nullable|string|max:255',
-            'memo_remarks'          => 'nullable|string|max:500',
         ]);
 
         $result = DB::transaction(function () use ($request) {
@@ -168,40 +148,12 @@ class StockInController extends Controller
                 if ($samePo) { $globalPoId = $firstPo; }
             }
 
-            // Auto-create memo if none provided but PO present
-            $memoRef = $request->memo_ref;
-            if (!$memoRef && $globalPoId) {
-                $po = PurchaseOrder::with('supplier')->find($globalPoId);
-                if ($po) {
-                    $memoRef = 'RM-'.now()->format('Ymd-His').'-'.Str::upper(Str::random(4));
-                    DB::table('memos')->insert([
-                        'memo_ref'      => $memoRef,
-                        'po_ref'        => $po->po_ref,
-                        'received_date' => now(),
-                        'received_by'   => Auth::id(),
-                        'memo_remarks'  => $request->memo_remarks,
-                        'created_at'    => now(),
-                        'updated_at'    => now(),
-                    ]);
-                }
-            }
-
-            // Validate provided memo matches PO
-            if ($memoRef && $globalPoId) {
-                $memo = DB::table('memos')->where('memo_ref', $memoRef)->first();
-                $po   = PurchaseOrder::find($globalPoId);
-                if (!$memo || !$po || $memo->po_ref !== $po->po_ref) {
-                    throw new \RuntimeException('Selected memo does not match the selected PO.');
-                }
-            }
-
             // Record transactions and stock updates
             foreach ($request->rows as $row) {
                 $ref = 'IN-'.now()->format('Ymd-His').'-'.Str::upper(Str::random(4));
                 $flags = [];
                 if (!empty($row['damaged'])) { $flags[] = 'DAMAGED'; }
-                $memoPrefix = $memoRef ? ('Memo: '.$memoRef) : null;
-                $remarks = trim(implode(' | ', array_filter([$memoPrefix, $row['remarks'] ?? null, implode(',', $flags)], fn($v) => $v)));
+                $remarks = trim(implode(' | ', array_filter([$row['remarks'] ?? null, implode(',', $flags)], fn($v) => $v)));
 
                 InventoryTransaction::create([
                     'trans_ref'     => $ref,
@@ -209,7 +161,6 @@ class StockInController extends Controller
                     'trans_quantity'=> $row['quantity'],
                     'trans_date'    => $row['trans_date'],
                     'trans_remarks' => $remarks ?: null,
-                    'memo_ref'      => $memoRef ?: null,
                     'po_id'         => $row['po_id'] ?: null,
                     'trans_by'      => Auth::id(),
                     'item_id'       => $row['item_id'],
@@ -220,21 +171,19 @@ class StockInController extends Controller
                 ]);
             }
 
-            // Update PO status based on received quantities
+            // Update PO status based on received quantities (ordered -> delivered)
             $poStatus = null;
             if ($globalPoId) {
                 $po = PurchaseOrder::with(['items'])->find($globalPoId);
                 if ($po && $po->items->count()>0) {
-                    $fullyReceived = true; $anyReceived = false;
+                    $fullyReceived = true;
                     foreach ($po->items as $pi) {
                         $ordered = (float)$pi->pi_quantity;
                         $received = (float) InventoryTransaction::where('po_id',$pi->po_id)
                             ->where('item_id',$pi->item_id)->where('trans_type','in')->sum('trans_quantity');
-                        if ($received > 0) { $anyReceived = true; }
                         if ($received + 1e-9 < $ordered) { $fullyReceived = false; }
                     }
                     if ($fullyReceived) { $poStatus = 'delivered'; }
-                    elseif ($anyReceived) { $poStatus = 'partial'; }
                     if ($poStatus) { $po->update(['po_status'=>$poStatus]); }
                 }
             }
@@ -262,10 +211,10 @@ class StockInController extends Controller
                 if ($rows) { DB::table('notifications')->insert($rows); }
             }
 
-            return ['memo_ref'=>$memoRef, 'po_id'=>$globalPoId, 'po_status'=>$poStatus];
+            return ['po_id'=>$globalPoId, 'po_status'=>$poStatus];
         });
 
-        return response()->json(['success'=>true,'message'=>'Bulk stock-in saved','memo_ref'=>$result['memo_ref'],'po_status'=>$result['po_status']]);
+        return response()->json(['success'=>true,'message'=>'Bulk stock-in saved','po_status'=>$result['po_status']]);
     }
 
     // Helper: return PO details with items for receiving UI (JSON)
@@ -297,14 +246,13 @@ class StockInController extends Controller
         $status = strtolower($request->get('status',''));
         $search = strtolower($request->get('search',''));
 
-        // Map UI status to DB statuses (pending => draft)
+        // Map UI status to DB statuses (pending => draft). No 'partial' in base enum.
         $statusMap = [
-            'pending' => ['draft','pending'],
+            'pending' => ['draft'],
             'ordered' => ['ordered'],
-            'partial' => ['partial'],
         ];
 
-        $defaultStatuses = ['draft','ordered','partial'];
+        $defaultStatuses = ['draft','ordered'];
 
         $q = PurchaseOrder::query()
             ->with('supplier')

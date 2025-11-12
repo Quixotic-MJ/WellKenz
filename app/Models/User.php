@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use App\Models\InventoryTransaction;
+use App\Models\AcknowledgementReceipt;
+use App\Models\Memo;
 
 class User extends Authenticatable
 {
@@ -68,6 +71,30 @@ class User extends Authenticatable
     public function itemRequests()
     {
         return $this->hasMany(ItemRequest::class, 'requested_by', 'user_id');
+    }
+
+    // Relationship with Inventory Transactions
+    public function inventoryTransactions()
+    {
+        return $this->hasMany(InventoryTransaction::class, 'user_id', 'user_id');
+    }
+
+    // Relationship with Issued Acknowledgement Receipts
+    public function issuedAcknowledgeReceipts()
+    {
+        return $this->hasMany(AcknowledgementReceipt::class, 'issued_by', 'user_id');
+    }
+
+    // Relationship with Received Acknowledgement Receipts
+    public function receivedAcknowledgeReceipts()
+    {
+        return $this->hasMany(AcknowledgementReceipt::class, 'received_by', 'user_id');
+    }
+
+    // Relationship with Memos
+    public function memos()
+    {
+        return $this->hasMany(Memo::class, 'user_id', 'user_id');
     }
 
     // Get unread notifications count

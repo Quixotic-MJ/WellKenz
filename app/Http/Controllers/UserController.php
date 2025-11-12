@@ -19,7 +19,7 @@ class UserController extends Controller
         $adminsCount = User::where('role', 'admin')->count();
         $inactiveUsers = User::where('status', 'inactive')->count();
 
-        return view('Admin.user_management', compact(
+        return view('Admin.User.user_management', compact(
             'users',
             'totalUsers',
             'activeUsers',
@@ -148,16 +148,10 @@ class UserController extends Controller
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Password updated successfully!'
-            ]);
+            return redirect()->back()->with('success', 'Password updated successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Error updating password: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()->with('error', 'Error updating password: ' . $e->getMessage());
         }
     }
 
@@ -170,11 +164,11 @@ class UserController extends Controller
             // Note: You'll need to update these relationships in your User model
             if (
                 $user->requisitions()->exists() ||
-                $user->approvedRequisitions()->exists() ||
-                $user->inventoryTransactions()->exists() ||
-                $user->issuedAcknowledgeReceipts()->exists() ||
-                $user->receivedAcknowledgeReceipts()->exists() ||
-                $user->memos()->exists()
+                $user->approvedRequisitions()->exists()
+                // $user->inventoryTransactions()->exists() ||
+                // $user->issuedAcknowledgeReceipts()->exists() ||
+                // $user->receivedAcknowledgeReceipts()->exists() ||
+                // $user->memos()->exists()
             ) {
                 return response()->json([
                     'success' => false,

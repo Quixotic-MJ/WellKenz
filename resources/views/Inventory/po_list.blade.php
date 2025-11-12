@@ -14,7 +14,6 @@
           <option value="">All</option>
           <option value="pending">Pending</option>
           <option value="ordered" selected>Ordered</option>
-          <option value="partial">Partial</option>
         </select>
         <button class="px-3 py-2 bg-gray-800 text-white text-sm rounded" onclick="loadPOs()">Search</button>
       </div>
@@ -45,6 +44,7 @@
 
 @push('scripts')
 <script>
+const INVENTORY_RECEIVING_URL = "{{ route('Inventory_Receiving') }}";
 async function loadPOs(){
   const q = document.getElementById('search').value.trim().toLowerCase();
   const status = document.getElementById('status').value;
@@ -61,7 +61,8 @@ async function loadPOs(){
     const list = data || [];
     if (!list.length){ rows.innerHTML = '<tr><td colspan="6" class="px-3 py-6 text-center text-gray-500">No results</td></tr>'; return; }
     list.forEach(po =>{
-      const badge = po.po_status === 'ordered' ? 'bg-amber-100 text-amber-700' : (po.po_status==='partial'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-700');
+      const st = (po.po_status||'').toLowerCase();
+      const badge = st === 'ordered' ? 'bg-amber-100 text-amber-700' : (st==='delivered'?'bg-green-100 text-green-700':'bg-gray-100 text-gray-700');
       const tr = document.createElement('tr');
       tr.innerHTML =
         '<td class="px-3 py-2">'+ (po.po_ref||'-') +'</td>'+
@@ -70,7 +71,7 @@ async function loadPOs(){
         '<td class="px-3 py-2"><span class="px-2 py-1 rounded text-xs '+badge+'">'+ (po.po_status||'-') +'</span></td>'+
         '<td class="px-3 py-2">'+ (po.created_at ? new Date(po.created_at).toLocaleDateString() : '-') +'</td>'+
         '<td class="px-3 py-2 text-center">'+
-          '<a href="{{ route('Inventory_Receiving') }}?po_id='+po.po_id+'" class="px-3 py-1 bg-blue-700 text-white rounded text-xs">Receive</a>'+
+          '<a href="'+ INVENTORY_RECEIVING_URL +'?po_id='+ po.po_id +'" class="px-3 py-1 bg-blue-700 text-white rounded text-xs">Receive</a>'+
         '</td>';
       rows.appendChild(tr);
     });

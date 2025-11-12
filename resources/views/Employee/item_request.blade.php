@@ -186,7 +186,7 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
 
-            fetch('{{ route('item_requests.store') }}', {
+            fetch('{{ route('item-requests.store') }}', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -224,7 +224,7 @@
         }
 
         function loadMyRequests() {
-            fetch('{{ route('item_requests.my_requests') }}', {
+            fetch('{{ route('item-requests.my_requests') }}', {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json',

@@ -1,726 +1,365 @@
 @extends('Admin.layout.app')
 
-@section('title', 'Requisition Overview - WellKenz ERP')
-
-@section('breadcrumb', 'Requisition Overview')
+@section('title', 'Requisition Management - WellKenz ERP')
+@section('breadcrumb', 'Requisition Management')
 
 @section('content')
     <div class="space-y-6">
-        <!-- Messages -->
-        <div id="successMessage" class="hidden bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3">
-            Status updated successfully!
-        </div>
 
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="font-display text-3xl font-bold text-text-dark">Requisition Overview</h1>
-                <p class="text-text-muted mt-2">View and manage all employee requisitions</p>
-            </div>
-            <div class="flex items-center space-x-4">
-                <span class="px-3 py-1 bg-caramel text-white text-sm font-semibold rounded-full">
-                    {{ $totalRequisitions ?? '24' }} Total
-                </span>
-            </div>
-        </div>
+        <!-- toast -->
+        <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
+        <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="bg-white border-2 border-border-soft p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Pending</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="pendingCount">8</p>
-                <p class="text-xs text-yellow-600 mt-1">Awaiting approval</p>
-            </div>
-
-            <div class="bg-white border-2 border-green-200 p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Approved</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="approvedCount">12</p>
-                <p class="text-xs text-green-600 mt-1">This month</p>
-            </div>
-
-            <div class="bg-white border-2 border-red-200 p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Rejected</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="rejectedCount">4</p>
-                <p class="text-xs text-red-600 mt-1">Requires review</p>
-            </div>
-
-            <div class="bg-white border-2 border-border-soft p-6">
-                <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Total Value</p>
-                <p class="text-3xl font-bold text-text-dark mt-2" id="totalValue">$4,280</p>
-                <p class="text-xs text-text-muted mt-1">All requisitions</p>
-            </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="bg-white border-2 border-border-soft p-6">
-            <div class="flex items-center space-x-6">
-                <!-- Status Filter -->
+        <!-- header card -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <div class="flex items-center justify-between">
                 <div>
-                    <label class="block text-sm font-semibold text-text-dark mb-2">Status</label>
-                    <select onchange="filterRequisitions()" id="statusFilter"
-                        class="border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate transition bg-white min-w-40">
-                        <option value="all">All Status</option>
+                    <h1 class="text-2xl font-semibold text-gray-900">Requisition Management</h1>
+                    <p class="text-sm text-gray-500 mt-1">Oversee internal supply requisitions submitted by employees</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- live counts -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="bg-white border border-gray-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Total</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $totalCount }}</p>
+            </div>
+            <div class="bg-white border border-amber-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">
+                    {{ $pendingCount }}</p>
+            </div>
+            <div class="bg-white border border-green-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Approved</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">
+                    {{ $approvedCount }}</p>
+            </div>
+            <div class="bg-white border border-rose-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Rejected</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">
+                    {{ $rejectedCount }}</p>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Completed</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">
+                    {{ $completedCount }}</p>
+            </div>
+        </div>
+
+        <!-- requisitions table -->
+        <div class="bg-white border border-gray-200 rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">All Requisitions</h3>
+                <div class="flex items-center space-x-3">
+                    <select onchange="filterTable(this.value)"
+                        class="text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400">
+                        <option value="all">All</option>
                         <option value="pending">Pending</option>
                         <option value="approved">Approved</option>
                         <option value="rejected">Rejected</option>
+                        <option value="completed">Completed</option>
                     </select>
-                </div>
-
-                <!-- Department Filter -->
-                <div>
-                    <label class="block text-sm font-semibold text-text-dark mb-2">Department</label>
-                    <select onchange="filterRequisitions()" id="departmentFilter"
-                        class="border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate transition bg-white min-w-48">
-                        <option value="all">All Departments</option>
-                        <option value="production">Production</option>
-                        <option value="purchasing">Purchasing</option>
-                        <option value="inventory">Inventory</option>
-                        <option value="sales">Sales</option>
-                        <option value="administration">Administration</option>
-                    </select>
-                </div>
-
-                <!-- Priority Filter -->
-                <div>
-                    <label class="block text-sm font-semibold text-text-dark mb-2">Priority</label>
-                    <select onchange="filterRequisitions()" id="priorityFilter"
-                        class="border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate transition bg-white min-w-40">
-                        <option value="all">All Priorities</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                    </select>
-                </div>
-
-                <!-- Date Filter -->
-                <div>
-                    <label class="block text-sm font-semibold text-text-dark mb-2">Date Range</label>
-                    <select onchange="filterRequisitions()" id="dateFilter"
-                        class="border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate transition bg-white min-w-48">
-                        <option value="all">All Time</option>
-                        <option value="today">Today</option>
-                        <option value="week">This Week</option>
-                        <option value="month">This Month</option>
-                    </select>
-                </div>
-
-                <!-- Reset Filters -->
-                <div class="flex items-end">
-                    <button onclick="resetFilters()"
-                        class="px-4 py-2 border-2 border-border-soft hover:border-chocolate transition text-text-dark font-semibold">
-                        Reset Filters
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Requisitions Table -->
-        <div class="bg-white border-2 border-border-soft">
-            <div class="px-6 py-4 border-b-2 border-border-soft bg-cream-bg">
-                <div class="flex items-center justify-between">
-                    <h3 class="font-display text-xl font-bold text-text-dark">All Requisitions</h3>
-                    <div class="flex items-center space-x-4">
-                        <!-- Search Input -->
-                        <div class="relative">
-                            <input type="text" placeholder="Search requisitions..." onkeyup="searchRequisitions(this.value)"
-                                class="pl-9 pr-4 py-2 border-2 border-border-soft text-sm focus:outline-none focus:border-chocolate transition w-64">
-                            <i class="fas fa-search absolute left-3 top-3 text-text-muted text-xs"></i>
-                        </div>
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Search requisitions…"
+                            onkeyup="searchTable(this.value)"
+                            class="pl-9 pr-9 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <button type="button" onclick="clearSearch()" id="clearBtn"
+                            class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 hidden"><i
+                                class="fas fa-times text-xs"></i></button>
                     </div>
                 </div>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full" id="requisitionsTable">
-                    <thead>
-                        <tr class="bg-gray-50 border-b-2 border-border-soft">
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Reference</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Requester</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Purpose</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Department</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Priority</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Status</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Request Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Approval Date</th>
-                            <th class="px-6 py-3 text-left text-xs font-bold text-text-muted uppercase">Actions</th>
+                <table class="w-full text-sm" id="requisitionsTable">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer"
+                                onclick="sortTable('ref')">Ref <i class="fas fa-sort ml-1"></i></th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Purpose</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Priority</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Requested By</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reviewed By</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Items</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Remarks</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-border-soft" id="requisitionsTableBody">
-                        <!-- Sample Requisition Data -->
-                        <tr class="hover:bg-cream-bg transition requisition-row" 
-                            data-status="pending" 
-                            data-department="production" 
-                            data-priority="high"
-                            data-date="today">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">REQ-2024-0012</p>
-                                <p class="text-xs text-text-muted">Baking Supplies</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">Maria Garcia</p>
-                                <p class="text-xs text-text-muted">Head Baker</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Weekly flour and ingredient restock</p>
-                                <p class="text-xs text-text-muted">For bread production line</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">
-                                    Production
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">
-                                    HIGH
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
-                                    PENDING
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Today</p>
-                                <p class="text-xs text-text-muted">10:30 AM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-muted">-</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="viewRequisitionDetails(1)"
-                                        class="px-3 py-1 bg-caramel text-white text-xs font-semibold hover:bg-caramel-dark transition rounded">
-                                        View
-                                    </button>
-                                    <button onclick="openApproveModal(1, 'REQ-2024-0012')"
-                                        class="px-3 py-1 bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition rounded">
-                                        Approve
-                                    </button>
-                                    <button onclick="openRejectModal(1, 'REQ-2024-0012')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition rounded">
-                                        Reject
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition requisition-row" 
-                            data-status="approved" 
-                            data-department="production" 
-                            data-priority="medium"
-                            data-date="yesterday">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">REQ-2024-0011</p>
-                                <p class="text-xs text-text-muted">Baking Tools</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">John Smith</p>
-                                <p class="text-xs text-text-muted">Pastry Chef</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">New pastry tools and equipment</p>
-                                <p class="text-xs text-text-muted">For dessert section expansion</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">
-                                    Production
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
-                                    MEDIUM
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                    APPROVED
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Yesterday</p>
-                                <p class="text-xs text-text-muted">2:15 PM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Today</p>
-                                <p class="text-xs text-text-muted">9:00 AM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="viewRequisitionDetails(2)"
-                                        class="px-3 py-1 bg-caramel text-white text-xs font-semibold hover:bg-caramel-dark transition rounded">
-                                        View
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition requisition-row" 
-                            data-status="rejected" 
-                            data-department="sales" 
-                            data-priority="low"
-                            data-date="2days">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">REQ-2024-0010</p>
-                                <p class="text-xs text-text-muted">Marketing Materials</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">Emily Chen</p>
-                                <p class="text-xs text-text-muted">Sales Staff</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Promotional banners and flyers</p>
-                                <p class="text-xs text-text-muted">Summer campaign launch</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">
-                                    Sales
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                    LOW
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">
-                                    REJECTED
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">2 days ago</p>
-                                <p class="text-xs text-text-muted">11:45 AM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Yesterday</p>
-                                <p class="text-xs text-text-muted">4:30 PM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="viewRequisitionDetails(3)"
-                                        class="px-3 py-1 bg-caramel text-white text-xs font-semibold hover:bg-caramel-dark transition rounded">
-                                        View
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition requisition-row" 
-                            data-status="approved" 
-                            data-department="inventory" 
-                            data-priority="high"
-                            data-date="week">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">REQ-2024-0009</p>
-                                <p class="text-xs text-text-muted">Storage Equipment</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">Sarah Wilson</p>
-                                <p class="text-xs text-text-muted">Inventory Clerk</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Additional shelving units</p>
-                                <p class="text-xs text-text-muted">Warehouse organization project</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-                                    Inventory
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">
-                                    HIGH
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                    APPROVED
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">3 days ago</p>
-                                <p class="text-xs text-text-muted">3:20 PM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">2 days ago</p>
-                                <p class="text-xs text-text-muted">10:15 AM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="viewRequisitionDetails(4)"
-                                        class="px-3 py-1 bg-caramel text-white text-xs font-semibold hover:bg-caramel-dark transition rounded">
-                                        View
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-
-                        <tr class="hover:bg-cream-bg transition requisition-row" 
-                            data-status="pending" 
-                            data-department="purchasing" 
-                            data-priority="medium"
-                            data-date="today">
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">REQ-2024-0013</p>
-                                <p class="text-xs text-text-muted">Office Supplies</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-bold text-text-dark">Robert Johnson</p>
-                                <p class="text-xs text-text-muted">Purchasing Officer</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Monthly office stationery</p>
-                                <p class="text-xs text-text-muted">General office use</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">
-                                    Purchasing
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
-                                    MEDIUM
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded-full">
-                                    PENDING
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-dark">Today</p>
-                                <p class="text-xs text-text-muted">8:45 AM</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm text-text-muted">-</p>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex space-x-2">
-                                    <button onclick="viewRequisitionDetails(5)"
-                                        class="px-3 py-1 bg-caramel text-white text-xs font-semibold hover:bg-caramel-dark transition rounded">
-                                        View
-                                    </button>
-                                    <button onclick="openApproveModal(5, 'REQ-2024-0013')"
-                                        class="px-3 py-1 bg-green-500 text-white text-xs font-semibold hover:bg-green-600 transition rounded">
-                                        Approve
-                                    </button>
-                                    <button onclick="openRejectModal(5, 'REQ-2024-0013')"
-                                        class="px-3 py-1 bg-red-500 text-white text-xs font-semibold hover:bg-red-600 transition rounded">
-                                        Reject
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
+                    <tbody class="divide-y divide-gray-200" id="requisitionsTableBody">
+                        @foreach ($requisitions as $req)
+                            <tr class="hover:bg-gray-50 transition req-row" data-ref="{{ strtolower($req->req_ref) }}"
+                                data-status="{{ strtolower($req->req_status) }}">
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $req->req_ref }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->req_purpose }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
+                                    <span
+                                        class="inline-block px-2 py-1 text-xs font-semibold rounded
+                                @if ($req->req_priority === 'high') bg-rose-100 text-rose-700
+                                @elseif($req->req_priority === 'medium') bg-amber-100 text-amber-700
+                                @else bg-gray-100 text-gray-700 @endif">
+                                        {{ ucfirst($req->req_priority) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->requester->name ?? '—' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->approver->name ?? '—' }}</td>
+                                <td class="px-6 py-4">
+                                    @if ($req->req_status === 'pending')
+                                        <span
+                                            class="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded">Pending</span>
+                                    @elseif($req->req_status === 'approved')
+                                        <span
+                                            class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">Approved</span>
+                                    @elseif($req->req_status === 'rejected')
+                                        <span
+                                            class="inline-block px-2 py-1 bg-rose-100 text-rose-700 text-xs font-semibold rounded">Rejected</span>
+                                    @else
+                                        <span
+                                            class="inline-block px-2 py-1 bg-gray-100 text-gray-700 text-xs font-semibold rounded">Completed</span>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->items->count() }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->req_reject_reason ?? '—' }}</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <button onclick="openViewModal({{ $req->req_id }})"
+                                            class="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                                            title="View items">
+                                            <i class="fas fa-eye text-sm"></i>
+                                        </button>
+                                        @if ($req->req_status === 'pending')
+                                            <button
+                                                data-id="{{ $req->req_id }}"
+                                                data-ref="{{ e($req->req_ref) }}"
+                                                onclick="openApproveFromBtn(this)"
+                                                class="px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition text-xs font-semibold rounded">
+                                                Approve
+                                            </button>
+                                            <button
+                                                data-id="{{ $req->req_id }}"
+                                                data-ref="{{ e($req->req_ref) }}"
+                                                onclick="openRejectFromBtn(this)"
+                                                class="px-3 py-1 bg-rose-600 text-white hover:bg-rose-700 transition text-xs font-semibold rounded">
+                                                Reject
+                                            </button>
+                                        @else
+                                            <span class="text-xs text-gray-500">Finalised</span>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
 
-            <div class="px-6 py-4 border-t-2 border-border-soft bg-cream-bg">
-                <p class="text-sm text-text-muted">Showing <span id="visibleCount">5</span> of 24 requisitions</p>
+            <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+                Showing <span id="visibleCount">{{ $requisitions->count() }}</span> of {{ $requisitions->total() }} requisitions
+            </div>
+            <div class="px-6 py-3">
+                {{ $requisitions->links() }}
             </div>
         </div>
+
+        <!-- ====== MODALS  ====== -->
+        @include('Admin.Requisition.requisition.view')
+        @include('Admin.Requisition.requisition.approve')
+        @include('Admin.Requisition.requisition.reject')
+
     </div>
-
-    <!-- Approve Confirmation Modal -->
-    <div id="approveModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-md w-full">
-            <div class="p-6 border-b-2 border-border-soft">
-                <h3 class="font-display text-xl font-bold text-text-dark">Approve Requisition</h3>
-            </div>
-            <div class="p-6">
-                <div class="flex items-center space-x-3 mb-4">
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-check text-green-600 text-lg"></i>
-                    </div>
-                    <div>
-                        <p class="text-text-dark font-semibold" id="approveReqNumber"></p>
-                        <p class="text-sm text-text-muted">Ready for approval</p>
-                    </div>
-                </div>
-                <p class="text-text-dark mb-4">Are you sure you want to approve this requisition?</p>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Approval Notes (Optional)</label>
-                        <textarea id="approveNotes" 
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate resize-none"
-                            placeholder="Add any notes or instructions..."
-                            rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button type="button" onclick="closeApproveModal()"
-                        class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
-                        Cancel
-                    </button>
-                    <button type="button" onclick="approveRequisition()" class="px-6 py-2 bg-green-500 text-white hover:bg-green-600 transition">
-                        <i class="fas fa-check mr-2"></i>
-                        Approve
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reject Confirmation Modal -->
-    <div id="rejectModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div class="bg-white max-w-md w-full">
-            <div class="p-6 border-b-2 border-border-soft">
-                <h3 class="font-display text-xl font-bold text-text-dark">Reject Requisition</h3>
-            </div>
-            <div class="p-6">
-                <div class="flex items-center space-x-3 mb-4">
-                    <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                        <i class="fas fa-times text-red-600 text-lg"></i>
-                    </div>
-                    <div>
-                        <p class="text-text-dark font-semibold" id="rejectReqNumber"></p>
-                        <p class="text-sm text-text-muted">Will be rejected</p>
-                    </div>
-                </div>
-                <p class="text-text-dark mb-4">Are you sure you want to reject this requisition?</p>
-                <div class="space-y-3">
-                    <div>
-                        <label class="block text-sm font-semibold text-text-dark mb-2">Rejection Reason <span class="text-red-500">*</span></label>
-                        <textarea id="rejectReason" required
-                            class="w-full border-2 border-border-soft px-4 py-2 focus:outline-none focus:border-chocolate resize-none"
-                            placeholder="Please provide a reason for rejection..."
-                            rows="3"></textarea>
-                    </div>
-                </div>
-                <div class="flex justify-end space-x-3 mt-6">
-                    <button type="button" onclick="closeRejectModal()"
-                        class="px-6 py-2 border-2 border-border-soft hover:border-chocolate transition">
-                        Cancel
-                    </button>
-                    <button type="button" onclick="rejectRequisition()" class="px-6 py-2 bg-red-500 text-white hover:bg-red-600 transition">
-                        <i class="fas fa-times mr-2"></i>
-                        Reject
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap');
-        @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
-
-        .font-display {
-            font-family: 'Playfair Display', serif;
-        }
-
-        .cream-bg {
-            background-color: #faf7f3;
-        }
-
-        .text-text-dark {
-            color: #1a1410;
-        }
-
-        .text-text-muted {
-            color: #8b7355;
-        }
-
-        .bg-caramel {
-            background-color: #c48d3f;
-        }
-
-        .bg-caramel-dark {
-            background-color: #a67332;
-        }
-
-        .bg-chocolate {
-            background-color: #3d2817;
-        }
-
-        .border-border-soft {
-            border-color: #e8dfd4;
-        }
-
-        .hover-lift:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-    </style>
 
     <script>
-        let currentRequisitionId = null;
-        let currentReqNumber = null;
+        /* light helpers */
+        let currentId = null;
+        const REQ_BASE = "{{ url('/requisitions') }}";
 
-        // Filter Functions
-        function filterRequisitions() {
-            const statusFilter = document.getElementById('statusFilter').value;
-            const departmentFilter = document.getElementById('departmentFilter').value;
-            const priorityFilter = document.getElementById('priorityFilter').value;
-            const dateFilter = document.getElementById('dateFilter').value;
+        function showMessage(msg, type = 'success') {
+            const div = type === 'success' ? document.getElementById('successMessage') : document.getElementById(
+                'errorMessage');
+            div.textContent = msg;
+            div.classList.remove('hidden');
+            setTimeout(() => div.classList.add('hidden'), 3000);
+        }
 
-            const rows = document.querySelectorAll('.requisition-row');
-            let visibleCount = 0;
+        function closeModals() {
+            ['viewRequisitionModal', 'approveRequisitionModal', 'rejectRequisitionModal'].forEach(id => document
+                .getElementById(id)?.classList.add('hidden'));
+            currentId = null;
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModals();
+        });
 
-            rows.forEach(row => {
-                const status = row.getAttribute('data-status');
-                const department = row.getAttribute('data-department');
-                const priority = row.getAttribute('data-priority');
-                const date = row.getAttribute('data-date');
+        /* search / filter */
+        function filterTable(val) {
+            const rows = document.querySelectorAll('.req-row');
+            let visible = 0;
+            rows.forEach(r => {
+                const ok = val === 'all' || r.dataset.status === val;
+                r.style.display = ok ? '' : 'none';
+                if (ok) visible++;
+            });
+            document.getElementById('visibleCount').textContent = visible;
+        }
 
-                let statusMatch = statusFilter === 'all' || status === statusFilter;
-                let departmentMatch = departmentFilter === 'all' || department === departmentFilter;
-                let priorityMatch = priorityFilter === 'all' || priority === priorityFilter;
-                let dateMatch = dateFilter === 'all' || shouldShowByDate(date, dateFilter);
+        function searchTable(q) {
+            const Q = q.toLowerCase();
+            const rows = document.querySelectorAll('.req-row');
+            let visible = 0;
+            rows.forEach(r => {
+                const ok = r.dataset.ref.includes(Q) || r.textContent.toLowerCase().includes(Q);
+                r.style.display = ok ? '' : 'none';
+                if (ok) visible++;
+            });
+            document.getElementById('visibleCount').textContent = visible;
+            const btn = document.getElementById('clearBtn');
+            Q ? btn.classList.remove('hidden') : btn.classList.add('hidden');
+        }
 
-                if (statusMatch && departmentMatch && priorityMatch && dateMatch) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            searchTable('');
+            document.getElementById('clearBtn').classList.add('hidden');
+        }
+
+        /* sort */
+        let sortField = 'ref',
+            sortDir = 'asc';
+
+        function sortTable(f) {
+            if (sortField === f) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            else {
+                sortField = f;
+                sortDir = 'asc';
+            }
+            const tbody = document.getElementById('requisitionsTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+            rows.sort((a, b) => {
+                const A = a.dataset[sortField].toLowerCase(),
+                    B = b.dataset[sortField].toLowerCase();
+                return sortDir === 'asc' ? A.localeCompare(B) : B.localeCompare(A);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+            document.querySelectorAll('thead th i').forEach(i => i.className = 'fas fa-sort ml-1 text-xs');
+            const th = document.querySelector(`th[onclick="sortTable('${f}')"] i`);
+            if (th) th.className = sortDir === 'asc' ? 'fas fa-sort-up ml-1 text-xs' : 'fas fa-sort-down ml-1 text-xs';
+        }
+
+        /* modal openers */
+        function openViewModal(id) {
+            currentId = id;
+            fetch(`/requisitions/${id}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
                 }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('viewItemsBody');
+                tbody.innerHTML = '';
+                data.items.forEach(item => {
+                    const row = `<tr>
+                        <td class="px-4 py-2">${item.item.item_name}</td>
+                        <td class="px-4 py-2">${item.req_item_quantity}</td>
+                        <td class="px-4 py-2">${item.item_unit}</td>
+                    </tr>`;
+                    tbody.innerHTML += row;
+                });
+                document.getElementById('viewRequisitionModal').classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Failed to load requisition details.', 'error');
+            });
+        }
+
+        function openApproveModal(id, ref) {
+            currentId = id;
+            document.getElementById('approveRequisitionRef').textContent = ref;
+            const form = document.querySelector('#approveRequisitionModal form');
+            if (form) form.action = `${REQ_BASE}/${id}/status`;
+            document.getElementById('approveRequisitionModal').classList.remove('hidden');
+        }
+
+        function openRejectModal(id, ref) {
+            currentId = id;
+            document.getElementById('rejectRequisitionRef').textContent = ref;
+            const form = document.querySelector('#rejectRequisitionModal form');
+            if (form) form.action = `${REQ_BASE}/${id}/status`;
+            document.getElementById('rejectRequisitionModal').classList.remove('hidden');
+        }
+
+        function openApproveFromBtn(btn){
+            const id = btn.dataset.id;
+            const ref = btn.dataset.ref || '';
+            openApproveModal(id, ref);
+        }
+        function openRejectFromBtn(btn){
+            const id = btn.dataset.id;
+            const ref = btn.dataset.ref || '';
+            openRejectModal(id, ref);
+        }
+
+        // Form submissions
+        document.addEventListener('DOMContentLoaded', function(){
+            document.getElementById('approveRequisitionForm').addEventListener('submit', function(e){
+                e.preventDefault();
+                const formData = new FormData(this);
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success){
+                        showMessage(data.message);
+                        closeModals();
+                        location.reload();
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('An error occurred.', 'error');
+                });
             });
 
-            document.getElementById('visibleCount').textContent = visibleCount;
-        }
-
-        function shouldShowByDate(date, filter) {
-            switch(filter) {
-                case 'today':
-                    return date === 'today';
-                case 'week':
-                    return date === 'today' || date === 'yesterday' || date === '2days' || date === 'week';
-                case 'month':
-                    return true; // All sample data is within month
-                default:
-                    return true;
-            }
-        }
-
-        function resetFilters() {
-            document.getElementById('statusFilter').value = 'all';
-            document.getElementById('departmentFilter').value = 'all';
-            document.getElementById('priorityFilter').value = 'all';
-            document.getElementById('dateFilter').value = 'all';
-            filterRequisitions();
-            showMessage('Filters reset successfully!', 'success');
-        }
-
-        // Search functionality
-        function searchRequisitions(query) {
-            const rows = document.querySelectorAll('.requisition-row');
-            let visibleCount = 0;
-
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                if (text.includes(query.toLowerCase()) || query === '') {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
+            document.getElementById('rejectRequisitionForm').addEventListener('submit', function(e){
+                e.preventDefault();
+                const formData = new FormData(this);
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if(data.success){
+                        showMessage(data.message);
+                        closeModals();
+                        location.reload();
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('An error occurred.', 'error');
+                });
             });
-
-            document.getElementById('visibleCount').textContent = visibleCount;
-        }
-
-        // Modal Functions
-        function openApproveModal(requisitionId, reqNumber) {
-            currentRequisitionId = requisitionId;
-            currentReqNumber = reqNumber;
-            document.getElementById('approveReqNumber').textContent = reqNumber;
-            document.getElementById('approveNotes').value = '';
-            document.getElementById('approveModal').classList.remove('hidden');
-        }
-
-        function closeApproveModal() {
-            document.getElementById('approveModal').classList.add('hidden');
-            currentRequisitionId = null;
-            currentReqNumber = null;
-        }
-
-        function openRejectModal(requisitionId, reqNumber) {
-            currentRequisitionId = requisitionId;
-            currentReqNumber = reqNumber;
-            document.getElementById('rejectReqNumber').textContent = reqNumber;
-            document.getElementById('rejectReason').value = '';
-            document.getElementById('rejectModal').classList.remove('hidden');
-        }
-
-        function closeRejectModal() {
-            document.getElementById('rejectModal').classList.add('hidden');
-            currentRequisitionId = null;
-            currentReqNumber = null;
-        }
-
-        // Requisition Actions
-        function approveRequisition() {
-            const notes = document.getElementById('approveNotes').value;
-            showMessage(`Requisition ${currentReqNumber} approved successfully!`, 'success');
-            closeApproveModal();
-            updateStats('approve');
-        }
-
-        function rejectRequisition() {
-            const reason = document.getElementById('rejectReason').value;
-            if (!reason.trim()) {
-                alert('Please provide a rejection reason.');
-                return;
-            }
-            showMessage(`Requisition ${currentReqNumber} rejected.`, 'success');
-            closeRejectModal();
-            updateStats('reject');
-        }
-
-        function viewRequisitionDetails(requisitionId) {
-            showMessage(`Viewing details for requisition ID: ${requisitionId}`, 'success');
-            // In real app, would navigate to detail page or show modal
-        }
-
-        // Stats Update
-        function updateStats(action) {
-            const pendingCount = document.getElementById('pendingCount');
-            const approvedCount = document.getElementById('approvedCount');
-            const rejectedCount = document.getElementById('rejectedCount');
-
-            let pending = parseInt(pendingCount.textContent);
-            let approved = parseInt(approvedCount.textContent);
-            let rejected = parseInt(rejectedCount.textContent);
-
-            if (action === 'approve') {
-                pendingCount.textContent = pending - 1;
-                approvedCount.textContent = approved + 1;
-            } else if (action === 'reject') {
-                pendingCount.textContent = pending - 1;
-                rejectedCount.textContent = rejected + 1;
-            }
-        }
-
-        // Utility Functions
-        function showMessage(message, type) {
-            const messageDiv = document.getElementById('successMessage');
-            messageDiv.textContent = message;
-            messageDiv.classList.remove('hidden');
-            
-            setTimeout(() => {
-                messageDiv.classList.add('hidden');
-            }, 3000);
-        }
-
-        // Close modals when clicking outside
-        document.getElementById('approveModal').addEventListener('click', function(e) {
-            if (e.target === this) closeApproveModal();
-        });
-
-        document.getElementById('rejectModal').addEventListener('click', function(e) {
-            if (e.target === this) closeRejectModal();
-        });
-
-        // Close modals with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeApproveModal();
-                closeRejectModal();
-            }
-        });
-
-        // Initialize filters
-        document.addEventListener('DOMContentLoaded', function() {
-            filterRequisitions();
         });
     </script>
 @endsection
