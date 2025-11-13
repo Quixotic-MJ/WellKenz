@@ -89,8 +89,13 @@
                 <tbody class="divide-y divide-gray-200" id="notificationsTableBody">
                     @foreach($notifications as $n)
                     <tr class="hover:bg-gray-50 transition notif-row"
+                        data-id="{{ $n->notif_id }}"
                         data-module="{{ $n->related_type }}"
                         data-read="{{ $n->is_read ? 'read' : 'unread' }}"
+                        data-title="{{ $n->notif_title }}"
+                        data-content="{{ $n->notif_content }}"
+                        data-user="{{ $n->user->name ?? 'System' }}"
+                        data-timestamp="{{ $n->created_at->format('M d, Y H:i') }}"
                         data-date="{{ $n->created_at->format('Y-m-d H:i') }}">
                         <td class="px-6 py-4 text-sm text-gray-900">{{ $n->created_at->format('M d, Y H:i') }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ ucfirst(str_replace('_',' ',$n->related_type)) }}</td>
@@ -106,12 +111,12 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center space-x-2">
-                                <button onclick="openViewModal({{ $n->notification_id }})"
+                                <button onclick="openViewModal({{ $n->notif_id }})"
                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
                                     <i class="fas fa-eye text-sm"></i>
                                 </button>
                                 @if(!$n->is_read)
-                                    <button onclick="markRead({{ $n->notification_id }})"
+                                    <button onclick="markRead({{ $n->notif_id }})"
                                         class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark read">
                                         <i class="fas fa-check text-sm"></i>
                                     </button>
@@ -201,10 +206,27 @@ function sortTable(f){
 
 /* modal openers */
 function openViewModal(id){
-    currentId=id;
-    /* ajax fetch then fill modal */
+    const row = document.querySelector(`.notif-row[data-id='${id}']`);
+    if(!row) return;
+
+    const title = row.dataset.title;
+    const content = row.dataset.content;
+    const module = row.dataset.module.replace('_',' ').toUpperCase();
+    const user = row.dataset.user;
+    const timestamp = row.dataset.timestamp;
+
+    const modalBody = document.getElementById('viewNotificationBody');
+    modalBody.innerHTML = `
+        <p><span class="font-semibold">Title:</span> ${title}</p>
+        <p><span class="font-semibold">Content:</span> ${content}</p>
+        <p><span class="font-semibold">Module:</span> ${module}</p>
+        <p><span class="font-semibold">User:</span> ${user}</p>
+        <p><span class="font-semibold">Timestamp:</span> ${timestamp}</p>
+    `;
+
     document.getElementById('viewNotificationModal').classList.remove('hidden');
 }
+
 function openComposeModal(){
     document.getElementById('composeNotificationModal').classList.remove('hidden');
 }

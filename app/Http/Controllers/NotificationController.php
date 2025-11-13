@@ -11,10 +11,7 @@ class NotificationController extends Controller
 {
     public function markAsRead($id)
     {
-        $notification = Notification::where('notif_id', $id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
-
+        $notification = Notification::where('notif_id', $id)->firstOrFail();
         $notification->update(['is_read' => true]);
 
         return response()->json(['success' => true]);

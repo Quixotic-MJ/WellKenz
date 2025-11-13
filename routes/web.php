@@ -92,6 +92,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/report', [\App\Http\Controllers\ReportController::class, 'index'])->name('Admin_Report');
         Route::get('/reports/{report}', [\App\Http\Controllers\ReportController::class, 'generate'])->name('Admin_Report_Generate');
         Route::get('/notification', [NotificationController::class, 'adminIndex'])->name('Admin_Notification');
+        Route::prefix('notifications')->group(function () {
+            Route::post('/{id}/mark-read', [NotificationController::class, 'markAsRead'])->name('admin.notifications.markRead');
+        });
 
         /* Admin Purchase Orders */
         Route::prefix('purchase-orders')->name('admin.purchase_orders.')->controller(PurchaseOrderController::class)->group(function () {
