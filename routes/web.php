@@ -50,9 +50,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [ItemRequestController::class, 'store'])->name('item-requests.store');
         Route::get('/my-requests', [ItemRequestController::class, 'getMyRequests'])->name('item-requests.my_requests');
         Route::get('/{id}', [ItemRequestController::class, 'show'])->name('item-requests.show');
+        Route::get('/{id}/edit', [ItemRequestController::class, 'edit'])->name('item-requests.edit');
+        Route::put('/{id}', [ItemRequestController::class, 'update'])->name('item-requests.update');
         Route::get('/pending', [ItemRequestController::class, 'getPendingRequests'])->name('item-requests.pending');
         Route::post('/{id}/approve', [ItemRequestController::class, 'approve'])->name('item-requests.approve');
         Route::post('/{id}/reject', [ItemRequestController::class, 'reject'])->name('item-requests.reject');
+        Route::post('/cancel', [ItemRequestController::class, 'cancel'])->name('item-requests.cancel');
     });
 
     /* ---------- Notification ---------- */
@@ -69,6 +72,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [RequisitionController::class, 'store'])->name('requisitions.store');
         Route::get('/my-requisitions', [RequisitionController::class, 'getMyRequisitions'])->name('requisitions.my_requisitions');
         Route::get('/{id}', [RequisitionController::class, 'getRequisitionDetails'])->name('requisitions.show');
+        Route::get('/{id}/edit', [RequisitionController::class, 'edit'])->name('requisitions.edit');
+        Route::put('/{id}', [RequisitionController::class, 'update'])->name('requisitions.update');
         Route::get('/print/{id}', [RequisitionController::class, 'print'])->name('requisitions.print');
         Route::post('/{id}/status', [RequisitionController::class, 'updateStatus'])->name('requisitions.update_status');
         Route::delete('/{id}', [RequisitionController::class, 'destroy'])->name('requisitions.destroy');
@@ -157,7 +162,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:employee'])->group(function () {
         Route::get('/Staff_dashboard', [EmployeeController::class, 'dashboard'])->name('Staff_dashboard');
         Route::get('/Staff_Create_Requisition', [RequisitionController::class, 'create'])->name('Staff_Create_Requisition');
-        Route::get('/Staff_Requisition_Record', fn() => view('Employee.Requisition.my_requisition'))->name('Staff_Requisition_Record');
+        Route::get('/Staff_Requisition_Record', [RequisitionController::class, 'myRequisitions'])->name('Staff_Requisition_Record');
         Route::get('/Staff_Item_Request', [ItemRequestController::class, 'create'])->name('Staff_Item_Request');
         Route::get('/Staff_Receipt', fn() => view('Employee.acknowledgement_receipt'))->name('Staff_Reciept');
         Route::get('/Staff_Notification', fn() => view('Employee.notification'))->name('Staff_Notification');

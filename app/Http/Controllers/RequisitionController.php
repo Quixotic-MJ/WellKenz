@@ -52,6 +52,144 @@ class RequisitionController extends Controller
         ));
     }
 
+    public function myRequisitions()
+    {
+        $user = Auth::user();
+        $userId = $user?->user_id;
+
+        if (!$userId) {
+            return view('Employee.Requisition.my_requisition', [
+                'requisitions' => collect(),
+                'totalCount' => 0,
+                'pendingCount' => 0,
+                'approvedCount' => 0,
+                'rejectedCount' => 0,
+            ]);
+        }
+
+        $requisitions = Requisition::with('items')
+            ->where('requested_by', $userId)
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        $totalCount = DB::table('requisitions')->where('requested_by', $userId)->count();
+        $pendingCount = DB::table('requisitions')->where('requested_by', $userId)->where('req_status', 'pending')->count();
+        $approvedCount = DB::table('requisitions')->where('requested_by', $userId)->where('req_status', 'approved')->count();
+        $rejectedCount = DB::table('requisitions')->where('requested_by', $userId)->where('req_status', 'rejected')->count();
+
+        return view('Employee.Requisition.my_requisition', compact(
+            'requisitions', 'totalCount', 'pendingCount', 'approvedCount', 'rejectedCount'
+        ));
+    }
+
+    /**
+     * Show edit requisition form
+     */
+    public function edit($id)
+    {
+        $user = Auth::user();
+        $userId = $user?->user_id;
+
+        if (!$userId) {
+            return redirect()->route('Staff_Requisition_Record')->with('error', 'User not authenticated');
+        }
+
+        $requisition = Requisition::with('items.item')
+            ->where('req_id', $id)
+            ->where('requested_by', $userId)
+            ->where('req_status', 'pending')
+            ->first();
+
+        if (!$requisition) {
+            return redirect()->route('Staff_Requisition_Record')->with('error', 'Requisition not found or cannot be edited');
+        }
+
+        $items = DB::table('items')
+            ->where('is_active', true)
+            ->orderBy('item_name')
+            ->select('item_id', 'item_name', 'item_unit', 'item_stock')
+            ->get();
+
+        return view('Employee.Requisition.edit', compact('requisition', 'items'));
+    }
+
+    /**
+     * Update a requisition
+     */
+    public function update(Request $request, $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'req_purpose' => 'required|string|min:10',
+            'req_priority' => 'required|in:low,medium,high',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|integer|exists:items,item_id',
+            'items.*.quantity' => 'required|integer|min:1|max:10000'
+        ], [
+            'req_purpose.min' => 'Please provide a more detailed purpose (at least 10 characters).',
+            'items.required' => 'Please add at least one item to the requisition.',
+            'items.*.quantity.min' => 'Quantity must be at least 1.',
+            'items.*.quantity.max' => 'Quantity cannot exceed 10,000.'
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $user = Auth::user();
+
+            if (!$user) {
+                return redirect()->back()->with('error', 'User not authenticated');
+            }
+
+            $userId = $user->user_id;
+
+            $requisition = Requisition::where('req_id', $id)
+                ->where('requested_by', $userId)
+                ->where('req_status', 'pending')
+                ->first();
+
+            if (!$requisition) {
+                return redirect()->route('Staff_Requisition_Record')->with('error', 'Requisition not found or cannot be updated');
+            }
+
+            // Update requisition
+            $requisition->req_purpose = $request->req_purpose;
+            $requisition->req_priority = $request->req_priority;
+            $requisition->save();
+
+            // Delete existing items
+            RequisitionItem::where('req_id', $id)->delete();
+
+            // Add updated items
+            foreach ($request->items as $item) {
+                $itemDetails = DB::table('items')
+                    ->where('item_id', $item['item_id'])
+                    ->select('item_unit')
+                    ->first();
+
+                $requisitionItem = new RequisitionItem();
+                $requisitionItem->req_id = $id;
+                $requisitionItem->item_id = $item['item_id'];
+                $requisitionItem->req_item_quantity = $item['quantity'];
+                $requisitionItem->req_item_status = 'pending';
+                $requisitionItem->item_unit = $itemDetails->item_unit;
+                $requisitionItem->save();
+            }
+
+            DB::commit();
+
+            return redirect()->route('Staff_Requisition_Record')->with('success', 'Requisition updated successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error updating requisition: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error updating requisition: ' . $e->getMessage());
+        }
+    }
+
     /**
      * Store a new requisition
      */
@@ -111,10 +249,19 @@ class RequisitionController extends Controller
                 'user_name' => $user->name
             ]);
 
+            // Generate sequential requisition reference for the day
+            $today = now()->format('Y-m-d');
+            $lastReq = DB::table('requisitions')
+                ->whereDate('created_at', $today)
+                ->orderBy('req_id', 'desc')
+                ->first();
+
+            $sequence = $lastReq ? intval(substr($lastReq->req_ref, -4)) + 1 : 1;
+            $reqRef = 'REQ-' . now()->format('Ymd') . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+
             // Create requisition using the model instead of DB::table
             $requisition = new Requisition();
-            // Generate server-side requisition reference
-            $requisition->req_ref = 'REQ-'.now()->format('Ymd-His').'-'.Str::upper(Str::random(4));
+            $requisition->req_ref = $reqRef;
             $requisition->req_purpose = $request->req_purpose;
             $requisition->req_priority = $request->req_priority;
             $requisition->req_status = 'pending';

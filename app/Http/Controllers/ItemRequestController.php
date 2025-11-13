@@ -14,7 +14,30 @@ class ItemRequestController extends Controller
      */
     public function create()
     {
-        return view('Employee.item_request');
+        $userId = Auth::id();
+
+        if (!$userId) {
+            return view('Employee.Item_Request.item_request', [
+                'requests' => collect(),
+                'totalCount' => 0,
+                'pendingCount' => 0,
+                'approvedCount' => 0,
+                'rejectedCount' => 0,
+            ]);
+        }
+
+        $requests = ItemRequest::where('requested_by', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $totalCount   = ItemRequest::where('requested_by', $userId)->count();
+        $pendingCount = ItemRequest::where('requested_by', $userId)->where('item_req_status', 'pending')->count();
+        $approvedCount= ItemRequest::where('requested_by', $userId)->where('item_req_status', 'approved')->count();
+        $rejectedCount= ItemRequest::where('requested_by', $userId)->where('item_req_status', 'rejected')->count();
+
+        return view('Employee.Item_Request.item_request', compact(
+            'requests', 'totalCount', 'pendingCount', 'approvedCount', 'rejectedCount'
+        ));
     }
 
     /**
@@ -95,6 +118,55 @@ class ItemRequestController extends Controller
             }
             abort(404);
         }
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit($id)
+    {
+        $request = ItemRequest::findOrFail($id);
+
+        // Check if user is the requester
+        if (Auth::id() !== $request->requested_by) {
+            abort(403);
+        }
+
+        // Check if still pending
+        if ($request->item_req_status !== 'pending') {
+            return redirect()->route('Staff_Item_Request')->with('error', 'This request can no longer be edited');
+        }
+
+        return view('Employee.Item_Request.edit', compact('request'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        $itemRequest = ItemRequest::findOrFail($id);
+
+        // Check if user is the requester
+        if (Auth::id() !== $itemRequest->requested_by) {
+            abort(403);
+        }
+
+        // Check if still pending
+        if ($itemRequest->item_req_status !== 'pending') {
+            return redirect()->route('Staff_Item_Request')->with('error', 'This request can no longer be edited');
+        }
+
+        $validated = $request->validate([
+            'item_req_name' => 'required|string|max:255',
+            'item_req_unit' => 'required|string|max:50',
+            'item_req_quantity' => 'required|integer|min:1',
+            'item_req_description' => 'required|string'
+        ]);
+
+        $itemRequest->update($validated);
+
+        return redirect()->route('Staff_Item_Request')->with('success', 'Item request updated successfully!');
     }
 
     /**
@@ -389,6 +461,65 @@ class ItemRequestController extends Controller
             }
 
             return back()->with('error', 'Error rejecting request: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Cancel item request (by requester)
+     */
+    public function cancel(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'id' => 'required|integer|exists:item_requests,item_req_id'
+            ]);
+
+            $itemRequest = ItemRequest::findOrFail($validated['id']);
+
+            // Check if user is the requester
+            if (Auth::id() !== $itemRequest->requested_by) {
+                if (request()->ajax() || request()->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unauthorized to cancel this request'
+                    ], 403);
+                }
+                abort(403);
+            }
+
+            // Check if already processed
+            if ($itemRequest->item_req_status !== 'pending') {
+                if (request()->ajax() || request()->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'This request has already been processed'
+                    ], 400);
+                }
+                return back()->with('error', 'This request has already been processed');
+            }
+
+            $itemRequest->update([
+                'item_req_status' => 'cancelled'
+            ]);
+
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Item request cancelled successfully!'
+                ]);
+            }
+
+            return back()->with('success', 'Item request cancelled successfully!');
+
+        } catch (\Exception $e) {
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error cancelling request: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return back()->with('error', 'Error cancelling request: ' . $e->getMessage());
         }
     }
 }
