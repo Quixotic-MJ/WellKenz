@@ -18,7 +18,38 @@ class RequisitionController extends Controller
      */
     public function create()
     {
-        return view('Employee.Requisition.create_requisition');
+        $user = Auth::user();
+        $userId = $user?->user_id;
+
+        if (!$userId) {
+            return view('Employee.Requisition.create_requisition', [
+                'requisitions' => collect(),
+                'items' => collect(),
+                'reqTotal' => 0,
+                'reqPending' => 0,
+                'reqApproved' => 0,
+                'reqRejected' => 0,
+            ]);
+        }
+
+        $requisitions = Requisition::where('requested_by', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $reqTotal    = DB::table('requisitions')->where('requested_by', $userId)->count();
+        $reqPending  = DB::table('requisitions')->where('requested_by', $userId)->where('req_status', 'pending')->count();
+        $reqApproved = DB::table('requisitions')->where('requested_by', $userId)->where('req_status', 'approved')->count();
+        $reqRejected = DB::table('requisitions')->where('requested_by', $userId)->where('req_status', 'rejected')->count();
+
+        $items = DB::table('items')
+            ->where('is_active', true)
+            ->orderBy('item_name')
+            ->select('item_id', 'item_name', 'item_unit', 'item_stock')
+            ->get();
+
+        return view('Employee.Requisition.create_requisition', compact(
+            'requisitions', 'items', 'reqTotal', 'reqPending', 'reqApproved', 'reqRejected'
+        ));
     }
 
     /**
@@ -658,6 +689,34 @@ class RequisitionController extends Controller
                 'success' => false,
                 'message' => 'Error updating requisition status: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Printable requisition view (owner, admin, or supervisor)
+     */
+    public function print($id)
+    {
+        try {
+            $user = Auth::user();
+            $userId = $user?->user_id;
+
+            $req = Requisition::with(['items.item', 'requester', 'approver'])
+                ->where('req_id', $id)
+                ->first();
+
+            if (!$req) {
+                return back()->with('error', 'Requisition not found');
+            }
+
+            if (!in_array($user?->role, ['admin', 'supervisor']) && $req->requested_by != $userId) {
+                return back()->with('error', 'Unauthorized');
+            }
+
+            return view('Employee.Requisition.print', compact('req'));
+        } catch (\Exception $e) {
+            Log::error('Print requisition error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to render requisition print');
         }
     }
 }

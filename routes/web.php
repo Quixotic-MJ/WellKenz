@@ -12,6 +12,7 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\InventoryController;        //  ← 1.  ADD THIS LINE
 use App\Http\Controllers\StockInController;          //  ← 4.  ADD THIS LINE
 use App\Http\Controllers\AcknowledgementReceiptController;
+use App\Http\Controllers\EmployeeController;
 use Illuminate\Support\Facades\DB;
 
 /* ----------------------------------------------------------
@@ -35,6 +36,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/low-stock', [ItemController::class, 'getLowStock'])->name('items.low_stock');
         Route::get('/{id}', [ItemController::class, 'getItemDetails'])->name('items.details');
         Route::get('/inventory/items', [RequisitionController::class, 'getInventoryItems'])->name('items.inventory');
+    });
+
+    /* ---------- Employee ---------- */
+    Route::middleware(['role:employee'])->prefix('employee')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\EmployeeController::class, 'dashboard'])->name('Employee_Dashboard');
+        Route::post('/notifications/mark-read', [\App\Http\Controllers\EmployeeController::class, 'markNotifsRead'])->name('Employee_Notifications_MarkRead');
     });
 
     /* ---------- Item Request ---------- */
@@ -62,6 +69,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [RequisitionController::class, 'store'])->name('requisitions.store');
         Route::get('/my-requisitions', [RequisitionController::class, 'getMyRequisitions'])->name('requisitions.my_requisitions');
         Route::get('/{id}', [RequisitionController::class, 'getRequisitionDetails'])->name('requisitions.show');
+        Route::get('/print/{id}', [RequisitionController::class, 'print'])->name('requisitions.print');
         Route::post('/{id}/status', [RequisitionController::class, 'updateStatus'])->name('requisitions.update_status');
         Route::delete('/{id}', [RequisitionController::class, 'destroy'])->name('requisitions.destroy');
         Route::get('/', [RequisitionController::class, 'getAllRequisitions'])->name('requisitions.index');
@@ -147,12 +155,13 @@ Route::middleware(['auth'])->group(function () {
 
     /* ---------- Employee ---------- */
     Route::middleware(['role:employee'])->group(function () {
-        Route::get('/Staff_dashboard', fn() => view('Employee.dashboard'))->name('Staff_dashboard');
+        Route::get('/Staff_dashboard', [EmployeeController::class, 'dashboard'])->name('Staff_dashboard');
         Route::get('/Staff_Create_Requisition', [RequisitionController::class, 'create'])->name('Staff_Create_Requisition');
         Route::get('/Staff_Requisition_Record', fn() => view('Employee.Requisition.my_requisition'))->name('Staff_Requisition_Record');
         Route::get('/Staff_Item_Request', [ItemRequestController::class, 'create'])->name('Staff_Item_Request');
         Route::get('/Staff_Receipt', fn() => view('Employee.acknowledgement_receipt'))->name('Staff_Reciept');
         Route::get('/Staff_Notification', fn() => view('Employee.notification'))->name('Staff_Notification');
+        Route::post('/notifications/mark-read', [EmployeeController::class, 'markNotifsRead'])->name('Employee_Notifications_MarkRead');
     });
 
     /* ---------- Inventory ---------- */
