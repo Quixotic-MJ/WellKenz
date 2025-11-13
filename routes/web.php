@@ -81,7 +81,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/supplier', [SupplierController::class, 'index'])->name('Admin_Supplier');
         Route::get('/inventory-transaction', [InventoryController::class, 'adminTransactions'])->name('Admin_Inventory_Transaction');
         Route::get('/inventory', [InventoryController::class, 'adminItemManagement'])->name('Admin_Item_Management');
-        Route::get('/report', fn() => view('Admin.report'))->name('Admin_Report');
+        Route::get('/report', [\App\Http\Controllers\ReportController::class, 'index'])->name('Admin_Report');
+        Route::get('/reports/{report}', [\App\Http\Controllers\ReportController::class, 'generate'])->name('Admin_Report_Generate');
         Route::get('/notification', fn() => view('Admin.notification'))->name('Admin_Notification');
 
         /* Admin Purchase Orders */
