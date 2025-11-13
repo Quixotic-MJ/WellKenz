@@ -85,4 +85,43 @@ class NotificationController extends Controller
 
         return view('Admin.Notification.notification', compact('notifications', 'users'));
     }
+
+    public function compose(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'nullable|exists:users,user_id',
+            'notif_title' => 'required|string|max:255',
+            'notif_content' => 'required|string',
+            'related_type' => 'required|string|max:50'
+        ]);
+
+        if ($validated['user_id']) {
+            // Send to specific user
+            Notification::create([
+                'notif_title' => $validated['notif_title'],
+                'notif_content' => $validated['notif_content'],
+                'related_type' => $validated['related_type'],
+                'user_id' => $validated['user_id'],
+                'is_read' => false
+            ]);
+        } else {
+            // Send to all users
+            $users = User::all();
+            $notifications = [];
+            foreach ($users as $user) {
+                $notifications[] = [
+                    'notif_title' => $validated['notif_title'],
+                    'notif_content' => $validated['notif_content'],
+                    'related_type' => $validated['related_type'],
+                    'user_id' => $user->user_id,
+                    'is_read' => false,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ];
+            }
+            Notification::insert($notifications);
+        }
+
+        return redirect()->back()->with('success', 'Notification sent successfully!');
+    }
 }

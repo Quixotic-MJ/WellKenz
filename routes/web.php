@@ -97,6 +97,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/report', [\App\Http\Controllers\ReportController::class, 'index'])->name('Admin_Report');
         Route::get('/reports/{report}', [\App\Http\Controllers\ReportController::class, 'generate'])->name('Admin_Report_Generate');
         Route::get('/notification', [NotificationController::class, 'adminIndex'])->name('Admin_Notification');
+        Route::post('/notification/compose', [NotificationController::class, 'compose'])->name('admin.notification.compose');
 
         /* Admin Purchase Orders */
         Route::prefix('purchase-orders')->name('admin.purchase_orders.')->controller(PurchaseOrderController::class)->group(function () {
@@ -231,8 +232,8 @@ Route::middleware(['auth'])->group(function () {
     /* ---------- Supervisor ---------- */
     Route::middleware(['role:supervisor'])->group(function () {
         Route::get('/Supervisor_Dashboard', [\App\Http\Controllers\SupervisorController::class, 'dashboard'])->name('Supervisor_Dashboard');
-        Route::get('/Supervisor_Requisition', fn() => view('Supervisor.Requisition.requisition'))->name('Supervisor_Requisition');
-        Route::get('/Supervisor_Item_Request', fn() => view('Supervisor.Requisition.item_request'))->name('Supervisor_Item_Request');
+        Route::get('/Supervisor_Requisition', [RequisitionController::class, 'supervisorIndex'])->name('Supervisor_Requisition');
+        Route::get('/Supervisor_Item_Request', fn() => view('Supervisor.Item_Request.item_request'))->name('Supervisor_Item_Request');
         Route::get('/Supervisor_Purchase_Order', fn() => view('Supervisor.purchase_order'))->name('Supervisor_Purchase_Order');
         Route::get('/Supervisor_Inventory_Overview', fn() => view('Supervisor.inventory_overview'))->name('Supervisor_Inventory_Overview');
         Route::get('/Supervisor_Report', fn() => view('Supervisor.report'))->name('Supervisor_Report');

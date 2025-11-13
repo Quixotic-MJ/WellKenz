@@ -14,6 +14,47 @@ use Illuminate\Support\Str;
 class RequisitionController extends Controller
 {
     /**
+     * Supervisor page: Requisition Management (dynamic)
+     */
+    public function supervisorIndex()
+    {
+        try {
+            $user = Auth::user();
+
+            if (!$user || !in_array($user->role, ['supervisor', 'admin'])) {
+                abort(403);
+            }
+
+            // KPI counts
+            $pendingCount  = Requisition::where('req_status', 'pending')->count();
+            $approvedCount = Requisition::where('req_status', 'approved')->count();
+            $rejectedCount = Requisition::where('req_status', 'rejected')->count();
+            $thisMonthCount = Requisition::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->count();
+
+            // Lists
+            $pendingList = Requisition::with(['requester', 'items', 'approver'])
+                ->where('req_status', 'pending')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $pastList = Requisition::with(['requester', 'items', 'approver'])
+                ->whereIn('req_status', ['approved', 'rejected', 'completed'])
+                ->orderBy('updated_at', 'desc')
+                ->get();
+
+            return view('Supervisor.Requisition.requisition', compact(
+                'pendingCount', 'approvedCount', 'rejectedCount', 'thisMonthCount',
+                'pendingList', 'pastList'
+            ));
+
+        } catch (\Exception $e) {
+            Log::error('Error in supervisorIndex: ' . $e->getMessage());
+            abort(500);
+        }
+    }
+    /**
      * Show create requisition form
      */
     public function create()
@@ -732,18 +773,76 @@ class RequisitionController extends Controller
 
             $requisition = Requisition::with([
                 'requester',
+                // Requisition hasMany RequisitionItem -> item -> category
                 'items.item.category',
                 'approver'
             ])->find($id);
 
             if (!$requisition) {
+                if (request()->ajax() || request()->wantsJson()) {
+                    return response()->json(['error' => 'Requisition not found'], 404);
+                }
                 abort(404);
+            }
+
+            if (request()->ajax() || request()->wantsJson()) {
+                $data = [
+                    'req_id' => $requisition->req_id,
+                    'req_ref' => $requisition->req_ref,
+                    'req_purpose' => $requisition->req_purpose,
+                    'req_priority' => $requisition->req_priority,
+                    'req_status' => $requisition->req_status,
+                    'req_reject_reason' => $requisition->req_reject_reason,
+                    'created_at' => $requisition->created_at,
+                    'updated_at' => $requisition->updated_at,
+                    'requester' => $requisition->requester ? [
+                        'name' => $requisition->requester->name,
+                    ] : null,
+                    'approver' => $requisition->approver ? [
+                        'name' => $requisition->approver->name,
+                    ] : null,
+                    'items' => $requisition->items->map(function ($ri) {
+                        // $ri is App\Models\RequisitionItem in this app
+                        $item = $ri->item;
+                        $quantity = $ri->req_item_quantity
+                            ?? $ri->quantity
+                            ?? $ri->req_qty
+                            ?? $ri->qty
+                            ?? null;
+                        $unit = $ri->item_unit
+                            ?? $ri->req_item_unit
+                            ?? $ri->unit
+                            ?? $ri->req_unit
+                            ?? ($item?->item_unit ?? $item?->unit ?? null);
+                        $name = $item?->item_name ?? $ri->item_name ?? null;
+                        $desc = $item?->item_description ?? $ri->item_description ?? null;
+                        return [
+                            'item_name' => $name,
+                            'item_description' => $desc,
+                            'quantity' => $quantity,
+                            'unit' => $unit,
+                            // expose raw keys used by frontend fallbacks
+                            'req_item_quantity' => $ri->req_item_quantity,
+                            'req_item_unit' => $ri->item_unit,
+                            'category' => ($item && ($item->category ?? null)) ? [
+                                // normalize DB cat_name to category_name for UI
+                                'category_name' => ($item->category->category_name ?? null)
+                                    ?? ($item->category->cat_name ?? null)
+                                    ?? ($item->category->name ?? null),
+                            ] : null,
+                        ];
+                    })->values(),
+                ];
+                return response()->json($data);
             }
 
             return view('Supervisor.Requisition.review', compact('requisition'));
 
         } catch (\Exception $e) {
             Log::error('Error in getRequisitionForReview: ' . $e->getMessage());
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json(['error' => 'Failed to load requisition', 'message' => $e->getMessage()], 500);
+            }
             abort(500);
         }
     }
