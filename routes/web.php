@@ -83,7 +83,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/inventory', [InventoryController::class, 'adminItemManagement'])->name('Admin_Item_Management');
         Route::get('/report', [\App\Http\Controllers\ReportController::class, 'index'])->name('Admin_Report');
         Route::get('/reports/{report}', [\App\Http\Controllers\ReportController::class, 'generate'])->name('Admin_Report_Generate');
-        Route::get('/notification', fn() => view('Admin.notification'))->name('Admin_Notification');
+        Route::get('/notification', [NotificationController::class, 'adminIndex'])->name('Admin_Notification');
 
         /* Admin Purchase Orders */
         Route::prefix('purchase-orders')->name('admin.purchase_orders.')->controller(PurchaseOrderController::class)->group(function () {

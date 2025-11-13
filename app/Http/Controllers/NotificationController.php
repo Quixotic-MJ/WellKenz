@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Notification;
+use App\Models\User;
 
 class NotificationController extends Controller
 {
@@ -34,13 +35,21 @@ class NotificationController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('notifications.index', compact('notifications'));
+        return view('Admin.Notification.notification', compact('notifications'));
     }
 
     public function getUnreadCount()
     {
         $count = Auth::user()->getUnreadNotificationsCount();
-        
+
         return response()->json(['count' => $count]);
+    }
+
+    public function adminIndex()
+    {
+        $notifications = Notification::orderBy('created_at', 'desc')->paginate(20);
+        $users = User::all();
+
+        return view('Admin.Notification.notification', compact('notifications', 'users'));
     }
 }
