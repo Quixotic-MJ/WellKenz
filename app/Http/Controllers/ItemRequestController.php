@@ -107,7 +107,12 @@ class ItemRequestController extends Controller
                 return response()->json($request);
             }
 
-            // For non-AJAX requests, redirect back
+            // If supervisor/admin and not AJAX, render review page
+            if (in_array(Auth::user()->role, ['admin', 'supervisor'])) {
+                return view('Supervisor.Requisition.item_request_show', compact('request'));
+            }
+
+            // Otherwise, redirect back
             return redirect()->back();
 
         } catch (\Exception $e) {
@@ -226,6 +231,23 @@ class ItemRequestController extends Controller
                 ->paginate(20);
 
             return view('Admin.Requisition.item_request', compact('requests'));
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error loading requests: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Supervisor index page for item requests
+     */
+    public function supervisorIndex()
+    {
+        try {
+            $requests = ItemRequest::with(['requester', 'approver'])
+                ->orderBy('created_at', 'desc')
+                ->paginate(20);
+
+            return view('Supervisor.Requisition.item_request', compact('requests'));
 
         } catch (\Exception $e) {
             return back()->with('error', 'Error loading requests: ' . $e->getMessage());

@@ -6,9 +6,55 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class AcknowledgementReceiptController extends Controller
 {
+    /**
+     * Employee page: list own acknowledgement receipts with KPI counts.
+     */
+    public function employeeIndex()
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return view('Employee.AR.acknowledgement_receipt', [
+                'receipts' => collect(),
+                'totalCount' => 0,
+                'issuedCount' => 0,
+                'receivedCount' => 0,
+                'thisMonthCount' => 0,
+            ]);
+        }
+
+        // Base counts
+        $totalCount = DB::table('acknowledge_receipts')->where('issued_to', $userId)->count();
+        $issuedCount = DB::table('acknowledge_receipts')->where('issued_to', $userId)->where('ar_status', 'issued')->count();
+        $receivedCount = DB::table('acknowledge_receipts')->where('issued_to', $userId)->where('ar_status', 'received')->count();
+        $thisMonthCount = DB::table('acknowledge_receipts')
+            ->where('issued_to', $userId)
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->count();
+
+        // Receipts list with issuer name
+        $rows = DB::table('acknowledge_receipts as ar')
+            ->leftJoin('users as u1', 'u1.user_id', '=', 'ar.issued_by')
+            ->where('ar.issued_to', $userId)
+            ->orderBy('ar.created_at', 'desc')
+            ->select('ar.*', 'u1.name as issuer_name')
+            ->get();
+
+        $receipts = collect($rows)->map(function ($r) {
+            // Ensure date cast and issuer object for Blade compatibility
+            $r->issued_date = $r->issued_date ? Carbon::parse($r->issued_date) : null;
+            $r->issuer = (object) ['name' => $r->issuer_name];
+            return $r;
+        });
+
+        return view('Employee.AR.acknowledgement_receipt', compact(
+            'receipts', 'totalCount', 'issuedCount', 'receivedCount', 'thisMonthCount'
+        ));
+    }
     /**
      * Create a new Acknowledgement Receipt (AR) and perform Stock-Out
      * Payload shape:
@@ -117,5 +163,46 @@ class AcknowledgementReceiptController extends Controller
             ->get();
 
         return response()->json(['ar'=>$ar,'items'=>$items]);
+    }
+
+    /**
+     * Confirm receipt of acknowledgement receipt (employee)
+     */
+    public function confirm(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|integer'
+        ]);
+
+        $userId = Auth::id();
+        if (!$userId) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $ar = DB::table('acknowledge_receipts')->where('ar_id', $request->id)->where('issued_to', $userId)->first();
+        if (!$ar) {
+            return response()->json(['success' => false, 'message' => 'AR not found or not authorized'], 404);
+        }
+
+        if ($ar->ar_status !== 'issued') {
+            return response()->json(['success' => false, 'message' => 'AR is not in issued status'], 400);
+        }
+
+        DB::table('acknowledge_receipts')->where('ar_id', $request->id)->update([
+            'ar_status' => 'received',
+            'updated_at' => now()
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Receipt confirmed successfully']);
+    }
+
+    /**
+     * Print acknowledgement receipt
+     */
+    public function print($id)
+    {
+        // For now, just return a view or redirect
+        // You can implement PDF generation here
+        return view('Employee.AR.print', compact('id'));
     }
 }

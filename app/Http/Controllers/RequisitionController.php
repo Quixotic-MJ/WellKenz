@@ -724,10 +724,10 @@ class RequisitionController extends Controller
     {
         try {
             $user = Auth::user();
-            
+
             // Check if user is supervisor or admin
             if (!$user || !in_array($user->role, ['supervisor', 'admin'])) {
-                return response()->json(['error' => 'Unauthorized access'], 403);
+                abort(403);
             }
 
             $requisition = Requisition::with([
@@ -737,14 +737,14 @@ class RequisitionController extends Controller
             ])->find($id);
 
             if (!$requisition) {
-                return response()->json(['error' => 'Requisition not found'], 404);
+                abort(404);
             }
 
-            return response()->json($requisition);
+            return view('Supervisor.Requisition.review', compact('requisition'));
 
         } catch (\Exception $e) {
             Log::error('Error in getRequisitionForReview: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to load requisition'], 500);
+            abort(500);
         }
     }
 

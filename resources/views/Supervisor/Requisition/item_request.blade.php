@@ -319,7 +319,7 @@ function loadRequests() {
     const status = document.getElementById('statusFilter').value;
     const date = document.getElementById('dateFilter').value;
 
-    let url = `/supervisor/item-requests?page=${currentPage}`;
+    let url = `/supervisor/item-requests/data?page=${currentPage}`;
 
     if (search) url += `&search=${encodeURIComponent(search)}`;
     if (status !== 'all') url += `&status=${status}`;

@@ -164,9 +164,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/Staff_Create_Requisition', [RequisitionController::class, 'create'])->name('Staff_Create_Requisition');
         Route::get('/Staff_Requisition_Record', [RequisitionController::class, 'myRequisitions'])->name('Staff_Requisition_Record');
         Route::get('/Staff_Item_Request', [ItemRequestController::class, 'create'])->name('Staff_Item_Request');
-        Route::get('/Staff_Receipt', fn() => view('Employee.acknowledgement_receipt'))->name('Staff_Reciept');
-        Route::get('/Staff_Notification', fn() => view('Employee.notification'))->name('Staff_Notification');
+        Route::get('/Staff_Receipt', [AcknowledgementReceiptController::class, 'employeeIndex'])->name('Staff_Reciept');
+        Route::get('/Staff_Notification', [NotificationController::class, 'employeeIndex'])->name('Staff_Notification');
         Route::post('/notifications/mark-read', [EmployeeController::class, 'markNotifsRead'])->name('Employee_Notifications_MarkRead');
+
+        /* Employee Acknowledgement Receipts */
+        Route::prefix('acknowledgements')->name('employee.acknowledgements.')->group(function () {
+            Route::get('/', [AcknowledgementReceiptController::class, 'employeeIndex'])->name('index');
+            Route::post('/confirm', [AcknowledgementReceiptController::class, 'confirm'])->name('confirm');
+            Route::get('/{id}', [AcknowledgementReceiptController::class, 'show'])->name('show');
+            Route::get('/{id}/print', [AcknowledgementReceiptController::class, 'print'])->name('print');
+        });
     });
 
     /* ---------- Inventory ---------- */
@@ -222,7 +230,7 @@ Route::middleware(['auth'])->group(function () {
 
     /* ---------- Supervisor ---------- */
     Route::middleware(['role:supervisor'])->group(function () {
-        Route::get('/Supervisor_Dashboard', fn() => view('Supervisor.dashboard'))->name('Supervisor_Dashboard');
+        Route::get('/Supervisor_Dashboard', [\App\Http\Controllers\SupervisorController::class, 'dashboard'])->name('Supervisor_Dashboard');
         Route::get('/Supervisor_Requisition', fn() => view('Supervisor.Requisition.requisition'))->name('Supervisor_Requisition');
         Route::get('/Supervisor_Item_Request', fn() => view('Supervisor.Requisition.item_request'))->name('Supervisor_Item_Request');
         Route::get('/Supervisor_Purchase_Order', fn() => view('Supervisor.purchase_order'))->name('Supervisor_Purchase_Order');
@@ -237,9 +245,10 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/requisitions/{id}', [RequisitionController::class, 'getRequisitionForReview'])->name('supervisor.requisitions.show');
             Route::post('/requisitions/{id}/status', [RequisitionController::class, 'updateRequisitionStatus'])->name('supervisor.requisitions.status');
 
-            Route::get('/item-requests', [ItemRequestController::class, 'getAllRequests'])->name('supervisor.item_requests.index');
+            Route::get('/item-requests', [ItemRequestController::class, 'supervisorIndex'])->name('supervisor.item-requests.index');
+            Route::get('/item-requests/data', [ItemRequestController::class, 'getAllRequests'])->name('supervisor.item-requests.data');
             Route::get('/item-requests/stats', [ItemRequestController::class, 'getRequestStats'])->name('supervisor.item_requests.stats');
-            Route::get('/item-requests/{id}', [ItemRequestController::class, 'show'])->name('supervisor.item_requests.show');
+            Route::get('/item-requests/{id}', [ItemRequestController::class, 'show'])->name('supervisor.item-requests.show');
             Route::post('/item-requests/{id}/status', [ItemRequestController::class, 'updateStatus'])->name('supervisor.item_requests.update_status');
         });
     });
@@ -270,6 +279,9 @@ Route::middleware(['auth'])->prefix('api')->group(function () {
     Route::get('/item-requests/pending', [ItemRequestController::class, 'getPendingRequests']);
     Route::post('/item-requests/{id}/approve', [ItemRequestController::class, 'approve']);
     Route::post('/item-requests/{id}/reject', [ItemRequestController::class, 'reject']);
+
+    /* Acknowledgement Receipt */
+    Route::get('/ar/{id}', [AcknowledgementReceiptController::class, 'show']);
 
     /* Inventory */
     Route::get('/inventory/items', [RequisitionController::class, 'getInventoryItems']);

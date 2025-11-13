@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Notification;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class NotificationController extends Controller
 {
@@ -36,6 +37,38 @@ class NotificationController extends Controller
             ->paginate(20);
 
         return view('Admin.Notification.notification', compact('notifications'));
+    }
+
+    /**
+     * Employee notifications page: provide counts and list for the authenticated user.
+     */
+    public function employeeIndex()
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return view('Employee.Notification.notification', [
+                'notifications' => collect(),
+                'totalCount' => 0,
+                'unreadCount' => 0,
+                'readCount' => 0,
+                'thisWeekCount' => 0,
+            ]);
+        }
+
+        $totalCount = Notification::where('user_id', $userId)->count();
+        $unreadCount = Notification::where('user_id', $userId)->where('is_read', false)->count();
+        $readCount = Notification::where('user_id', $userId)->where('is_read', true)->count();
+        $thisWeekCount = Notification::where('user_id', $userId)
+            ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+            ->count();
+
+        $notifications = Notification::where('user_id', $userId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return view('Employee.Notification.notification', compact(
+            'notifications', 'totalCount', 'unreadCount', 'readCount', 'thisWeekCount'
+        ));
     }
 
     public function getUnreadCount()
