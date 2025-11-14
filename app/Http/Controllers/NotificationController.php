@@ -124,4 +124,93 @@ class NotificationController extends Controller
 
         return redirect()->back()->with('success', 'Notification sent successfully!');
     }
+
+    /**
+     * Get notification details for modal view
+     */
+    public function getNotificationDetails($id)
+    {
+        try {
+            \Log::info('=== NOTIFICATION DETAILS REQUEST ===');
+            \Log::info('Notification ID: ' . $id);
+            \Log::info('User ID: ' . Auth::id());
+            \Log::info('User: ' . Auth::user()->name);
+
+            // Check if notification exists and belongs to user
+            $notification = Notification::where('notif_id', $id)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (!$notification) {
+                \Log::warning('Notification not found or access denied');
+                \Log::warning('Available notifications for user: ' . 
+                    Notification::where('user_id', Auth::id())->pluck('notif_id')->implode(', '));
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Notification not found or you do not have permission to view it',
+                    'debug' => [
+                        'requested_id' => $id,
+                        'user_id' => Auth::id(),
+                        'available_notifications' => Notification::where('user_id', Auth::id())->pluck('notif_id')
+                    ]
+                ], 404);
+            }
+
+            \Log::info('Notification found: ' . $notification->notif_title);
+
+            // Format the response data
+            $formattedNotification = [
+                'notification_id' => $notification->notif_id,
+                'notif_title' => $notification->notif_title,
+                'notif_content' => $notification->notif_content,
+                'related_type' => $notification->related_type,
+                'type_formatted' => ucfirst(str_replace('_', ' ', $notification->related_type)),
+                'related_id' => $notification->related_id,
+                'related_link' => $this->generateRelatedLink($notification),
+                'is_read' => (bool) $notification->is_read,
+                'formatted_date' => $notification->created_at->format('M d, Y \a\t H:i'),
+                'created_at' => $notification->created_at->toISOString(),
+                'updated_at' => $notification->updated_at->toISOString(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'notification' => $formattedNotification,
+                'debug' => [
+                    'notification_found' => true,
+                    'user_authenticated' => true
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error in getNotificationDetails: ' . $e->getMessage());
+            \Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Server error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate related link based on notification type
+     */
+    private function generateRelatedLink($notification)
+    {
+        // Adjust these routes based on your actual route names
+        switch ($notification->related_type) {
+            case 'requisition':
+                return route('employee.requisitions.show', $notification->related_id);
+            case 'item_request':
+                return route('employee.item-requests.show', $notification->related_id);
+            case 'acknowledgment':
+                return route('employee.acknowledgments.show', $notification->related_id);
+            case 'announcement':
+                return route('employee.announcements.show', $notification->related_id);
+            default:
+                return null;
+        }
+    }
 }

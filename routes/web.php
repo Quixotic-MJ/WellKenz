@@ -168,6 +168,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/Staff_Receipt', [AcknowledgementReceiptController::class, 'employeeIndex'])->name('Staff_Reciept');
         Route::get('/Staff_Notification', [NotificationController::class, 'employeeIndex'])->name('Staff_Notification');
         Route::post('/notifications/mark-read', [EmployeeController::class, 'markNotifsRead'])->name('Employee_Notifications_MarkRead');
+        Route::get('/employee/notifications/{id}/details', [NotificationController::class, 'getNotificationDetails'])->name('employee.notifications.details');
+        Route::post('/employee/notifications/{id}/mark-read', [NotificationController::class, 'markAsRead'])->name('employee.notifications.mark-read');
 
         /* Employee Acknowledgement Receipts */
         Route::prefix('acknowledgements')->name('employee.acknowledgements.')->group(function () {

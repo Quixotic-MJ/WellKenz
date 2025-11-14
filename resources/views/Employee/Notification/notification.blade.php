@@ -84,7 +84,8 @@
                         @if(!$n->is_read) bg-blue-50 @endif"
                         data-module="{{ $n->related_type }}"
                         data-read="{{ $n->is_read ? 'read' : 'unread' }}"
-                        data-date="{{ $n->created_at->format('Y-m-d H:i') }}">
+                        data-date="{{ $n->created_at->format('Y-m-d H:i') }}"
+                        data-notification-id="{{ $n->notif_id }}">
                         <td class="px-6 py-4 text-sm text-gray-900">{{ $n->created_at->format('M d, Y H:i') }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ ucfirst(str_replace('_',' ',$n->related_type)) }}</td>
                         <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $n->notif_title }}</td>
@@ -98,13 +99,16 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center space-x-2">
-                                <button onclick="openViewModal({{ $n->notification_id }})"
-                                    class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
+                                <!-- Eye icon for viewing -->
+                                <button onclick="openViewModal({{ $n->notif_id }})"
+                                    class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View Details">
                                     <i class="fas fa-eye text-sm"></i>
                                 </button>
+                                
+                                <!-- Check mark for marking as read -->
                                 @if(!$n->is_read)
-                                    <button onclick="markRead({{ $n->notification_id }})"
-                                        class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark read">
+                                    <button onclick="markRead({{ $n->notif_id }})"
+                                        class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark as Read">
                                         <i class="fas fa-check text-sm"></i>
                                     </button>
                                 @endif
@@ -142,10 +146,12 @@ function showMessage(msg, type = 'success'){
     div.textContent = msg; div.classList.remove('hidden');
     setTimeout(()=> div.classList.add('hidden'), 3000);
 }
+
 function closeModals(){
     ['viewNotificationModal'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     currentId = null;
 }
+
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModals(); });
 
 /* search / filter */
@@ -158,6 +164,7 @@ function filterModule(val){
     });
     document.getElementById('visibleCount').textContent = visible;
 }
+
 function filterRead(val){
     const rows = document.querySelectorAll('.notif-row');
     let visible = 0;
@@ -167,6 +174,7 @@ function filterRead(val){
     });
     document.getElementById('visibleCount').textContent = visible;
 }
+
 function searchTable(q){
     const Q = q.toLowerCase(); const rows = document.querySelectorAll('.notif-row'); let visible=0;
     rows.forEach(r=>{
@@ -177,6 +185,7 @@ function searchTable(q){
     const btn = document.getElementById('clearBtn');
     Q ? btn.classList.remove('hidden') : btn.classList.add('hidden');
 }
+
 function clearSearch(){
     document.getElementById('searchInput').value=''; searchTable(''); document.getElementById('clearBtn').classList.add('hidden');
 }
@@ -197,14 +206,12 @@ function sortTable(f){
     if(th) th.className=sortDir==='asc'?'fas fa-sort-up ml-1 text-xs':'fas fa-sort-down ml-1 text-xs';
 }
 
-/* modal openers */
-function openViewModal(id){
-    currentId=id;
-    /* ajax fetch then fill modal */
-    document.getElementById('viewNotificationModal').classList.remove('hidden');
-}
+/* mark as read function */
 function markRead(id){
-    fetch('/employee/notifications/'+id+'/mark-read',{
+    console.log('Marking notification as read:', id);
+    
+    // Use the correct route that goes to NotificationController
+    fetch(`/employee/notifications/${id}/mark-read`, {
         method:'POST',
         headers:{
             'X-Requested-With':'XMLHttpRequest',
@@ -215,12 +222,168 @@ function markRead(id){
     .then(res=>{
         if(res.success){
             showMessage('Marked as read');
-            setTimeout(()=>location.reload(),500);
+            // Update UI without reload
+            const row = document.querySelector(`tr[data-notification-id="${id}"]`);
+            if (row) {
+                // Update status badge
+                const statusCell = row.querySelector('td:nth-child(5)');
+                statusCell.innerHTML = '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">Read</span>';
+                
+                // Remove mark as read button
+                const markReadBtn = row.querySelector('button[onclick^="markRead"]');
+                if (markReadBtn) markReadBtn.remove();
+                
+                // Update row data attribute and background
+                row.dataset.read = 'read';
+                row.classList.remove('bg-blue-50');
+                
+                // Update counters
+                updateNotificationCounters();
+            }
         }else{
             showMessage(res.message||'Error','error');
         }
     })
     .catch(()=>showMessage('Error','error'));
+}
+
+function updateNotificationCounters() {
+    // Update the unread count display
+    const unreadRows = document.querySelectorAll('.notif-row[data-read="unread"]');
+    const unreadCountElement = document.querySelector('.bg-white.border.border-amber-200 .text-2xl');
+    if (unreadCountElement) {
+        unreadCountElement.textContent = unreadRows.length;
+    }
+    
+    // Update the read count display
+    const readRows = document.querySelectorAll('.notif-row[data-read="read"]');
+    const readCountElement = document.querySelector('.bg-white.border.border-green-200 .text-2xl');
+    if (readCountElement) {
+        readCountElement.textContent = readRows.length;
+    }
+}
+
+/* modal openers */
+function openViewModal(id){
+    console.log('=== OPENING VIEW MODAL ===');
+    console.log('Notification ID:', id);
+    
+    currentId = id;
+    
+    // Show loading state
+    document.getElementById('viewNotificationModal').classList.remove('hidden');
+    document.getElementById('viewNotificationBody').innerHTML = `
+        <div class="flex justify-center items-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span class="ml-3 text-gray-600">Loading notification details...</span>
+        </div>
+    `;
+
+    // Build the URL
+    const url = `/employee/notifications/${id}/details`;
+    console.log('Fetching from URL:', url);
+
+    // Fetch notification details via AJAX
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+        },
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        console.log('Response OK:', response.ok);
+        
+        if (!response.ok) {
+            return response.text().then(text => {
+                console.log('Response text:', text);
+                throw new Error(`HTTP error! status: ${response.status}, response: ${text}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Received data:', data);
+        
+        if (data.success && data.notification) {
+            const notification = data.notification;
+            console.log('Notification data:', notification);
+            
+            document.getElementById('viewNotificationBody').innerHTML = `
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Date & Time</label>
+                                <p class="text-sm text-gray-900 mt-1">${notification.formatted_date}</p>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Type</label>
+                                <p class="text-sm text-gray-900 mt-1">${notification.type_formatted}</p>
+                            </div>
+                            <div>
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Status</label>
+                                <p class="text-sm mt-1">
+                                    ${notification.is_read ? 
+                                        '<span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">Read</span>' : 
+                                        '<span class="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded">Unread</span>'
+                                    }
+                                </p>
+                            </div>
+                            ${notification.related_link ? `
+                            <div>
+                                <label class="text-xs font-semibold text-gray-500 uppercase">Related To</label>
+                                <p class="text-sm text-gray-900 mt-1">
+                                    <a href="${notification.related_link}" target="_blank" class="text-blue-600 hover:text-blue-800 underline">View Related Item</a>
+                                </p>
+                            </div>
+                            ` : '<div></div>'}
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <label class="text-xs font-semibold text-gray-500 uppercase">Title</label>
+                        <h4 class="text-lg font-semibold text-gray-900 mt-1">${notification.notif_title}</h4>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <label class="text-xs font-semibold text-gray-500 uppercase">Content</label>
+                        <div class="mt-2 p-4 bg-gray-50 rounded-lg">
+                            <p class="text-gray-700 whitespace-pre-wrap">${notification.notif_content}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Automatically mark as read when viewing if it's unread
+            if (!notification.is_read) {
+                console.log('Auto-marking as read:', id);
+                markRead(id);
+            }
+        } else {
+            throw new Error(data.message || 'Failed to load notification details');
+        }
+    })
+    .catch(error => {
+        console.error('Error details:', error);
+        document.getElementById('viewNotificationBody').innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-3"></i>
+                <p class="text-red-600 font-semibold">Failed to load notification details</p>
+                <p class="text-gray-500 text-sm mt-2">Error: ${error.message}</p>
+                <div class="mt-4 space-x-2">
+                    <button onclick="openViewModal(${id})" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                        Try Again
+                    </button>
+                    <button onclick="closeModals()" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">
+                        Close
+                    </button>
+                </div>
+            </div>
+        `;
+    });
 }
 </script>
 @endsection
