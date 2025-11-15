@@ -41,7 +41,7 @@
         <div class="bg-white border border-rose-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Critical Stock</p>
             <p class="text-2xl font-semibold text-gray-900 mt-2">
-                {{ DB::table('items')->where('is_active',true)->whereRaw('item_stock <= minimum_stock')->count() }}
+                {{ DB::table('items')->where('is_active',true)->whereRaw('item_stock <= min_stock_level')->count() }}
             </p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-5">
@@ -123,11 +123,11 @@
                         <td class="px-6 py-4 text-sm text-gray-900">{{ $item->item_stock }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">{{ $item->item_unit }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">{{ $item->reorder_level }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ $item->minimum_stock }} / {{ $item->maximum_stock ?? '∞' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ $item->min_stock_level }} / {{ $item->max_stock_level ?? '∞' }}</td>
                         <td class="px-6 py-4">
                             @php
                                 $status = 'LOW';
-                                if($item->item_stock <= $item->minimum_stock) $status = 'CRITICAL';
+                                if($item->item_stock <= $item->min_stock_level) $status = 'CRITICAL';
                             @endphp
                             <span class="inline-block px-2 py-1 text-xs font-semibold rounded
                                 @if($status=='CRITICAL') bg-rose-100 text-rose-700
@@ -184,9 +184,9 @@
 </div>
 
 <!-- ====== MODALS  ====== -->
-@include('Inventory.LowStock.modals.view')
-@include('Inventory.LowStock.modals.transaction')
-@include('Inventory.LowStock.modals.notify')
+@include('Inventory.Alert.view')
+@include('Inventory.Alert.transaction')
+@include('Inventory.Alert.notify')
 
 @endsection
 

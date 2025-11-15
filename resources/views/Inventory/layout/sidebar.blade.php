@@ -26,48 +26,49 @@
             <ul class="space-y-1 px-3">
                 <!-- Dashboard -->
                 <li>
-                    <a href="{{ route('Inventory_Dashboard') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_Dashboard') ? 'active-menu' : '' }}">
+                    <a href="{{ route('inventory.dashboard') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.dashboard') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
                     </a>
                 </li>
 
-                <!-- Inventory List -->
+                <!-- Transactions (Inventory List) -->
                 <li>
-                    <a href="{{ route('Inventory_List') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_List') ? 'active-menu' : '' }}">
+                    <a href="{{ route('inventory.transactions.index') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.transactions.index') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory List</span>
+                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Transactions</span>
                     </a>
                 </li>
 
                 <!-- Stock In -->
                 <li>
-                    <a href="{{ route('Inventory_Stock_in') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_Stock_in') ? 'active-menu' : '' }}">
+                    <a href="{{ route('inventory.stock-in.index') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.stock-in.index') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-arrow-down w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Stock In</span>
                     </a>
                 </li>
 
-                <!-- POs to Receive -->
+                <!-- Reports -->
                 <li>
-                    <a href="{{ route('Inventory_PO_List') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_PO_List') ? 'active-menu' : '' }}">
-                        <i class="fas fa-truck-loading w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">POs to Receive</span>
+                    <a href="{{ route('inventory.reports') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.reports') ? 'active-menu' : '' }}">
+                        <i
+                            class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports</span>
                     </a>
                 </li>
 
                 <!-- Stock Out -->
                 <li>
-                    <a href="{{ route('Inventory_Stock_out') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_Stock_out') ? 'active-menu' : '' }}">
+                    <a href="{{ route('inventory.stock-out.index') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.stock-out.index') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-arrow-up w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Stock Out</span>
@@ -76,18 +77,19 @@
 
                 <!-- Low Stock Alert -->
                 <li>
-                    <a href="{{ route('Inventory_Low_Stock_Alert_notification') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_Low_Stock_Alert_notification') ? 'active-menu' : '' }}">
+                    <a href="{{ route('inventory.alerts.index') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.alerts.index') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-exclamation-triangle w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Low Stock Alert</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Low Stock
+                            Alert</span>
                     </a>
                 </li>
 
-                <!-- Reports & Analytics -->
+                <!-- Reports & Analytics (duplicate kept for backward compatibility - points to reports) -->
                 <li>
-                    <a href="{{ route('Inventory_Report') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_Report') ? 'active-menu' : '' }}">
+                    <a href="{{ route('inventory.reports') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.reports') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports &
@@ -95,15 +97,17 @@
                     </a>
                 </li>
 
-                <!-- Notification -->
+                <!-- Notifications -->
                 <li>
-                    <a href="{{ route('Inventory_Notification') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Inventory_Notification') ? 'active-menu' : '' }}">
+                    <a href="{{ route('inventory.notifications.index') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.notifications.index') ? 'active-menu' : '' }}">
                         <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Notification</span>
+                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
                     </a>
                 </li>
+
+
             </ul>
         </nav>
     </div>
@@ -113,6 +117,7 @@
     .active-menu {
         background-color: rgba(255, 255, 255, 0.15);
         color: white;
-        border-left-color: #D2691E !important; /* caramel color */
+        border-left-color: #D2691E !important;
+        /* caramel color */
     }
 </style>

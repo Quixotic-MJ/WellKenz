@@ -413,7 +413,7 @@ document.getElementById('stockInForm').addEventListener('submit', async (e) => {
     remarks:     ''
   }));
 
-  const res = await fetch("{{ route('stock-in.store-bulk') }}", {
+  const res = await fetch("{{ route('inventory.stock-in.store-bulk') }}", {
     method: 'POST',
     headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' },
     body: JSON.stringify({ rows, memo_ref: (document.getElementById('memoRefSelect')?.value || null) })

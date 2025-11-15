@@ -28,20 +28,20 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Total</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('emp_id',session('emp_id'))->count() }}</p>
+            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('user_id',auth()->id())->count() }}</p>
         </div>
         <div class="bg-white border border-amber-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Unread</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('emp_id',session('emp_id'))->where('is_read',0)->count() }}</p>
+            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('user_id',auth()->id())->where('is_read',0)->count() }}</p>
         </div>
         <div class="bg-white border border-green-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Read</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('emp_id',session('emp_id'))->where('is_read',1)->count() }}</p>
+            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('user_id',auth()->id())->where('is_read',1)->count() }}</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Today</p>
             <p class="text-2xl font-semibold text-gray-900 mt-2">
-                {{ DB::table('notifications')->where('emp_id',session('emp_id'))->whereDate('created_at',today())->count() }}
+                {{ DB::table('notifications')->where('user_id',auth()->id())->whereDate('created_at',today())->count() }}
             </p>
         </div>
     </div>
@@ -95,7 +95,7 @@
                         data-module="{{ $n->related_type }}"
                         data-read="{{ $n->is_read ? 'read' : 'unread' }}"
                         data-date="{{ $n->created_at->format('Y-m-d H:i') }}"
-                        onclick="markReadInline({{ $n->notification_id }}, this)">
+                        onclick="markReadInline({{ $n->notif_id }}, this)">
                         <td class="px-6 py-4 text-sm text-gray-900">{{ $n->created_at->format('M d, Y H:i') }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ ucfirst(str_replace('_',' ',$n->related_type)) }}</td>
                         <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $n->notif_title }}</td>
@@ -109,11 +109,11 @@
                         </td>
                         <td class="px-6 py-4" onclick="event.stopPropagation()">
                             <div class="flex items-center space-x-2">
-                                <button onclick="openViewModal({{ $n->notification_id }})"
+                                <button onclick="openViewModal({{ $n->notif_id }})"
                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View Details">
                                     <i class="fas fa-eye text-sm"></i>
                                 </button>
-                                <a href="{{ route('purchasing.notifications.jump',$n->notification_id) }}"
+                                <a href="{{ route('purchasing.notifications.jump',$n->notif_id) }}"
                                    class="p-2 text-indigo-600 hover:bg-indigo-50 rounded transition" title="Open record">
                                     <i class="fas fa-external-link-alt text-sm"></i>
                                 </a>
@@ -262,4 +262,3 @@ function afterPrint(){
 window.onbeforeprint = beforePrint;
 window.onafterprint  = afterPrint;
 </script>
-@endsection

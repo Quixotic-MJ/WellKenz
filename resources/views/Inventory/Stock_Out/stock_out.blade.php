@@ -39,7 +39,9 @@
         <div class="bg-white border border-rose-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Pending Issuance</p>
             <p class="text-2xl font-semibold text-gray-900 mt-2">
-                {{ DB::table('requisitions')->where('req_status','approved')->whereDoesntHave('acknowledgeReceipt')->count() }}
+                {{ DB::table('requisitions')->where('req_status','approved')->whereNotExists(function($q) {
+                    $q->select(DB::raw(1))->from('acknowledge_receipts')->whereRaw('acknowledge_receipts.req_id = requisitions.req_id');
+                })->count() }}
             </p>
         </div>
         <div class="bg-white border border-blue-200 rounded-lg p-5">

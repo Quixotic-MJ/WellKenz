@@ -64,7 +64,7 @@
                 <div>
                     <p class="text-xs text-gray-500 uppercase tracking-wider">Critical Stock</p>
                     <p class="text-2xl font-semibold text-gray-900 mt-2">
-                        {{ DB::table('items')->whereRaw('item_stock <= minimum_stock')->count() }}
+                        {{ DB::table('items')->whereRaw('item_stock <= min_stock_level')->count() }}
                     </p>
                 </div>
                 <div class="w-10 h-10 bg-rose-100 flex items-center justify-center rounded">
@@ -77,9 +77,17 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs text-gray-500 uppercase tracking-wider">Expiring ≤ 30 d</p>
-                    <p class="text-2xl font-semibold text-gray-900 mt-2">
-                        {{ count(DB::select('SELECT * FROM get_expiry_alerts(30)')) }}
-                    </p>
+                    @php
+                        try {
+                            $expiringCount = count(DB::select('SELECT * FROM get_expiry_alerts(30)'));
+                        } catch (\Throwable $e) {
+                            $expiringCount = DB::table('items')
+                                ->whereNotNull('item_expire_date')
+                                ->whereRaw("item_expire_date <= (CURRENT_DATE + INTERVAL '30 day')")
+                                ->count();
+                        }
+                    @endphp
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $expiringCount }}</p>
                 </div>
                 <div class="w-10 h-10 bg-blue-100 flex items-center justify-center rounded">
                     <i class="fas fa-calendar-times text-blue-600"></i>
@@ -172,16 +180,17 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Near-Expiry Alerts (≤ 30 d)</h3>
             @php
-                try {
-                    $expiry = collect(DB::select('SELECT * FROM get_expiry_alerts(30)'));
-                } catch (\Throwable $e) {
-                    $expiry = DB::table('items')
-                              ->whereNotNull('item_expire_date')
-                              ->whereRaw("item_expire_date <= CURRENT_DATE + INTERVAL '30 day'")
-                              ->select('item_name','item_expire_date','item_stock','item_unit')
-                              ->get();
-                }
-                $expiry = $expiry->take(5);
+                $expiry = DB::table('items')
+                          ->whereNotNull('item_expire_date')
+                          ->whereRaw("item_expire_date <= CURRENT_DATE + INTERVAL '30 day'")
+                          ->select('item_name','item_expire_date','item_stock','item_unit')
+                          ->get()
+                          ->map(function($item) {
+                              $item->days_until_expiry = \Carbon\Carbon::parse($item->item_expire_date)->diffInDays(now());
+                              $item->expiry_status = $item->item_expire_date < now() ? 'EXPIRED' : 'NEAR_EXPIRY';
+                              return $item;
+                          })
+                          ->take(5);
             @endphp
             <div class="space-y-3">
                 @forelse($expiry as $item)

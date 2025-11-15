@@ -65,15 +65,6 @@
                     </a>
                 </li>
 
-                <!-- Inventory Overview -->
-                <li>
-                    <a href="{{ route('purchasing.approved.index') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.approved.index') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-warehouse w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory Overview</span>
-                    </a>
-                </li>
 
                 <!-- Reports & Analytics -->
                 <li>

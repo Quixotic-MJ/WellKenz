@@ -111,6 +111,23 @@ Route::middleware(['auth'])->group(function () {
     // --- Inventory Routes ---
     Route::middleware('role:inventory')->prefix('inventory')->name('inventory.')->group(function () {
         Route::get('/dashboard', [InventoryController::class, 'index'])->name('dashboard');
+        Route::get('/transactions', [InventoryController::class, 'transactionsIndex'])->name('transactions.index');
+        Route::get('/transactions/create', [InventoryController::class, 'stockInIndex'])->name('transactions.create');
+        Route::get('/stock-in', [InventoryController::class, 'stockInIndex'])->name('stock-in.index');
+        Route::post('/stock-in/bulk', [InventoryController::class, 'storeBulkStockIn'])->name('stock-in.store-bulk');
+        Route::get('/stock-out', [InventoryController::class, 'stockOutIndex'])->name('stock-out.index');
+        Route::get('/adjustments', [InventoryController::class, 'adjustmentsIndex'])->name('adjustments.index');
+        Route::get('/alerts', [InventoryController::class, 'alertsIndex'])->name('alerts.index');
+        Route::get('/notifications', [InventoryController::class, 'notificationsIndex'])->name('notifications.index');
+        Route::get('/reports', [InventoryController::class, 'report'])->name('reports');
+        Route::post('/items', [InventoryController::class, 'storeItem'])->name('items.store');
+        Route::put('/items/bulk-update', [InventoryController::class, 'bulkUpdateItems'])->name('items.bulk-update');
+        Route::get('/acknowledge-receipts', [InventoryController::class, 'acknowledgeReceiptsIndex'])->name('acknowledge-receipts.index');
+        Route::get('/notifications/{id}', [InventoryController::class, 'notificationShow'])->name('notifications.show');
+        Route::post('/notifications/{id}/mark-read', [InventoryController::class, 'notificationMarkRead'])->name('notifications.mark-read');
+        Route::post('/notifications/mark-all-read', [InventoryController::class, 'notificationsMarkAllRead'])->name('notifications.markAllRead');
+        Route::get('/notifications/{id}/jump', [InventoryController::class, 'notificationsJump'])->name('notifications.jump');
+        Route::post('/low-stock/notify', [InventoryController::class, 'notifyLowStock'])->name('low-stock.notify');
     });
 
     // --- Purchasing Routes ---
@@ -119,13 +136,29 @@ Route::middleware(['auth'])->group(function () {
         // Approved requisitions → Create PO
         Route::get('/approved-requisitions', [PurchasingController::class, 'approvedIndex'])->name('approved.index');
         Route::post('/requisitions/mark-read', [PurchasingController::class, 'requisitionsMarkRead'])->name('requisitions.markRead');
-        // Suppliers (JSON for modals) and page
+        // Suppliers (page + modal APIs)
         Route::get('/suppliers', [PurchasingController::class, 'suppliersIndex'])->name('suppliers.index');
+        Route::post('/suppliers', [PurchasingController::class, 'supplierStore'])->name('suppliers.store');
+        Route::get('/suppliers/{id}', [PurchasingController::class, 'supplierShow'])->name('suppliers.show');
+        Route::put('/suppliers/{id}', [PurchasingController::class, 'supplierUpdate'])->name('suppliers.update');
+        Route::get('/suppliers/{id}/pos', [PurchasingController::class, 'supplierPos'])->name('suppliers.pos');
+        Route::post('/suppliers/{id}/toggle-status', [PurchasingController::class, 'supplierToggleStatus'])->name('suppliers.toggle');
+
+        // Delivery recording
+        Route::get('/delivery/{poId}', [PurchasingController::class, 'deliveryShow'])->name('delivery.show');
+        Route::post('/delivery/{poId}', [PurchasingController::class, 'deliveryStore'])->name('delivery.store');
+        // Delivery recording
+        Route::get('/delivery/{poId}', [PurchasingController::class, 'deliveryShow'])->name('delivery.show');
+        Route::post('/delivery/{poId}', [PurchasingController::class, 'deliveryStore'])->name('delivery.store');
         // Create Purchase Order
         Route::post('/purchase-orders', [PurchasingController::class, 'purchaseOrdersStore'])->name('purchase-orders.store');
         // Memo pages
         Route::get('/memo', [PurchasingController::class, 'memoIndex'])->name('memo.index');
         Route::get('/memo/record', [PurchasingController::class, 'memoRecord'])->name('memo.record');
+        Route::get('/memo/{memoRef}', [PurchasingController::class, 'memoShow'])->name('memo.show');
+        // Reports
+        Route::get('/reports', [PurchasingController::class, 'report'])->name('reports');
+        Route::get('/reports/{report}', [PurchasingController::class, 'generateReport'])->name('reports.generate');
         // Notifications
         Route::get('/notifications', [PurchasingController::class, 'notificationsIndex'])->name('notifications');
         Route::get('/notifications/{id}', [PurchasingController::class, 'notificationsView'])->name('notifications.view');

@@ -14,9 +14,9 @@
                         <input type="number" name="reorder_level" min="0" class="ml-auto w-24 border border-gray-300 rounded px-2 py-1">
                     </label>
                     <label class="flex items-center">
-                        <input type="checkbox" name="update[]" value="minimum_stock" class="mr-2">
+                        <input type="checkbox" name="update[]" value="min_stock_level" class="mr-2">
                         <span class="text-sm text-gray-700">Minimum Stock</span>
-                        <input type="number" name="minimum_stock" min="0" class="ml-auto w-24 border border-gray-300 rounded px-2 py-1">
+                        <input type="number" name="min_stock_level" min="0" class="ml-auto w-24 border border-gray-300 rounded px-2 py-1">
                     </label>
                     <label class="flex items-center">
                         <input type="checkbox" name="update[]" value="maximum_stock" class="mr-2">

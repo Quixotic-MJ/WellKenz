@@ -1,32 +1,33 @@
-<div id="viewNotificationModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div class="bg-white max-w-2xl w-full rounded-lg border border-gray-200">
-        <div class="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+<div id="viewNotificationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div class="absolute inset-0 bg-black bg-opacity-40" onclick="closeModals()"></div>
+    <div class="relative z-10 bg-white w-full max-w-lg rounded shadow-lg" onclick="event.stopPropagation()">
+        <div class="px-5 py-3 border-b flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">Notification Details</h3>
-            <button type="button" onclick="closeModals()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            <button onclick="closeModals()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
         </div>
-        <div class="p-6 space-y-3 text-sm">
+        <div class="p-5 space-y-3">
             <div>
-                <span class="text-xs text-gray-500">Module</span>
-                <p id="viewNotifModule" class="font-semibold text-gray-900"></p>
+                <label class="text-xs text-gray-500 uppercase">Title</label>
+                <p id="viewNotifTitle" class="text-sm font-semibold text-gray-900 mt-1">-</p>
             </div>
             <div>
-                <span class="text-xs text-gray-500">Title</span>
-                <p id="viewNotifTitle" class="font-semibold text-gray-900"></p>
+                <label class="text-xs text-gray-500 uppercase">Module</label>
+                <p id="viewNotifModule" class="text-sm text-gray-900 mt-1">-</p>
             </div>
             <div>
-                <span class="text-xs text-gray-500">Message</span>
-                <p id="viewNotifContent" class="text-gray-700 whitespace-pre-wrap"></p>
+                <label class="text-xs text-gray-500 uppercase">Content</label>
+                <p id="viewNotifContent" class="text-sm text-gray-900 mt-1">-</p>
             </div>
             <div>
-                <span class="text-xs text-gray-500">Received</span>
-                <p id="viewNotifDate" class="text-gray-700"></p>
+                <label class="text-xs text-gray-500 uppercase">Date</label>
+                <p id="viewNotifDate" class="text-sm text-gray-900 mt-1">-</p>
             </div>
         </div>
-        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
-            <a id="viewNotifLink" href="#" class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg text-sm">
+        <div class="px-5 py-3 border-t bg-gray-50 flex justify-between">
+            <a id="viewNotifLink" href="#" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                 <i class="fas fa-external-link-alt mr-2"></i>Open Record
             </a>
-            <button type="button" onclick="closeModals()" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg text-sm">Close</button>
+            <button onclick="closeModals()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded">Close</button>
         </div>
     </div>
 </div>

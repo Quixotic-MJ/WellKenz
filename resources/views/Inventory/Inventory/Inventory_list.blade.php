@@ -51,13 +51,23 @@
         <div class="bg-white border border-rose-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Critical Stock</p>
             <p class="text-2xl font-semibold text-gray-900 mt-2">
-                {{ DB::table('items')->where('is_active',true)->whereRaw('item_stock <= minimum_stock')->count() }}
+                {{ DB::table('items')->where('is_active',true)->whereRaw('item_stock <= min_stock_level')->count() }}
             </p>
         </div>
         <div class="bg-white border border-blue-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Expiring ≤ 30 d</p>
             <p class="text-2xl font-semibold text-gray-900 mt-2">
-                {{ count(DB::select('SELECT * FROM get_expiry_alerts(30)')) }}
+                @php
+                    try {
+                        $expiringCount = count(DB::select('SELECT * FROM get_expiry_alerts(30)'));
+                    } catch (\Throwable $e) {
+                        $expiringCount = DB::table('items')
+                            ->whereNotNull('item_expire_date')
+                            ->whereRaw("item_expire_date <= (CURRENT_DATE + INTERVAL '30 day')")
+                            ->count();
+                    }
+                @endphp
+                {{ $expiringCount }}
             </p>
         </div>
     </div>
@@ -132,14 +142,14 @@
                         <td class="px-6 py-4 text-sm text-gray-900">{{ $item->item_stock }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">{{ $item->item_unit }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">{{ $item->reorder_level }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ $item->minimum_stock }} / {{ $item->maximum_stock ?? '∞' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ $item->min_stock_level }} / {{ $item->max_stock_level ?? '∞' }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">
                             @if($item->item_expire_date) {{ \Carbon\Carbon::parse($item->item_expire_date)->format('M d, Y') }} @else - @endif
                         </td>
                         <td class="px-6 py-4">
                             @php
                                 $status = 'NORMAL';
-                                if($item->item_stock <= $item->minimum_stock) $status = 'CRITICAL';
+                                if($item->item_stock <= $item->min_stock_level) $status = 'CRITICAL';
                                 elseif($item->item_stock <= $item->reorder_level) $status = 'LOW';
                             @endphp
                             <span class="inline-block px-2 py-1 text-xs font-semibold rounded
@@ -356,4 +366,4 @@ function printItemList(){
     window.print();
 }
 </script>
-@endsection
+@endpush

@@ -42,7 +42,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text- text-gray-700 mb-1">Minimum Stock <span class="text-rose-500">*</span></label>
-                            <input type="number" name="minimum_stock" min="0" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400">
+                            <input type="number" name="min_stock_level" min="0" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">

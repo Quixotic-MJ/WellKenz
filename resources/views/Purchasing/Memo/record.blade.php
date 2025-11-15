@@ -22,7 +22,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Received By <span class="text-rose-500">*</span></label>
-                    <input type="text" name="received_by" required class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400">
+                    <input type="text" name="received_by" value="{{ auth()->user()->name ?? 'Purchasing Officer' }}" readonly required class="w-full border border-gray-300 bg-gray-100 rounded px-3 py-2 focus:outline-none">
                 </div>
 
                 <div>

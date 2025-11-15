@@ -594,9 +594,9 @@ BEGIN
         i.item_stock AS current_stock,i.item_expire_date,
         (i.item_expire_date - CURRENT_DATE) AS days_until_expiry,
         CASE
-            WHEN i.item_expire_date < CURRENT_DATE THEN 'EXPIRED'
-            WHEN (i.item_expire_date - CURRENT_DATE) <= p_days_threshold THEN 'NEAR_EXPIRY'
-            ELSE 'OK'
+            WHEN i.item_expire_date < CURRENT_DATE THEN 'EXPIRED'::VARCHAR
+            WHEN (i.item_expire_date - CURRENT_DATE) <= p_days_threshold THEN 'NEAR_EXPIRY'::VARCHAR
+            ELSE 'OK'::VARCHAR
         END AS expiry_status
     FROM items i
     WHERE i.item_expire_date IS NOT NULL

@@ -90,7 +90,7 @@
                                 {{ ucfirst($sup->sup_status) }}
                             </span>
                         </td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ $sup->purchaseOrders->count() }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ $sup->po_count }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center space-x-2">
                                 <button onclick="openViewModal({{ $sup->sup_id }})"
@@ -199,21 +199,123 @@ function toggleStatus(id,current){
 /* modal openers */
 function openCreateModal(){
     document.getElementById('createSupModal').classList.remove('hidden');
+    // bind create save
+    const btn = document.getElementById('createSupSaveBtn');
+    btn.onclick = ()=>{
+        const f=document.getElementById('createSupForm');
+        const payload={
+            sup_name: f.sup_name.value,
+            sup_email: f.sup_email.value,
+            contact_number: f.contact_number.value,
+            contact_person: f.contact_person.value,
+            sup_address: f.sup_address.value,
+            sup_status: f.sup_status.value,
+        };
+        fetch('/purchasing/suppliers',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+            body: JSON.stringify(payload)
+        }).then(r=>r.json()).then(res=>{
+            if(res.success){
+                showMessage('Supplier created');
+                setTimeout(()=>location.reload(),500);
+            }else{
+                showMessage(res.message||'Create failed','error');
+            }
+        }).catch(()=>showMessage('Create failed','error'));
+    };
 }
 function openViewModal(id){
     currentId=id;
-    /* ajax fetch then fill modal */
-    document.getElementById('viewSupModal').classList.remove('hidden');
+    fetch(`/purchasing/suppliers/${id}`, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(r=>r.json())
+        .then(res=>{
+            if(!res.success) throw new Error(res.message||'Error');
+            const s=res.supplier||{};
+            const html = `
+                <div class="space-y-2">
+                    <p><span class="text-gray-500">Name:</span> <span class="font-medium text-gray-900">${s.sup_name||'-'}</span></p>
+                    <p><span class="text-gray-500">Contact Person:</span> ${s.contact_person||'-'}</p>
+                    <p><span class="text-gray-500">Email:</span> ${s.sup_email||'-'}</p>
+                    <p><span class="text-gray-500">Phone:</span> ${s.contact_number||'-'}</p>
+                    <p><span class="text-gray-500">Address:</span> ${s.sup_address||'-'}</p>
+                    <p><span class="text-gray-500">Status:</span> ${s.sup_status||'-'}</p>
+                </div>`;
+            document.getElementById('viewSupBody').innerHTML = html;
+            document.getElementById('viewSupModal').classList.remove('hidden');
+        })
+        .catch(()=>showMessage('Failed to load supplier','error'));
 }
 function openEditModal(id){
     currentId=id;
-    /* ajax fetch then fill modal */
-    document.getElementById('editSupModal').classList.remove('hidden');
+    fetch(`/purchasing/suppliers/${id}`, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(r=>r.json())
+        .then(res=>{
+            if(!res.success) throw new Error(res.message||'Error');
+            const s=res.supplier||{};
+            const f=document.getElementById('editSupForm');
+            f.sup_name.value = s.sup_name||'';
+            f.sup_email.value = s.sup_email||'';
+            f.contact_number.value = s.contact_number||'';
+            f.contact_person.value = s.contact_person||'';
+            f.sup_status.value = s.sup_status||'';
+            f.sup_address.value = s.sup_address||'';
+            document.getElementById('editSupModal').classList.remove('hidden');
+        })
+        .catch(()=>showMessage('Failed to load supplier','error'));
+    // bind save
+    const btn = document.getElementById('editSupSaveBtn');
+    btn.onclick = ()=>{
+        const f=document.getElementById('editSupForm');
+        const payload={
+            sup_name: f.sup_name.value,
+            sup_email: f.sup_email.value,
+            contact_number: f.contact_number.value,
+            contact_person: f.contact_person.value,
+            sup_address: f.sup_address.value,
+        };
+        fetch(`/purchasing/suppliers/${currentId}`,{
+            method:'PUT',
+            headers:{'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':'{{ csrf_token() }}'},
+            body: JSON.stringify(payload)
+        }).then(r=>r.json()).then(res=>{
+            if(res.success){
+                showMessage('Supplier updated');
+                setTimeout(()=>location.reload(),500);
+            }else{
+                showMessage(res.message||'Update failed','error');
+            }
+        }).catch(()=>showMessage('Update failed','error'));
+    };
 }
 function openPOsModal(id){
     currentId=id;
-    /* ajax fetch then fill modal */
-    document.getElementById('posModal').classList.remove('hidden');
+    const body=document.getElementById('posBody');
+    body.innerHTML = '<p class="text-gray-500">Loading…</p>';
+    fetch(`/purchasing/suppliers/${id}/pos`,{headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}})
+        .then(r=>r.json())
+        .then(res=>{
+            if(!res.success) throw new Error('Error');
+            if(!res.pos || !res.pos.length){
+                body.innerHTML = '<p class="text-gray-500">No purchase orders for this supplier.</p>';
+                document.getElementById('posModal').classList.remove('hidden');
+                return;
+            }
+            const rows = res.pos.map(p=>`<tr>
+                <td class="px-4 py-2">${p.po_ref}</td>
+                <td class="px-4 py-2">${(p.po_status||'').toUpperCase()}</td>
+                <td class="px-4 py-2 text-right">₱${Number(p.total_amount||0).toFixed(2)}</td>
+                <td class="px-4 py-2">${(new Date(p.created_at)).toLocaleDateString()}</td>
+            </tr>`).join('');
+            body.innerHTML = `<table class=\"w-full text-sm\"><thead class=\"bg-gray-50\"><tr>
+                <th class=\"px-4 py-2 text-left\">PO Ref</th>
+                <th class=\"px-4 py-2 text-left\">Status</th>
+                <th class=\"px-4 py-2 text-right\">Total</th>
+                <th class=\"px-4 py-2 text-left\">Created</th>
+            </tr></thead><tbody class=\"divide-y\">${rows}</tbody></table>`;
+            document.getElementById('posModal').classList.remove('hidden');
+        })
+        .catch(()=>{ body.innerHTML = '<p class="text-red-600">Failed to load POs.</p>'; document.getElementById('posModal').classList.remove('hidden'); });
 }
 </script>
 @endpush
