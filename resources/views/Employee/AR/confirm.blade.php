@@ -1,6 +1,6 @@
 <div id="confirmAcknowledgementModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div class="bg-white max-w-md w-full rounded-lg border border-gray-200">
-        <form method="POST" action="{{ route('employee.acknowledgements.confirm') }}">@csrf
+        <form method="POST" action="{{ route('staff.acknowledgements.confirm') }}">@csrf
             <input type="hidden" name="id" id="confirmAcknowledgementId">
             <div class="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900">Confirm Receipt</h3>

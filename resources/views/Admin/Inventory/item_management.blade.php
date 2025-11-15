@@ -129,7 +129,7 @@
                                             class="p-2 text-indigo-600 hover:bg-indigo-50 rounded transition" title="Adjust stock">
                                             <i class="fas fa-balance-scale text-sm"></i>
                                         </button>
-                                        <button onclick="openDeleteModal({{ $item->item_id }}, @json($item->item_name))"
+                                        <button data-id="{{ $item->item_id }}" data-name="{{ e($item->item_name) }}" onclick="openDeleteModalFromBtn(this)"
                                             class="p-2 text-red-600 hover:bg-red-50 rounded transition" title="Delete">
                                             <i class="fas fa-trash text-sm"></i>
                                         </button>
@@ -289,7 +289,15 @@
         function openDeleteModal(id, name) {
             currentId = id;
             document.getElementById('deleteItemName').textContent = name;
+            const form = document.getElementById('deleteItemForm');
+            if (form) form.action = `${ADMIN_BASE}/items/${id}`;
             document.getElementById('deleteItemModal').classList.remove('hidden');
+        }
+
+        function openDeleteModalFromBtn(btn) {
+            const id = btn.dataset.id;
+            const name = btn.dataset.name;
+            openDeleteModal(id, name);
         }
 
         document.addEventListener('DOMContentLoaded', function() {

@@ -28,21 +28,19 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Total</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->count() }}</p>
+            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $totalNotifications ?? 0 }}</p>
         </div>
         <div class="bg-white border border-amber-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Unread</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('is_read',0)->count() }}</p>
+            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $unreadNotifications ?? 0 }}</p>
         </div>
         <div class="bg-white border border-green-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Read</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('notifications')->where('is_read',1)->count() }}</p>
+            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $readNotifications ?? 0 }}</p>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">This Week</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">
-                {{ DB::table('notifications')->whereBetween('created_at',[now()->startOfWeek(),now()->endOfWeek()])->count() }}
-            </p>
+            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $weekNotifications ?? 0 }}</p>
         </div>
     </div>
 

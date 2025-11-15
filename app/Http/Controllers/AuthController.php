@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
+use Illuminate\Support\Facades\DB; // This is no longer strictly needed for this file
+use App\Models\User; // This is now used
 
 class AuthController extends Controller
 {
     public function showLogin()
     {
-        return view('auth.login');
+        return view('Auth.login');
     }
 
     public function login(Request $request)
@@ -21,7 +22,6 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Attempt to find user by username
         $user = User::where('username', $credentials['username'])->first();
 
         // Check if user exists, password is correct, and user is active
@@ -30,8 +30,7 @@ class AuthController extends Controller
             if ($user->status !== 'active') {
                 return back()->with('error', 'Your account has been deactivated. Please contact administrator.')->withInput();
             }
-            
-            // Manually log in the user
+
             Auth::login($user);
             
             // Store role in session for individual middleware
@@ -50,15 +49,15 @@ class AuthController extends Controller
     {
         switch ($role) {
             case 'admin':
-                return redirect()->route('Admin_dashboard');
+                return redirect()->route('admin.dashboard');
             case 'employee':
-                return redirect()->route('Staff_dashboard');
+                return redirect()->route('staff.dashboard');
             case 'inventory':
-                return redirect()->route('Inventory_Dashboard');
+                return redirect()->route('inventory.dashboard');
             case 'purchasing':
-                return redirect()->route('Purchasing_dashboard');
+                return redirect()->route('purchasing.dashboard');
             case 'supervisor':
-                return redirect()->route('Supervisor_Dashboard');
+                return redirect()->route('supervisor.dashboard');
             default:
                 return redirect()->route('login')->with('error', 'Unknown user role.');
         }

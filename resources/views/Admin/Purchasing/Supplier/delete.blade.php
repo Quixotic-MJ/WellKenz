@@ -1,6 +1,6 @@
 <div id="deleteSupplierModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div class="bg-white max-w-md w-full rounded-lg border border-gray-200">
-        <form id="deleteSupplierForm" method="POST" action="">@csrf @method('DELETE')
+        <form id="deleteSupplierForm" method="POST" action="{{ url('/admin/suppliers/0') }}">@csrf @method('DELETE')
             <div class="p-6 border-b border-gray-200 bg-gray-50">
                 <h3 class="text-lg font-semibold text-gray-900">Delete Supplier</h3>
             </div>

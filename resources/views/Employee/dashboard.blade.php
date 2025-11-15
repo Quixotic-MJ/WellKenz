@@ -92,12 +92,12 @@
         <div class="space-y-3">
             @forelse($pendingItems as $req)
                 <div class="p-3 border border-gray-200 rounded">
-                    <div class="flex items-center justify-between">
-                        <p class="text-sm font-medium text-gray-900">{{ $req->item_name }}</p>
-                        <span class="text-xs px-2 py-1 bg-amber-100 text-amber-800 rounded">Pending</span>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">Qty: {{ $req->quantity }} • Requested {{ \Carbon\Carbon::parse($req->created_at)->diffForHumans() }}</p>
+                <div class="flex items-center justify-between">
+                    <p class="text-sm font-medium text-gray-900">{{ $req->item_req_name }}</p>
+                    <span class="text-xs px-2 py-1 bg-amber-100 text-amber-800 rounded">Pending</span>
                 </div>
+                <p class="text-xs text-gray-500 mt-1">Qty: {{ $req->item_req_quantity }} • Requested {{ \Carbon\Carbon::parse($req->created_at)->diffForHumans() }}</p>
+            </div>
             @empty
                 <p class="text-xs text-gray-500">No item requests pending approval.</p>
             @endforelse
@@ -148,7 +148,7 @@
     <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-semibold text-gray-900">My Recent Requisitions</h3>
-            <a href="{{ route('Admin_Requisition') }}" class="text-xs font-medium text-gray-600 hover:text-gray-900 uppercase tracking-wider">View All →</a>
+            <a href="{{ route('staff.requisitions.index') }}" class="text-xs font-medium text-gray-600 hover:text-gray-900 uppercase tracking-wider">View All →</a>
         </div>
         <table class="w-full text-sm">
             <thead class="bg-gray-50 border-b border-gray-200">
@@ -183,7 +183,7 @@
 
 <script>
 function markNotifsRead(){
-    fetch("{{ route('Employee_Notifications_MarkRead') }}",{
+    fetch("{{ route('staff.notifications.mark-all-read') }}",{
         method:"POST",
         headers:{
             "X-CSRF-TOKEN":"{{ csrf_token() }}",

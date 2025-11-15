@@ -26,8 +26,8 @@
             <ul class="space-y-1 px-3">
                 <!-- Dashboard -->
                 <li>
-                    <a href="{{ route('Admin_dashboard') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_dashboard') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.dashboard') ? route('admin.dashboard') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.dashboard') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
@@ -36,8 +36,8 @@
 
                 <!-- Requisition -->
                 <li>
-                    <a href="{{ route('Admin_Requisition') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Requisition') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.requisitions') ? route('admin.requisitions') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.requisitions*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
@@ -47,8 +47,8 @@
 
                 <!-- Item Request -->
                 <li>
-                    <a href="{{ route('Admin_Item_Request') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Item_Request') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.item-requests') ? route('admin.item-requests') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.item-requests*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
@@ -58,8 +58,8 @@
 
                 <!-- Purchasing -->
                 <li>
-                    <a href="{{ route('Admin_Purchase_Order') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Purchase_Order') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.purchase-orders') ? route('admin.purchase-orders') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.purchase-orders*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-shopping-cart w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase Order</span>
@@ -68,8 +68,8 @@
 
                 <!-- Supplier -->
                 <li>
-                    <a href="{{ route('Admin_Supplier') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Supplier') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.suppliers') ? route('admin.suppliers') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.suppliers*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-truck w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Supplier</span>
@@ -78,8 +78,8 @@
 
                 <!-- Inventory -->
                 <li>
-                    <a href="{{ route('Admin_Item_Management') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Inventory') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.item-management') ? route('admin.item-management') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.item-management*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-warehouse w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory Management</span>
@@ -88,8 +88,8 @@
 
                 <!-- Inventory Transaction -->
                 <li>
-                    <a href="{{ route('Admin_Inventory_Transaction') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Inventory_Transaction') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.inventory-transactions') ? route('admin.inventory-transactions') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.inventory-transactions*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-exchange-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory Transaction</span>
@@ -98,8 +98,8 @@
 
                 <!-- Reports & Analytics -->
                 <li>
-                    <a href="{{ route('Admin_Report') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Report') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.reports') ? route('admin.reports') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.reports*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports &
@@ -109,8 +109,8 @@
 
                 <!-- User Management -->
                 <li>
-                    <a href="{{ route('Admin_User_Management') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_User_Management') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.user-management') ? route('admin.user-management') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.user-management*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-users-cog w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">User
@@ -120,8 +120,8 @@
 
                 <!-- Notification -->
                 <li>
-                    <a href="{{ route('Admin_Notification') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Admin_Notification') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('admin.notifications') ? route('admin.notifications') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.notifications*') ? 'active-menu' : '' }}">
                         <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
                             class="sidebar-text font-medium text-sm transition-opacity duration-300">Notification</span>
@@ -132,25 +132,11 @@
     </div>
 </aside>
 
-<script>
-    // Set active menu based on current route
-    document.addEventListener('DOMContentLoaded', function() {
-        const currentPath = window.location.pathname;
-        const menuItems = document.querySelectorAll('.menu-item');
-        
-        menuItems.forEach(item => {
-            const href = item.getAttribute('href');
-            if (href && currentPath.includes(href.replace('{{ url('') }}', ''))) {
-                item.classList.add('active-menu');
-            }
-        });
-    });
-</script>
-
 <style>
+    /* This style block defines the 'active-menu' class used by Blade */
     .active-menu {
         background-color: rgba(255, 255, 255, 0.15);
-        color: white;
+        color: white !important;
         border-left-color: #D2691E !important; /* caramel color */
     }
 </style>

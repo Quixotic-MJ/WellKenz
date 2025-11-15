@@ -120,7 +120,7 @@
                             <td class="px-6 py-4 text-sm text-gray-900">{{ $ir->created_at->diffForHumans() }}</td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center space-x-2">
-                                    <a href="{{ route('supervisor.item-requests.show', $ir->item_request_id) }}"
+                                    <a href="{{ route('supervisor.item-requests.index') }}"
                                        class="px-3 py-1 bg-gray-900 text-white hover:bg-gray-800 transition text-xs font-semibold rounded">
                                         Review
                                     </a>
@@ -145,7 +145,7 @@
         <div class="bg-white border border-gray-200 rounded-lg">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900">Inventory Alerts</h3>
-                <a href="{{ route('Supervisor_Inventory_Overview') }}" class="text-sm text-blue-600 hover:text-blue-800">Manage →</a>
+                <a href="{{ route('supervisor.inventory-overview') }}" class="text-sm text-blue-600 hover:text-blue-800">Manage →</a>
             </div>
             <div class="p-6 space-y-4">
                 <!-- low-stock -->
@@ -188,7 +188,7 @@
         <div class="bg-white border border-gray-200 rounded-lg">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900">Recent Notifications</h3>
-                <a href="{{ route('Supervisor_Notification') }}" class="text-sm text-blue-600 hover:text-blue-800">View all →</a>
+                <a href="{{ route('supervisor.notifications') }}" class="text-sm text-blue-600 hover:text-blue-800">View all →</a>
             </div>
             <div class="divide-y divide-gray-200">
                 @forelse($recentNotifications as $n)

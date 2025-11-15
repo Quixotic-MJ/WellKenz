@@ -1,28 +1,28 @@
 @extends('Inventory.layout.app')
 
-@section('title', 'Dashboard - WellKenz ERP')
-
-@section('breadcrumb', 'Dashboard')
+@section('title','Inventory Overview - WellKenz ERP')
+@section('breadcrumb','Inventory Overview')
 
 @section('content')
 <div class="space-y-6">
-    <!-- Welcome Card -->
+
+    <!-- toast -->
+    <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
+    <div id="errorMessage"  class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
+
+    <!-- 1. welcome / date card -->
     <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="flex items-center justify-between">
             <div>
                 @php
                     $hour = date('H');
                     $greeting = 'Good ';
-                    if ($hour < 12) {
-                        $greeting .= 'morning';
-                    } elseif ($hour < 17) {
-                        $greeting .= 'afternoon';
-                    } else {
-                        $greeting .= 'evening';
-                    }
+                    if ($hour < 12) { $greeting .= 'morning'; }
+                    elseif ($hour < 17) { $greeting .= 'afternoon'; }
+                    else { $greeting .= 'evening'; }
                 @endphp
                 <h1 class="text-2xl font-semibold text-gray-900">{{ $greeting }}, {{ session('emp_name') }}</h1>
-                <p class="text-sm text-gray-500 mt-1">Welcome to your {{ session('role') }} dashboard. Here's your bakery performance overview.</p>
+                <p class="text-sm text-gray-500 mt-1">Inventory custodian overview – live health at a glance</p>
             </div>
             <div class="text-right">
                 <p class="text-sm text-gray-900 font-medium">{{ date('F j, Y') }}</p>
@@ -31,301 +31,251 @@
         </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Pending Requisitions -->
+    <!-- 2. live counts -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase tracking-wider">Pending Requisitions</p>
-                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $pendingRequisitions ?? '8' }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Awaiting approval</p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Total Items</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('items')->count() }}</p>
                 </div>
                 <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
-                    <i class="fas fa-clock text-gray-600"></i>
+                    <i class="fas fa-boxes text-gray-600"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Total Purchases -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5">
+        <div class="bg-white border border-amber-200 rounded-lg p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase tracking-wider">Total Purchases</p>
-                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $totalPurchases ?? '24' }}</p>
-                    <p class="text-xs text-gray-400 mt-1">This month</p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Low Stock</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">
+                        {{ count(DB::select('SELECT * FROM get_low_stock_items()')) }}
+                    </p>
                 </div>
-                <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
-                    <i class="fas fa-shopping-cart text-gray-600"></i>
+                <div class="w-10 h-10 bg-amber-100 flex items-center justify-center rounded">
+                    <i class="fas fa-exclamation-triangle text-amber-600"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Low-Stock Alerts -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5">
+        <div class="bg-white border border-rose-200 rounded-lg p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase tracking-wider">Low-Stock Alerts</p>
-                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $lowStockAlerts ?? '6' }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Need restocking</p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Critical Stock</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">
+                        {{ DB::table('items')->whereRaw('item_stock <= minimum_stock')->count() }}
+                    </p>
                 </div>
-                <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
-                    <i class="fas fa-exclamation-triangle text-gray-600"></i>
+                <div class="w-10 h-10 bg-rose-100 flex items-center justify-center rounded">
+                    <i class="fas fa-exclamation-circle text-rose-600"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Monthly Revenue -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5">
+        <div class="bg-white border border-blue-200 rounded-lg p-5">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-xs text-gray-500 uppercase tracking-wider">Monthly Revenue</p>
-                    <p class="text-2xl font-semibold text-gray-900 mt-2">${{ $monthlyRevenue ?? '12,450' }}</p>
-                    <p class="text-xs text-gray-400 mt-1">Current month</p>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Expiring ≤ 30 d</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">
+                        {{ count(DB::select('SELECT * FROM get_expiry_alerts(30)')) }}
+                    </p>
                 </div>
-                <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
-                    <i class="fas fa-chart-line text-gray-600"></i>
+                <div class="w-10 h-10 bg-blue-100 flex items-center justify-center rounded">
+                    <i class="fas fa-calendar-times text-blue-600"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Charts Section -->
-        <div class="lg:col-span-2 space-y-6">
-            <!-- Expense Trends Chart -->
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Expense Trends</h3>
-                    <select class="text-sm border border-gray-300 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400">
-                        <option>Last 30 days</option>
-                        <option>Last 90 days</option>
-                        <option>This Year</option>
-                    </select>
-                </div>
-                
-                <!-- Chart Container -->
-                <div class="h-64 bg-gray-50 rounded flex items-center justify-center border border-gray-200">
-                    <div class="text-center text-gray-400">
-                        <i class="fas fa-chart-bar text-3xl mb-2"></i>
-                        <p class="text-sm">Expense trends chart</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stock Movement Chart -->
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-lg font-semibold text-gray-900">Stock Movement</h3>
-                    <select class="text-sm border border-gray-300 rounded px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400">
-                        <option>Last 30 days</option>
-                        <option>Last 90 days</option>
-                        <option>This Year</option>
-                    </select>
-                </div>
-                
-                <!-- Chart Container -->
-                <div class="h-64 bg-gray-50 rounded flex items-center justify-center border border-gray-200">
-                    <div class="text-center text-gray-400">
-                        <i class="fas fa-chart-line text-3xl mb-2"></i>
-                        <p class="text-sm">Stock movement chart</p>
-                    </div>
-                </div>
-            </div>
+    <!-- 3. today’s movement -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Today’s Stock-In</h3>
+            @php
+                $stockIn = DB::table('inventory_transactions')
+                           ->where('trans_type','in')
+                           ->whereDate('created_at',today())
+                           ->sum('trans_quantity');
+            @endphp
+            <p class="text-3xl font-bold text-green-700">{{ number_format($stockIn) }}</p>
+            <p class="text-xs text-gray-500 mt-1">Total units received</p>
         </div>
 
-        <!-- Sidebar -->
-        <div class="space-y-6">
-            <!-- Quick Actions -->
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-
-                <div class="space-y-2">
-                    <a href="{{ route('requisitions.index') }}"
-                        class="block w-full px-4 py-2.5 bg-gray-900 text-white hover:bg-gray-800 transition text-center text-sm font-medium rounded">
-                        <i class="fas fa-clipboard-list mr-2"></i>
-                        View Requisitions
-                    </a>
-
-                    <a href="{{ route('Purchasing_Approved_Requisition') }}"
-                        class="block w-full px-4 py-2.5 border border-gray-300 hover:bg-gray-50 transition text-center text-sm font-medium text-gray-700 rounded">
-                        <i class="fas fa-shopping-cart mr-2"></i>
-                        Purchase Orders
-                    </a>
-
-                    <a href="{{ route('Inventory_List') }}"
-                        class="block w-full px-4 py-2.5 border border-gray-300 hover:bg-gray-50 transition text-center text-sm font-medium text-gray-700 rounded">
-                        <i class="fas fa-warehouse mr-2"></i>
-                        Inventory Check
-                    </a>
-
-                    <a href="{{ route('Inventory_Report') }}"
-                        class="block w-full px-4 py-2.5 border border-gray-300 hover:bg-gray-50 transition text-center text-sm font-medium text-gray-700 rounded">
-                        <i class="fas fa-chart-pie mr-2"></i>
-                        Performance Reports
-                    </a>
-                </div>
-            </div>
-
-            <!-- Recent Activities -->
-            <div class="bg-white border border-gray-200 rounded-lg p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Activities</h3>
-
-                <div class="space-y-4">
-                    <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-file-alt text-gray-600 text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm text-gray-900 font-medium">New requisition created</p>
-                            <p class="text-xs text-gray-500 mt-0.5">Production Team • 2 hours ago</p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-check text-gray-600 text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm text-gray-900 font-medium">Purchase order approved</p>
-                            <p class="text-xs text-gray-500 mt-0.5">Supply Manager • 5 hours ago</p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-exclamation text-gray-600 text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm text-gray-900 font-medium">Low stock alert</p>
-                            <p class="text-xs text-gray-500 mt-0.5">Flour inventory • Yesterday</p>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3">
-                        <div class="w-8 h-8 bg-gray-100 rounded flex items-center justify-center flex-shrink-0">
-                            <i class="fas fa-chart-line text-gray-600 text-xs"></i>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm text-gray-900 font-medium">Monthly report generated</p>
-                            <p class="text-xs text-gray-500 mt-0.5">System • 1 day ago</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Today’s Stock-Out</h3>
+            @php
+                $stockOut = DB::table('inventory_transactions')
+                            ->where('trans_type','out')
+                            ->whereDate('created_at',today())
+                            ->sum('trans_quantity');
+            @endphp
+            <p class="text-3xl font-bold text-rose-700">{{ number_format($stockOut) }}</p>
+            <p class="text-xs text-gray-500 mt-1">Total units issued</p>
         </div>
     </div>
 
-    <!-- Bottom Grid -->
+    <!-- 4. pending deliveries -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Pending Deliveries (Ordered)</h3>
+        @php
+            $pending = DB::table('purchase_orders')
+                       ->where('po_status','ordered')
+                       ->select('po_ref','supplier_id','delivery_date','po_total')
+                       ->orderBy('delivery_date')
+                       ->limit(5)
+                       ->get();
+        @endphp
+        <div class="space-y-3">
+            @forelse($pending as $po)
+                <div class="p-3 border-l-4 border-blue-500 bg-blue-50 rounded">
+                    <p class="text-sm font-medium text-gray-900">PO-{{ $po->po_ref }} – ₱ {{ number_format($po->po_total,2) }}</p>
+                    <p class="text-xs text-gray-600 mt-1">
+                        Expected: {{ \Carbon\Carbon::parse($po->delivery_date)->format('M d, Y') }}
+                    </p>
+                </div>
+            @empty
+                <p class="text-xs text-gray-500">No pending deliveries.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <!-- 5. alerts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Low Stock Alert Panel -->
+        <!-- overdue deliveries -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Low Stock Alerts</h3>
-
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Overdue Deliveries</h3>
+            @php
+                $overdue = DB::table('purchase_orders')
+                           ->where('po_status','ordered')
+                           ->whereDate('delivery_date','<',today())
+                           ->select('po_ref','supplier_id','delivery_date','po_total')
+                           ->orderBy('delivery_date')
+                           ->limit(5)
+                           ->get();
+            @endphp
             <div class="space-y-3">
-                <div class="p-4 border-l-4 border-red-500 bg-red-50 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">All-Purpose Flour</p>
-                            <p class="text-xs text-gray-600 mt-1">Current: 15kg • Minimum: 50kg</p>
-                            <p class="text-xs text-gray-500 mt-1">Last updated: Today</p>
-                        </div>
-                        <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded ml-2">CRITICAL</span>
+                @forelse($overdue as $po)
+                    <div class="p-3 border-l-4 border-rose-500 bg-rose-50 rounded">
+                        <p class="text-sm font-medium text-gray-900">PO-{{ $po->po_ref }} – ₱ {{ number_format($po->po_total,2) }}</p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            Expected: {{ \Carbon\Carbon::parse($po->delivery_date)->format('M d, Y') }}
+                        </p>
                     </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Chocolate Chips</p>
-                            <p class="text-xs text-gray-600 mt-1">Current: 8kg • Minimum: 20kg</p>
-                            <p class="text-xs text-gray-500 mt-1">Last updated: Yesterday</p>
-                        </div>
-                        <span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded ml-2">WARNING</span>
-                    </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-red-500 bg-red-50 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Butter</p>
-                            <p class="text-xs text-gray-600 mt-1">Current: 12kg • Minimum: 25kg</p>
-                            <p class="text-xs text-gray-500 mt-1">Last updated: 2 days ago</p>
-                        </div>
-                        <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded ml-2">CRITICAL</span>
-                    </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-amber-500 bg-amber-50 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Fresh Cream</p>
-                            <p class="text-xs text-gray-600 mt-1">Current: 5L • Minimum: 15L</p>
-                            <p class="text-xs text-gray-500 mt-1">Last updated: Today</p>
-                        </div>
-                        <span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded ml-2">WARNING</span>
-                    </div>
-                </div>
+                @empty
+                    <p class="text-xs text-gray-500">No overdue deliveries – great job!</p>
+                @endforelse
             </div>
         </div>
 
-        <!-- Recent Requisitions -->
+        <!-- near-expiry -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900">Recent Requisitions</h3>
-                <a href="{{ route('requisitions.index') }}"
-                    class="text-xs font-medium text-gray-600 hover:text-gray-900 uppercase tracking-wider">
-                    View All →
-                </a>
-            </div>
-
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Near-Expiry Alerts (≤ 30 d)</h3>
+            @php
+                try {
+                    $expiry = collect(DB::select('SELECT * FROM get_expiry_alerts(30)'));
+                } catch (\Throwable $e) {
+                    $expiry = DB::table('items')
+                              ->whereNotNull('item_expire_date')
+                              ->whereRaw("item_expire_date <= CURRENT_DATE + INTERVAL '30 day'")
+                              ->select('item_name','item_expire_date','item_stock','item_unit')
+                              ->get();
+                }
+                $expiry = $expiry->take(5);
+            @endphp
             <div class="space-y-3">
-                <div class="p-4 border border-gray-200 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Baking Ingredients - Bulk Order</p>
-                            <p class="text-xs text-gray-500 mt-1">Production Department • REQ-2024-0012</p>
-                            <p class="text-xs text-gray-500 mt-1">Requested by: Maria Garcia</p>
-                        </div>
-                        <span class="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded ml-2">PENDING</span>
+                @forelse($expiry as $item)
+                    <div class="p-3 border-l-4 border-amber-500 bg-amber-50 rounded">
+                        <p class="text-sm font-medium text-gray-900">{{ $item->item_name }}</p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            Expires: {{ \Carbon\Carbon::parse($item->item_expire_date)->format('M d, Y') }} • Stock: {{ $item->item_stock }} {{ $item->item_unit }}
+                        </p>
                     </div>
-                </div>
-
-                <div class="p-4 border border-gray-200 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Packaging Materials</p>
-                            <p class="text-xs text-gray-500 mt-1">Packaging Department • REQ-2024-0013</p>
-                            <p class="text-xs text-gray-500 mt-1">Requested by: John Smith</p>
-                        </div>
-                        <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded ml-2">APPROVED</span>
-                    </div>
-                </div>
-
-                <div class="p-4 border border-gray-200 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Emergency Flour Supply</p>
-                            <p class="text-xs text-gray-500 mt-1">Production Department • REQ-2024-0014</p>
-                            <p class="text-xs text-gray-500 mt-1">Requested by: Robert Chen</p>
-                        </div>
-                        <span class="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded ml-2">URGENT</span>
-                    </div>
-                </div>
-
-                <div class="p-4 border border-gray-200 rounded">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-medium text-gray-900">Dairy Products Restock</p>
-                            <p class="text-xs text-gray-500 mt-1">Production Department • REQ-2024-0015</p>
-                            <p class="text-xs text-gray-500 mt-1">Requested by: Sarah Lee</p>
-                        </div>
-                        <span class="px-2 py-1 bg-gray-100 text-gray-800 text-xs font-medium rounded ml-2">DRAFT</span>
-                    </div>
-                </div>
+                @empty
+                    <p class="text-xs text-gray-500">No items expiring within 30 days.</p>
+                @endforelse
             </div>
         </div>
     </div>
+
+    <!-- 6. recent transactions -->
+    <div class="bg-white border border-gray-200 rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Recent Inventory Transactions</h3>
+            <a href="{{ route('inventory.transactions.index') }}" class="text-xs font-medium text-gray-600 hover:text-gray-900 uppercase tracking-wider">View All →</a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="txTable">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Item</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Balance</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reference</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="txTableBody">
+                    @foreach($recentTx as $tx)
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ $tx->created_at->format('M d, Y H:i') }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ $tx->item->item_name ?? '-' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600 capitalize">{{ $tx->trans_type }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ $tx->trans_quantity }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ $tx->balance_qty ?? '-' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600">{{ $tx->trans_ref ?? '-' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+            Showing {{ $recentTx->count() }} of {{ $recentTx->total() }} transactions
+        </div>
+    </div>
+
 </div>
+
+<script>
+/* ===== helpers ===== */
+function showMessage(msg, type = 'success'){
+    const div = type === 'success' ? document.getElementById('successMessage') : document.getElementById('errorMessage');
+    div.textContent = msg; div.classList.remove('hidden');
+    setTimeout(()=> div.classList.add('hidden'), 3000);
+}
+
+/* ===== search recent tx ===== */
+function searchTable(q){
+    const Q = q.toLowerCase(); const rows = document.querySelectorAll('#txTableBody tr'); let visible=0;
+    rows.forEach(r=>{
+        const ok = r.textContent.toLowerCase().includes(Q);
+        r.style.display = ok ? '' : 'none'; if(ok) visible++;
+    });
+    document.getElementById('visibleCount')?.textContent = visible;
+    const btn = document.getElementById('clearBtn');
+    Q ? btn.classList.remove('hidden') : btn.classList.add('hidden');
+}
+function clearSearch(){
+    document.getElementById('searchInput').value=''; searchTable(''); document.getElementById('clearBtn').classList.add('hidden');
+}
+
+/* ===== sort ===== */
+let sortField='date', sortDir='desc';
+function sortTable(f){
+    if(sortField===f) sortDir=sortDir==='asc'?'desc':'asc'; else {sortField=f; sortDir='asc';}
+    const tbody=document.getElementById('txTableBody');
+    const rows=Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+    rows.sort((a,b)=>{
+        const A=a.children[f==='date'?0:1].textContent, B=b.children[f==='date'?0:1].textContent;
+        return sortDir==='asc'?A.localeCompare(B):B.localeCompare(A);
+    });
+    rows.forEach(r=>tbody.appendChild(r));
+    document.querySelectorAll('thead th i').forEach(i=>i.className='fas fa-sort ml-1 text-xs');
+    const th=document.querySelector(`th[onclick="sortTable('${f}')"] i`);
+    if(th) th.className=sortDir==='asc'?'fas fa-sort-up ml-1 text-xs':'fas fa-sort-down ml-1 text-xs';
+}
+</script>
 @endsection

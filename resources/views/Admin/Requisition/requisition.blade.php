@@ -174,7 +174,7 @@
     <script>
         /* light helpers */
         let currentId = null;
-        const REQ_BASE = "{{ url('/requisitions') }}";
+        const REQ_BASE = "{{ url('/admin/requisitions') }}";
 
         function showMessage(msg, type = 'success') {
             const div = type === 'success' ? document.getElementById('successMessage') : document.getElementById(
@@ -251,7 +251,7 @@
         /* modal openers */
         function openViewModal(id) {
             currentId = id;
-            fetch(`/requisitions/${id}`, {
+            fetch(`${REQ_BASE}/${id}`, {
                 method: 'GET',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),

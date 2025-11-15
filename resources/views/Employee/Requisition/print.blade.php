@@ -1,89 +1,65 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Print Requisition</title>
+    <meta charset="UTF-8">
+    <title>Requisition - {{ $req->req_ref }} – WellKenz ERP</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: DejaVu Sans, Arial, sans-serif; margin: 24px; color: #111; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .title { font-size: 20px; font-weight: 700; }
-        .meta { font-size: 12px; color: #555; }
-        .card { border: 1px solid #ddd; border-radius: 6px; margin-bottom: 16px; }
-        .card h3 { margin: 0; padding: 10px 12px; border-bottom: 1px solid #eee; background: #fafafa; font-size: 14px; }
-        .card .body { padding: 12px; font-size: 13px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background: #fafafa; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; }
-        .badge.pending { background: #fff7ed; color: #9a3412; }
-        .badge.approved { background: #ecfdf5; color: #065f46; }
-        .badge.rejected { background: #fef2f2; color: #991b1b; }
-        .footer { margin-top: 24px; font-size: 12px; color: #666; }
-        .row { display: flex; gap: 16px; }
-        .col { flex: 1; }
+        body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#333;margin:0;padding:15px}
+        h1,h2{margin:0 0 8px 0;font-weight:700}
+        h1{font-size:18px}h2{font-size:14px}
+        table{width:100%;border-collapse:collapse;margin-top:10px}
+        th,td{padding:6px 4px;text-align:left;border:1px solid #ccc}
+        th{background:#f5f5f5;font-weight:700}
+        .info{display:flex;gap:20px;margin-bottom:15px}
+        .info div{background:#f9f9f9;border:1px solid #ddd;padding:8px 12px;border-radius:4px;font-size:11px}
+        .logo{float:right;width:120px;height:auto}
+        .clear{clear:both}
+        @media print{body{margin:10mm}@page{size:A4 portrait;margin:10mm}}
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="title">Requisition</div>
-        <div class="meta">
-            <div>Reference: {{ $req->req_ref }}</div>
-            <div>Date: {{ optional($req->req_date)->format('Y-m-d') ?? optional($req->created_at)->format('Y-m-d') }}</div>
-        </div>
+    <h1>Requisition Details</h1>
+    <p>Reference: RQ-{{ $req->req_ref }} | Generated: {{ now()->format('d-M-Y H:i') }}</p>
+    <div class="clear"></div>
+
+    <div class="info">
+        <div><strong>Status:</strong> {{ ucfirst($req->req_status) }}</div>
+        <div><strong>Priority:</strong> {{ ucfirst($req->req_priority) }}</div>
+        <div><strong>Requested:</strong> {{ $req->created_at->format('d-M-Y') }}</div>
     </div>
 
-    <div class="card">
-        <h3>Details</h3>
-        <div class="body row">
-            <div class="col">
-                <div><strong>Requested By:</strong> {{ $req->requester->name ?? 'N/A' }}</div>
-                <div><strong>Status:</strong> <span class="badge {{ $req->req_status }}">{{ ucfirst($req->req_status) }}</span></div>
-                <div><strong>Priority:</strong> {{ ucfirst($req->req_priority) }}</div>
-            </div>
-            <div class="col">
-                <div><strong>Approved By:</strong> {{ $req->approver->name ?? '—' }}</div>
-                <div><strong>Approved Date:</strong> {{ optional($req->approved_date)->format('Y-m-d') ?? '—' }}</div>
-            </div>
-        </div>
+    <div style="margin-bottom:15px;">
+        <strong>Purpose:</strong><br>
+        {{ $req->req_purpose }}
     </div>
 
-    <div class="card">
-        <h3>Purpose</h3>
-        <div class="body">{{ $req->req_purpose }}</div>
+    <h2>Requested Items</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($items as $item)
+            <tr>
+                <td>{{ $item->item_name }}</td>
+                <td>{{ $item->req_item_quantity }}</td>
+                <td>{{ $item->item_unit }}</td>
+            </tr>
+            @empty
+            <tr><td colspan="3">No items</td></tr>
+            @endforelse
+        </tbody>
+    </table>
+
+    @if($req->req_reject_reason)
+    <div style="margin-top:15px;">
+        <strong>Rejection Reason:</strong><br>
+        {{ $req->req_reject_reason }}
     </div>
-
-    <div class="card">
-        <h3>Items</h3>
-        <div class="body">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 50%">Item</th>
-                        <th style="width: 15%">Unit</th>
-                        <th style="width: 15%">Requested Qty</th>
-                        <th style="width: 20%">Remarks</th>
-                    </tr>
-                </thead>
-                <tbody>
-                @foreach($req->items as $ri)
-                    <tr>
-                        <td>{{ $ri->item->item_name ?? ('#'.$ri->item_id) }}</td>
-                        <td>{{ $ri->item_unit ?? ($ri->item->item_unit ?? '—') }}</td>
-                        <td>{{ $ri->req_item_quantity }}</td>
-                        <td>{{ $ri->req_item_status }}</td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="footer">Generated by WellKenz ERP • {{ now()->format('Y-m-d H:i') }}</div>
-
-    <script>
-        window.onload = function(){ window.print && window.print(); };
-    </script>
+    @endif
 </body>
 </html>

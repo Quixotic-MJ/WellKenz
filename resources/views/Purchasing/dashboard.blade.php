@@ -1,305 +1,227 @@
 @extends('Purchasing.layout.app')
 
-@section('title', 'Dashboard - WellKenz ERP')
-
-@section('breadcrumb', 'Dashboard')
+@section('title', 'Purchasing Overview - WellKenz ERP')
+@section('breadcrumb', 'Purchasing Overview')
 
 @section('content')
 <div class="space-y-6">
-    <!-- Welcome Card -->
-    <div class="bg-white border-2 border-border-soft rounded-lg p-8">
+
+    <!-- toast -->
+    <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
+    <div id="errorMessage"  class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
+
+    <!-- 1. header card -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="flex items-center justify-between">
             <div>
-                @php
-                    $hour = date('H');
-                    $greeting = 'Good ';
-                    if ($hour < 12) {
-                        $greeting .= 'morning';
-                    } elseif ($hour < 17) {
-                        $greeting .= 'afternoon';
-                    } else {
-                        $greeting .= 'evening';
-                    }
-                @endphp
-                <h1 class="font-display text-3xl font-bold text-text-dark">{{ $greeting }}, {{ session('emp_name') }}</h1>
-                <p class="text-text-muted mt-2">Welcome to your {{ session('role') }} dashboard. Here's your overview for today.</p>
+                <h1 class="text-2xl font-semibold text-gray-900">Purchasing Overview</h1>
+                <p class="text-sm text-gray-500 mt-1">Quick visibility on all procurement activities</p>
             </div>
             <div class="text-right">
-                <p class="text-sm text-text-dark font-semibold">{{ date('F j, Y') }}</p>
-                <p class="text-xs text-text-muted mt-1">{{ date('l') }}</p>
+                <p class="text-sm text-gray-900 font-medium">{{ date('F j, Y') }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ date('l') }}</p>
             </div>
         </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Approved Requisitions (ready for PO creation) -->
-        <a href="{{ route('Purchasing_Approved_Requisition') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-green-500 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-clipboard-check text-white text-lg"></i>
+    <!-- 2. live counts -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- approved requisitions waiting PO -->
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Approved Reqs</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $approvedReqs }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Awaiting PO creation</p>
                 </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Approved Requisitions</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">{{ $approvedRequisitionsForPO ?? '8' }}</p>
-            <p class="text-xs text-green-600 mt-1">Ready for PO creation</p>
-        </a>
-
-        <!-- Active POs -->
-        <a href="{{ route('Purchasing_Purchase_Order') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-blue-500 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-shopping-cart text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Active POs</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">{{ $activePOs ?? '12' }}</p>
-            <p class="text-xs text-blue-600 mt-1">In progress</p>
-        </a>
-
-        <!-- Notifications -->
-        <a href="{{ route('Purchasing_Notification') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-indigo-500 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-bell text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Notifications</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">{{ $notificationsCount ?? '5' }}</p>
-            <p class="text-xs text-indigo-600 mt-1">Unread messages</p>
-        </a>
-    </div>
-
-    <!-- Second Stats Row -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Pending PO Creation -->
-        <a href="{{ route('Purchasing_Approved_Requisition') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-yellow-500 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-file-invoice-dollar text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Pending PO Creation</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">{{ $pendingPOCreation ?? '6' }}</p>
-            <p class="text-xs text-yellow-600 mt-1">Awaiting processing</p>
-        </a>
-
-        <!-- Low-stock Alerts -->
-        <a href="{{ route('Purchasing_Inventory_overview') }}?filter=low_stock" class="bg-white border-2 border-red-200 rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-red-500 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-exclamation-triangle text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Low-stock Alerts</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">{{ $lowStockAlerts ?? '7' }}</p>
-            <p class="text-xs text-red-600 mt-1">Needs attention</p>
-        </a>
-
-        <!-- Active Suppliers -->
-        <a href="{{ route('Purchasing_Supplier') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-purple-500 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-truck text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Active Suppliers</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">{{ $activeSuppliers ?? '15' }}</p>
-            <p class="text-xs text-purple-600 mt-1">Vendor partners</p>
-        </a>
-
-        <!-- Monthly PO Value -->
-        <a href="{{ route('Purchasing_Report') }}" class="bg-white border-2 border-border-soft rounded-lg p-6 hover-lift transition-all duration-200 cursor-pointer">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-orange-500 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-chart-line text-white text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-text-muted uppercase tracking-wider">Monthly PO Value</p>
-            <p class="text-3xl font-bold text-text-dark mt-2">${{ $monthlyPOValue ?? '45,230' }}</p>
-            <p class="text-xs text-orange-600 mt-1">Current month</p>
-        </a>
-    </div>
-
-    <!-- Main Content -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Recent Approved Requisitions -->
-        <div class="lg:col-span-2 bg-white border-2 border-border-soft rounded-lg p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="font-display text-xl font-bold text-text-dark">Recent Approved Requisitions</h3>
-                <a href="{{ route('Purchasing_Approved_Requisition') }}" class="text-xs font-bold text-caramel hover:text-caramel-dark uppercase tracking-wider flex items-center">
-                    View All <i class="fas fa-arrow-right ml-1 text-xs"></i>
-                </a>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="flex items-start justify-between p-4 border-l-4 border-green-500 bg-green-50 rounded-lg">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">Baking Ingredients - Bulk Order</p>
-                        <p class="text-xs text-text-muted mt-1">Production Department • REQ-2024-0012</p>
-                        <p class="text-xs text-text-muted mt-2">Approved by: Procurement Manager</p>
-                    </div>
-                    <span class="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">READY FOR PO</span>
-                </div>
-
-                <div class="flex items-start justify-between p-4 border-l-4 border-green-500 bg-green-50 rounded-lg">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">Kitchen Equipment</p>
-                        <p class="text-xs text-text-muted mt-1">Operations Department • REQ-2024-0011</p>
-                        <p class="text-xs text-text-muted mt-2">Approved by: Operations Head</p>
-                    </div>
-                    <span class="px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">READY FOR PO</span>
-                </div>
-
-                <div class="flex items-start justify-between p-4 border-l-4 border-blue-500 bg-blue-50 rounded-lg">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">Packaging Materials</p>
-                        <p class="text-xs text-text-muted mt-1">Packaging Department • REQ-2024-0010</p>
-                        <p class="text-xs text-text-muted mt-2">Approved by: Packaging Supervisor</p>
-                    </div>
-                    <span class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">PO IN PROGRESS</span>
-                </div>
-
-                <div class="flex items-start justify-between p-4 border-l-4 border-yellow-500 bg-yellow-50 rounded-lg">
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">Office Supplies</p>
-                        <p class="text-xs text-text-muted mt-1">Administration • REQ-2024-0009</p>
-                        <p class="text-xs text-text-muted mt-2">Approved by: Admin Manager</p>
-                    </div>
-                    <span class="px-3 py-1 bg-yellow-600 text-white text-xs font-bold rounded-full">AWAITING QUOTATION</span>
+                <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
+                    <i class="fas fa-clipboard-check text-gray-600"></i>
                 </div>
             </div>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="bg-white border-2 border-border-soft rounded-lg p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6">Quick Actions</h3>
-            
-            <div class="space-y-3">
-                <a href="{{ route('Purchasing_Purchase_Order') }}" class="block w-full p-4 bg-caramel text-white hover:bg-caramel-dark transition text-center font-semibold rounded-lg hover-lift">
-                    <i class="fas fa-file-invoice-dollar mr-2"></i>
-                    Create Purchase Order
-                </a>
-
-                <a href="{{ route('Purchasing_Supplier') }}" class="block w-full p-4 border-2 border-border-soft hover:border-chocolate hover:bg-cream-bg transition text-center font-semibold text-text-dark rounded-lg hover-lift">
-                    <i class="fas fa-truck mr-2 text-chocolate"></i>
-                    Supplier Management
-                </a>
-
-                <a href="{{ route('Purchasing_Report') }}" class="block w-full p-4 border-2 border-border-soft hover:border-chocolate hover:bg-cream-bg transition text-center font-semibold text-text-dark rounded-lg hover-lift">
-                    <i class="fas fa-chart-bar mr-2 text-chocolate"></i>
-                    View Reports
-                </a>
+        <!-- purchase-order statuses -->
+        <div class="bg-white border border-gray-200 rounded-lg p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Draft POs</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $draftPOs }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Not yet ordered</p>
+                </div>
+                <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
+                    <i class="fas fa-file-alt text-gray-600"></i>
+                </div>
             </div>
+        </div>
 
-            <!-- User Info Card -->
-            <div class="mt-6 p-4 bg-cream-bg border border-border-soft rounded-lg">
-                <div class="flex items-center space-x-3">
-                    <div class="w-12 h-12 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
-                        <span class="text-white text-sm font-bold">
-                            {{ substr(session('emp_name'), 0, 1) }}{{ substr(strstr(session('emp_name'), ' ') ?: '', 1, 1) }}
-                        </span>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-text-dark">{{ session('emp_name') }}</p>
-                        <p class="text-xs text-text-muted">{{ session('emp_position') }}</p>
-                        <p class="text-xs text-text-muted mt-1">{{ session('username') }}</p>
-                    </div>
+        <div class="bg-white border border-blue-200 rounded-lg p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Ordered</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $orderedPOs }}</p>
+                    <p class="text-xs text-gray-400 mt-1">With suppliers</p>
+                </div>
+                <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
+                    <i class="fas fa-truck text-gray-600"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-green-200 rounded-lg p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Delivered</p>
+                    <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $deliveredPOs }}</p>
+                    <p class="text-xs text-gray-400 mt-1">Awaiting stock-in</p>
+                </div>
+                <div class="w-10 h-10 bg-gray-100 flex items-center justify-center rounded">
+                    <i class="fas fa-box text-gray-600"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bottom Grid -->
+    <!-- 3. quick alerts -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Active Purchase Orders -->
-        <div class="bg-white border-2 border-border-soft rounded-lg p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6">Active Purchase Orders</h3>
-            
+        <!-- overdue POs -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Overdue Deliveries</h3>
             <div class="space-y-3">
-                <div class="p-4 border-l-4 border-green-500 bg-green-50 rounded-lg">
-                    <p class="text-sm font-bold text-text-dark">PO-2024-0456</p>
-                    <p class="text-xs text-text-muted mt-1">Flour & Sugar • Baker's Supply Co. • $2,450</p>
-                    <div class="flex items-center justify-between mt-2">
-                        <span class="px-2 py-1 bg-green-600 text-white text-xs font-bold rounded-full">DELIVERED</span>
-                        <span class="text-xs text-text-muted">Today</span>
+                @forelse($overdue as $po)
+                    <div class="p-3 border-l-4 border-rose-500 bg-rose-50 rounded">
+                        <p class="text-sm font-medium text-gray-900">
+                            PO-{{ $po->po_ref }} – ₱ {{ number_format($po->total_amount ?? 0,2) }}
+                        </p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            Expected: {{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('M d, Y') : '-' }}
+                        </p>
                     </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-blue-500 bg-blue-50 rounded-lg">
-                    <p class="text-sm font-bold text-text-dark">PO-2024-0457</p>
-                    <p class="text-xs text-text-muted mt-1">Packaging • PackPro Inc. • $1,230</p>
-                    <div class="flex items-center justify-between mt-2">
-                        <span class="px-2 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">IN TRANSIT</span>
-                        <span class="text-xs text-text-muted">ETA: Tomorrow</span>
-                    </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-yellow-500 bg-yellow-50 rounded-lg">
-                    <p class="text-sm font-bold text-text-dark">PO-2024-0458</p>
-                    <p class="text-xs text-text-muted mt-1">Equipment • KitchenTech • $8,750</p>
-                    <div class="flex items-center justify-between mt-2">
-                        <span class="px-2 py-1 bg-yellow-600 text-white text-xs font-bold rounded-full">PROCESSING</span>
-                        <span class="text-xs text-text-muted">2 days ago</span>
-                    </div>
-                </div>
+                @empty
+                    <p class="text-xs text-gray-500">No overdue deliveries – great job!</p>
+                @endforelse
             </div>
         </div>
 
-        <!-- Supplier Performance -->
-        <div class="bg-white border-2 border-blue-200 rounded-lg p-6">
-            <h3 class="font-display text-xl font-bold text-text-dark mb-6 flex items-center">
-                <i class="fas fa-star text-blue-500 mr-2"></i>
-                Top Suppliers
-            </h3>
-            
+        <!-- delivered awaiting stock-in -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Delivered Awaiting Stock-In</h3>
             <div class="space-y-3">
-                <div class="p-4 border-l-4 border-green-500 bg-green-50 rounded-lg">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-text-dark">Baker's Supply Co.</p>
-                            <p class="text-xs text-text-muted mt-1">Rating: 4.8/5 • 45 orders</p>
-                            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                <div class="bg-green-500 h-2 rounded-full" style="width: 96%"></div>
-                            </div>
-                        </div>
-                        <span class="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                            EXCELLENT
-                        </span>
+                @forelse($awaiting as $po)
+                    <div class="p-3 border-l-4 border-blue-500 bg-blue-50 rounded">
+                        <p class="text-sm font-medium text-gray-900">
+                            PO-{{ $po->po_ref }} – ₱ {{ number_format($po->total_amount ?? 0,2) }}
+                        </p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            Delivered: {{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('M d, Y') : '-' }}
+                        </p>
                     </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-blue-500 bg-blue-50 rounded-lg">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-text-dark">PackPro Inc.</p>
-                            <p class="text-xs text-text-muted mt-1">Rating: 4.5/5 • 32 orders</p>
-                            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                <div class="bg-blue-500 h-2 rounded-full" style="width: 90%"></div>
-                            </div>
-                        </div>
-                        <span class="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
-                            GOOD
-                        </span>
-                    </div>
-                </div>
-
-                <div class="p-4 border-l-4 border-yellow-500 bg-yellow-50 rounded-lg">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-text-dark">KitchenTech</p>
-                            <p class="text-xs text-text-muted mt-1">Rating: 4.2/5 • 18 orders</p>
-                            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
-                                <div class="bg-yellow-500 h-2 rounded-full" style="width: 84%"></div>
-                            </div>
-                        </div>
-                        <span class="px-3 py-1 bg-yellow-500 text-white text-xs font-bold rounded-full">
-                            SATISFACTORY
-                        </span>
-                    </div>
-                </div>
+                @empty
+                    <p class="text-xs text-gray-500">All delivered POs have been stocked-in.</p>
+                @endforelse
             </div>
         </div>
     </div>
+
+    <!-- 4. recent POs -->
+    <div class="bg-white border border-gray-200 rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Recently Created Purchase Orders</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm" id="recentPOTable">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">PO Ref</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total (₱)</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Delivery</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Created</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200" id="recentPOTableBody">
+                    @foreach($recentPOs as $po)
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4 text-sm font-semibold text-gray-900">PO-{{ $po->po_ref }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-900">{{ $po->supplier->sup_name ?? '-' }}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-block px-2 py-1 text-xs font-semibold rounded
+                                @if($po->po_status=='draft') bg-gray-100 text-gray-700
+                                @elseif($po->po_status=='ordered') bg-blue-100 text-blue-700
+                                @elseif($po->po_status=='delivered') bg-green-100 text-green-700
+                                @elseif($po->po_status=='cancelled') bg-rose-100 text-rose-700
+                                @else bg-gray-100 text-gray-700 @endif">
+                                {{ ucfirst($po->po_status) }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-900">₱ {{ number_format($po->total_amount,2) }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('M d, Y') : '-' }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ $po->created_at->format('M d, Y') }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+            Showing {{ $recentPOs->count() }} of {{ $totalPOs }} purchase orders
+        </div>
+    </div>
+
+    <!-- 5. supplier snapshot -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Supplier Snapshot</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Total Suppliers</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $totalSuppliers }}</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Active This Month</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $activeSuppliersThisMonth }}</p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Top Supplier (Qty)</p>
+                <p class="text-sm font-semibold text-gray-900 mt-2">
+                    {{ $topSupplierQtyName ?? '-' }}
+                </p>
+            </div>
+            <div class="text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Top Supplier (Value)</p>
+                <p class="text-sm font-semibold text-gray-900 mt-2">
+                    {{ $topSupplierValName ?? '-' }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. PO-related notifications -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent PO Notifications</h3>
+        <div class="space-y-3">
+            @forelse($notifs as $n)
+                <div class="p-3 border border-gray-200 rounded hover:bg-gray-50 transition">
+                    <div class="flex items-center justify-between">
+                        <p class="text-sm font-semibold text-gray-900">{{ $n->notif_title }}</p>
+                        <span class="text-xs text-gray-500">{{ $n->created_at->diffForHumans() }}</span>
+                    </div>
+                    <p class="text-xs text-gray-600 mt-1">{{ $n->notif_content }}</p>
+                </div>
+            @empty
+                <p class="text-xs text-gray-500">No new notifications.</p>
+            @endforelse
+        </div>
+    </div>
+
 </div>
+
+<script>
+/* toast helper */
+function showMessage(msg, type = 'success'){
+    const div = type === 'success' ? document.getElementById('successMessage') : document.getElementById('errorMessage');
+    div.textContent = msg; div.classList.remove('hidden');
+    setTimeout(()=> div.classList.add('hidden'), 3000);
+}
+</script>
 @endsection

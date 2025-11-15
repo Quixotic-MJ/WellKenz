@@ -1,7 +1,7 @@
 {{-- Create User Modal --}}
 <div id="createUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div class="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-lg border border-gray-200">
-        <form id="createUserForm" method="POST" action="{{ route('users.store') }}">
+        <form id="createUserForm" method="POST" action="{{ route('admin.users.store') }}">
             @csrf
             <div class="p-6 border-b border-gray-200 bg-gray-50">
                 <div class="flex items-center justify-between">

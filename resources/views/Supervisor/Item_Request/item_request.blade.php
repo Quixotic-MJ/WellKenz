@@ -1,737 +1,413 @@
 @extends('Supervisor.layout.app')
 
-@section('title', 'Item Requests - WellKenz ERP')
-
-@section('breadcrumb', 'Item Requests')
+@section('title', 'Custom Item Requests - WellKenz ERP')
+@section('breadcrumb', 'Custom Item Requests')
 
 @section('content')
-<div class="space-y-6">
-    <!-- Messages -->
-    <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded"></div>
-    <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded"></div>
+    <div class="space-y-6">
 
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-semibold text-gray-900">Item Request Approval</h1>
-            <p class="text-gray-500 mt-2">Review and approve custom item requests from employees</p>
-        </div>
-    </div>
+        <!-- toast -->
+        <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
+        <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- header card -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-amber-100 rounded flex items-center justify-center">
-                    <i class="fas fa-clock text-amber-600 text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Pending Approvals</p>
-            <p class="text-3xl font-bold text-gray-900 mt-2" id="pendingCount">0</p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-green-100 rounded flex items-center justify-center">
-                    <i class="fas fa-check-circle text-green-600 text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Approved Today</p>
-            <p class="text-3xl font-bold text-gray-900 mt-2" id="approvedTodayCount">0</p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-red-100 rounded flex items-center justify-center">
-                    <i class="fas fa-times-circle text-red-600 text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Rejected This Week</p>
-            <p class="text-3xl font-bold text-gray-900 mt-2" id="rejectedWeekCount">0</p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 bg-blue-100 rounded flex items-center justify-center">
-                    <i class="fas fa-clipboard-list text-blue-600 text-lg"></i>
-                </div>
-            </div>
-            <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">Total This Month</p>
-            <p class="text-3xl font-bold text-gray-900 mt-2" id="totalMonthCount">0</p>
-        </div>
-    </div>
-
-    <!-- Filters -->
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <h3 class="text-xl font-semibold text-gray-900">Filters</h3>
-            <div class="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-                <div class="relative flex-1 md:w-64">
-                    <input type="text" id="searchRequests" placeholder="Search by name, description, employee..."
-                        class="pl-9 pr-4 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition w-full">
-                    <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
-                </div>
-
-                <select id="statusFilter" class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="rejected">Rejected</option>
-                </select>
-
-                <input type="date" id="dateFilter" class="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
-
-                <button onclick="clearFilters()" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded text-sm">
-                    Clear
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Item Requests Table -->
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <div class="flex items-center justify-between mb-6">
-            <h3 class="text-xl font-semibold text-gray-900">Item Requests</h3>
-            <div class="flex items-center space-x-4">
-                <button onclick="loadRequests()" class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded text-sm">
-                    <i class="fas fa-refresh mr-2"></i>Refresh
-                </button>
-            </div>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead>
-                    <tr class="bg-gray-50 border-b border-gray-200">
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Employee</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Item Name</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Quantity</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200" id="requestsTable">
-                    <!-- Requests will be loaded via AJAX -->
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        <div class="flex items-center justify-between mt-6" id="paginationContainer">
-            <!-- Pagination will be loaded via AJAX -->
-        </div>
-    </div>
-</div>
-
-<!-- Approval Modal -->
-<div id="approvalModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div class="bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-lg">
-        <div class="p-6 border-b border-gray-200">
             <div class="flex items-center justify-between">
-                <h3 class="text-2xl font-semibold text-gray-900" id="modalTitle">Review Item Request</h3>
-                <button onclick="closeApprovalModal()" class="text-gray-500 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="p-6" id="requestDetails">
-            <!-- Request details will be loaded here -->
-        </div>
-
-        <!-- Approval Form -->
-        <div class="p-6 border-t border-gray-200" id="approvalFormSection">
-            <form id="approvalForm">
-                @csrf
-                <input type="hidden" id="requestId" name="request_id">
-
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Decision</label>
-                        <div class="flex space-x-4">
-                            <label class="flex items-center">
-                                <input type="radio" name="decision" value="approve" class="text-green-600 focus:ring-green-500">
-                                <span class="ml-2 text-sm text-gray-700">Approve</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="radio" name="decision" value="reject" class="text-red-600 focus:ring-red-500">
-                                <span class="ml-2 text-sm text-gray-700">Reject</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div id="rejectReasonSection" class="hidden">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Rejection Reason *</label>
-                        <textarea id="req_reject_reason" name="req_reject_reason" rows="3"
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400"
-                            placeholder="Please provide a reason for rejecting this request..." required></textarea>
-                    </div>
-
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" onclick="closeApprovalModal()"
-                            class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
-                            Cancel
-                        </button>
-                        <button type="submit" id="submitDecisionBtn"
-                            class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded">
-                            Submit Decision
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- View Only Section (for processed requests) -->
-        <div class="p-6 border-t border-gray-200 hidden" id="viewOnlySection">
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-info-circle text-blue-400 text-lg"></i>
-                    </div>
-                    <div class="ml-3">
-                        <h4 class="text-sm font-semibold text-blue-800">Request Already Processed</h4>
-                        <p class="text-sm text-blue-700 mt-1">This request has already been processed and cannot be modified.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="flex justify-end mt-4">
-                <button type="button" onclick="closeApprovalModal()"
-                    class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition rounded">
-                    Close
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-let currentRequest = null;
-let currentPage = 1;
-let totalPages = 1;
-
-document.addEventListener('DOMContentLoaded', function() {
-    loadRequests();
-    loadStats();
-
-    // Search functionality
-    document.getElementById('searchRequests').addEventListener('input', debounce(function(e) {
-        currentPage = 1;
-        loadRequests();
-    }, 500));
-
-    // Filter functionality
-    document.getElementById('statusFilter').addEventListener('change', function() {
-        currentPage = 1;
-        loadRequests();
-    });
-
-    document.getElementById('dateFilter').addEventListener('change', function() {
-        currentPage = 1;
-        loadRequests();
-    });
-
-    // Decision radio buttons
-    document.querySelectorAll('input[name="decision"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            const rejectReasonSection = document.getElementById('rejectReasonSection');
-
-            if (this.value === 'reject') {
-                rejectReasonSection.classList.remove('hidden');
-                document.getElementById('req_reject_reason').required = true;
-            } else {
-                rejectReasonSection.classList.add('hidden');
-                document.getElementById('req_reject_reason').required = false;
-            }
-        });
-    });
-
-    // Approval form submission
-    document.getElementById('approvalForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        const formData = new FormData(this);
-        const decision = formData.get('decision');
-        const requestId = formData.get('request_id');
-        const rejectReason = formData.get('req_reject_reason');
-
-        // Validate reject reason if rejecting
-        if (decision === 'reject' && (!rejectReason || rejectReason.trim() === '')) {
-            showMessage('Please provide a rejection reason', 'error');
-            return;
-        }
-
-        // Disable submit button to prevent multiple submissions
-        const submitBtn = document.getElementById('submitDecisionBtn');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
-
-        const url = `/supervisor/item-requests/${requestId}/status`;
-
-        fetch(url, {
-            method: 'POST',
-            body: JSON.stringify({
-                item_req_status: decision === 'approve' ? 'approved' : 'rejected',
-                remarks: rejectReason,
-                _token: '{{ csrf_token() }}'
-            }),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                if (response.status === 403) {
-                    throw new Error('Access denied. You do not have permission to approve requests.');
-                }
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                showMessage(data.message, 'success');
-                closeApprovalModal();
-                loadRequests();
-                loadStats();
-            } else {
-                showMessage(data.message || 'Error processing request', 'error');
-                // Re-enable submit button on error
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Submit Decision';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showMessage('Error processing request: ' + error.message, 'error');
-            // Re-enable submit button on error
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = 'Submit Decision';
-        });
-    });
-});
-
-function loadRequests() {
-    const search = document.getElementById('searchRequests').value;
-    const status = document.getElementById('statusFilter').value;
-    const date = document.getElementById('dateFilter').value;
-
-    let url = `/supervisor/item-requests/data?page=${currentPage}`;
-
-    if (search) url += `&search=${encodeURIComponent(search)}`;
-    if (status !== 'all') url += `&status=${status}`;
-    if (date) url += `&date=${date}`;
-
-    fetch(url, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 403) {
-                throw new Error('Access denied. You do not have permission to view requests.');
-            }
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Handle both paginated response and direct array
-        let requests = [];
-        let meta = null;
-
-        if (data.data !== undefined) {
-            // Paginated response
-            requests = data.data;
-            meta = data.meta;
-        } else if (Array.isArray(data)) {
-            // Direct array response
-            requests = data;
-        } else {
-            // Single object or error
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            requests = [data];
-        }
-
-        const tbody = document.getElementById('requestsTable');
-        tbody.innerHTML = '';
-
-        if (!requests || requests.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                        <i class="fas fa-inbox text-4xl mb-3 opacity-50"></i>
-                        <p>No item requests found.</p>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-
-        requests.forEach(request => {
-            const statusColors = {
-                'pending': 'bg-amber-100 text-amber-800',
-                'approved': 'bg-green-100 text-green-800',
-                'rejected': 'bg-red-100 text-red-800'
-            };
-
-            const statusColor = statusColors[request.item_req_status] || 'bg-gray-100 text-gray-800';
-
-            // Determine button text and actions based on status
-            let actionButtons = '';
-            if (request.item_req_status === 'pending') {
-                actionButtons = `
-                    <button onclick="reviewRequest(${request.item_req_id})"
-                        class="px-3 py-1 bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition rounded">
-                        Review
-                    </button>
-                    <button onclick="quickApprove(${request.item_req_id})"
-                        class="px-3 py-1 bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition rounded">
-                        Quick Approve
-                    </button>
-                `;
-            } else {
-                actionButtons = `
-                    <button onclick="reviewRequest(${request.item_req_id})"
-                        class="px-3 py-1 bg-gray-600 text-white text-xs font-medium hover:bg-gray-700 transition rounded">
-                        View Details
-                    </button>
-                `;
-            }
-
-            const row = `
-                <tr class="hover:bg-gray-50 transition">
-                    <td class="px-6 py-4">
-                        <p class="text-sm font-semibold text-gray-900">${request.requester ? request.requester.name : 'N/A'}</p>
-                        <p class="text-xs text-gray-500">${request.requester ? request.requester.position : ''}</p>
-                    </td>
-                    <td class="px-6 py-4">
-                        <p class="text-sm font-semibold text-gray-900">${request.item_req_name}</p>
-                        <p class="text-xs text-gray-500 max-w-xs truncate">${request.item_req_description ? request.item_req_description.substring(0, 50) + (request.item_req_description.length > 50 ? '...' : '') : 'No description'}</p>
-                    </td>
-                    <td class="px-6 py-4">
-                        <p class="text-sm text-gray-900">${request.item_req_quantity} ${request.item_req_unit}</p>
-                    </td>
-                    <td class="px-6 py-4">
-                        <span class="inline-block px-2 py-1 ${statusColor} text-xs font-semibold capitalize rounded">
-                            ${request.item_req_status}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4">
-                        <p class="text-sm text-gray-900">${new Date(request.created_at).toLocaleDateString()}</p>
-                    </td>
-                    <td class="px-6 py-4">
-                        <div class="flex space-x-2">
-                            ${actionButtons}
-                        </div>
-                    </td>
-                </tr>
-            `;
-            tbody.innerHTML += row;
-        });
-
-        // Update pagination
-        if (meta) {
-            currentPage = meta.current_page;
-            totalPages = meta.last_page;
-            updatePagination(meta);
-        } else {
-            // Hide pagination if no meta data
-            document.getElementById('paginationContainer').innerHTML = '';
-        }
-    })
-    .catch(error => {
-        console.error('Error loading requests:', error);
-        showMessage('Error loading requests: ' + error.message, 'error');
-    });
-}
-
-function updatePagination(meta) {
-    const container = document.getElementById('paginationContainer');
-    if (!meta || meta.last_page <= 1) {
-        container.innerHTML = '';
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="flex items-center space-x-2">
-            <button onclick="changePage(1)" ${meta.current_page === 1 ? 'disabled' : ''}
-                class="px-3 py-1 border border-gray-300 rounded text-sm ${meta.current_page === 1 ? 'bg-gray-100 text-gray-400' : 'hover:bg-gray-50'}">
-                First
-            </button>
-            <button onclick="changePage(${meta.current_page - 1})" ${meta.current_page === 1 ? 'disabled' : ''}
-                class="px-3 py-1 border border-gray-300 rounded text-sm ${meta.current_page === 1 ? 'bg-gray-100 text-gray-400' : 'hover:bg-gray-50'}">
-                Previous
-            </button>
-
-            <span class="text-sm text-gray-700">
-                Page ${meta.current_page} of ${meta.last_page}
-            </span>
-
-            <button onclick="changePage(${meta.current_page + 1})" ${meta.current_page === meta.last_page ? 'disabled' : ''}
-                class="px-3 py-1 border border-gray-300 rounded text-sm ${meta.current_page === meta.last_page ? 'bg-gray-100 text-gray-400' : 'hover:bg-gray-50'}">
-                Next
-            </button>
-            <button onclick="changePage(${meta.last_page})" ${meta.current_page === meta.last_page ? 'disabled' : ''}
-                class="px-3 py-1 border border-gray-300 rounded text-sm ${meta.current_page === meta.last_page ? 'bg-gray-100 text-gray-400' : 'hover:bg-gray-50'}">
-                Last
-            </button>
-        </div>
-        <div class="text-sm text-gray-700">
-            Showing ${meta.from} to ${meta.to} of ${meta.total} results
-        </div>
-    `;
-}
-
-function changePage(page) {
-    if (page < 1 || page > totalPages) return;
-    currentPage = page;
-    loadRequests();
-}
-
-function loadStats() {
-    fetch('/supervisor/item-requests/stats', {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 403) {
-                throw new Error('Access denied. You do not have permission to view statistics.');
-            }
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        document.getElementById('pendingCount').textContent = data.pending || 0;
-        document.getElementById('approvedTodayCount').textContent = data.approved_today || 0;
-        document.getElementById('rejectedWeekCount').textContent = data.rejected_week || 0;
-        document.getElementById('totalMonthCount').textContent = data.total_month || 0;
-    })
-    .catch(error => {
-        console.error('Error loading stats:', error);
-        showMessage('Error loading statistics: ' + error.message, 'error');
-    });
-}
-
-function reviewRequest(requestId) {
-    fetch(`/supervisor/item-requests/${requestId}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 403) {
-                throw new Error('Access denied. You do not have permission to view request details.');
-            }
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.error) {
-            throw new Error(data.error);
-        }
-
-        const request = data;
-        currentRequest = request;
-
-        // Update modal title based on status
-        const modalTitle = document.getElementById('modalTitle');
-        if (request.item_req_status === 'pending') {
-            modalTitle.textContent = 'Review Item Request';
-        } else {
-            modalTitle.textContent = 'Item Request Details';
-        }
-
-        // Show/hide form based on status
-        const approvalFormSection = document.getElementById('approvalFormSection');
-        const viewOnlySection = document.getElementById('viewOnlySection');
-
-        if (request.item_req_status === 'pending') {
-            approvalFormSection.classList.remove('hidden');
-            viewOnlySection.classList.add('hidden');
-        } else {
-            approvalFormSection.classList.add('hidden');
-            viewOnlySection.classList.remove('hidden');
-        }
-
-        document.getElementById('requestDetails').innerHTML = `
-            <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Employee</label>
-                        <p class="text-gray-900 font-semibold">${request.requester ? request.requester.name : 'N/A'}</p>
-                        <p class="text-sm text-gray-600">${request.requester ? request.requester.position : ''}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Request Date</label>
-                        <p class="text-gray-900">${new Date(request.created_at).toLocaleDateString()}</p>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
-                        <p class="text-gray-900 font-semibold">${request.item_req_name}</p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Quantity & Unit</label>
-                        <p class="text-gray-900">${request.item_req_quantity} ${request.item_req_unit}</p>
-                    </div>
-                </div>
-
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                    <p class="text-gray-900 bg-gray-50 p-3 rounded">${request.item_req_description || 'No description provided'}</p>
+                    <h1 class="text-2xl font-semibold text-gray-900">Custom Item Requests</h1>
+                    <p class="text-sm text-gray-500 mt-1">Handle employee requests for new items not yet in inventory</p>
                 </div>
-
-                ${request.item_req_status === 'rejected' && request.item_req_reject_reason ? `
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-times-circle text-red-400 text-lg mt-1"></i>
-                        </div>
-                        <div class="ml-3">
-                            <h4 class="text-sm font-semibold text-red-800 mb-1">Rejection Reason</h4>
-                            <p class="text-red-700 whitespace-pre-wrap">${request.item_req_reject_reason}</p>
-                            ${request.approver ? `
-                                <p class="text-xs text-red-600 mt-2">
-                                    Rejected by: ${request.approver.name} on ${new Date(request.updated_at).toLocaleDateString()}
-                                </p>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
-
-                ${request.item_req_status === 'approved' && request.approver ? `
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-check-circle text-green-400 text-lg mt-1"></i>
-                        </div>
-                        <div class="ml-3">
-                            <h4 class="text-sm font-semibold text-green-800 mb-1">Approval Information</h4>
-                            <p class="text-green-700">
-                                Approved by: ${request.approver.name} on ${new Date(request.updated_at).toLocaleDateString()}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
             </div>
-        `;
+        </div>
 
-        document.getElementById('requestId').value = requestId;
-        document.getElementById('approvalModal').classList.remove('hidden');
-    })
-    .catch(error => {
-        console.error('Error loading request details:', error);
-        showMessage('Error loading request details: ' + error.message, 'error');
-    });
-}
+        <!-- live counts -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white border border-amber-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $pendingCount }}</p>
+            </div>
+            <div class="bg-white border border-green-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Approved</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $approvedCount }}</p>
+            </div>
+            <div class="bg-white border border-rose-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">Rejected</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $rejectedCount }}</p>
+            </div>
+            <div class="bg-white border border-gray-200 rounded-lg p-5">
+                <p class="text-xs text-gray-500 uppercase tracking-wider">This Month</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">
+                    {{ $thisMonthCount }}
+                </p>
+            </div>
+        </div>
 
-function quickApprove(requestId) {
-    if (!confirm('Are you sure you want to approve this item request?')) return;
+        <!-- pending requests table -->
+        <div class="bg-white border border-gray-200 rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Pending Requests</h3>
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Search requests…"
+                            onkeyup="searchTable(this.value)"
+                            class="pl-9 pr-9 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <button type="button" onclick="clearSearch()" id="clearBtn"
+                            class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 hidden"><i
+                                class="fas fa-times text-xs"></i></button>
+                    </div>
+                </div>
+            </div>
 
-    fetch(`/supervisor/item-requests/${requestId}/status`, {
-        method: 'POST',
-        body: JSON.stringify({
-            item_req_status: 'approved',
-            remarks: 'Approved via quick action',
-            _token: '{{ csrf_token() }}'
-        }),
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="requestsTable">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer"
+                                onclick="sortTable('name')">Item Name <i class="fas fa-sort ml-1"></i></th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unit</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Requested By</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200" id="requestsTableBody">
+                        @forelse($pendingList as $req)
+                            <tr class="hover:bg-gray-50 transition req-row"
+                                data-name="{{ strtolower($req->item_req_name) }}">
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $req->item_req_name }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->item_req_unit }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->item_req_quantity }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->requester->name ?? '—' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->created_at->format('M d, Y') }}</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <button onclick="openViewModal({{ $req->item_req_id }})"
+                                            class="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
+                                            title="View details">
+                                            <i class="fas fa-eye text-sm"></i>
+                                        </button>
+                                        <button
+                                            data-item-name="{{ e($req->item_req_name) }}"
+                                            onclick="openApproveModal({{ $req->item_req_id }}, this.dataset.itemName)"
+                                            class="px-3 py-1 bg-green-600 text-white hover:bg-green-700 transition text-xs font-semibold rounded">
+                                            Approve
+                                        </button>
+                                        <button
+                                            data-item-name="{{ e($req->item_req_name) }}"
+                                            onclick="openRejectModal({{ $req->item_req_id }}, this.dataset.itemName)"
+                                            class="px-3 py-1 bg-rose-600 text-white hover:bg-rose-700 transition text-xs font-semibold rounded">
+                                            Reject
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">No pending custom item
+                                    requests.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+                Showing <span id="visibleCount">{{ $pendingList->count() }}</span> of {{ $pendingList->count() }} pending
+                requests
+            </div>
+        </div>
+
+        <!-- past decisions -->
+        <div class="bg-white border border-gray-200 rounded-lg">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Past Decisions</h3>
+                <div class="flex items-center space-x-3">
+                    <select onchange="filterStatus(this.value)"
+                        class="text-sm border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400">
+                        <option value="all">All Status</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                    <div class="relative">
+                        <input type="text" id="searchPast" placeholder="Search past decisions…"
+                            onkeyup="searchPastTable(this.value)"
+                            class="pl-9 pr-9 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400 text-xs"></i>
+                        <button type="button" onclick="clearPastSearch()" id="clearPastBtn"
+                            class="absolute right-3 top-3 text-gray-400 hover:text-gray-600 hidden"><i
+                                class="fas fa-times text-xs"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm" id="pastTable">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer"
+                                onclick="sortPastTable('name')">Item Name <i class="fas fa-sort ml-1"></i></th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unit</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Requested By</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200" id="pastTableBody">
+                        @forelse($pastList as $req)
+                            <tr class="hover:bg-gray-50 transition past-row"
+                                data-name="{{ strtolower($req->item_req_name) }}"
+                                data-status="{{ strtolower($req->item_req_status) }}">
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $req->item_req_name }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->item_req_unit }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->item_req_quantity }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">
+                                    <span
+                                        class="inline-block px-2 py-1 text-xs font-semibold rounded
+                                @if ($req->item_req_status === 'approved') bg-green-100 text-green-700
+                                @else bg-rose-100 text-rose-700 @endif">
+                                        {{ ucfirst($req->item_req_status) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->requester->name ?? '—' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->updated_at->format('M d, Y') }}</td>
+                                <td class="px-6 py-4">
+                                    <button onclick="openViewModal({{ $req->item_req_id }})"
+                                        class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
+                                        <i class="fas fa-eye text-sm"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="px-6 py-12 text-center text-gray-500">No past decisions.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
+                Showing <span id="visiblePastCount">{{ $pastList->count() }}</span> of {{ $pastList->count() }} past
+                decisions
+            </div>
+        </div>
+
+        <!-- ====== MODALS  ====== -->
+        @include('Supervisor.Item_Request.view')
+        @include('Supervisor.Item_Request.approve')
+        @include('Supervisor.Item_Request.reject')
+
+    </div>
+
+    <script>
+        /* light helpers */
+        let currentId = null;
+
+        function showMessage(msg, type = 'success') {
+            const div = type === 'success' ? document.getElementById('successMessage') : document.getElementById(
+                'errorMessage');
+            div.textContent = msg;
+            div.classList.remove('hidden');
+            setTimeout(() => div.classList.add('hidden'), 3000);
         }
-    })
-    .then(response => {
-        if (!response.ok) {
-            if (response.status === 403) {
-                throw new Error('Access denied. You do not have permission to approve requests.');
+
+        function closeModals() {
+            ['viewItemRequestModal', 'approveItemRequestModal', 'rejectItemRequestModal'].forEach(id => document
+                .getElementById(id)?.classList.add('hidden'));
+            currentId = null;
+        }
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeModals();
+        });
+
+        /* search / filter */
+        function filterStatus(val) {
+            const rows = document.querySelectorAll('.past-row');
+            let visible = 0;
+            rows.forEach(r => {
+                const ok = val === 'all' || r.dataset.status === val;
+                r.style.display = ok ? '' : 'none';
+                if (ok) visible++;
+            });
+            document.getElementById('visiblePastCount').textContent = visible;
+        }
+
+        function searchTable(q) {
+            const Q = q.toLowerCase();
+            const rows = document.querySelectorAll('.req-row');
+            let visible = 0;
+            rows.forEach(r => {
+                const ok = r.dataset.name.includes(Q) || r.textContent.toLowerCase().includes(Q);
+                r.style.display = ok ? '' : 'none';
+                if (ok) visible++;
+            });
+            document.getElementById('visibleCount').textContent = visible;
+            const btn = document.getElementById('clearBtn');
+            Q ? btn.classList.remove('hidden') : btn.classList.add('hidden');
+        }
+
+        function searchPastTable(q) {
+            const Q = q.toLowerCase();
+            const rows = document.querySelectorAll('.past-row');
+            let visible = 0;
+            rows.forEach(r => {
+                const ok = r.dataset.name.includes(Q) || r.textContent.toLowerCase().includes(Q);
+                r.style.display = ok ? '' : 'none';
+                if (ok) visible++;
+            });
+            document.getElementById('visiblePastCount').textContent = visible;
+            const btn = document.getElementById('clearPastBtn');
+            Q ? btn.classList.remove('hidden') : btn.classList.add('hidden');
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            searchTable('');
+            document.getElementById('clearBtn').classList.add('hidden');
+        }
+
+        function clearPastSearch() {
+            document.getElementById('searchPast').value = '';
+            searchPastTable('');
+            document.getElementById('clearPastBtn').classList.add('hidden');
+        }
+
+        /* sort */
+        let sortField = 'name',
+            sortDir = 'asc';
+
+        function sortTable(f) {
+            if (sortField === f) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            else {
+                sortField = f;
+                sortDir = 'asc';
             }
-            throw new Error('Network response was not ok');
+            const tbody = document.getElementById('requestsTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+            rows.sort((a, b) => {
+                const A = a.dataset[f].toLowerCase(),
+                    B = b.dataset[f].toLowerCase();
+                return sortDir === 'asc' ? A.localeCompare(B) : B.localeCompare(A);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+            document.querySelectorAll('thead th i').forEach(i => i.className = 'fas fa-sort ml-1 text-xs');
+            const th = document.querySelector(`th[onclick="sortTable('${f}')"] i`);
+            if (th) th.className = sortDir === 'asc' ? 'fas fa-sort-up ml-1 text-xs' : 'fas fa-sort-down ml-1 text-xs';
         }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            showMessage(data.message, 'success');
-            loadRequests();
-            loadStats();
-        } else {
-            showMessage(data.message || 'Error approving request', 'error');
+
+        function sortPastTable(f) {
+            if (sortField === f) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            else {
+                sortField = f;
+                sortDir = 'asc';
+            }
+            const tbody = document.getElementById('pastTableBody');
+            const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+            rows.sort((a, b) => {
+                const A = a.dataset[f].toLowerCase(),
+                    B = b.dataset[f].toLowerCase();
+                return sortDir === 'asc' ? A.localeCompare(B) : B.localeCompare(A);
+            });
+            rows.forEach(r => tbody.appendChild(r));
+            document.querySelectorAll('thead th i').forEach(i => i.className = 'fas fa-sort ml-1 text-xs');
+            const th = document.querySelector(`th[onclick="sortPastTable('${f}')"] i`);
+            if (th) th.className = sortDir === 'asc' ? 'fas fa-sort-up ml-1 text-xs' : 'fas fa-sort-down ml-1 text-xs';
         }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showMessage('Error approving request: ' + error.message, 'error');
-    });
-}
 
-function closeApprovalModal() {
-    document.getElementById('approvalModal').classList.add('hidden');
-    document.getElementById('approvalForm').reset();
-    document.getElementById('rejectReasonSection').classList.add('hidden');
-
-    // Reset submit button
-    const submitBtn = document.getElementById('submitDecisionBtn');
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = 'Submit Decision';
-}
-
-function clearFilters() {
-    document.getElementById('searchRequests').value = '';
-    document.getElementById('statusFilter').value = 'all';
-    document.getElementById('dateFilter').value = '';
-    currentPage = 1;
-    loadRequests();
-}
-
-function showMessage(message, type) {
-    const messageDiv = type === 'success' ?
-        document.getElementById('successMessage') :
-        document.getElementById('errorMessage');
-
-    if (messageDiv) {
-        messageDiv.textContent = message;
-        messageDiv.classList.remove('hidden');
-
-        setTimeout(() => {
-            messageDiv.classList.add('hidden');
-        }, 5000);
+    /* modal openers */
+    function openViewModal(id){
+        currentId=id;
+        fetch(`/supervisor/item-requests/${id}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r=>{ if(!r.ok) throw new Error('Network response was not ok'); return r.json(); })
+            .then(data=>{
+                const body = document.getElementById('viewItemRequestBody');
+                if (!body) { document.getElementById('viewItemRequestModal').classList.remove('hidden'); return; }
+                body.innerHTML = `
+                    <div class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
+                                <p class="text-gray-900 font-semibold">${data.item_req_name}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Requested By</label>
+                                <p class="text-gray-900">${data.requester ? data.requester.name : 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Unit</label>
+                                <p class="text-gray-900">${data.item_req_unit}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                                <p class="text-gray-900">${data.item_req_quantity}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <p class="text-gray-900 bg-gray-50 p-3 rounded">${data.item_req_description || '—'}</p>
+                        </div>
+                        ${data.item_req_status === 'rejected' && data.item_req_reject_reason ? `
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+                                Rejection Reason: ${data.item_req_reject_reason}
+                            </div>
+                        ` : ''}
+                    </div>`;
+                document.getElementById('viewItemRequestModal').classList.remove('hidden');
+            })
+            .catch(()=>{ showMessage('Error loading item request', 'error'); });
     }
-}
+    function openApproveModal(id,name){
+        currentId=id;
+        const el = document.getElementById('approveItemRequestName'); if (el) el.textContent=name;
+        const form = document.querySelector('#approveItemRequestModal form');
+        if (form) form.action = `/supervisor/item-requests/${id}/status`;
+        document.getElementById('approveItemRequestModal').classList.remove('hidden');
+    }
+    function openRejectModal(id,name){
+        currentId=id;
+        const el = document.getElementById('rejectItemRequestName'); if (el) el.textContent=name;
+        const form = document.querySelector('#rejectItemRequestModal form');
+        if (form) form.action = `/supervisor/item-requests/${id}/status`;
+        document.getElementById('rejectItemRequestModal').classList.remove('hidden');
+    }
 
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+    /* form submissions */
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('#approveItemRequestModal form, #rejectItemRequestModal form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(data.message, 'success');
+                        closeModals();
+                        // Reload the page to update the tables
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showMessage(data.message, 'error');
+                    }
+                })
+                .catch(() => showMessage('Error processing request', 'error'));
+            });
+        });
+    });
 </script>
 @endsection

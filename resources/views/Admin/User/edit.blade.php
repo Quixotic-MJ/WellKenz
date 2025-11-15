@@ -1,7 +1,7 @@
 {{-- Edit User Modal --}}
 <div id="editUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div class="bg-white max-w-2xl w-full max-h-[90vh] overflow-y-auto rounded-lg border border-gray-200">
-        <form id="editUserForm" method="POST" action="">
+        <form id="editUserForm" method="POST" action="{{ url('/admin/users/0') }}">
             @csrf @method('PUT')
             <input type="hidden" name="user_id" id="edit_user_id">
             <div class="p-6 border-b border-gray-200 bg-gray-50">

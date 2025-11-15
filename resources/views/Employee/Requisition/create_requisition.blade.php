@@ -114,7 +114,7 @@
                                     </button>
                                 @endif
                                 @if($r->req_status=='approved')
-                                    <a href="{{ route('requisitions.print',$r->req_id) }}" target="_blank"
+                                    <a href="{{ route('staff.requisitions.print',$r->req_id) }}" target="_blank"
                                        class="p-2 text-gray-600 hover:bg-gray-50 rounded transition" title="Print">
                                         <i class="fas fa-print text-sm"></i>
                                     </a>
@@ -192,7 +192,7 @@ function openCreateModal(){
 }
 function openViewModal(id){
     currentId=id;
-    fetch(`/requisitions/${id}`)
+    fetch(`/staff/requisitions/${id}`)
     .then(r=>r.json())
     .then(data=>{
         if(data.error){
@@ -265,10 +265,11 @@ function openViewModal(id){
 /* cancel */
 function cancelReq(id){
     if(!confirm('Cancel this pending requisition?')) return;
-    fetch(`/requisitions/${id}`,{
+    fetch(`{{ url('/staff/requisitions') }}/${id}`,{
         method:'DELETE',
         headers:{
             'X-Requested-With':'XMLHttpRequest',
+            'Accept':'application/json',
             'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').content
         }
     })

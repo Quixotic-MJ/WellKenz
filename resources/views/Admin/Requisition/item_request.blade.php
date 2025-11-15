@@ -1,4 +1,4 @@
-@extends('admin.layout.app')
+@extends('Admin.layout.app')
 
 @section('content')
     <div class="space-y-6">
@@ -21,22 +21,19 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white border border-gray-200 rounded-lg p-5">
                 <p class="text-xs text-gray-500 uppercase tracking-wider">Total Requests</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ DB::table('item_requests')->count() }}</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $totalRequests ?? 0 }}</p>
             </div>
             <div class="bg-white border border-amber-200 rounded-lg p-5">
                 <p class="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-2">
-                    {{ DB::table('item_requests')->where('item_req_status', 'pending')->count() }}</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $pendingRequests ?? 0 }}</p>
             </div>
             <div class="bg-white border border-green-200 rounded-lg p-5">
                 <p class="text-xs text-gray-500 uppercase tracking-wider">Approved</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-2">
-                    {{ DB::table('item_requests')->where('item_req_status', 'approved')->count() }}</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $approvedRequests ?? 0 }}</p>
             </div>
             <div class="bg-white border border-rose-200 rounded-lg p-5">
                 <p class="text-xs text-gray-500 uppercase tracking-wider">Rejected</p>
-                <p class="text-2xl font-semibold text-gray-900 mt-2">
-                    {{ DB::table('item_requests')->where('item_req_status', 'rejected')->count() }}</p>
+                <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $rejectedRequests ?? 0 }}</p>
             </div>
         </div>
 

@@ -13,7 +13,7 @@
                 <h1 class="text-2xl font-semibold text-gray-900">My Requisitions</h1>
                 <p class="text-sm text-gray-500 mt-1">Track all your submitted requisitions and their status</p>
             </div>
-            <a href="{{ route('requisitions.create') }}"
+            <a href="{{ route('staff.requisitions.create') }}"
                class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 transition text-sm font-medium rounded">
                 <i class="fas fa-plus-circle mr-2"></i>New Requisition
             </a>
@@ -109,7 +109,7 @@
                                     <i class="fas fa-eye text-sm"></i>
                                 </button>
                                 @if($req->req_status==='pending')
-                                    <a href="{{ route('requisitions.edit',$req->req_id) }}"
+                                    <a href="{{ route('staff.requisitions.edit',$req->req_id) }}"
                                         class="p-2 text-gray-600 hover:bg-gray-50 rounded transition" title="Edit">
                                         <i class="fas fa-edit text-sm"></i>
                                     </a>
@@ -122,7 +122,7 @@
                         <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                             <i class="fas fa-file-alt text-3xl mb-3 opacity-50"></i>
                             <p>No requisitions found.</p>
-                            <a href="{{ route('requisitions.create') }}" class="text-blue-600 hover:text-blue-800">Create your first requisition</a>
+                            <a href="{{ route('staff.requisitions.create') }}" class="text-blue-600 hover:text-blue-800">Create your first requisition</a>
                         </td>
                     </tr>
                     @endforelse
@@ -198,7 +198,7 @@ function sortTable(f){
 /* modal openers */
 function openViewModal(id){
     currentId=id;
-    fetch(`/requisitions/${id}`)
+    fetch(`/staff/requisitions/${id}`)
     .then(r=>r.json())
     .then(data=>{
         if(data.error){

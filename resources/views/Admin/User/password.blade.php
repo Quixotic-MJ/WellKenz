@@ -1,7 +1,7 @@
 {{-- Reset Password Modal --}}
 <div id="passwordModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div class="bg-white max-w-md w-full rounded-lg border border-gray-200">
-        <form id="changePasswordForm" method="POST" action="">
+        <form id="changePasswordForm" method="POST" action="{{ url('/admin/users/0/password') }}">
             @csrf @method('PUT')
             <input type="hidden" name="user_id" id="change_password_user_id">
             <div class="p-6 border-b border-gray-200 bg-gray-50">

@@ -1,5 +1,5 @@
 /* ============================================================
-   0.  Clean-up (idempotent – harmless if objects don’t exist)
+   0. Clean-up (idempotent – harmless if objects don’t exist)
    ============================================================ */
 DROP TABLE IF EXISTS
     memos,
@@ -49,19 +49,19 @@ DROP TYPE IF EXISTS
 CASCADE;
 
 /* ============================================================
-   1.  ENUMERATED TYPES
+   1. ENUMERATED TYPES
    ============================================================ */
-CREATE TYPE user_role      AS ENUM ('admin','employee','inventory','purchasing','supervisor');
-CREATE TYPE user_status    AS ENUM ('active','inactive');
-CREATE TYPE req_status     AS ENUM ('pending','approved','rejected','completed');
-CREATE TYPE req_priority   AS ENUM ('low','medium','high');
+CREATE TYPE user_role       AS ENUM ('admin','employee','inventory','purchasing','supervisor');
+CREATE TYPE user_status     AS ENUM ('active','inactive');
+CREATE TYPE req_status      AS ENUM ('pending','approved','rejected','completed');
+CREATE TYPE req_priority    AS ENUM ('low','medium','high');
 CREATE TYPE req_item_status AS ENUM ('pending','partially_fulfilled','fulfilled');
-CREATE TYPE po_status      AS ENUM ('draft','ordered','delivered','cancelled');
-CREATE TYPE ar_status      AS ENUM ('issued','received','cancelled');
-CREATE TYPE trans_type     AS ENUM ('in','out','adjustment');
+CREATE TYPE po_status       AS ENUM ('draft','ordered','delivered','cancelled');
+CREATE TYPE ar_status       AS ENUM ('issued','received','cancelled');
+CREATE TYPE trans_type      AS ENUM ('in','out','adjustment');
 
 /* ============================================================
-   2.  TABLES
+   2. TABLES
    ============================================================ */
 CREATE TABLE sessions (
     id            VARCHAR(255) PRIMARY KEY,
@@ -71,12 +71,12 @@ CREATE TABLE sessions (
     payload       TEXT         NOT NULL,
     last_activity INTEGER      NOT NULL
 );
-CREATE INDEX idx_sessions_user_id      ON sessions(user_id);
+CREATE INDEX idx_sessions_user_id       ON sessions(user_id);
 CREATE INDEX idx_sessions_last_activity ON sessions(last_activity);
 
 CREATE TABLE categories (
-    cat_id   SERIAL PRIMARY KEY,
-    cat_name VARCHAR(255) NOT NULL,
+    cat_id    SERIAL PRIMARY KEY,
+    cat_name  VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -108,38 +108,38 @@ CREATE TABLE users (
 );
 
 CREATE TABLE items (
-    item_id          SERIAL PRIMARY KEY,
-    item_code        VARCHAR(255) UNIQUE NOT NULL,
-    item_name        VARCHAR(255) NOT NULL,
-    item_description TEXT NULL,
-    item_unit        VARCHAR(255) NOT NULL,
-    cat_id           INTEGER REFERENCES categories(cat_id),
-    item_stock       DECIMAL(12,3) DEFAULT 0,
-    item_expire_date DATE NULL,
-    last_updated     TIMESTAMP DEFAULT NOW(),
-    reorder_level    DECIMAL(12,3) DEFAULT 0,
-    min_stock_level  DECIMAL(12,3) DEFAULT 0,
-    max_stock_level  DECIMAL(12,3) NULL,
-    is_active        BOOLEAN DEFAULT TRUE,
-    is_custom        BOOLEAN DEFAULT FALSE,
+    item_id           SERIAL PRIMARY KEY,
+    item_code         VARCHAR(255) UNIQUE NOT NULL,
+    item_name         VARCHAR(255) NOT NULL,
+    item_description  TEXT NULL,
+    item_unit         VARCHAR(255) NOT NULL,
+    cat_id            INTEGER REFERENCES categories(cat_id),
+    item_stock        DECIMAL(12,3) DEFAULT 0,
+    item_expire_date  DATE NULL,
+    last_updated      TIMESTAMP DEFAULT NOW(),
+    reorder_level     DECIMAL(12,3) DEFAULT 0,
+    min_stock_level   DECIMAL(12,3) DEFAULT 0,
+    max_stock_level   DECIMAL(12,3) NULL,
+    is_active         BOOLEAN DEFAULT TRUE,
+    is_custom         BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     deleted_at TIMESTAMP NULL
 );
-CREATE INDEX idx_items_stock_levels ON items(item_stock,reorder_level);
+CREATE INDEX idx_items_stock_levels ON items(item_stock, reorder_level);
 CREATE INDEX idx_items_expire       ON items(item_expire_date);
 CREATE INDEX idx_items_active       ON items(is_active);
 CREATE INDEX idx_items_custom       ON items(is_custom);
 
 CREATE TABLE item_requests (
-    item_req_id      SERIAL PRIMARY KEY,
-    item_req_name    VARCHAR(255) NOT NULL,
-    item_req_unit    VARCHAR(255) NOT NULL,
-    item_req_quantity INTEGER NOT NULL,
+    item_req_id        SERIAL PRIMARY KEY,
+    item_req_name      VARCHAR(255) NOT NULL,
+    item_req_unit      VARCHAR(255) NOT NULL,
+    item_req_quantity  INTEGER NOT NULL,
     item_req_description TEXT NULL,
-    item_req_status  VARCHAR(255) DEFAULT 'pending',
-    requested_by     INTEGER REFERENCES users(user_id),
-    approved_by      INTEGER REFERENCES users(user_id),
+    item_req_status    VARCHAR(255) DEFAULT 'pending',
+    requested_by       INTEGER REFERENCES users(user_id),
+    approved_by        INTEGER REFERENCES users(user_id),
     item_req_reject_reason TEXT NULL,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -169,29 +169,29 @@ CREATE INDEX idx_req_date      ON requisitions(req_date);
 CREATE INDEX idx_req_requested ON requisitions(requested_by);
 
 CREATE TABLE requisition_items (
-    req_item_id      SERIAL PRIMARY KEY,
+    req_item_id       SERIAL PRIMARY KEY,
     req_item_quantity INTEGER NOT NULL,
-    req_item_status  req_item_status DEFAULT 'pending',
-    item_unit        VARCHAR(255) NOT NULL,
-    req_id           INTEGER REFERENCES requisitions(req_id) ON DELETE CASCADE,
-    item_id          INTEGER REFERENCES items(item_id),
+    req_item_status   req_item_status DEFAULT 'pending',
+    item_unit         VARCHAR(255) NOT NULL,
+    req_id            INTEGER REFERENCES requisitions(req_id) ON DELETE CASCADE,
+    item_id           INTEGER REFERENCES items(item_id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
-CREATE INDEX idx_ri_req   ON requisition_items(req_id);
-CREATE INDEX idx_ri_item  ON requisition_items(item_id);
+CREATE INDEX idx_ri_req    ON requisition_items(req_id);
+CREATE INDEX idx_ri_item   ON requisition_items(item_id);
 CREATE INDEX idx_ri_status ON requisition_items(req_item_status);
 
 CREATE TABLE purchase_orders (
-    po_id                   SERIAL PRIMARY KEY,
-    po_ref                  VARCHAR(255) UNIQUE NOT NULL,
-    po_status               po_status DEFAULT 'draft',
-    order_date              DATE NOT NULL,
-    delivery_address        TEXT NOT NULL,
-    expected_delivery_date  DATE NULL,
-    total_amount            DECIMAL(10,2) DEFAULT 0,
-    sup_id                  INTEGER REFERENCES suppliers(sup_id),
-    req_id                  INTEGER REFERENCES requisitions(req_id),
+    po_id                  SERIAL PRIMARY KEY,
+    po_ref                 VARCHAR(255) UNIQUE NOT NULL,
+    po_status              po_status DEFAULT 'draft',
+    order_date             DATE NOT NULL,
+    delivery_address       TEXT NOT NULL,
+    expected_delivery_date DATE NULL,
+    total_amount           DECIMAL(10,2) DEFAULT 0,
+    sup_id                 INTEGER REFERENCES suppliers(sup_id),
+    req_id                 INTEGER REFERENCES requisitions(req_id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -208,15 +208,15 @@ CREATE TABLE purchase_items (
 );
 
 CREATE TABLE inventory_transactions (
-    trans_id     SERIAL PRIMARY KEY,
-    trans_ref    VARCHAR(255) UNIQUE NOT NULL,
-    trans_type   trans_type NOT NULL,
+    trans_id       SERIAL PRIMARY KEY,
+    trans_ref      VARCHAR(255) UNIQUE NOT NULL,
+    trans_type     trans_type NOT NULL,
     trans_quantity INTEGER NOT NULL,
-    trans_date   DATE NOT NULL,
-    trans_remarks TEXT NULL,
-    po_id        INTEGER REFERENCES purchase_orders(po_id),
-    trans_by     INTEGER REFERENCES users(user_id),
-    item_id      INTEGER REFERENCES items(item_id),
+    trans_date     DATE NOT NULL,
+    trans_remarks  TEXT NULL,
+    po_id          INTEGER REFERENCES purchase_orders(po_id),
+    trans_by       INTEGER REFERENCES users(user_id),
+    item_id        INTEGER REFERENCES items(item_id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -235,12 +235,12 @@ CREATE TABLE acknowledge_receipts (
 );
 
 CREATE TABLE memos (
-    memo_id      SERIAL PRIMARY KEY,
-    memo_ref     VARCHAR(255) UNIQUE NOT NULL,
-    memo_remarks TEXT NULL,
+    memo_id       SERIAL PRIMARY KEY,
+    memo_ref      VARCHAR(255) UNIQUE NOT NULL,
+    memo_remarks  TEXT NULL,
     received_date DATE NOT NULL,
-    received_by  INTEGER REFERENCES users(user_id),
-    po_ref       VARCHAR(255) REFERENCES purchase_orders(po_ref),
+    received_by   INTEGER REFERENCES users(user_id),
+    po_ref        VARCHAR(255) REFERENCES purchase_orders(po_ref),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -258,7 +258,7 @@ CREATE TABLE notifications (
 );
 
 /* ============================================================
-   3.  USER CRUD FUNCTIONS
+   3. USER CRUD FUNCTIONS
    ============================================================ */
 CREATE OR REPLACE FUNCTION create_user(
     p_username VARCHAR,
@@ -270,8 +270,7 @@ CREATE OR REPLACE FUNCTION create_user(
     p_contact  VARCHAR,
     p_status   VARCHAR DEFAULT 'active'
 ) RETURNS JSON AS $$
-DECLARE
-    new_user_id INTEGER;
+DECLARE new_user_id INTEGER;
 BEGIN
     IF EXISTS (SELECT 1 FROM users WHERE username = p_username) THEN
         RETURN json_build_object('success',false,'message','Username already exists');
@@ -285,8 +284,8 @@ BEGIN
     RETURNING user_id INTO new_user_id;
 
     RETURN json_build_object('success',true,'message','User created successfully','user_id',new_user_id);
-EXCEPTION
-    WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -316,8 +315,8 @@ BEGIN
         RETURN json_build_object('success',false,'message','User not found');
     END IF;
     RETURN json_build_object('success',true,'message','User updated successfully');
-EXCEPTION
-    WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -328,8 +327,8 @@ BEGIN
         RETURN json_build_object('success',false,'message','User not found');
     END IF;
     RETURN json_build_object('success',true,'message','User deleted successfully');
-EXCEPTION
-    WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -341,8 +340,8 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT u.user_id, u.username, u.role, u.name, u."position",
-           u.email, u.contact, u.status, u.created_at, u.updated_at
+    SELECT u.user_id, u.username, u.role::VARCHAR, u.name, u."position",
+           u.email, u.contact, u.status::VARCHAR, u.created_at, u.updated_at
     FROM users u WHERE u.user_id=p_user_id;
 END;
 $$ LANGUAGE plpgsql;
@@ -355,28 +354,29 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT u.user_id, u.username, u.role, u.name, u."position",
-           u.email, u.contact, u.status, u.created_at, u.updated_at
+    SELECT u.user_id, u.username, u.role::VARCHAR, u.name, u."position",
+           u.email, u.contact, u.status::VARCHAR, u.created_at, u.updated_at
     FROM users u ORDER BY u.created_at DESC;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION change_user_password(p_user_id INTEGER, p_new_password VARCHAR) RETURNS JSON AS $$
+CREATE OR REPLACE FUNCTION change_user_password(p_user_id INTEGER, p_new_password VARCHAR)
+RETURNS JSON AS $$
 BEGIN
     UPDATE users SET password=p_new_password, updated_at=NOW() WHERE user_id=p_user_id;
     IF NOT FOUND THEN
         RETURN json_build_object('success',false,'message','User not found');
     END IF;
     RETURN json_build_object('success',true,'message','Password updated successfully');
-EXCEPTION
-    WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION toggle_user_status(p_user_id INTEGER) RETURNS JSON AS $$
 DECLARE
-    current_status VARCHAR;
-    new_status     VARCHAR;
+    current_status user_status;
+    new_status     user_status;
 BEGIN
     SELECT status INTO current_status FROM users WHERE user_id=p_user_id;
     IF current_status IS NULL THEN
@@ -385,14 +385,14 @@ BEGIN
 
     new_status := CASE WHEN current_status='active' THEN 'inactive' ELSE 'active' END;
     UPDATE users SET status=new_status, updated_at=NOW() WHERE user_id=p_user_id;
-    RETURN json_build_object('success',true,'message','User status changed to '||new_status,'new_status',new_status);
-EXCEPTION
-    WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+    RETURN json_build_object('success',true,'message','User status changed to '||new_status::VARCHAR,'new_status',new_status::VARCHAR);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
 /* ============================================================
-   4.  ITEM CRUD / STOCK FUNCTIONS
+   4. ITEM CRUD / STOCK FUNCTIONS
    ============================================================ */
 CREATE OR REPLACE FUNCTION create_item(
     p_item_code         VARCHAR,
@@ -407,8 +407,7 @@ CREATE OR REPLACE FUNCTION create_item(
     p_max_stock_level   DECIMAL DEFAULT NULL,
     p_is_custom         BOOLEAN DEFAULT FALSE
 ) RETURNS JSON AS $$
-DECLARE
-    new_item_id INTEGER;
+DECLARE new_item_id INTEGER;
 BEGIN
     IF EXISTS (SELECT 1 FROM items WHERE item_code=p_item_code) THEN
         RETURN json_build_object('success',false,'message','Item code already exists');
@@ -428,7 +427,8 @@ BEGIN
     ) RETURNING item_id INTO new_item_id;
 
     RETURN json_build_object('success',true,'message','Item created successfully','item_id',new_item_id);
-EXCEPTION WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -467,7 +467,8 @@ BEGIN
         RETURN json_build_object('success',false,'message','Item not found');
     END IF;
     RETURN json_build_object('success',true,'message','Item updated successfully');
-EXCEPTION WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -482,7 +483,8 @@ BEGIN
 
     DELETE FROM items WHERE item_id=p_item_id;
     RETURN json_build_object('success',true,'message','Item deleted successfully');
-EXCEPTION WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -543,7 +545,8 @@ BEGIN
 
     UPDATE items SET item_stock=new_stock,last_updated=NOW(),updated_at=NOW() WHERE item_id=p_item_id;
     RETURN json_build_object('success',true,'message','Stock updated successfully','old_stock',current_stock,'new_stock',new_stock);
-EXCEPTION WHEN OTHERS THEN RETURN json_build_object('success',false,'message',SQLERRM);
+EXCEPTION WHEN OTHERS THEN
+    RETURN json_build_object('success',false,'message',SQLERRM);
 END;
 $$ LANGUAGE plpgsql;
 
@@ -556,7 +559,7 @@ RETURNS TABLE (
     current_stock   DECIMAL,
     reorder_level   DECIMAL,
     min_stock_level DECIMAL,
-    stock_status    VARCHAR          -- <- still VARCHAR
+    stock_status    VARCHAR
 ) AS $$
 BEGIN
     RETURN QUERY
@@ -572,7 +575,7 @@ BEGIN
             WHEN i.item_stock <= i.min_stock_level THEN 'CRITICAL'
             WHEN i.item_stock <= i.reorder_level THEN 'LOW'
             ELSE 'NORMAL'
-        END::VARCHAR          -- <- cast added here
+        END::VARCHAR
     FROM items i
     WHERE i.item_stock <= i.reorder_level
     ORDER BY i.item_stock ASC;
@@ -640,9 +643,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* ============================================================
-   5.  DONE – everything in one shot
+   5. DONE – everything in one shot
    ============================================================ */
 SELECT 'All tables, types and functions created successfully!' AS result;
-
-
-

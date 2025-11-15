@@ -104,7 +104,7 @@
                                             <i class="fas fa-eye text-sm"></i>
                                         </button>
                                         @if ($req->item_req_status === 'pending')
-                                            <a href="{{ route('item-requests.edit', $req->item_req_id) }}"
+                                            <a href="{{ route('staff.item-requests.edit', $req->item_req_id) }}"
                                                 class="p-2 text-gray-600 hover:bg-gray-50 rounded transition"
                                                 title="Edit">
                                                 <i class="fas fa-edit text-sm"></i>
@@ -226,7 +226,7 @@
     function openViewModal(id){
         currentId=id;
         const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        fetch(`/item-requests/${id}`, {
+        fetch(`/staff/item-requests/${id}`, {
             method: 'GET',
             headers: {
                 'X-CSRF-TOKEN': csrfToken,
@@ -258,6 +258,7 @@
                         <div><strong>Requested At:</strong> ${new Date(data.created_at).toLocaleDateString()}</div>
                         ${data.approver ? `<div><strong>Approved By:</strong> ${data.approver.name}</div>` : ''}
                         ${data.updated_at !== data.created_at ? `<div><strong>Updated At:</strong> ${new Date(data.updated_at).toLocaleDateString()}</div>` : ''}
+                        ${data.item_req_reject_reason ? `<div class="col-span-2"><strong>Reject Reason:</strong> ${data.item_req_reject_reason}</div>` : ''}
                     </div>
                 `;
                 document.getElementById('viewItemRequestModal').classList.remove('hidden');

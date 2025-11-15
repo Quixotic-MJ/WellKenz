@@ -1,5 +1,15 @@
 <!-- HEADER COMPONENT START -->
 <header class="bg-white shadow-sm border-b-2 border-border-soft component-body">
+    @php
+        $__user = Auth::user();
+        $unreadNotificationsCount = isset($unreadNotificationsCount)
+            ? $unreadNotificationsCount
+            : ($__user ? $__user->getUnreadNotificationsCount() : 0);
+        $recentNotifications = isset($recentNotifications)
+            ? $recentNotifications
+            : ($__user ? $__user->getRecentNotifications(5) : collect());
+        unset($__user);
+    @endphp
     <div class="flex items-center justify-between px-4 sm:px-6 py-3">
         <!-- Left Section -->
         <div class="flex items-center space-x-3">
@@ -67,7 +77,7 @@
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-dark">{{ $notification->notif_title }}</p>
                                             <p class="text-xs text-text-muted mt-1">{{ $notification->notif_content }}</p>
-                                            <p class="text-xs text-text-muted mt-2">{{ $notification->created_at->diffForHumans() }}</p>
+                                            <p class="text-xs text-text-muted mt-2">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</p>
                                         </div>
                                         @if(!$notification->is_read)
                                             <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1"></div>
@@ -83,7 +93,7 @@
                         @endif
                     </div>
                     <div class="p-3 border-t-2 border-border-soft rounded-b-lg">
-                        <a href="{{ route('notifications.index') }}" class="block text-center text-xs font-bold text-chocolate hover:text-chocolate-dark transition uppercase tracking-wider">
+                        <a href="{{ route('admin.notifications') }}" class="block text-center text-xs font-bold text-chocolate hover:text-chocolate-dark transition uppercase tracking-wider">
                             View All Notifications
                         </a>
                     </div>
@@ -228,7 +238,7 @@
     // Mark notification as read
     async function markNotificationAsRead(notificationId) {
         try {
-            const response = await fetch(`/notifications/${notificationId}/read`, {
+            const response = await fetch(`/admin/notifications/${notificationId}/mark-read`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -257,7 +267,7 @@
     // Mark all notifications as read
     async function markAllAsRead() {
         try {
-            const response = await fetch('/notifications/mark-all-read', {
+            const response = await fetch('/admin/notifications/mark-all-read', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -278,7 +288,8 @@
                 }
                 
                 // Update the count in the header
-                getEl('notificationsDropdown').querySelector('h3').textContent = 'Notifications (0)';
+                const header = getEl('notificationsDropdown')?.querySelector('h3');
+                if (header) header.textContent = 'Notifications (0)';
             }
         } catch (error) {
             console.error('Error marking all notifications as read:', error);
@@ -342,13 +353,14 @@
             }
         }
 
-        // Poll for new notifications every 30 seconds
+        // Poll for new notifications every 30 seconds (only for admin users)
+        @if(Auth::user() && Auth::user()->role === 'admin')
         setInterval(async () => {
             try {
-                const response = await fetch('/notifications/unread-count');
+                const response = await fetch('/admin/notifications/unread-count');
                 const data = await response.json();
                 const currentCount = parseInt(getEl('notificationCount')?.textContent || 0);
-                
+
                 if (data.count !== currentCount) {
                     // Refresh the page to get updated notifications
                     window.location.reload();
@@ -357,5 +369,6 @@
                 console.error('Error checking for new notifications:', error);
             }
         }, 30000);
+        @endif
     });
 </script>

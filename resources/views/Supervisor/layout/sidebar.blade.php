@@ -26,8 +26,8 @@
             <ul class="space-y-1 px-3">
                 <!-- Dashboard -->
                 <li>
-                    <a href="{{ route('Supervisor_Dashboard') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Dashboard') ? 'active-menu' : '' }}">
+                    <a href="{{ route('supervisor.dashboard') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.dashboard') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
@@ -36,8 +36,8 @@
 
                 <!-- Requisition -->
                 <li>
-                    <a href="{{ route('Supervisor_Requisition') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Requisition') ? 'active-menu' : '' }}">
+                    <a href="{{ route('supervisor.requisitions.index') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.requisitions.*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span
@@ -47,9 +47,9 @@
 
                 <!-- Purchasing -->
                 <li>
-                    <a href="{{ route('Supervisor_Item_Request') }}"
+                    <a href="{{ route('supervisor.item-requests.index') }}"
                         id="menu-item-request"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Item_Request') ? 'active-menu' : '' }}">
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.item-requests.*') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-boxes w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Approve Item Request</span>
@@ -58,8 +58,8 @@
 
                 <!-- Inventory -->
                 <li>
-                    <a href="{{ route('Supervisor_Purchase_Order') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Purchase_Order') ? 'active-menu' : '' }}">
+                    <a href="{{ route('supervisor.purchase-orders') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.purchase-orders') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-file-invoice-dollar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase Order Overview</span>
@@ -68,8 +68,8 @@
 
                 <!-- Reports & Analytics -->
                 <li>
-                    <a href="{{ route('Supervisor_Inventory_Overview') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Inventory_Overview') ? 'active-menu' : '' }}">
+                    <a href="{{ route('supervisor.inventory-overview') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.inventory-overview') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory Overview</span>
@@ -78,8 +78,8 @@
 
                 <!-- User Management -->
                 <li>
-                    <a href="{{ route('Supervisor_Report') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Report') ? 'active-menu' : '' }}">
+                    <a href="{{ route('supervisor.reports') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.reports') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-chart-pie w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports</span>
@@ -88,8 +88,8 @@
 
                 <!-- Employee Management -->
                 <li>
-                    <a href="{{ route('Supervisor_Notification') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('Supervisor_Notification') ? 'active-menu' : '' }}">
+                    <a href="{{ route('supervisor.notifications') }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.notifications') ? 'active-menu' : '' }}">
                         <i
                             class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>

@@ -17,7 +17,7 @@
                 <h1 class="text-2xl font-semibold text-gray-900">Edit Requisition</h1>
                 <p class="text-sm text-gray-500 mt-1">Modify your pending requisition</p>
             </div>
-            <a href="{{ route('Staff_Requisition_Record') }}"
+            <a href="{{ route('staff.requisitions.index') }}"
                 class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-sm font-medium rounded">
                 <i class="fas fa-arrow-left mr-2"></i>Back to List
             </a>
@@ -25,7 +25,7 @@
     </div>
 
     <!-- form -->
-    <form method="POST" action="{{ route('requisitions.update', $requisition->req_id) }}" id="editReqForm">
+    <form method="POST" action="{{ route('staff.requisitions.update', $requisition->req_id) }}" id="editReqForm">
         @csrf
         @method('PUT')
 
@@ -92,7 +92,7 @@
             </div>
 
             <div class="mt-6 flex justify-end space-x-3">
-                <a href="{{ route('Staff_Requisition_Record') }}" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">Cancel</a>
+                <a href="{{ route('staff.requisitions.index') }}" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">Cancel</a>
                 <button type="submit" class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded">Update Requisition</button>
             </div>
         </div>

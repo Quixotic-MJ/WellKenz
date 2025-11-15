@@ -193,6 +193,12 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+/* light helpers */
+function showMessage(msg, type = 'success'){
+    const div = type === 'success' ? document.getElementById('successMessage') : document.getElementById('errorMessage');
+    div.textContent = msg; div.classList.remove('hidden');
+    setTimeout(()=> div.classList.add('hidden'), 3000);
+}
 let reportChart = null;
 function renderChart(cfg){
     if(!cfg) return;
