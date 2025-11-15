@@ -136,6 +136,8 @@ Route::middleware(['auth'])->group(function () {
         // Purchase: create PO from multiple requisitions (JSON), view, print
         Route::post('/purchase/from-requisitions', [PurchasingController::class, 'purchaseCreateFromReqs'])->name('purchase.from-reqs');
         Route::get('/purchase/view/{id}', [PurchasingController::class, 'purchaseView'])->name('purchase.view');
+        Route::post('/purchase/update/{id}', [PurchasingController::class, 'purchaseUpdate'])->name('purchase.update');
+        Route::delete('/purchase/{id}', [PurchasingController::class, 'purchaseDestroy'])->name('purchase.destroy');
         Route::get('/purchase/print/{id}', [PurchasingController::class, 'purchasePrint'])->name('purchase.print');
         // Requisition details (JSON) for purchasing modals
         Route::get('/requisitions/{id}', [PurchasingController::class, 'requisitionShow'])->name('requisitions.show');

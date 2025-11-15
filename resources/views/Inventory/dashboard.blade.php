@@ -121,8 +121,8 @@
         @php
             $pending = DB::table('purchase_orders')
                        ->where('po_status','ordered')
-                       ->select('po_ref','supplier_id','delivery_date','po_total')
-                       ->orderBy('delivery_date')
+                       ->select('po_ref','sup_id as supplier_id','expected_delivery_date as delivery_date','total_amount as po_total')
+                       ->orderBy('expected_delivery_date')
                        ->limit(5)
                        ->get();
         @endphp
@@ -148,9 +148,9 @@
             @php
                 $overdue = DB::table('purchase_orders')
                            ->where('po_status','ordered')
-                           ->whereDate('delivery_date','<',today())
-                           ->select('po_ref','supplier_id','delivery_date','po_total')
-                           ->orderBy('delivery_date')
+                           ->whereDate('expected_delivery_date','<',today())
+                           ->select('po_ref','sup_id as supplier_id','expected_delivery_date as delivery_date','total_amount as po_total')
+                           ->orderBy('expected_delivery_date')
                            ->limit(5)
                            ->get();
             @endphp

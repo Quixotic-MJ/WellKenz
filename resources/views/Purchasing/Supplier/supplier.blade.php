@@ -38,7 +38,7 @@
             <p class="text-xs text-gray-500 uppercase tracking-wider">Used in POs</p>
             <p class="text-2xl font-semibold text-gray-900 mt-2">
                 {{ DB::table('suppliers')->whereIn('sup_id', function($q){
-                    $q->select('supplier_id')->from('purchase_orders');
+                    $q->select('sup_id')->from('purchase_orders');
                 })->count() }}
             </p>
         </div>

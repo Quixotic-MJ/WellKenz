@@ -24,6 +24,105 @@
             </div>
         </div>
 
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Draft Purchase Orders</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">PO Ref</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Expected</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @forelse(($draftPOsList ?? []) as $po)
+                                <tr class="hover:bg-gray-50 transition">
+                                    <td class="px-6 py-3 font-medium text-gray-900">PO-{{ $po->po_ref }}</td>
+                                    <td class="px-6 py-3 text-gray-700">{{ $po->sup_name ?? '-' }}</td>
+                                    <td class="px-6 py-3 text-right text-gray-700">₱{{ number_format($po->total_amount ?? 0, 2) }}</td>
+                                    <td class="px-6 py-3 text-gray-600">{{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('M d, Y') : '-' }}</td>
+                                    <td class="px-6 py-3 text-gray-600">{{ \Carbon\Carbon::parse($po->created_at)->format('M d, Y') }}</td>
+                                    <td class="px-6 py-3">
+                                        <div class="flex items-center space-x-2">
+                                            <a href="{{ route('purchasing.purchase.view', $po->po_id) }}" class="p-2 text-amber-600 hover:bg-amber-50 rounded" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{{ route('purchasing.purchase.print', $po->po_id) }}" target="_blank" class="p-2 text-red-600 hover:bg-red-50 rounded" title="Print">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                            <form action="{{ route('purchasing.purchase.destroy', $po->po_id) }}" method="POST" onsubmit="return confirm('Delete draft PO-{{ $po->po_ref }}? This cannot be undone.');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="p-2 text-rose-600 hover:bg-rose-50 rounded" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">No draft POs.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-lg">
+                <div class="px-6 py-4 border-b bg-gray-50 flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Recently Created POs</h3>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">PO Ref</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Supplier</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Expected</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @forelse(($orderedPOsList ?? []) as $po)
+                                <tr class="hover:bg-gray-50 transition">
+                                    <td class="px-6 py-3 font-medium text-gray-900">PO-{{ $po->po_ref }}</td>
+                                    <td class="px-6 py-3 text-gray-700">{{ $po->sup_name ?? '-' }}</td>
+                                    <td class="px-6 py-3 text-right text-gray-700">₱{{ number_format($po->total_amount ?? 0, 2) }}</td>
+                                    <td class="px-6 py-3 text-gray-600">{{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('M d, Y') : '-' }}</td>
+                                    <td class="px-6 py-3 text-gray-600">{{ \Carbon\Carbon::parse($po->created_at)->format('M d, Y') }}</td>
+                                    <td class="px-6 py-3">
+                                        <div class="flex items-center space-x-2">
+                                            <a href="{{ route('purchasing.purchase.view', $po->po_id) }}" class="p-2 text-blue-600 hover:bg-blue-50 rounded" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ route('purchasing.purchase.print', $po->po_id) }}" target="_blank" class="p-2 text-red-600 hover:bg-red-50 rounded" title="Print">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">No created POs.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white border border-gray-200 rounded-lg p-5">
                 <p class="text-xs text-gray-500 uppercase tracking-wider">Total Approved</p>
@@ -457,7 +556,7 @@
 
                     // Updated footer button to call the API function
                     document.getElementById('viewReqModalFooter').innerHTML = `
-                        <button onclick="createAndShowPO([${data.req_id}]);" type="button" class="px-4 py-2 bg-green-600 text-white hover:bg-green-700 transition text-sm font-medium rounded">
+                        <button onclick="redirectCreatePO({{ $req->req_id }});" type="button" class="px-4 py-2 bg-green-600 text-white hover:bg-green-700 transition text-sm font-medium rounded">
                             <i class="fas fa-plus mr-2"></i>Create Purchase Order
                         </button>
                         <button onclick="closeModals()" type="button" class="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm font-medium rounded ml-2">

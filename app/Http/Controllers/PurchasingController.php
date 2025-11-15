@@ -161,9 +161,23 @@ class PurchasingController extends Controller
                 return $r;
             });
 
+        // recent Draft and Ordered POs lists for quick access
+        $draftPOsList = DB::table('purchase_orders as po')
+            ->leftJoin('suppliers as s','s.sup_id','=','po.sup_id')
+            ->select('po.po_id','po.po_ref','po.total_amount','po.expected_delivery_date','po.created_at','po.po_status','s.sup_name')
+            ->where('po.po_status','draft')
+            ->orderByDesc('po.created_at')
+            ->limit(10)->get();
+        $orderedPOsList = DB::table('purchase_orders as po')
+            ->leftJoin('suppliers as s','s.sup_id','=','po.sup_id')
+            ->select('po.po_id','po.po_ref','po.total_amount','po.expected_delivery_date','po.created_at','po.po_status','s.sup_name')
+            ->where('po.po_status','ordered')
+            ->orderByDesc('po.created_at')
+            ->limit(10)->get();
+
         return view('Purchasing.Purchase.create_purchase_order', compact(
             'approvedReqsCount','pendingPOCount','convertedTodayCount','approvedThisWeekCount',
-            'overdue','lowStockItems','approvedReqs'
+            'overdue','lowStockItems','approvedReqs','draftPOsList','orderedPOsList'
         ));
     }
 
@@ -349,6 +363,7 @@ class PurchasingController extends Controller
             'expected_delivery_date' => null,
             'delivery_address' => 'To be determined',
             'total_amount' => 0,
+            'notes' => $requesterNames->isNotEmpty() ? ('Requesters: '.$requesterNames->implode(', ')) : null,
             'created_at' => now(),
             'updated_at' => now(),
         ], 'po_id');
@@ -358,7 +373,7 @@ class PurchasingController extends Controller
                 'po_id' => $poId,
                 'item_id' => $it->item_id,
                 'pi_quantity' => (float)$it->total_qty,
-                'pi_unit_price' => null,
+                'pi_unit_price' => 0.00,
                 'pi_subtotal' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -373,24 +388,103 @@ class PurchasingController extends Controller
     {
         $po = DB::table('purchase_orders as po')
             ->leftJoin('suppliers as s','s.sup_id','=','po.sup_id')
-            ->select('po.*','s.sup_name', 's.address as sup_address','s.contact_person')
+            ->select('po.*','s.sup_name', 's.sup_address as sup_address','s.contact_person')
             ->where('po.po_id',$poId)->first();
         if(!$po) abort(404);
         $items = DB::table('purchase_items as pi')
             ->leftJoin('items as i','i.item_id','=','pi.item_id')
             ->where('pi.po_id',$poId)
-            ->select('i.item_name','i.item_unit as unit','pi.pi_quantity as quantity','pi.pi_unit_price as unit_price')
+            ->select('i.item_name','i.item_unit as unit','pi.item_id','pi.pi_quantity as quantity','pi.pi_unit_price as unit_price')
             ->get();
+        $suppliers = DB::table('suppliers')->select('sup_id','sup_name')->orderBy('sup_name')->get();
         $purchaseOrder = (object) [
             'po_id' => $po->po_id,
             'po_ref' => $po->po_ref,
             'po_status' => $po->po_status,
             'created_at' => $po->created_at,
             'expected_delivery_date' => $po->expected_delivery_date,
+            'delivery_address' => $po->delivery_address,
             'supplier' => (object)['name'=>$po->sup_name],
             'items' => $items,
         ];
-        return view('Purchasing.Purchase.create-po', compact('purchaseOrder'));
+        return view('Purchasing.Purchase.create-po', compact('purchaseOrder','suppliers'));
+    }
+
+    // Update a draft PO (supplier, expected date, delivery address, unit prices). Optionally finalize when action=submit
+    public function purchaseUpdate(Request $request, $poId)
+    {
+        $po = DB::table('purchase_orders')->where('po_id',$poId)->first();
+        if(!$po) abort(404);
+        // Allow updates only if draft
+        $isSubmit = $request->input('action') === 'submit';
+
+        $data = $request->validate([
+            'sup_id' => 'required|integer',
+            'expected_delivery_date' => 'nullable|date',
+            'delivery_address' => 'required|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|integer',
+            'items.*.unit_price' => 'required|numeric|min:0',
+        ]);
+
+        // Update PO header
+        DB::table('purchase_orders')->where('po_id',$poId)->update([
+            'sup_id' => $data['sup_id'],
+            'expected_delivery_date' => $data['expected_delivery_date'] ?? null,
+            'delivery_address' => $data['delivery_address'],
+            'po_status' => $isSubmit ? 'ordered' : 'draft',
+            'order_date' => now()->toDateString(),
+            'updated_at' => now(),
+        ]);
+
+        // Update line prices and recompute totals
+        $total = 0;
+        foreach ($data['items'] as $row) {
+            $line = ((float)($row['unit_price'])) * (float) DB::table('purchase_items')->where('po_id',$poId)->where('item_id',$row['item_id'])->value('pi_quantity');
+            $total += $line;
+            DB::table('purchase_items')
+                ->where('po_id',$poId)
+                ->where('item_id',$row['item_id'])
+                ->update([
+                    'pi_unit_price' => (float)$row['unit_price'],
+                    'pi_subtotal' => $line,
+                    'updated_at' => now(),
+                ]);
+        }
+        DB::table('purchase_orders')->where('po_id',$poId)->update(['total_amount'=>$total, 'updated_at'=>now()]);
+
+        // Notification on finalize
+        if ($isSubmit) {
+            $poRef = DB::table('purchase_orders')->where('po_id',$poId)->value('po_ref');
+            DB::table('notifications')->insert([
+                [
+                    'notif_title' => 'Purchase Order Finalized',
+                    'notif_content' => 'PO '.$poRef.' has been submitted to supplier.',
+                    'related_type' => 'purchase_order',
+                    'related_id' => $poId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]
+            ]);
+        }
+
+        if ($isSubmit) {
+            return redirect()->route('purchasing.purchase.view', $poId)->with('status','PO submitted');
+        }
+        return redirect()->route('purchasing.approved.index')->with('status','Draft saved');
+    }
+
+    // Delete a draft PO (and its items). Disallow deleting non-draft.
+    public function purchaseDestroy($poId)
+    {
+        $po = DB::table('purchase_orders')->where('po_id',$poId)->first();
+        if(!$po) abort(404);
+        if ($po->po_status !== 'draft') {
+            return back()->with('error','Only draft POs can be deleted.');
+        }
+        DB::table('purchase_items')->where('po_id',$poId)->delete();
+        DB::table('purchase_orders')->where('po_id',$poId)->delete();
+        return back()->with('status','Draft PO deleted');
     }
 
     // Printable PO page
@@ -398,7 +492,7 @@ class PurchasingController extends Controller
     {
         $po = DB::table('purchase_orders as po')
             ->leftJoin('suppliers as s','s.sup_id','=','po.sup_id')
-            ->select('po.*','s.sup_name','s.address as sup_address','s.contact_person')
+            ->select('po.*','s.sup_name','s.sup_address as sup_address','s.contact_person')
             ->where('po.po_id',$poId)->first();
         if(!$po) abort(404);
         $items = DB::table('purchase_items as pi')
