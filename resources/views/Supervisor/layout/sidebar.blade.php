@@ -28,70 +28,84 @@
                 <li>
                     <a href="{{ route('supervisor.dashboard') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.dashboard') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
                     </a>
+                </li>
+
+                <!-- Approval Management Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Approval Management</div>
                 </li>
 
                 <!-- Requisition -->
                 <li>
                     <a href="{{ route('supervisor.requisitions.index') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.requisitions.*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Approve Requisitions</span>
+                        <i class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Approve Requisitions</span>
                     </a>
                 </li>
 
-                <!-- Purchasing -->
+                <!-- Item Request -->
                 <li>
                     <a href="{{ route('supervisor.item-requests.index') }}"
-                        id="menu-item-request"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.item-requests.*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-boxes w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Approve Item Request</span>
+                        <i class="fas fa-boxes w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Approve Item Requests</span>
                     </a>
                 </li>
 
-                <!-- Inventory -->
+                <!-- Purchase Order Management Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Purchase Order Management</div>
+                </li>
+
+                <!-- Purchase Order -->
                 <li>
                     <a href="{{ route('supervisor.purchase-orders') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.purchase-orders') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-file-invoice-dollar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase Order Overview</span>
+                        <i class="fas fa-file-invoice-dollar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase Order Approval</span>
                     </a>
                 </li>
 
-                <!-- Reports & Analytics -->
+                <!-- Inventory Monitoring Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Inventory Monitoring</div>
+                </li>
+
+                <!-- Inventory Overview -->
                 <li>
                     <a href="{{ route('supervisor.inventory-overview') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.inventory-overview') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory Overview</span>
                     </a>
                 </li>
 
-                <!-- User Management -->
+                <!-- Reports & Analytics Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Reports & Analytics</div>
+                </li>
+
                 <li>
                     <a href="{{ route('supervisor.reports') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.reports') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-chart-pie w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports</span>
+                        <i class="fas fa-chart-pie w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports & Analytics</span>
                     </a>
                 </li>
 
-                <!-- Employee Management -->
+                <!-- System Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">System</div>
+                </li>
+
                 <li>
                     <a href="{{ route('supervisor.notifications') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.notifications') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
                     </a>
                 </li>
@@ -99,21 +113,6 @@
         </nav>
     </div>
 </aside>
-
-<script>
-    // Set active menu based on current route
-    document.addEventListener('DOMContentLoaded', function() {
-        const currentPath = window.location.pathname;
-        const menuItems = document.querySelectorAll('.menu-item');
-        
-        menuItems.forEach(item => {
-            const href = item.getAttribute('href');
-            if (href && currentPath.includes(href.replace('{{ url('') }}', ''))) {
-                item.classList.add('active-menu');
-            }
-        });
-    });
-</script>
 
 <style>
     .active-menu {

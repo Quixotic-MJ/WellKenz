@@ -13,7 +13,7 @@ use App\Http\Controllers\SupervisorController;
 
 /* ----------------------------------------------------------
    PUBLIC ROUTES (Guests can access)
- ---------------------------------------------------------- */
+---------------------------------------------------------- */
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
@@ -22,7 +22,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /* ----------------------------------------------------------
    PROTECTED DASHBOARD ROUTES
- ---------------------------------------------------------- */
+---------------------------------------------------------- */
 
 // This 'auth' middleware group REJECTS anyone who is not logged in.
 Route::middleware(['auth'])->group(function () {
@@ -116,11 +116,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard/stats', [InventoryController::class, 'dashboardStats'])->name('dashboard.stats');
         Route::get('/dashboard/expiry-alerts', [InventoryController::class, 'expiryAlerts'])->name('dashboard.expiry-alerts');
         Route::get('/dashboard/incoming-deliveries', [InventoryController::class, 'incomingDeliveries'])->name('dashboard.incoming-deliveries');
-        Route::get('/dashboard/weekly-summary', [InventoryController::class, 'weeklyStockInSummary'])->name('dashboard.weekly-summary');
-        
         // Item List routes
         Route::get('/items-list', [InventoryController::class, 'itemsList'])->name('items.list');
-        Route::get('/items-list/data', [InventoryController::class, 'itemsListData'])->name('items.list.data');
+        
+        // Dashboard API endpoints
+        Route::get('/dashboard/stats', [InventoryController::class, 'dashboardStats'])->name('dashboard.stats');
+        Route::get('/dashboard/expiry-alerts', [InventoryController::class, 'expiryAlerts'])->name('dashboard.expiry-alerts');
+        Route::get('/dashboard/incoming-deliveries', [InventoryController::class, 'incomingDeliveries'])->name('dashboard.incoming-deliveries');
+        Route::get('/dashboard/weekly-summary', [InventoryController::class, 'weeklyStockInSummary'])->name('dashboard.weekly-summary');
         
         // Items management routes
         Route::post('/items', [InventoryController::class, 'storeItem'])->name('items.store');
@@ -154,9 +157,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/transactions', [InventoryController::class, 'transactionsIndex'])->name('transactions.index');
         Route::get('/transactions/list', [InventoryController::class, 'transactionsList'])->name('transactions.list');
         Route::get('/transactions/recent', [InventoryController::class, 'recentTransactions'])->name('transactions.recent');
-        Route::post('/transactions', [InventoryController::class, 'storeTransaction'])->name('transactions.store');
-        Route::get('/transactions/{id}', [InventoryController::class, 'transactionShow'])->name('transactions.show');
-        Route::get('/items/{id}/transactions', [InventoryController::class, 'itemTransactions'])->name('items.transactions');
         
         // Reports routes
         Route::get('/reports', [InventoryController::class, 'reportsIndex'])->name('reports');
@@ -169,19 +169,41 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/notifications/{id}', [InventoryController::class, 'notificationShow'])->name('notifications.show');
         Route::post('/notifications/{id}/mark-read', [InventoryController::class, 'notificationMarkRead'])->name('notifications.mark-read');
         Route::post('/notifications/mark-all-read', [InventoryController::class, 'notificationsMarkAllRead'])->name('notifications.markAllRead');
-        Route::get('/notifications/{id}/jump', [InventoryController::class, 'notificationsJump'])->name('notifications.jump');
         
         // Other routes
         Route::get('/acknowledge-receipts', [InventoryController::class, 'acknowledgeReceiptsIndex'])->name('acknowledge-receipts.index');
-        Route::get('/alerts', [InventoryController::class, 'alertsIndex'])->name('alerts.index');
+        Route::get('/items-list', [InventoryController::class, 'itemsList'])->name('items-list');
         
-        // Bulk operations
+        Route::get('/dashboard/weekly-summary', [InventoryController::class, 'weeklyStockInSummary'])->name('dashboard.weekly-summary');
+        
+        Route::get('/transactions', [InventoryController::class, 'transactionsIndex'])->name('transactions.index');
+        Route::get('/transactions/list', [InventoryController::class, 'transactionsList'])->name('transactions.list');
+        Route::get('/transactions/create', [InventoryController::class, 'stockInIndex'])->name('transactions.create');
+        Route::get('/stock-in', [InventoryController::class, 'stockInIndex'])->name('stock-in.index');
         Route::post('/stock-in/bulk', [InventoryController::class, 'storeBulkStockIn'])->name('stock-in.store-bulk');
-        
+        Route::get('/stock-out', [InventoryController::class, 'stockOutIndex'])->name('stock-out.index');
+        Route::get('/adjustments', [InventoryController::class, 'adjustmentsIndex'])->name('adjustments.index');
+        Route::get('/alerts', [InventoryController::class, 'alertsIndex'])->name('alerts.index');
+        Route::get('/notifications', [InventoryController::class, 'notificationsIndex'])->name('notifications.index');
+        Route::get('/reports', [InventoryController::class, 'report'])->name('reports');
+        // Items CRUD (ajax)
+        Route::get('/items/{id}', [InventoryController::class, 'itemShow'])->name('items.show');
+        Route::put('/items/{id}', [InventoryController::class, 'itemUpdate'])->name('items.update');
+        Route::delete('/items/{id}', [InventoryController::class, 'itemDeactivate'])->name('items.destroy');
+        // Transactions
+        Route::post('/transactions', [InventoryController::class, 'storeTransaction'])->name('transactions.store');
+        Route::get('/transactions/recent', [InventoryController::class, 'recentTransactions'])->name('transactions.recent');
+        Route::get('/transactions/{id}', [InventoryController::class, 'transactionShow'])->name('transactions.show');
+        Route::get('/items/{id}/transactions', [InventoryController::class, 'itemTransactions'])->name('items.transactions');
         // Approved request items for creating new inventory items
         Route::get('/approved-request-items', [InventoryController::class, 'approvedRequestItems'])->name('approved-request-items');
-        
-        // Low stock notification
+        Route::post('/items', [InventoryController::class, 'storeItem'])->name('items.store');
+        Route::put('/items/bulk-update', [InventoryController::class, 'bulkUpdateItems'])->name('items.bulk-update');
+        Route::get('/acknowledge-receipts', [InventoryController::class, 'acknowledgeReceiptsIndex'])->name('acknowledge-receipts.index');
+        Route::get('/notifications/{id}', [InventoryController::class, 'notificationShow'])->name('notifications.show');
+        Route::post('/notifications/{id}/mark-read', [InventoryController::class, 'notificationMarkRead'])->name('notifications.mark-read');
+        Route::post('/notifications/mark-all-read', [InventoryController::class, 'notificationsMarkAllRead'])->name('notifications.markAllRead');
+        Route::get('/notifications/{id}/jump', [InventoryController::class, 'notificationsJump'])->name('notifications.jump');
         Route::post('/low-stock/notify', [InventoryController::class, 'notifyLowStock'])->name('low-stock.notify');
     });
 
@@ -199,6 +221,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/suppliers/{id}/pos', [PurchasingController::class, 'supplierPos'])->name('suppliers.pos');
         Route::post('/suppliers/{id}/toggle-status', [PurchasingController::class, 'supplierToggleStatus'])->name('suppliers.toggle');
 
+        // Delivery recording
+        Route::get('/delivery/{poId}', [PurchasingController::class, 'deliveryShow'])->name('delivery.show');
+        Route::post('/delivery/{poId}', [PurchasingController::class, 'deliveryStore'])->name('delivery.store');
         // Delivery recording
         Route::get('/delivery/{poId}', [PurchasingController::class, 'deliveryShow'])->name('delivery.show');
         Route::post('/delivery/{poId}', [PurchasingController::class, 'deliveryStore'])->name('delivery.store');

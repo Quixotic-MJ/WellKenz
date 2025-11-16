@@ -28,62 +28,77 @@
                 <li>
                     <a href="{{ route('purchasing.dashboard') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.dashboard') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
                     </a>
                 </li>
 
-              
-                <!-- Purchase Order -->
+                <!-- Purchase Management Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Purchase Management</div>
+                </li>
+
+                <!-- Create PO -->
                 <li>
                     <a href="{{ route('purchasing.approved.index') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.approved.index') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-shopping-cart w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create PO </span>
+                        <i class="fas fa-plus-circle w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create Purchase Order</span>
                     </a>
+                </li>
+
+                <!-- Supplier Management Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Supplier Management</div>
                 </li>
 
                 <!-- Supplier -->
                 <li>
                     <a href="{{ route('purchasing.suppliers.index') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.suppliers.*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-truck w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-truck w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Supplier Management</span>
                     </a>
                 </li>
 
-                 <!-- Memo -->
+                <!-- Delivery Management Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Delivery Management</div>
+                </li>
+
+                <!-- Memo -->
                 <li>
                     <a href="{{ route('purchasing.memo.index') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.memo.*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-truck w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-truck-loading w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Delivery Recording</span>
                     </a>
                 </li>
 
-
-                <!-- Reports & Analytics -->
+                <!-- Reports & Analytics Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Reports & Analytics</div>
+                </li>
+                
                 <li>
                     <a href="{{ route('purchasing.report') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.report') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports &
-                            Analytics</span>
+                        <i class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports & Analytics</span>
                     </a>
                 </li>
 
+                <!-- System Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">System</div>
+                </li>
+                
                 <!-- Notification -->
                 <li>
                     <a href="{{ route('purchasing.notifications') }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.notifications') ? 'active-menu' : '' }}">
                         <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Notification</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
                     </a>
                 </li>
             </ul>

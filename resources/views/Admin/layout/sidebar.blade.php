@@ -28,20 +28,22 @@
                 <li>
                     <a href="{{ Route::has('admin.dashboard') ? route('admin.dashboard') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.dashboard') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
                     </a>
                 </li>
 
+                <!-- Core Operations Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Core Operations</div>
+                </li>
+                
                 <!-- Requisition -->
                 <li>
                     <a href="{{ Route::has('admin.requisitions') ? route('admin.requisitions') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.requisitions*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Requisition</span>
+                        <i class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Requisition Management</span>
                     </a>
                 </li>
 
@@ -49,20 +51,22 @@
                 <li>
                     <a href="{{ Route::has('admin.item-requests') ? route('admin.item-requests') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.item-requests*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Item Request</span>
+                        <i class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Item Request Management</span>
                     </a>
                 </li>
 
-                <!-- Purchasing -->
+                <!-- Purchasing & Supply Chain Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Purchasing & Supply Chain</div>
+                </li>
+
+                <!-- Purchase Order -->
                 <li>
                     <a href="{{ Route::has('admin.purchase-orders') ? route('admin.purchase-orders') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.purchase-orders*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-shopping-cart w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase Order</span>
+                        <i class="fas fa-shopping-cart w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase Orders</span>
                     </a>
                 </li>
 
@@ -70,19 +74,22 @@
                 <li>
                     <a href="{{ Route::has('admin.suppliers') ? route('admin.suppliers') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.suppliers*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-truck w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Supplier</span>
+                        <i class="fas fa-truck w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Supplier Management</span>
                     </a>
+                </li>
+
+                <!-- Inventory Management Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Inventory Management</div>
                 </li>
 
                 <!-- Inventory -->
                 <li>
                     <a href="{{ Route::has('admin.item-management') ? route('admin.item-management') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.item-management*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-warehouse w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory Management</span>
+                        <i class="fas fa-warehouse w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Item Management</span>
                     </a>
                 </li>
 
@@ -90,41 +97,47 @@
                 <li>
                     <a href="{{ Route::has('admin.inventory-transactions') ? route('admin.inventory-transactions') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.inventory-transactions*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-exchange-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Inventory Transaction</span>
+                        <i class="fas fa-exchange-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Transaction History</span>
                     </a>
                 </li>
 
-                <!-- Reports & Analytics -->
+                <!-- Reports & Analytics Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Reports & Analytics</div>
+                </li>
+                
                 <li>
                     <a href="{{ Route::has('admin.reports') ? route('admin.reports') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.reports*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports &
-                            Analytics</span>
+                        <i class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Reports & Analytics</span>
                     </a>
                 </li>
 
-                <!-- User Management -->
+                <!-- User Management Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">User Management</div>
+                </li>
+                
                 <li>
                     <a href="{{ Route::has('admin.user-management') ? route('admin.user-management') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.user-management*') ? 'active-menu' : '' }}">
-                        <i
-                            class="fas fa-users-cog w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">User
-                            Management</span>
+                        <i class="fas fa-users-cog w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">User Management</span>
                     </a>
                 </li>
 
-                <!-- Notification -->
+                <!-- System Section -->
+                <li class="pt-2">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">System</div>
+                </li>
+                
                 <li>
                     <a href="{{ Route::has('admin.notifications') ? route('admin.notifications') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('admin.notifications*') ? 'active-menu' : '' }}">
                         <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span
-                            class="sidebar-text font-medium text-sm transition-opacity duration-300">Notification</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
                     </a>
                 </li>
             </ul>
@@ -133,7 +146,6 @@
 </aside>
 
 <style>
-    /* This style block defines the 'active-menu' class used by Blade */
     .active-menu {
         background-color: rgba(255, 255, 255, 0.15);
         color: white !important;

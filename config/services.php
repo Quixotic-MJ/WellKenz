@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'minimax' => [
+        'base_url' => env('MINIMAX_BASE_URL', 'https://api.minimax.chat/v1'),
+        'api_key' => env('MINIMAX_API_KEY'),
+        'group_id' => env('MINIMAX_GROUP_ID'),
+    ],
+
 ];

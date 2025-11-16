@@ -118,11 +118,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard/incoming-deliveries', [InventoryController::class, 'incomingDeliveries'])->name('dashboard.incoming-deliveries');
         Route::get('/dashboard/weekly-summary', [InventoryController::class, 'weeklyStockInSummary'])->name('dashboard.weekly-summary');
         
-        // Item List routes
-        Route::get('/items-list', [InventoryController::class, 'itemsList'])->name('items.list');
-        Route::get('/items-list/data', [InventoryController::class, 'itemsListData'])->name('items.list.data');
-        
         // Items management routes
+        Route::get('/items-list', [InventoryController::class, 'itemsList'])->name('items.list');
         Route::post('/items', [InventoryController::class, 'storeItem'])->name('items.store');
         Route::get('/items/{id}', [InventoryController::class, 'itemShow'])->name('items.show');
         Route::put('/items/{id}', [InventoryController::class, 'itemUpdate'])->name('items.update');
@@ -154,9 +151,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/transactions', [InventoryController::class, 'transactionsIndex'])->name('transactions.index');
         Route::get('/transactions/list', [InventoryController::class, 'transactionsList'])->name('transactions.list');
         Route::get('/transactions/recent', [InventoryController::class, 'recentTransactions'])->name('transactions.recent');
-        Route::post('/transactions', [InventoryController::class, 'storeTransaction'])->name('transactions.store');
-        Route::get('/transactions/{id}', [InventoryController::class, 'transactionShow'])->name('transactions.show');
-        Route::get('/items/{id}/transactions', [InventoryController::class, 'itemTransactions'])->name('items.transactions');
         
         // Reports routes
         Route::get('/reports', [InventoryController::class, 'reportsIndex'])->name('reports');
@@ -169,20 +163,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/notifications/{id}', [InventoryController::class, 'notificationShow'])->name('notifications.show');
         Route::post('/notifications/{id}/mark-read', [InventoryController::class, 'notificationMarkRead'])->name('notifications.mark-read');
         Route::post('/notifications/mark-all-read', [InventoryController::class, 'notificationsMarkAllRead'])->name('notifications.markAllRead');
-        Route::get('/notifications/{id}/jump', [InventoryController::class, 'notificationsJump'])->name('notifications.jump');
         
         // Other routes
         Route::get('/acknowledge-receipts', [InventoryController::class, 'acknowledgeReceiptsIndex'])->name('acknowledge-receipts.index');
         Route::get('/alerts', [InventoryController::class, 'alertsIndex'])->name('alerts.index');
-        
-        // Bulk operations
-        Route::post('/stock-in/bulk', [InventoryController::class, 'storeBulkStockIn'])->name('stock-in.store-bulk');
-        
-        // Approved request items for creating new inventory items
-        Route::get('/approved-request-items', [InventoryController::class, 'approvedRequestItems'])->name('approved-request-items');
-        
-        // Low stock notification
+        Route::get('/notifications/{id}/jump', [InventoryController::class, 'notificationsJump'])->name('notifications.jump');
         Route::post('/low-stock/notify', [InventoryController::class, 'notifyLowStock'])->name('low-stock.notify');
+        Route::get('/approved-request-items', [InventoryController::class, 'approvedRequestItems'])->name('approved-request-items');
     });
 
     // --- Purchasing Routes ---
