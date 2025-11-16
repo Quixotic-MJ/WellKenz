@@ -12,7 +12,7 @@ use App\Http\Controllers\SupervisorController;
 
 
 /* ----------------------------------------------------------
-   PUBLIC ROUTES (Guests can access)
+    PUBLIC ROUTES (Guests can access)
  ---------------------------------------------------------- */
 
 Route::get('/', [AuthController::class, 'showLogin'])->name('login');
@@ -21,7 +21,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 
 /* ----------------------------------------------------------
-   PROTECTED DASHBOARD ROUTES
+    PROTECTED DASHBOARD ROUTES
  ---------------------------------------------------------- */
 
 // This 'auth' middleware group REJECTS anyone who is not logged in.
@@ -34,6 +34,11 @@ Route::middleware(['auth'])->group(function () {
         // Feature pages used by the Admin UI
         Route::get('/requisitions', [AdminController::class, 'requisitions'])->name('requisitions');
         Route::get('/item-requests', [AdminController::class, 'itemRequests'])->name('item-requests');
+        
+        // **** THIS IS THE NEW ROUTE YOU ARE MISSING ****
+        Route::post('/item-requests/{id}/status', [AdminController::class, 'updateItemRequestStatus'])->name('item-requests.status');
+        // ************************************************
+
         Route::get('/inventory/transactions', [AdminController::class, 'inventoryTransactions'])->name('inventory-transactions');
         Route::get('/inventory/items', [AdminController::class, 'itemManagement'])->name('item-management');
         Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
@@ -55,13 +60,14 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/users/{id}/password', [AdminController::class, 'changeUserPassword'])->name('users.password');
         Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.destroy');
         Route::get('/notifications', [AdminController::class, 'notifications'])->name('notifications');
-        Route::get('/notifications/{id}', [AdminController::class, 'notificationShow'])->name('notifications.show');
         Route::get('/notifications/compose', [AdminController::class, 'composeNotificationPage'])->name('notifications.compose-page');
 
         // Notifications AJAX endpoints used by header
         Route::post('/notifications/{id}/mark-read', [AdminController::class, 'notificationMarkRead'])->name('notifications.mark-read');
         Route::post('/notifications/mark-all-read', [AdminController::class, 'notificationMarkAllRead'])->name('notifications.mark-all');
         Route::get('/notifications/unread-count', [AdminController::class, 'notificationUnreadCount'])->name('notifications.unread-count');
+
+        Route::get('/notifications/{id}', [AdminController::class, 'notificationShow'])->name('notifications.show');
 
         // Inventory/Items & Categories endpoints (JSON) used by modals
         Route::post('/categories', [AdminController::class, 'storeCategory'])->name('categories.store');
@@ -73,6 +79,7 @@ Route::middleware(['auth'])->group(function () {
 
         // Requisitions details for modal
         Route::get('/requisitions/{id}', [AdminController::class, 'showRequisition'])->name('requisitions.show');
+        Route::post('/requisitions/{id}/status', [AdminController::class, 'updateRequisitionStatus'])->name('requisitions.status');
 
         // Inventory transaction details for modal
         Route::get('/inventory/transactions/{id}', [AdminController::class, 'transactionShow'])->name('inventory-transactions.show');

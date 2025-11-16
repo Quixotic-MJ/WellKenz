@@ -73,11 +73,11 @@ class AdminController extends Controller
 
     public function requisitions()
     {
-        $totalCount    = DB::table('requisitions')->count();
-        $pendingCount  = DB::table('requisitions')->where('req_status','pending')->count();
-        $approvedCount = DB::table('requisitions')->where('req_status','approved')->count();
-        $rejectedCount = DB::table('requisitions')->where('req_status','rejected')->count();
-        $completedCount= DB::table('requisitions')->where('req_status','completed')->count();
+        $totalCount     = DB::table('requisitions')->count();
+        $pendingCount   = DB::table('requisitions')->where('req_status','pending')->count();
+        $approvedCount  = DB::table('requisitions')->where('req_status','approved')->count();
+        $rejectedCount  = DB::table('requisitions')->where('req_status','rejected')->count();
+        $completedCount = DB::table('requisitions')->where('req_status','completed')->count();
 
         $requisitions = DB::table('requisitions as r')
             ->leftJoin('users as u1','u1.user_id','=','r.requested_by')
@@ -126,12 +126,12 @@ class AdminController extends Controller
 
     public function inventoryTransactions()
     {
-        $totalCount   = DB::table('inventory_transactions')->count();
-        $inCount      = DB::table('inventory_transactions')->where('trans_type','in')->count();
-        $outCount     = DB::table('inventory_transactions')->where('trans_type','out')->count();
-        $adjCount     = DB::table('inventory_transactions')->where('trans_type','adjustment')->count();
-        $ackCount     = DB::table('acknowledge_receipts')->count();
-        $negStockCount= DB::table('items')->where('item_stock','<',0)->count();
+        $totalCount    = DB::table('inventory_transactions')->count();
+        $inCount       = DB::table('inventory_transactions')->where('trans_type','in')->count();
+        $outCount      = DB::table('inventory_transactions')->where('trans_type','out')->count();
+        $adjCount      = DB::table('inventory_transactions')->where('trans_type','adjustment')->count();
+        $ackCount      = DB::table('acknowledge_receipts')->count();
+        $negStockCount = DB::table('items')->where('item_stock','<',0)->count();
 
         $transactions = DB::table('inventory_transactions as t')
             ->leftJoin('items as i','i.item_id','=','t.item_id')
@@ -194,24 +194,37 @@ class AdminController extends Controller
 
         $categories = DB::table('categories')->select('cat_id','cat_name')->orderBy('cat_name')->get();
 
-        return view('Admin.Inventory.item_management', compact('categoriesCount','totalItems','lowStockCount','expiringCount','items','categories'));
+        // **** THIS IS THE NEW DATA FOR YOUR FEATURE ****
+        $pendingItemCreations = DB::table('approved_request_items as ari')
+            ->join('requisitions as r', 'r.req_id', '=', 'ari.req_id')
+            ->join('users as u', 'u.user_id', '=', 'r.requested_by')
+            ->where('ari.created_as_item', false)
+            ->whereNull('ari.item_id') // Only get ones not yet linked to an item
+            ->select('ari.req_item_id', 'ari.item_name', 'ari.item_unit', 'ari.item_description', 'u.name as requester_name')
+            ->get();
+        // ************************************************
+
+        return view('Admin.Inventory.item_management', compact(
+            'categoriesCount','totalItems','lowStockCount','expiringCount','items','categories',
+            'pendingItemCreations' // <-- Pass new data to the view
+        ));
     }
 
     public function reports()
     {
-        $activeUsers          = DB::table('users')->where('status','active')->count();
-        $pendingItemRequests  = DB::table('item_requests')->where('item_req_status','pending')->count();
-        $pendingRequisitions  = DB::table('requisitions')->where('req_status','pending')->count();
-        $orderedPOs           = DB::table('purchase_orders')->where('po_status','ordered')->count();
-        $movementCount        = DB::table('inventory_transactions')->count();
-        $lowStockCount        = DB::table('items')->whereColumn('item_stock','<=','reorder_level')->count();
-        $suppliersCount       = DB::table('suppliers')->count();
-        $weeklyStockInCount   = DB::table('inventory_transactions')
+        $activeUsers            = DB::table('users')->where('status','active')->count();
+        $pendingItemRequests    = DB::table('item_requests')->where('item_req_status','pending')->count();
+        $pendingRequisitions    = DB::table('requisitions')->where('req_status','pending')->count();
+        $orderedPOs             = DB::table('purchase_orders')->where('po_status','ordered')->count();
+        $movementCount          = DB::table('inventory_transactions')->count();
+        $lowStockCount          = DB::table('items')->whereColumn('item_stock','<=','reorder_level')->count();
+        $suppliersCount         = DB::table('suppliers')->count();
+        $weeklyStockInCount     = DB::table('inventory_transactions')
             ->where('trans_type','in')
             ->whereBetween('trans_date',[now()->subDays(7)->toDateString(), now()->toDateString()])
             ->count();
-        $negativeStockCount   = DB::table('items')->where('item_stock','<',0)->count();
-        $arIssuedCount        = DB::table('acknowledge_receipts')->where('ar_status','issued')->count();
+        $negativeStockCount     = DB::table('items')->where('item_stock','<',0)->count();
+        $arIssuedCount          = DB::table('acknowledge_receipts')->where('ar_status','issued')->count();
 
         return view('Admin.Report.report', compact(
             'activeUsers','pendingItemRequests','pendingRequisitions','orderedPOs','movementCount','lowStockCount','suppliersCount','weeklyStockInCount','negativeStockCount','arIssuedCount'
@@ -220,11 +233,11 @@ class AdminController extends Controller
 
     public function purchaseOrders()
     {
-        $totalPOs      = DB::table('purchase_orders')->count();
-        $draftCount    = DB::table('purchase_orders')->where('po_status','draft')->count();
-        $orderedCount  = DB::table('purchase_orders')->where('po_status','ordered')->count();
-        $deliveredCount= DB::table('purchase_orders')->where('po_status','delivered')->count();
-        $thisMonthCount= DB::table('purchase_orders')->whereBetween('created_at',[now()->startOfMonth(), now()->endOfMonth()])->count();
+        $totalPOs       = DB::table('purchase_orders')->count();
+        $draftCount     = DB::table('purchase_orders')->where('po_status','draft')->count();
+        $orderedCount   = DB::table('purchase_orders')->where('po_status','ordered')->count();
+        $deliveredCount = DB::table('purchase_orders')->where('po_status','delivered')->count();
+        $thisMonthCount = DB::table('purchase_orders')->whereBetween('created_at',[now()->startOfMonth(), now()->endOfMonth()])->count();
 
         $purchaseOrders = DB::table('purchase_orders as p')
             ->leftJoin('suppliers as s','s.sup_id','=','p.sup_id')
@@ -560,10 +573,15 @@ class AdminController extends Controller
             'reorder_level' => 'required|numeric|min:0',
             'item_expire_date' => 'nullable|date',
             'item_description' => 'nullable|string',
+            // **** ADD THIS VALIDATION RULE ****
+            'approved_item_req_id' => 'nullable|integer|exists:approved_request_items,req_item_id',
         ]);
+        
         // Generate item_code simple scheme
         $code = 'ITM-'.strtoupper(substr(preg_replace('/\s+/', '', $data['item_name']),0,3)).'-'.str_pad((string) (DB::table('items')->max('item_id') + 1), 4, '0', STR_PAD_LEFT);
-        DB::table('items')->insert([
+        
+        // **** GET THE NEW ITEM ID ****
+        $newItemId = DB::table('items')->insertGetId([
             'item_code' => $code,
             'item_name' => $data['item_name'],
             'item_description' => $data['item_description'] ?? null,
@@ -577,6 +595,18 @@ class AdminController extends Controller
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        // **** UPDATE THE APPROVED REQUEST IF IT EXISTS ****
+        if (!empty($data['approved_item_req_id'])) {
+            DB::table('approved_request_items')
+                ->where('req_item_id', $data['approved_item_req_id'])
+                ->update([
+                    'created_as_item' => true,
+                    'item_id' => $newItemId // Link the new item
+                ]);
+        }
+        // ************************************************
+
         return response()->json(['success' => true]);
     }
 
@@ -643,6 +673,129 @@ class AdminController extends Controller
                 'item_unit' => $r->item_unit,
             ]);
         return response()->json(['items' => $items]);
+    }
+
+    // Requisition Status Update (from previous fix)
+    public function updateRequisitionStatus(Request $request, $id)
+    {
+        // FIX 1: Validate 'req_status' and 'remarks', which are sent from the form
+        $data = $request->validate([
+            'req_status' => 'required|in:approved,rejected', // Was 'status'
+            'remarks' => 'required_if:req_status,rejected|nullable|string|max:255', // Was 'req_reject_reason'
+        ]);
+
+        try {
+            $requisition = DB::table('requisitions')->where('req_id', $id)->first();
+
+            if (!$requisition) {
+                return response()->json(['success' => false, 'message' => 'Requisition not found.'], 404);
+            }
+
+            if ($requisition->req_status !== 'pending') {
+                return response()->json(['success' => false, 'message' => 'This requisition has already been processed.'], 422);
+            }
+
+            // FIX 2: Use the correct validated data keys
+            $updateData = [
+                'req_status' => $data['req_status'], // Was $data['status']
+                'approved_by' => Auth::id(),
+                'updated_at' => now(),
+            ];
+
+            if ($data['req_status'] === 'approved') { // Was $data['status']
+                $updateData['approved_date'] = now()->toDateString();
+                $updateData['req_reject_reason'] = null;
+            } else {
+                // Use 'remarks' from the form for the 'req_reject_reason' column
+                $updateData['req_reject_reason'] = $data['remarks']; // Was $data['req_reject_reason']
+                $updateData['approved_date'] = null;
+            }
+
+            DB::table('requisitions')->where('req_id', $id)->update($updateData);
+
+            // Create a notification for the user who requested it
+            $requesterId = $requisition->requested_by;
+            if ($requesterId) {
+                // FIX 3: Use the correct variable for the notification message
+                DB::table('notifications')->insert([
+                    'notif_title' => 'Requisition ' . $data['req_status'], // Was $data['status']
+                    'notif_content' => 'Your requisition ' . $requisition->req_ref . ' has been ' . $data['req_status'] . '.', // Was $data['status']
+                    'related_id' => $id,
+                    'related_type' => 'requisition',
+                    'user_id' => $requesterId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Requisition has been ' . $data['req_status'] . '.' // Was $data['status']
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Requisition status update error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'An error occurred while updating the status.'], 500);
+        }
+    }
+    
+    // Method to update Item Request status
+    public function updateItemRequestStatus(Request $request, $id)
+    {
+        // Validate 'item_req_status' and 'remarks' from the form
+        $data = $request->validate([
+            'item_req_status' => 'required|in:approved,rejected',
+            'remarks' => 'required_if:item_req_status,rejected|nullable|string|max:255',
+        ]);
+
+        try {
+            $itemRequest = DB::table('item_requests')->where('item_req_id', $id)->first();
+
+            if (!$itemRequest) {
+                return response()->json(['success' => false, 'message' => 'Item Request not found.'], 404);
+            }
+
+            if ($itemRequest->item_req_status !== 'pending') {
+                return response()->json(['success' => false, 'message' => 'This request has already been processed.'], 422);
+            }
+
+            $updateData = [
+                'item_req_status' => $data['item_req_status'],
+                'approved_by' => Auth::id(),
+                'updated_at' => now(),
+            ];
+
+            if ($data['item_req_status'] === 'approved') {
+                $updateData['item_req_reject_reason'] = null;
+            } else {
+                $updateData['item_req_reject_reason'] = $data['remarks'];
+            }
+
+            DB::table('item_requests')->where('item_req_id', $id)->update($updateData);
+
+            // Create a notification for the user who requested it
+            $requesterId = $itemRequest->requested_by;
+            if ($requesterId) {
+                DB::table('notifications')->insert([
+                    'notif_title' => 'Item Request ' . $data['item_req_status'],
+                    'notif_content' => 'Your item request for "' . $itemRequest->item_req_name . '" has been ' . $data['item_req_status'] . '.',
+                    'related_id' => $id,
+                    'related_type' => 'item_request',
+                    'user_id' => $requesterId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Item Request has been ' . $data['item_req_status'] . '.'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Item Request status update error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'An error occurred while updating the status.'], 500);
+        }
     }
 
     // Notification compose (JSON)

@@ -51,19 +51,36 @@ class Requisition extends Model
     {
         parent::boot();
 
-        // BEFORE creating, set the default values
+        /**
+         * This 'creating' event fires *BEFORE* the database insert.
+         * We set default values and a TEMPORARY, UNIQUE req_ref
+         * to pass the 'not-null' database constraint.
+         */
         static::creating(function ($model) {
             $model->req_status = $model->req_status ?? 'pending';
             $model->req_date = $model->req_date ?? now()->toDateString();
             $model->requested_by = $model->requested_by ?? Auth::id();
+
+            // **** THIS IS THE FIX ****
+            // Set a temporary, unique value to pass the NOT NULL constraint.
+            if (empty($model->req_ref)) {
+                $model->req_ref = 'TEMP-' . uniqid() . '-' . microtime(true); 
+            }
         });
 
-        // AFTER creating, use the new ID to generate the ref
+        /**
+         * This 'created' event fires *AFTER* the database insert.
+         * Now we have the model's 'req_id', so we can create the
+         * *real* formatted req_ref (e.g., "RQ-00007").
+         */
         static::created(function ($model) {
-            if (empty($model->req_ref)) {
-                // This runs as a separate UPDATE query
+            // Check if the ref is our temporary one
+            if (str_starts_with($model->req_ref, 'TEMP-')) {
+                // Now we have the req_id, so we generate the final ref
                 $model->req_ref = 'RQ-' . str_pad($model->req_id, 5, '0', STR_PAD_LEFT);
-                $model->save();
+                
+                // Save *without* firing events again, to prevent loops
+                $model->saveQuietly(); 
             }
         });
     }

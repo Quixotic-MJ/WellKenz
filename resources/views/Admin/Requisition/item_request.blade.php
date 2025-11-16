@@ -1,13 +1,14 @@
 @extends('Admin.layout.app')
 
+@section('title', 'Item Request Management - WellKenz ERP')
+@section('breadcrumb', 'Item Request Management')
+
 @section('content')
     <div class="space-y-6">
 
-        <!-- toast -->
         <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
         <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
-        <!-- header card -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -17,7 +18,6 @@
             </div>
         </div>
 
-        <!-- live counts -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div class="bg-white border border-gray-200 rounded-lg p-5">
                 <p class="text-xs text-gray-500 uppercase tracking-wider">Total Requests</p>
@@ -37,7 +37,6 @@
             </div>
         </div>
 
-        <!-- requests table -->
         <div class="bg-white border border-gray-200 rounded-lg">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900">All Requests</h3>
@@ -127,20 +126,25 @@
             </div>
 
             <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
-                Showing <span id="visibleCount">{{ $requests->count() }}</span> of {{ $requests->count() }} requests
+                Showing <span id="visibleCount">{{ $requests->count() }}</span> of {{ $requests->total() }} requests
+            </div>
+             <div class="px-6 py-3">
+                {{ $requests->links() }}
             </div>
         </div>
 
-        <!-- ====== MODALS  ====== -->
-        @include('Admin.Requisition.item_request.approve')
-        @include('Admin.Requisition.item_request.reject')
+        {{-- These includes are not needed if the modals are already in this file --}}
+        {{-- @include('Admin.Requisition.item_request.approve') --}}
+        {{-- @include('Admin.Requisition.item_request.reject') --}}
 
     </div>
 
     <script>
         /* light helpers */
         let currentId = null;
-        const ITEM_REQ_BASE = "{{ url('/item-requests') }}";
+        
+        // **** FIX 1: The URL must include the /admin prefix ****
+        const ITEM_REQ_BASE = "{{ url('/admin/item-requests') }}";
 
         function showMessage(msg, type = 'success') {
             const div = type === 'success' ? document.getElementById('successMessage') : document.getElementById(
@@ -161,17 +165,16 @@
 
         /* search / filter */
         function filterTable(val) {
-            const rows = document.querySelectorAll('.request-row');
-            let visible = 0;
-            rows.forEach(r => {
-                const ok = val === 'all' || r.dataset.status === val;
-                r.style.display = ok ? '' : 'none';
-                if (ok) visible++;
-            });
-            document.getElementById('visibleCount').textContent = visible;
+            // This is paginated, so filtering should ideally be a server-side query
+            // For now, redirect with query string
+            let url = new URL(window.location.href);
+            url.searchParams.set('status', val);
+            window.location = url.toString();
         }
 
         function searchTable(q) {
+            // This is paginated, so search should be a server-side query
+            // For client-side search (only current page):
             const Q = q.toLowerCase();
             const rows = document.querySelectorAll('.request-row');
             let visible = 0;
@@ -196,6 +199,8 @@
             sortDir = 'asc';
 
         function sortTable(f) {
+            // This is paginated, so sorting should be a server-side query
+            // For client-side sort (only current page):
             if (sortField === f) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
             else {
                 sortField = f;
@@ -219,7 +224,7 @@
             currentId = id;
             document.getElementById('approveRequestName').textContent = name;
             const form = document.querySelector('#approveRequestModal form');
-            if (form) form.action = `${ITEM_REQ_BASE}/${id}/status`;
+            if (form) form.action = `${ITEM_REQ_BASE}/${id}/status`; // This will now be correct
             document.getElementById('approveRequestModal').classList.remove('hidden');
         }
 
@@ -227,7 +232,7 @@
             currentId = id;
             document.getElementById('rejectRequestName').textContent = name;
             const form = document.querySelector('#rejectRequestModal form');
-            if (form) form.action = `${ITEM_REQ_BASE}/${id}/status`;
+            if (form) form.action = `${ITEM_REQ_BASE}/${id}/status`; // This will now be correct
             document.getElementById('rejectRequestModal').classList.remove('hidden');
         }
 
@@ -241,5 +246,113 @@
             const name = btn.dataset.name || '';
             openRejectModal(id, name);
         }
+
+        // **** FIX 2: Add missing form submission logic ****
+        document.addEventListener('DOMContentLoaded', function(){
+            const approveForm = document.getElementById('approveRequestForm');
+            if (approveForm) {
+                approveForm.addEventListener('submit', function(e){
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    fetch(this.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.success){
+                            showMessage(data.message);
+                            closeModals();
+                            location.reload(); // Reloads the page on success
+                        } else {
+                            showMessage(data.message || 'An error occurred.', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showMessage('A network error occurred.', 'error');
+                    });
+                });
+            }
+
+            const rejectForm = document.getElementById('rejectRequestForm');
+            if (rejectForm) {
+                rejectForm.addEventListener('submit', function(e){
+                    e.preventDefault();
+                    const formData = new FormData(this);
+                    fetch(this.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.success){
+                            showMessage(data.message);
+                            closeModals();
+                            location.reload(); // Reloads the page on success
+                        } else {
+                            showMessage(data.message || 'An error occurred.', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showMessage('A network error occurred.', 'error');
+                    });
+                });
+            }
+        });
+        // *************************************************
+
     </script>
 @endsection
+
+
+<div id="approveRequestModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-md w-full rounded-lg border border-gray-200">
+        <form id="approveRequestForm" method="POST" action="">@csrf
+            <input type="hidden" name="item_req_status" value="approved">
+            <div class="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Approve Request</h3>
+                <button type="button" onclick="closeModals()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-gray-700 mb-4">Approve request for <span id="approveRequestName" class="font-semibold"></span>?</p>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+                <button type="button" onclick="closeModals()" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-green-600 text-white hover:bg-green-700 rounded">Approve</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="rejectRequestModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white max-w-md w-full rounded-lg border border-gray-200">
+        <form id="rejectRequestForm" method="POST" action="">@csrf
+            <input type="hidden" name="item_req_status" value="rejected">
+            <div class="p-6 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Reject Request</h3>
+                <button type="button" onclick="closeModals()" class="text-gray-500 hover:text-gray-700"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <p class="text-sm text-gray-700">Reject request for <span id="rejectRequestName" class="font-semibold"></span>?</p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                    <textarea name="remarks" rows="3" class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+                <button type="button" onclick="closeModals()" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-rose-600 text-white hover:bg-rose-700 rounded">Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
