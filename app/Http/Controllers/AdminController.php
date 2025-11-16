@@ -136,17 +136,39 @@ class AdminController extends Controller
         $transactions = DB::table('inventory_transactions as t')
             ->leftJoin('items as i','i.item_id','=','t.item_id')
             ->leftJoin('users as u','u.user_id','=','t.trans_by')
-            ->select('t.*','i.item_name','u.name as user_name')
+            ->leftJoin('purchase_orders as po','po.po_id','=','t.po_id')
+            ->leftJoin('memos as m','m.po_ref','=','po.po_ref')
+            ->leftJoin('acknowledge_receipts as ar','ar.req_id','=','po.req_id')
+            ->select('t.*','i.item_name','i.item_stock','u.name as user_name','po.po_ref','m.memo_id','m.memo_ref','ar.ar_id','ar.ar_ref')
             ->orderByDesc('t.created_at')
             ->paginate(15);
 
         $transactions->getCollection()->transform(function($row){
-            $row->item  = (object)['item_name' => $row->item_name];
+            $row->item  = (object)['item_name' => $row->item_name, 'current_stock' => $row->item_stock];
             $row->user  = (object)['name' => $row->user_name];
             $row->quantity = $row->trans_quantity; // blade uses quantity
             $row->inventory_transaction_id = $row->trans_id; // blade expects this id
-            $row->acknowledgeReceipt = null;
-            $row->memo = null;
+            
+            // For stock-out transactions, check for acknowledge receipts through purchase orders
+            if ($row->trans_type === 'out' && $row->ar_id) {
+                $row->acknowledgeReceipt = (object)[
+                    'id' => $row->ar_id,
+                    'ar_ref' => $row->ar_ref
+                ];
+            } else {
+                $row->acknowledgeReceipt = null;
+            }
+            
+            // For stock-in transactions, check for memos through purchase orders
+            if ($row->trans_type === 'in' && $row->memo_id) {
+                $row->memo = (object)[
+                    'id' => $row->memo_id,
+                    'memo_ref' => $row->memo_ref
+                ];
+            } else {
+                $row->memo = null;
+            }
+            
             return $row;
         });
 
@@ -221,6 +243,197 @@ class AdminController extends Controller
         return view('Admin.Purchasing.Purchase.purchase', compact('totalPOs','draftCount','orderedCount','deliveredCount','thisMonthCount','purchaseOrders'));
     }
 
+    public function purchaseOrderShow($id)
+    {
+        $po = DB::table('purchase_orders as p')
+            ->leftJoin('suppliers as s', 's.sup_id', '=', 'p.sup_id')
+            ->leftJoin('requisitions as r', 'r.req_id', '=', 'p.req_id')
+            ->select(
+                'p.po_id',
+                'p.po_ref',
+                'p.po_status',
+                'p.expected_delivery_date',
+                'p.total_amount',
+                'p.delivery_address',
+                's.sup_name',
+                'r.req_ref'
+            )
+            ->where('p.po_id', $id)
+            ->first();
+
+        if (!$po) {
+            return response()->json(['success' => false, 'message' => 'Purchase order not found'], 404);
+        }
+
+        $items = DB::table('purchase_items as pi')
+            ->leftJoin('items as i', 'i.item_id', '=', 'pi.item_id')
+            ->select(
+                'i.item_name',
+                'pi.pi_quantity as quantity',
+                'i.item_unit as unit',
+                'pi.pi_unit_price as unit_price',
+                'pi.pi_subtotal as subtotal'
+            )
+            ->where('pi.po_id', $id)
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'po' => $po,
+            'items' => $items,
+        ]);
+    }
+
+    public function purchaseOrderStatusUpdate(Request $request, $id)
+    {
+        $data = $request->validate([
+            'po_status' => 'required|in:draft,ordered,delivered,cancelled'
+        ]);
+
+        $updated = DB::table('purchase_orders')
+            ->where('po_id', $id)
+            ->update([
+                'po_status' => $data['po_status'],
+                'updated_at' => now()
+            ]);
+
+        if (!$updated) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Purchase order not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Purchase order status updated successfully'
+        ]);
+    }
+
+    public function transactionShow($id)
+    {
+        try {
+            $transaction = DB::table('inventory_transactions as t')
+                ->leftJoin('items as i', 'i.item_id', '=', 't.item_id')
+                ->leftJoin('users as u', 'u.user_id', '=', 't.trans_by')
+                ->leftJoin('purchase_orders as po', 'po.po_id', '=', 't.po_id')
+                ->select(
+                    't.*',
+                    'i.item_name',
+                    'i.item_code',
+                    'i.item_unit',
+                    'u.name as user_name',
+                    'po.po_ref'
+                )
+                ->where('t.trans_id', $id)
+                ->first();
+
+            if (!$transaction) {
+                return response()->json(['error' => 'Transaction not found'], 404);
+            }
+
+            return response()->json([
+                'date' => \Carbon\Carbon::parse($transaction->trans_date ?? $transaction->created_at)->format('M d, Y H:i'),
+                'type' => ucfirst($transaction->trans_type),
+                'item_code' => $transaction->item_code,
+                'item_name' => $transaction->item_name,
+                'item_unit' => $transaction->item_unit,
+                'quantity' => $transaction->trans_quantity,
+                'user' => $transaction->user_name,
+                'po_ref' => $transaction->po_ref,
+                'remarks' => $transaction->trans_remarks
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error loading transaction details'], 500);
+        }
+    }
+
+    // Acknowledge Receipts
+    public function acknowledgeReceipts()
+    {
+        $ackReceipts = DB::table('acknowledge_receipts as ar')
+            ->leftJoin('requisitions as r', 'r.req_id', '=', 'ar.req_id')
+            ->leftJoin('users as u1', 'u1.user_id', '=', 'ar.issued_by')
+            ->leftJoin('users as u2', 'u2.user_id', '=', 'ar.issued_to')
+            ->select(
+                'ar.*',
+                'r.req_ref',
+                'u1.name as issued_by_name',
+                'u2.name as issued_to_name'
+            )
+            ->orderByDesc('ar.created_at')
+            ->paginate(15);
+
+        $ackReceipts->getCollection()->transform(function($row){
+            $row->requisition = (object)['req_ref' => $row->req_ref];
+            $row->issuedBy = (object)['name' => $row->issued_by_name];
+            $row->issuedTo = (object)['name' => $row->issued_to_name];
+            return $row;
+        });
+
+        return view('Admin.Inventory.acknowledge_receipts', compact('ackReceipts'));
+    }
+
+    public function showAcknowledgeReceipt($id)
+    {
+        $ar = DB::table('acknowledge_receipts as ar')
+            ->leftJoin('requisitions as r', 'r.req_id', '=', 'ar.req_id')
+            ->leftJoin('users as u1', 'u1.user_id', '=', 'ar.issued_by')
+            ->leftJoin('users as u2', 'u2.user_id', '=', 'ar.issued_to')
+            ->select(
+                'ar.*',
+                'r.req_ref',
+                'u1.name as issued_by_name',
+                'u2.name as issued_to_name'
+            )
+            ->where('ar.ar_id', $id)
+            ->first();
+
+        if (!$ar) {
+            return response()->json(['error' => 'Acknowledge receipt not found'], 404);
+        }
+
+        $ar->requisition = (object)['req_ref' => $ar->req_ref];
+        $ar->issuedBy = (object)['name' => $ar->issued_by_name];
+        $ar->issuedTo = (object)['name' => $ar->issued_to_name];
+
+        return response()->json(['success' => true, 'acknowledge_receipt' => $ar]);
+    }
+
+    // Memos
+    public function memos()
+    {
+        $memos = DB::table('memos as m')
+            ->leftJoin('users as u', 'u.user_id', '=', 'm.received_by')
+            ->select('m.*', 'u.name as received_by_name')
+            ->orderByDesc('m.created_at')
+            ->paginate(15);
+
+        $memos->getCollection()->transform(function($row){
+            $row->receivedBy = (object)['name' => $row->received_by_name];
+            return $row;
+        });
+
+        return view('Admin.Inventory.memos', compact('memos'));
+    }
+
+    public function showMemo($id)
+    {
+        $memo = DB::table('memos as m')
+            ->leftJoin('users as u', 'u.user_id', '=', 'm.received_by')
+            ->select('m.*', 'u.name as received_by_name')
+            ->where('m.memo_id', $id)
+            ->first();
+
+        if (!$memo) {
+            return response()->json(['error' => 'Memo not found'], 404);
+        }
+
+        $memo->receivedBy = (object)['name' => $memo->received_by_name];
+
+        return response()->json(['success' => true, 'memo' => $memo]);
+    }
+
     public function suppliers()
     {
         $suppliers = DB::table('suppliers')->orderBy('sup_name')->get();
@@ -245,7 +458,14 @@ class AdminController extends Controller
 
     public function notifications()
     {
-        $notifications = DB::table('notifications')->orderByDesc('created_at')->paginate(20);
+        $notifications = DB::table('notifications')
+            ->orderByDesc('created_at')
+            ->paginate(20)
+            ->through(function ($n) {
+                $n->created_at = \Carbon\Carbon::parse($n->created_at);
+                $n->updated_at = $n->updated_at ? \Carbon\Carbon::parse($n->updated_at) : null;
+                return $n;
+            });
         $totalNotifications  = DB::table('notifications')->count();
         $unreadNotifications = DB::table('notifications')->where('is_read', false)->count();
         $readNotifications   = DB::table('notifications')->where('is_read', true)->count();
@@ -283,6 +503,38 @@ class AdminController extends Controller
             ->where('is_read', false)
             ->count();
         return response()->json(['count' => $count]);
+    }
+
+    public function notificationShow($id)
+    {
+        $notification = DB::table('notifications as n')
+            ->leftJoin('users as u', 'u.user_id', '=', 'n.user_id')
+            ->select(
+                'n.*',
+                'u.name as user_name'
+            )
+            ->where('n.notif_id', $id)
+            ->first();
+
+        if (!$notification) {
+            return response()->json(['success' => false, 'message' => 'Notification not found'], 404);
+        }
+
+        if (!$notification->is_read) {
+            DB::table('notifications')->where('notif_id', $id)->update(['is_read' => true]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'notification' => [
+                'title' => $notification->notif_title,
+                'content' => $notification->notif_content,
+                'related_type' => $notification->related_type,
+                'related_id' => $notification->related_id,
+                'user' => $notification->user_name,
+                'created_at' => optional($notification->created_at)->format('M d, Y H:i'),
+            ],
+        ]);
     }
 
     // --- Category create (JSON) ---

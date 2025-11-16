@@ -7,6 +7,7 @@ DROP TABLE IF EXISTS
     inventory_transactions,
     purchase_items,
     purchase_orders,
+    approved_request_items, -- Added new table to cleanup
     requisition_items,
     requisitions,
     item_requests,
@@ -182,6 +183,25 @@ CREATE INDEX idx_ri_req    ON requisition_items(req_id);
 CREATE INDEX idx_ri_item   ON requisition_items(item_id);
 CREATE INDEX idx_ri_status ON requisition_items(req_item_status);
 
+/* --- NEW TABLE FROM MIGRATION: approved_request_items --- */
+CREATE TABLE approved_request_items (
+    req_item_id        SERIAL PRIMARY KEY,
+    req_id             INTEGER REFERENCES requisitions(req_id) ON DELETE CASCADE,
+    item_id            INTEGER REFERENCES items(item_id) ON DELETE SET NULL,
+    item_name          VARCHAR(255) NOT NULL,
+    item_description   TEXT NULL,
+    item_unit          VARCHAR(255) NOT NULL,
+    requested_quantity DECIMAL(10,2) NOT NULL,
+    approved_quantity  DECIMAL(10,2) NOT NULL,
+    req_ref            VARCHAR(255) NULL,
+    created_as_item    BOOLEAN DEFAULT FALSE,
+    created_at         TIMESTAMP DEFAULT NOW(),
+    updated_at         TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_ari_req_id ON approved_request_items(req_id);
+CREATE INDEX idx_ari_item_id ON approved_request_items(item_id);
+
+/* --- UPDATED TABLE: purchase_orders (added notes column) --- */
 CREATE TABLE purchase_orders (
     po_id                  SERIAL PRIMARY KEY,
     po_ref                 VARCHAR(255) UNIQUE NOT NULL,
@@ -190,6 +210,7 @@ CREATE TABLE purchase_orders (
     delivery_address       TEXT NOT NULL,
     expected_delivery_date DATE NULL,
     total_amount           DECIMAL(10,2) DEFAULT 0,
+    notes                  TEXT NULL, -- Added per migration request
     sup_id                 INTEGER REFERENCES suppliers(sup_id),
     req_id                 INTEGER REFERENCES requisitions(req_id),
     created_at TIMESTAMP DEFAULT NOW(),
@@ -643,6 +664,6 @@ END;
 $$ LANGUAGE plpgsql;
 
 /* ============================================================
-   5. DONE – everything in one shot
+   5. DONE
    ============================================================ */
-SELECT 'All tables, types and functions created successfully!' AS result;
+SELECT 'All tables (including new approved_request_items), columns (purchase_orders.notes), types and functions created successfully!' AS result;

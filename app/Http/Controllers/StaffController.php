@@ -387,6 +387,66 @@ class StaffController extends Controller
         return redirect()->back()->with($updated ? 'success' : 'error', $updated ? 'Receipt confirmed successfully' : 'Unable to confirm receipt');
     }
 
+    public function arShow($id)
+    {
+        $userId = Auth::id();
+        $ar = DB::table('acknowledge_receipts as ar')
+            ->leftJoin('users as u', 'u.user_id', '=', 'ar.issued_by')
+            ->where('ar.ar_id', $id)
+            ->where('ar.issued_to', $userId)
+            ->select('ar.*', 'u.name as issued_by_name')
+            ->first();
+
+        if (!$ar) {
+            return response()->json(['error' => 'Acknowledgement receipt not found'], 404);
+        }
+
+        // Get related items from inventory_transactions
+        $items = DB::table('inventory_transactions as it')
+            ->join('purchase_orders as po', 'po.po_id', '=', 'it.po_id')
+            ->where('po.req_id', $ar->req_id)
+            ->select('it.item_id', 'it.trans_quantity', 'it.trans_type', 'it.trans_date')
+            ->get();
+        return response()->json([
+            'ar' => [
+                'ar_ref' => $ar->ar_ref,
+                'ar_status' => $ar->ar_status,
+                'issued_date' => $ar->issued_date,
+                'issued_by_name' => $ar->issued_by_name,
+                'ar_remarks' => $ar->ar_remarks,
+            ],
+            'items' => $items
+        ]);
+    }
+
+    public function arPrint($id)
+    {
+        $userId = Auth::id();
+        $ar = DB::table('acknowledge_receipts as ar')
+            ->leftJoin('users as u', 'u.user_id', '=', 'ar.issued_by')
+            ->leftJoin('users as u2', 'u2.user_id', '=', 'ar.issued_to')
+            ->leftJoin('requisitions as r', 'r.req_id', '=', 'ar.req_id')
+            ->where('ar.ar_id', $id)
+            ->where('ar.issued_to', $userId)
+            ->select('ar.*', 'u.name as issued_by_name', 'u2.name as issued_to_name', 'r.req_ref')
+            ->first();
+
+        if (!$ar) {
+            abort(404, 'Acknowledgement receipt not found');
+        }
+
+        $ar->issued_date = \Carbon\Carbon::parse($ar->issued_date);
+
+        // Get related items from inventory_transactions
+        $items = DB::table('inventory_transactions as it')
+            ->join('items as i', 'i.item_id', '=', 'it.item_id')
+            ->join('purchase_orders as po', 'po.po_id', '=', 'it.po_id')
+            ->where('po.req_id', $ar->req_id)
+            ->select('i.item_name', 'it.trans_quantity', 'it.trans_type', 'it.trans_date', 'i.item_unit')
+            ->get();
+        return view('Employee.AR.print_view', compact('ar', 'items'));
+    }
+
     // ===== Notifications =====
     public function notificationsIndex()
     {

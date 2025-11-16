@@ -29,7 +29,7 @@
         </div>
         <div class="divide-y divide-gray-200" id="notifications-list">
             @forelse($notifications as $notification)
-            <div class="p-6 {{ $notification->is_read ? 'bg-white' : 'bg-blue-50' }} hover:bg-gray-50 cursor-pointer" onclick="viewNotification({{ $notification->notification_id }})">
+            <div class="p-6 {{ $notification->is_read ? 'bg-white' : 'bg-blue-50' }} hover:bg-gray-50 cursor-pointer" onclick="viewNotification({{ $notification->notif_id }})">
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
                         <div class="flex items-center space-x-2">
@@ -38,11 +38,11 @@
                             <span class="inline-block w-2 h-2 bg-blue-600 rounded-full"></span>
                             @endif
                         </div>
-                        <p class="text-sm text-gray-600 mt-1">{{ $notification->notif_message }}</p>
+                        <p class="text-sm text-gray-600 mt-1">{{ $notification->notif_content }}</p>
                         <p class="text-xs text-gray-500 mt-2">{{ $notification->created_at->format('M d, Y H:i') }}</p>
                     </div>
                     <div class="flex space-x-2">
-                        <button onclick="markAsRead(event, {{ $notification->notification_id }})" class="text-sm text-blue-600 hover:text-blue-700">
+                        <button onclick="markAsRead(event, {{ $notification->notif_id }})" class="text-sm text-blue-600 hover:text-blue-700">
                             Mark Read
                         </button>
                     </div>

@@ -39,6 +39,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
         Route::get('/reports/{report}', [AdminController::class, 'generateReport'])->name('reports.generate');
         Route::get('/purchase-orders', [AdminController::class, 'purchaseOrders'])->name('purchase-orders');
+        Route::get('/purchase-orders/{id}', [AdminController::class, 'purchaseOrderShow'])->name('purchase-orders.show');
+        Route::post('/purchase-orders/{id}/status', [AdminController::class, 'purchaseOrderStatusUpdate'])->name('purchase-orders.status');
         Route::get('/suppliers', [AdminController::class, 'suppliers'])->name('suppliers');
         Route::post('/suppliers', [AdminController::class, 'storeSupplier'])->name('suppliers.store');
         Route::get('/suppliers/{id}', [AdminController::class, 'showSupplier'])->name('suppliers.show');
@@ -53,6 +55,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/users/{id}/password', [AdminController::class, 'changeUserPassword'])->name('users.password');
         Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.destroy');
         Route::get('/notifications', [AdminController::class, 'notifications'])->name('notifications');
+        Route::get('/notifications/{id}', [AdminController::class, 'notificationShow'])->name('notifications.show');
         Route::get('/notifications/compose', [AdminController::class, 'composeNotificationPage'])->name('notifications.compose-page');
 
         // Notifications AJAX endpoints used by header
@@ -70,6 +73,17 @@ Route::middleware(['auth'])->group(function () {
 
         // Requisitions details for modal
         Route::get('/requisitions/{id}', [AdminController::class, 'showRequisition'])->name('requisitions.show');
+
+        // Inventory transaction details for modal
+        Route::get('/inventory/transactions/{id}', [AdminController::class, 'transactionShow'])->name('inventory-transactions.show');
+
+        // Acknowledge receipts
+        Route::get('/acknowledge-receipts', [AdminController::class, 'acknowledgeReceipts'])->name('acknowledge-receipts.index');
+        Route::get('/acknowledge-receipts/{id}', [AdminController::class, 'showAcknowledgeReceipt'])->name('acknowledge-receipts.show');
+
+        // Memos
+        Route::get('/memos', [AdminController::class, 'memos'])->name('memos.index');
+        Route::get('/memos/{id}', [AdminController::class, 'showMemo'])->name('memos.show');
 
         // Notifications compose
         Route::post('/notifications/compose', [AdminController::class, 'composeNotification'])->name('notifications.compose');
@@ -101,6 +115,8 @@ Route::middleware(['auth'])->group(function () {
 
         // AR
         Route::get('/ar', [StaffController::class, 'arIndex'])->name('ar');
+        Route::get('/ar/{id}', [StaffController::class, 'arShow'])->name('ar.show');
+        Route::get('/ar/{id}/print', [StaffController::class, 'arPrint'])->name('ar.print');
         Route::post('/ar/confirm', [StaffController::class, 'arConfirm'])->name('acknowledgements.confirm');
 
         // Notifications

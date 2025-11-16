@@ -127,8 +127,6 @@
     <!-- ====== MODALS  ====== -->
     @include('Employee.AR.view')
     @include('Employee.AR.confirm')
-    @include('Employee.AR.print')
-
 </div>
 
 <script>
@@ -189,7 +187,7 @@ function sortTable(f){
 /* modal openers */
 function openViewModal(id){
     currentId=id;
-    fetch(`/api/ar/${id}`, { headers: { 'Accept':'application/json' }})
+    fetch(`/staff/ar/${id}`, { headers: { 'Accept':'application/json' }})
         .then(async (response)=>{
             const ct = response.headers.get('content-type')||'';
             if(!response.ok){
@@ -255,7 +253,7 @@ function openConfirmModal(id,ref){
 function openPrintModal(id){
     currentId=id;
     /* ajax fetch then open print window */
-    window.open('/employee/acknowledgements/'+id+'/print','_blank');
+    window.open('/staff/ar/'+id+'/print','_blank');
 }
 </script>
 @endsection

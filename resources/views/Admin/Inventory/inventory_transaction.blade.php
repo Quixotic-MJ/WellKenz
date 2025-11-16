@@ -109,9 +109,9 @@
                         <td class="px-6 py-4 text-sm text-gray-900">{{ $tx->trans_remarks ?? '—' }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">
                             @if($tx->trans_type === 'out' && $tx->acknowledgeReceipt)
-                                <a href="{{ route('admin.acknowledge-receipts.show', $tx->acknowledgeReceipt->id) }}" class="text-blue-600 hover:underline">Ack</a>
+                                <a href="{{ url('/admin/acknowledge-receipts/' . $tx->acknowledgeReceipt->id) }}" class="text-blue-600 hover:underline">Ack</a>
                             @elseif($tx->trans_type === 'in' && $tx->memo)
-                                <a href="{{ route('admin.memos.show', $tx->memo->id) }}" class="text-blue-600 hover:underline">Memo</a>
+                                <a href="{{ url('/admin/memos/' . $tx->memo->id) }}" class="text-blue-600 hover:underline">Memo</a>
                             @else
                                         —
                                     @endif
@@ -212,24 +212,24 @@ function sortTable(f){
 
 /* modal openers */
 function openViewModal(id){
-    currentId = id;
-    fetch(`/api/inventory/transactions/${id}`, { headers: { 'Accept':'application/json' }})
-      .then(r => r.json())
-      .then(data => {
-        if (data.error) throw new Error(data.error);
-        const body = document.getElementById('viewTransactionBody');
-        body.innerHTML = `
-          <div><span class="text-gray-500">Date:</span> ${data.date || '—'}</div>
-          <div><span class="text-gray-500">Type:</span> ${data.type || '—'}</div>
-          <div><span class="text-gray-500">Item:</span> ${(data.item_code? data.item_code+' — ' : '') + (data.item_name || '—')}</div>
-          <div><span class="text-gray-500">Qty:</span> ${(data.quantity ?? 0)} ${data.item_unit || ''}</div>
-          <div><span class="text-gray-500">User:</span> ${data.user || '—'}</div>
-          <div><span class="text-gray-500">PO Ref:</span> ${data.po_ref || '—'}</div>
-          <div><span class="text-gray-500">Remarks:</span> ${data.remarks || '—'}</div>
-        `;
-        document.getElementById('viewTransactionModal').classList.remove('hidden');
-      })
-      .catch(err => { console.error(err); showMessage('Failed to load transaction details','error'); });
+currentId = id;
+fetch(`/admin/inventory/transactions/${id}`, { headers: { 'Accept':'application/json' }})
+.then(r => r.json())
+.then(data => {
+if (data.error) throw new Error(data.error);
+const body = document.getElementById('viewTransactionBody');
+body.innerHTML = `
+  <div><span class="text-gray-500">Date:</span> ${data.date || '—'}</div>
+  <div><span class="text-gray-500">Type:</span> ${data.type || '—'}</div>
+  <div><span class="text-gray-500">Item:</span> ${(data.item_code? data.item_code+' — ' : '') + (data.item_name || '—')}</div>
+  <div><span class="text-gray-500">Qty:</span> ${(data.quantity ?? 0)} ${data.item_unit || ''}</div>
+  <div><span class="text-gray-500">User:</span> ${data.user || '—'}</div>
+  <div><span class="text-gray-500">PO Ref:</span> ${data.po_ref || '—'}</div>
+  <div><span class="text-gray-500">Remarks:</span> ${data.remarks || '—'}</div>
+`;
+document.getElementById('viewTransactionModal').classList.remove('hidden');
+})
+.catch(err => { console.error(err); showMessage('Failed to load transaction details','error'); });
 }
 </script>
 @endsection

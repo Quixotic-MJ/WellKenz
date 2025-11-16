@@ -10,7 +10,7 @@
                     <tr>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Item</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Qty</th>
-                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">UoM</th>
+                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Unit</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Price (₱)</th>
                         <th class="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Subtotal (₱)</th>
                     </tr>

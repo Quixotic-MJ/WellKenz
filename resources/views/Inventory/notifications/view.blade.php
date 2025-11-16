@@ -35,7 +35,7 @@
         </div>
         
         <div class="prose max-w-none">
-            <p class="text-gray-700 whitespace-pre-wrap">{{ $notification->notif_message }}</p>
+            <p class="text-gray-700 whitespace-pre-wrap">{{ $notification->notif_content }}</p>
         </div>
 
         @if($notification->notif_url)
@@ -51,7 +51,7 @@
 @push('scripts')
 <script>
     function markAsRead() {
-        fetch('{{ route("inventory.notifications.mark-read", $notification->notification_id) }}', {
+        fetch('{{ route("inventory.notifications.mark-read", $notification->notif_id) }}', {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),

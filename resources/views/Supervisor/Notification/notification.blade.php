@@ -110,12 +110,12 @@
                                 </td>
                                 <td class="px-6 py-4">
                                     <div class="flex items-center space-x-2">
-                                        <button onclick="openViewModal({{ $n->notification_id }})"
+                                        <button onclick="openViewModal({{ $n->notif_id }})"
                                             class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
                                             <i class="fas fa-eye text-sm"></i>
                                         </button>
                                         @if (!$n->is_read)
-                                            <button onclick="markRead({{ $n->notification_id }})"
+                                            <button onclick="markRead({{ $n->notif_id }})"
                                                 class="p-2 text-green-600 hover:bg-green-50 rounded transition"
                                                 title="Mark read">
                                                 <i class="fas fa-check text-sm"></i>

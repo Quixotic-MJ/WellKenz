@@ -146,7 +146,10 @@
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active-menu');
             });
-            document.getElementById(menuId).classList.add('active-menu');
+            const menuElement = document.getElementById(menuId);
+            if (menuElement) {
+                menuElement.classList.add('active-menu');
+            }
         }
 
         // Toggle dropdowns
@@ -174,9 +177,34 @@
             }
         });
 
-        // Set dashboard as active by default
+        // Auto-detect current route and set active menu
         document.addEventListener('DOMContentLoaded', function() {
-            setActiveMenu('menu-dashboard');
+            const currentPath = window.location.pathname;
+            
+            // Determine which menu should be active based on current path
+            let activeMenuId = 'menu-dashboard'; // default
+            
+            if (currentPath.includes('requisitions')) {
+                activeMenuId = 'menu-requisitions';
+            } else if (currentPath.includes('item-requests')) {
+                activeMenuId = 'menu-item-requests';
+            } else if (currentPath.includes('purchase-orders')) {
+                activeMenuId = 'menu-purchase-orders';
+            } else if (currentPath.includes('suppliers')) {
+                activeMenuId = 'menu-suppliers';
+            } else if (currentPath.includes('transactions')) {
+                activeMenuId = 'menu-transactions';
+            } else if (currentPath.includes('item-management')) {
+                activeMenuId = 'menu-item-management';
+            } else if (currentPath.includes('reports')) {
+                activeMenuId = 'menu-reports';
+            } else if (currentPath.includes('users')) {
+                activeMenuId = 'menu-user-management';
+            } else if (currentPath.includes('notifications')) {
+                activeMenuId = 'menu-notifications';
+            }
+            
+            setActiveMenu(activeMenuId);
         });
     </script>
     

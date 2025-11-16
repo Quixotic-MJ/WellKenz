@@ -104,12 +104,12 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center space-x-2">
-                                <button onclick="openViewModal({{ $n->notification_id }})"
+                                <button onclick="openViewModal({{ $n->notif_id }})"
                                     class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
                                     <i class="fas fa-eye text-sm"></i>
                                 </button>
                                 @if(!$n->is_read)
-                                    <button onclick="markRead({{ $n->notification_id }})"
+                                    <button onclick="markRead({{ $n->notif_id }})"
                                         class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark read">
                                         <i class="fas fa-check text-sm"></i>
                                     </button>
@@ -201,7 +201,45 @@ function sortTable(f){
 function openViewModal(id){
     currentId=id;
     /* ajax fetch then fill modal */
-    document.getElementById('viewNotificationModal').classList.remove('hidden');
+    fetch(`/admin/notifications/${id}`,{
+        headers:{'X-Requested-With':'XMLHttpRequest'}
+    })
+    .then(r=>r.ok?r.json():Promise.reject(r))
+    .then(res=>{
+        const body = document.getElementById('viewNotificationBody');
+        if(res.success){
+            const n = res.notification;
+            body.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                        <p class="text-gray-900 font-semibold">${n.title}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                        <p class="text-gray-900 bg-gray-50 p-3 rounded">${n.content}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Module</label>
+                            <p class="text-gray-900">${n.related_type || 'N/A'}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">User</label>
+                            <p class="text-gray-900">${n.user || 'System'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Timestamp</label>
+                        <p class="text-gray-900">${n.created_at}</p>
+                    </div>
+                </div>`;
+            document.getElementById('viewNotificationModal').classList.remove('hidden');
+        }else{
+            showMessage('Error loading notification details','error');
+        }
+    })
+    .catch(()=>showMessage('Error loading notification','error'));
 }
 function openComposeModal(){
     document.getElementById('composeNotificationModal').classList.remove('hidden');
