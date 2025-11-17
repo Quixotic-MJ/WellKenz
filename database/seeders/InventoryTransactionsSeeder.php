@@ -35,30 +35,34 @@ class InventoryTransactionsSeeder extends Seeder
                 'created_at' => '2024-11-15 10:30:00',
                 'updated_at' => '2024-11-15 10:30:00'
             ],
-            [
-                'trans_ref' => 'TRN-2024-003',
-                'trans_type' => 'in',
-                'trans_quantity' => 30,
-                'trans_date' => '2024-11-13',
-                'trans_remarks' => 'Purchase order delivery - butter stock',
-                'po_id' => 2,
-                'trans_by' => 4, // Maria Garcia (Inventory Manager)
-                'item_id' => 10, // Butter (Unsalted)
-                'created_at' => '2024-11-13 14:00:00',
-                'updated_at' => '2024-11-13 14:00:00'
-            ],
-            [
-                'trans_ref' => 'TRN-2024-004',
-                'trans_type' => 'in',
-                'trans_quantity' => 5,
-                'trans_date' => '2024-11-13',
-                'trans_remarks' => 'Purchase order delivery - decorator supplies',
-                'po_id' => 2,
-                'trans_by' => 4, // Maria Garcia (Inventory Manager)
-                'item_id' => 16, // Testing Item Low Stock
-                'created_at' => '2024-11-13 14:00:00',
-                'updated_at' => '2024-11-13 14:00:00'
-            ],
+            
+            // --- TRANSACTIONS FOR PO_ID 2 COMMENTED OUT ---
+            // [
+            //     'trans_ref' => 'TRN-2024-003',
+            //     'trans_type' => 'in',
+            //     'trans_quantity' => 30,
+            //     'trans_date' => '2024-11-13',
+            //     'trans_remarks' => 'Purchase order delivery - butter stock',
+            //     'po_id' => 2,
+            //     'trans_by' => 4, // Maria Garcia (Inventory Manager)
+            //     'item_id' => 10, // Butter (Unsalted)
+            //     'created_at' => '2024-11-13 14:00:00',
+            //     'updated_at' => '2024-11-13 14:00:00'
+            // ],
+            // [
+            //     'trans_ref' => 'TRN-2024-004',
+            //     'trans_type' => 'in',
+            //     'trans_quantity' => 5,
+            //     'trans_date' => '2024-11-13',
+            //     'trans_remarks' => 'Purchase order delivery - decorator supplies',
+            //     'po_id' => 2,
+            //     'trans_by' => 4, // Maria Garcia (Inventory Manager)
+            //     'item_id' => 16, // Testing Item Low Stock
+            //     'created_at' => '2024-11-13 14:00:00',
+            //     'updated_at' => '2024-11-13 14:00:00'
+            // ],
+            // ----------------------------------------------
+
             [
                 'trans_ref' => 'TRN-2024-005',
                 'trans_type' => 'in',
@@ -97,7 +101,7 @@ class InventoryTransactionsSeeder extends Seeder
                 'created_at' => '2024-11-15 08:00:00',
                 'updated_at' => '2024-11-15 08:00:00'
             ],
-            [
+           [
                 'trans_ref' => 'TRN-2024-008',
                 'trans_type' => 'out',
                 'trans_quantity' => 200,
@@ -107,7 +111,7 @@ class InventoryTransactionsSeeder extends Seeder
                 'trans_by' => 5, // Alice Brown (Senior Baker)
                 'item_id' => 7, // Fresh Eggs
                 'created_at' => '2024-11-15 08:00:00',
-                'updated_at' => '2024-11-15 08:00:00'
+                'updated_at' => '2024-11-15 08:00:00' // <-- This was the line with the typo
             ],
             [
                 'trans_ref' => 'TRN-2024-009',

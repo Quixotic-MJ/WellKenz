@@ -94,6 +94,23 @@ class RequisitionsSeeder extends Seeder
                 'created_at' => '2024-11-14 17:15:00',
                 'updated_at' => '2024-11-14 18:00:00'
             ],
+            // ----- ADDED THIS NEW REQUISITION -----
+            [
+                'req_id' => 7,
+                'req_ref' => 'REQ-2024-007',
+                'req_purpose' => 'NEW TEST: Approved requisition waiting for a PO',
+                'req_priority' => 'medium',
+                'req_status' => 'approved', // <-- It's 'approved'
+                'req_date' => '2025-11-17',
+                'approved_date' => '2025-11-17',
+                'req_reject_reason' => null,
+                'requested_by' => 6, // Bob Wilson
+                'approved_by' => 2, // Jane Smith
+                'created_at' => '2025-11-17 10:00:00',
+                'updated_at' => '2025-11-17 10:00:00'
+            ]
+            // This req_id (7) is NOT in your PurchaseOrdersSeeder,
+            // so it will appear on the page.
         ];
 
         foreach ($requisitions as $requisition) {

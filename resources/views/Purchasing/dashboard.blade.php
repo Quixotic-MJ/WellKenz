@@ -157,7 +157,7 @@
                         </td>
                         <td class="px-6 py-4 text-sm text-gray-900">₱ {{ number_format($po->total_amount,2) }}</td>
                         <td class="px-6 py-4 text-sm text-gray-500">{{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('M d, Y') : '-' }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-500">{{ $po->created_at->format('M d, Y') }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">{{ $po->created_at ? \Carbon\Carbon::parse($po->created_at)->format('M d, Y') : '-' }}</td>
                     </tr>
                     @endforeach
                 </tbody>

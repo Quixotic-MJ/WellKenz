@@ -85,13 +85,13 @@
             <tbody>
                 @php $grandTotal = 0; @endphp
                 @foreach ($purchaseOrder->items as $item)
-                    @php $lineTotal = $item->quantity * $item->unit_price; $grandTotal += $lineTotal; @endphp
+                    @php $grandTotal += $item->lineTotal; @endphp
                     <tr>
                         <td>{{ $item->item_name }}</td>
                         <td class="text-right">{{ $item->unit }}</td>
                         <td class="text-right">{{ number_format($item->quantity) }}</td>
                         <td class="text-right">₱{{ number_format($item->unit_price, 2) }}</td>
-                        <td class="text-right">₱{{ number_format($lineTotal, 2) }}</td>
+                        <td class="text-right">₱{{ number_format($item->lineTotal, 2) }}</td>
                     </tr>
                 @endforeach
                 <tr class="total-row">

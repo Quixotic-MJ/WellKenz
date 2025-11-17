@@ -165,8 +165,8 @@
                     @forelse($lowStockItems as $item)
                         <div class="p-3 border-l-4 border-amber-500 bg-amber-50 rounded">
                             <p class="text-sm font-medium text-gray-900">{{ $item->item_name }}</p>
-                            <p class="text-xs text-gray-600 mt-1">Stock: {{ $item->current_stock }} {{ $item->item_unit }} •
-                                Re-order: {{ $item->reorder_level }} {{ $item->item_unit }}</p>
+                            <p class="text-xs text-gray-600 mt-1">Stock: {{ $item->item_stock ?? 'N/A' }} {{ $item->item_unit }} •
+                                Re-order: {{ $item->reorder_level ?? 'N/A' }} {{ $item->item_unit }}</p>
                         </div>
                     @empty
                         <p class="text-xs text-gray-500">No low-stock items – you're all set!</p>
@@ -240,8 +240,8 @@
                                         {{ ucfirst($req->req_priority) }}
                                     </span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->requester->name ?? '-' }}</td>
-                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->approver->name ?? '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->requester_name ?? '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $req->approver_name ?? '-' }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-500">
                                     {{ $req->approved_date ? \Carbon\Carbon::parse($req->approved_date)->format('M d, Y') : '-' }}</td>
                                 <td class="px-6 py-4">
@@ -462,13 +462,13 @@
             const body = document.getElementById('viewReqModalBody');
             body.innerHTML = '<p class="text-gray-500 text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i>Loading details...</p>';
 
-            fetch(`/purchasing/requisitions/${id}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
+            fetch(`{{ url('purchasing/requisitions') }}/${id}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
                 .then(r => r.json())
                 .then(data => {
                     const formatDate = (dateString) => dateString ? new Date(dateString).toLocaleDateString('en-US', {
@@ -477,6 +477,7 @@
                         day: 'numeric'
                     }) : 'N/A';
                     
+                    // ----- START OF JAVASCRIPT FIX -----
                     body.innerHTML = `
                         <div class="space-y-6">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-b pb-4">
@@ -486,11 +487,11 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Requested By</label>
-                                    <p class="text-gray-900">${data.requester ? data.requester.name : 'N/A'}</p>
+                                    <p class="text-gray-900">${data.requester_name || 'N/A'}</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Approved By</label>
-                                    <p class="text-gray-900">${data.approver ? data.approver.name : 'N/A'}</p>
+                                    <p class="text-gray-900">${data.approver_name || 'N/A'}</p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Approved Date</label>
@@ -532,12 +533,12 @@
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-200">
-                                            ${data.items ? data.items.map(item => `
+                                            ${data.items && data.items.length > 0 ? data.items.map(item => `
                                                 <tr class="bg-white">
-                                                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${item.item ? item.item.item_name : 'Unknown Item'}</td>
+                                                    <td class="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${item.item_name || 'Unknown Item'}</td>
                                                     <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">${item.item_unit}</td>
                                                     <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">${item.req_item_quantity}</td>
-                                                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">${item.item?.current_stock ?? 'N/A'}</td>
+                                                    <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-600">${item.item_stock ?? 'N/A'}</td>
                                                     <td class="px-3 py-2 whitespace-nowrap">
                                                         <span class="inline-block px-2 py-1 text-xs font-semibold rounded ${
                                                             item.req_item_status === 'fulfilled' ? 'bg-green-100 text-green-700' :
@@ -553,10 +554,11 @@
                             </div>
                         </div>
                     `;
+                    // ----- END OF JAVASCRIPT FIX -----
 
                     // Updated footer button to call the API function
                     document.getElementById('viewReqModalFooter').innerHTML = `
-                        <button onclick="redirectCreatePO({{ $req->req_id }});" type="button" class="px-4 py-2 bg-green-600 text-white hover:bg-green-700 transition text-sm font-medium rounded">
+                        <button onclick="redirectCreatePO(currentId);" type="button" class="px-4 py-2 bg-green-600 text-white hover:bg-green-700 transition text-sm font-medium rounded">
                             <i class="fas fa-plus mr-2"></i>Create Purchase Order
                         </button>
                         <button onclick="closeModals()" type="button" class="px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm font-medium rounded ml-2">

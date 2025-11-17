@@ -151,6 +151,28 @@ class RequisitionItemsSeeder extends Seeder
                 'created_at' => '2024-11-14 17:15:00',
                 'updated_at' => '2024-11-14 18:00:00'
             ],
+
+            // ----- ADDED THESE NEW ITEMS FOR REQ 7 -----
+            [
+                'req_item_id' => 14,
+                'req_item_quantity' => 20,
+                'req_item_status' => 'pending',
+                'item_unit' => 'kilogram',
+                'req_id' => 7,
+                'item_id' => 3, // Bread Flour
+                'created_at' => '2025-11-17 10:00:00',
+                'updated_at' => '2025-11-17 10:00:00'
+            ],
+            [
+                'req_item_id' => 15,
+                'req_item_quantity' => 10,
+                'req_item_status' => 'pending',
+                'item_unit' => 'kilogram',
+                'req_id' => 7,
+                'item_id' => 5, // Yeast
+                'created_at' => '2025-11-17 10:00:00',
+                'updated_at' => '2025-11-17 10:00:00'
+            ]
         ];
 
         foreach ($requisitionItems as $item) {
