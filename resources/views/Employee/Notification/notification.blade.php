@@ -6,11 +6,9 @@
 @section('content')
 <div class="space-y-6">
 
-    <!-- toast -->
     <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
     <div id="errorMessage"  class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
-    <!-- header card -->
     <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="flex items-center justify-between">
             <div>
@@ -20,7 +18,6 @@
         </div>
     </div>
 
-    <!-- live counts -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Total</p>
@@ -40,7 +37,6 @@
         </div>
     </div>
 
-    <!-- notifications table -->
     <div class="bg-white border border-gray-200 rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">My Notifications</h3>
@@ -66,73 +62,91 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm" id="notificationsTable">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer" onclick="sortTable('date')">Date <i class="fas fa-sort ml-1"></i></th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Type</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Title</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Content</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200" id="notificationsTableBody">
-                    @forelse($notifications as $n)
-                    <tr class="hover:bg-gray-50 transition notif-row
-                        @if(!$n->is_read) bg-blue-50 @endif"
-                        data-module="{{ $n->related_type }}"
-                        data-read="{{ $n->is_read ? 'read' : 'unread' }}"
-                        data-date="{{ $n->created_at->format('Y-m-d H:i') }}">
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ $n->created_at->format('M d, Y H:i') }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ ucfirst(str_replace('_',' ',$n->related_type)) }}</td>
-                        <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $n->notif_title }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($n->notif_content,60) }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">
-                            @if($n->is_read)
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">Read</span>
-                            @else
-                                <span class="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded">Unread</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center space-x-2">
-                                <button onclick="openViewModal({{ $n->notif_id }})"
-                                    class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
-                                    <i class="fas fa-eye text-sm"></i>
+        {{-- ****** START: THIS IS THE NEW NOTIFICATION LIST (replaces <table>) ****** --}}
+        <div class="divide-y divide-gray-200" id="notificationsTableBody">
+            @forelse($notifications as $n)
+                @php
+                    // Set icon and color based on module
+                    $icon = [
+                        'requisition' => 'fas fa-file-alt',
+                        'item_request' => 'fas fa-tags',
+                        'acknowledgment' => 'fas fa-receipt',
+                        'announcement' => 'fas fa-bullhorn',
+                    ][$n->related_type] ?? 'fas fa-bell';
+
+                    $iconColor = [
+                        'requisition' => 'text-blue-500 bg-blue-50',
+                        'item_request' => 'text-indigo-500 bg-indigo-50',
+                        'acknowledgment' => 'text-green-500 bg-green-50',
+                        'announcement' => 'text-purple-500 bg-purple-50',
+                    ][$n->related_type] ?? 'text-gray-500 bg-gray-50';
+                @endphp
+
+                {{-- This div replaces the <tr>. All data- attributes are preserved for JS filtering --}}
+                <div class="notif-row flex items-start p-6 {{ !$n->is_read ? 'bg-blue-50 hover:bg-blue-100' : 'bg-white hover:bg-gray-50' }} transition"
+                     data-module="{{ $n->related_type }}"
+                     data-read="{{ $n->is_read ? 'read' : 'unread' }}"
+                     data-date="{{ $n->created_at->format('Y-m-d H:i') }}">
+                    
+                    <div class="mr-4 pt-1 flex-shrink-0">
+                        <span class="flex items-center justify-center h-10 w-10 rounded-full {{ $iconColor }}">
+                            <i class="{{ $icon }}"></i>
+                        </span>
+                    </div>
+
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-gray-900">{{ $n->notif_title }}</p>
+                            <span class="text-xs text-gray-500 flex-shrink-0 ml-4">{{ $n->created_at->diffForHumans() }}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">{{ $n->notif_content }}</p>
+                        <div class="text-xs text-gray-500 mt-2">
+                            <span>Module: <strong>{{ ucfirst(str_replace('_',' ',$n->related_type)) }}</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="ml-4 pl-4 flex-shrink-0 pt-1">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="openViewModal({{ $n->notif_id }})"
+                                class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
+                                <i class="fas fa-eye text-sm"></i>
+                            </button>
+                            @if(!$n->is_read)
+                                <button onclick="markRead({{ $n->notif_id }})"
+                                    class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark read">
+                                    <i class="fas fa-check text-sm"></i>
                                 </button>
-                                @if(!$n->is_read)
-                                    <button onclick="markRead({{ $n->notif_id }})"
-                                        class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark read">
-                                        <i class="fas fa-check text-sm"></i>
-                                    </button>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr>
-                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                            <i class="fas fa-bell text-3xl mb-3 opacity-50"></i>
-                            <p>No notifications found.</p>
-                        </td>
-                    </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="p-12 text-center text-gray-500">
+                    <i class="fas fa-bell text-3xl mb-3 opacity-50"></i>
+                    <p>No notifications found.</p>
+                </div>
+            @endforelse
         </div>
+        {{-- ****** END: NEW NOTIFICATION LIST ****** --}}
+
 
         <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
-            Showing <span id="visibleCount">{{ $notifications->count() }}</span> of {{ $notifications->count() }} notifications
+            Showing <span id="visibleCount">{{ $notifications->count() }}</span> of {{ $notifications->total() }} notifications
         </div>
+
+        {{-- Add pagination links --}}
+        @if ($notifications->hasPages())
+            <div class="px-6 py-4 border-t border-gray-200">
+                {{ $notifications->links() }}
+            </div>
+        @endif
     </div>
 
-    <!-- ====== MODALS  ====== -->
     @include('Employee.Notification.view')
 
 </div>
 
+{{-- ****** START: JAVASCRIPT UPDATES ****** --}}
 <script>
 /* light helpers */
 let currentId = null;
@@ -154,7 +168,8 @@ function filterModule(val){
     let visible = 0;
     rows.forEach(r=>{
         const ok = val==='all' || r.dataset.module===val;
-        r.style.display = ok ? '' : 'none'; if(ok) visible++;
+        r.style.display = ok ? 'flex' : 'none'; // <-- Updated from '' to 'flex'
+        if(ok) visible++;
     });
     document.getElementById('visibleCount').textContent = visible;
 }
@@ -163,7 +178,8 @@ function filterRead(val){
     let visible = 0;
     rows.forEach(r=>{
         const ok = val==='all' || r.dataset.read===val;
-        r.style.display = ok ? '' : 'none'; if(ok) visible++;
+        r.style.display = ok ? 'flex' : 'none'; // <-- Updated from '' to 'flex'
+        if(ok) visible++;
     });
     document.getElementById('visibleCount').textContent = visible;
 }
@@ -171,7 +187,8 @@ function searchTable(q){
     const Q = q.toLowerCase(); const rows = document.querySelectorAll('.notif-row'); let visible=0;
     rows.forEach(r=>{
         const ok = r.textContent.toLowerCase().includes(Q);
-        r.style.display = ok ? '' : 'none'; if(ok) visible++;
+        r.style.display = ok ? 'flex' : 'none'; // <-- Updated from '' to 'flex'
+        if(ok) visible++;
     });
     document.getElementById('visibleCount').textContent = visible;
     const btn = document.getElementById('clearBtn');
@@ -186,12 +203,13 @@ let sortField='date', sortDir='desc';
 function sortTable(f){
     if(sortField===f) sortDir=sortDir==='asc'?'desc':'asc'; else {sortField=f; sortDir='asc';}
     const tbody=document.getElementById('notificationsTableBody');
-    const rows=Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+    const rows=Array.from(tbody.querySelectorAll('.notif-row:not([style*="display: none"])')); // <-- Updated from 'tr' to '.notif-row'
     rows.sort((a,b)=>{
         const A=a.dataset[f], B=b.dataset[f];
         return sortDir==='asc'?A.localeCompare(B):B.localeCompare(A);
     });
     rows.forEach(r=>tbody.appendChild(r));
+    // Note: Sorting headers are removed, so this part won't run, which is fine.
     document.querySelectorAll('thead th i').forEach(i=>i.className='fas fa-sort ml-1 text-xs');
     const th=document.querySelector(`th[onclick="sortTable('${f}')"] i`);
     if(th) th.className=sortDir==='asc'?'fas fa-sort-up ml-1 text-xs':'fas fa-sort-down ml-1 text-xs';
@@ -200,11 +218,52 @@ function sortTable(f){
 /* modal openers */
 function openViewModal(id){
     currentId=id;
-    /* ajax fetch then fill modal */
-    document.getElementById('viewNotificationModal').classList.remove('hidden');
+    // **FIX**: Added fetch logic to load notification data
+    // **This assumes you will create a route at /staff/notifications/{id} in your web.php**
+    fetch(`/staff/notifications/${id}`, {
+        headers:{'X-Requested-With':'XMLHttpRequest'}
+    })
+    .then(r=>r.ok?r.json():Promise.reject(r))
+    .then(res=>{
+        const body = document.getElementById('viewNotificationBody');
+        if(res.success){ // Assuming a {success: true, notification: {...}} structure
+            const n = res.notification;
+            body.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                        <p class="text-gray-900 font-semibold">${n.title}</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Content</label>
+                        <p class="text-gray-900 bg-gray-50 p-3 rounded">${n.content}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Module</label>
+                            <p class="text-gray-900">${n.related_type || 'N/A'}</p>
+                        </div>
+                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">User</label>
+                            <p class="text-gray-900">${n.user || 'System'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Timestamp</label>
+                        <p class="text-gray-900">${n.created_at}</p>
+                    </div>
+                </div>`;
+            document.getElementById('viewNotificationModal').classList.remove('hidden');
+        }else{
+            showMessage('Error loading notification details','error');
+        }
+    })
+    .catch(()=>showMessage('Error loading notification. The controller route might be missing.','error'));
 }
+
 function markRead(id){
-    fetch('/employee/notifications/'+id+'/mark-read',{
+    // **FIX**: Changed URL from /employee/... to /staff/... to match web.php
+    fetch(`/staff/notifications/${id}/mark-read`,{
         method:'POST',
         headers:{
             'X-Requested-With':'XMLHttpRequest',
@@ -217,10 +276,11 @@ function markRead(id){
             showMessage('Marked as read');
             setTimeout(()=>location.reload(),500);
         }else{
-            showMessage(res.message||'Error','error');
+            showMessage(res.message||'Error: The controller route might be missing.','error');
         }
     })
-    .catch(()=>showMessage('Error','error'));
+    .catch(()=>showMessage('Error: The controller route might be missing.','error'));
 }
 </script>
+{{-- ****** END: JAVASCRIPT UPDATES ****** --}}
 @endsection

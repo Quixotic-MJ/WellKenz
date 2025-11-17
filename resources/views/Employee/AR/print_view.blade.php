@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acknowledgement Receipt - {{ $ar->ar_ref }}</title>
     <style>
@@ -156,15 +156,18 @@
         </div>
         <div class="info-item">
             <strong>Requisition Reference</strong>
-            <span>{{ $ar->req_ref ?? '—' }}</span>
+            {{-- ***** FIX 1: Access the relationship ***** --}}
+            <span>{{ $ar->requisition->req_ref ?? '—' }}</span>
         </div>
         <div class="info-item">
             <strong>Issued By</strong>
-            <span>{{ $ar->issued_by_name ?? '—' }}</span>
+            {{-- ***** FIX 2: Access the 'issuer' relationship ***** --}}
+            <span>{{ $ar->issuer->name ?? '—' }}</span>
         </div>
         <div class="info-item">
             <strong>Issued To</strong>
-            <span>{{ $ar->issued_to_name ?? '—' }}</span>
+            {{-- ***** FIX 3: Access the 'receiver' relationship ***** --}}
+            <span>{{ $ar->receiver->name ?? '—' }}</span>
         </div>
     </div>
 
