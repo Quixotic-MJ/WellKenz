@@ -6,11 +6,9 @@
 @section('content')
 <div class="space-y-6">
 
-    <!-- toast -->
     <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
     <div id="errorMessage"  class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
-    <!-- header card -->
     <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="flex items-center justify-between">
             <div>
@@ -24,60 +22,100 @@
         </div>
     </div>
 
-    <!-- live counts -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Total Items</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $totalItems }}</p>
+            <div class="flex items-center space-x-4">
+                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-blue-50 text-blue-500">
+                    <i class="fas fa-boxes fa-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Total Items</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $totalItems }}</p>
+                </div>
+            </div>
         </div>
         <div class="bg-white border border-amber-200 rounded-lg p-5">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Low-Stock</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $lowStockCount }}</p>
+            <div class="flex items-center space-x-4">
+                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-amber-50 text-amber-500">
+                    <i class="fas fa-arrow-down fa-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Low-Stock</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $lowStockCount }}</p>
+                </div>
+            </div>
         </div>
         <div class="bg-white border border-rose-200 rounded-lg p-5">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Expiring ≤ 30 d</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $expiringCount }}</p>
+            <div class="flex items-center space-x-4">
+                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 text-rose-500">
+                    <i class="fas fa-calendar-times fa-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Expiring ≤ 30 d</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $expiringCount }}</p>
+                </div>
+            </div>
         </div>
         <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <p class="text-xs text-gray-500 uppercase tracking-wider">Zero Stock</p>
-            <p class="text-2xl font-semibold text-gray-900 mt-2">{{ $zeroStockCount }}</p>
+            <div class="flex items-center space-x-4">
+                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-gray-50 text-gray-500">
+                    <i class="fas fa-ban fa-lg"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-500 uppercase tracking-wider">Zero Stock</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{ $zeroStockCount }}</p>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- alerts row -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- low-stock card -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Low-Stock Alerts</h3>
-            <div class="space-y-3">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-arrow-down text-amber-500 mr-3"></i>
+                Low-Stock Alerts
+            </h3>
+            <div class="space-y-2 max-h-48 overflow-y-auto pr-2">
                 @forelse($lowStockTop as $item)
-                    <div class="p-3 border-l-4 border-amber-500 bg-amber-50 rounded">
-                        <p class="text-sm font-medium text-gray-900">{{ $item->item_name }}</p>
-                        <p class="text-xs text-gray-600 mt-1">Stock: {{ $item->item_stock }} {{ $item->item_unit }} • Re-order: {{ $item->reorder_level }} {{ $item->item_unit }}</p>
+                    <div class="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                        <div>
+                            <p class="text-sm font-medium text-amber-900">{{ $item->item_name }}</p>
+                            <p class="text-xs text-amber-700 mt-1">Stock: {{ $item->item_stock }} / Re-order: {{ $item->reorder_level }}</p>
+                        </div>
+                        <span class="text-xs font-mono px-2 py-1 bg-white text-amber-800 rounded-full">{{ $item->item_unit }}</span>
                     </div>
                 @empty
-                    <p class="text-xs text-gray-500">No low-stock items – you're all set!</p>
+                    <div class="text-sm text-gray-500 text-center py-8">
+                        <i class="fas fa-check-circle text-green-500 text-2xl mb-2"></i>
+                        <p>No low-stock items!</p>
+                    </div>
                 @endforelse
             </div>
         </div>
 
-        <!-- expiry card -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Near-Expiry Alerts (≤ 30 days)</h3>
-            <div class="space-y-3">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <i class="fas fa-calendar-times text-rose-500 mr-3"></i>
+                Near-Expiry Alerts (≤ 30 days)
+            </h3>
+            <div class="space-y-2 max-h-48 overflow-y-auto pr-2">
                 @forelse($expiryTop as $lot)
-                    <div class="p-3 border-l-4 border-rose-500 bg-rose-50 rounded">
-                        <p class="text-sm font-medium text-gray-900">{{ $lot->item_name }}</p>
-                        <p class="text-xs text-gray-600 mt-1">Expires: {{ \Carbon\Carbon::parse($lot->item_expire_date)->format('M d, Y') }}</p>
+                    <div class="flex items-center justify-between bg-rose-50 border border-rose-200 rounded-lg px-4 py-3">
+                        <div>
+                            <p class="text-sm font-medium text-rose-900">{{ $lot->item_name }}</p>
+                            <p class="text-xs text-rose-700 mt-1">Expires: {{ \Carbon\Carbon::parse($lot->item_expire_date)->format('M d, Y') }}</p>
+                        </div>
                     </div>
                 @empty
-                    <p class="text-xs text-gray-500">No items expiring within 30 days.</p>
+                    <div class="text-sm text-gray-500 text-center py-8">
+                        <i class="fas fa-check-circle text-green-500 text-2xl mb-2"></i>
+                        <p>No items expiring soon.</p>
+                    </div>
                 @endforelse
             </div>
         </div>
     </div>
 
-    <!-- full inventory table -->
     <div class="bg-white border border-gray-200 rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">All Inventory Items</h3>
@@ -97,7 +135,6 @@
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Stock</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Unit</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reorder Lvl</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Expires</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
@@ -108,18 +145,17 @@
                     <tr class="hover:bg-gray-50 transition item-row"
                         data-code="{{ $item->item_code }}"
                         data-stock="{{ $item->item_stock }}">
-                        <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $item->item_code }}</td>
+                        <td class="px-6 py-4 text-sm font-semibold text-gray-900 font-mono">{{ $item->item_code }}</td>
                         <td class="px-6 py-4 text-sm text-gray-900">{{ $item->item_name }}</td>
                         <td class="px-6 py-4 text-sm text-gray-600">{{ $item->category->cat_name ?? '-' }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ $item->item_stock }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ $item->item_unit }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">{{ $item->reorder_level }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-600">
+                        <td class="px-6 py-4 text-sm text-gray-900 font-mono">{{ $item->item_stock }} <span class="text-gray-500 text-xs">{{ $item->item_unit }}</span></td>
+                        <td class="px-6 py-4 text-sm text-gray-600 font-mono">{{ $item->reorder_level }}</td>
+                        <td class="px-6 py-4 text-sm text-gray-600 font-mono">
                             @if($item->item_expire_date) {{ \Carbon\Carbon::parse($item->item_expire_date)->format('M d, Y') }} @else - @endif
                         </td>
                         <td class="px-6 py-4">
                             <button onclick="openViewModal({{ $item->item_id }})"
-                                class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
+                                class="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition" title="View">
                                 <i class="fas fa-eye text-sm"></i>
                             </button>
                         </td>
@@ -136,7 +172,6 @@
 
 </div>
 
-<!-- ====== MODAL  ====== -->
 @include('Supervisor.Inventory.view')
 
 @endsection
@@ -194,7 +229,10 @@ function openViewModal(id){
         method: 'GET',
         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     })
-    .then(r => r.json())
+    .then(r => {
+        if (!r.ok) { throw new Error('Network response was not ok'); }
+        return r.json();
+    })
     .then(data => {
         const body = document.getElementById('viewItemBody');
         body.innerHTML = `
@@ -254,7 +292,10 @@ function openViewModal(id){
             </div>`;
         document.getElementById('viewItemModal').classList.remove('hidden');
     })
-    .catch(() => showMessage('Error loading item details', 'error'));
+    .catch((err) => {
+        console.error(err);
+        showMessage('Error loading item details', 'error')
+    });
 }
 </script>
 @endpush

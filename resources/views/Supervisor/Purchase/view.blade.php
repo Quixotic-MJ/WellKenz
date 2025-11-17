@@ -9,14 +9,12 @@
 
         {{-- ajax fills --}}
         <div class="p-6 space-y-4 text-sm" id="viewPOBody">
-            {{-- PO ref, supplier, linked req, items table, totals, delivery, memos, inventory txs --}}
+            {{-- This will be filled by JavaScript --}}
+            <p class="text-center text-gray-500">Loading details...</p>
         </div>
 
-        {{-- supervisor quick actions --}}
-        <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
-            <button onclick="openRejectModal()" class="px-3 py-1.5 text-sm border border-rose-300 text-rose-700 hover:bg-rose-50 rounded">
-                <i class="fas fa-times mr-1"></i>Reject
-            </button>
+        {{-- ***** FIX: Removed the Reject button from this modal ***** --}}
+        <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3">
             <button type="button" onclick="closeModals()" class="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded">
                 Close
             </button>

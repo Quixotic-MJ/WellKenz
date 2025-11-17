@@ -6,11 +6,9 @@
 @section('content')
     <div class="space-y-6">
 
-        <!-- toast -->
         <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
         <div id="errorMessage" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
-        <!-- header card -->
         <div class="bg-white border border-gray-200 rounded-lg p-6">
             <div class="flex items-center justify-between">
                 <div>
@@ -25,7 +23,6 @@
             </div>
         </div>
 
-        <!-- live counts -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div class="bg-white border border-gray-200 rounded-lg p-5">
                 <p class="text-xs text-gray-500 uppercase tracking-wider">Total POs</p>
@@ -49,7 +46,6 @@
             </div>
         </div>
 
-        <!-- oversight table -->
         <div class="bg-white border border-gray-200 rounded-lg">
             <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900">All Purchase Orders</h3>
@@ -122,11 +118,18 @@
                                             title="View Details">
                                             <i class="fas fa-eye text-sm"></i>
                                         </button>
+                                        
+                                        {{-- ***** FIX: APPROVE/REJECT BUTTONS ARE NOW TOGETHER ***** --}}
                                         @if ($po->po_status == 'ordered' && $po->total_amount > 50000)
                                             <button data-po-id="{{ $po->po_id }}" data-action="approve"
                                                 class="p-2 text-amber-600 hover:bg-amber-50 rounded transition"
                                                 title="High-value approval">
                                                 <i class="fas fa-stamp text-sm"></i>
+                                            </button>
+                                            <button data-po-id="{{ $po->po_id }}" data-action="reject"
+                                                class="p-2 text-red-600 hover:bg-red-50 rounded transition"
+                                                title="High-value rejection">
+                                                <i class="fas fa-times-circle text-sm"></i>
                                             </button>
                                         @endif
                                     </div>
@@ -145,9 +148,9 @@
 
     </div>
 
-    <!-- ====== MODALS  ====== -->
     @include('Supervisor.Purchase.view')
     @include('Supervisor.Purchase.approve')
+    @include('Supervisor.Purchase.reject') {{-- <-- ***** FIX: ADDED THIS INCLUDE ***** --}}
 
 @endsection
 
@@ -165,7 +168,8 @@
         }
 
         function closeModals() {
-            ['viewPOModal', 'approvePOModal'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            // ***** FIX: Added rejectPOModal to this list *****
+            ['viewPOModal', 'approvePOModal', 'rejectPOModal'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
             currentId = null;
         }
         document.addEventListener('keydown', e => {
@@ -234,7 +238,12 @@
                 method: 'GET',
                 headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
             })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error(`HTTP error! status: ${r.status}`);
+                }
+                return r.json();
+            })
             .then(data => {
                 const body = document.getElementById('viewPOBody');
                 body.innerHTML = `
@@ -248,9 +257,9 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
                                 <span class="inline-block px-2 py-1 text-xs font-semibold rounded
                                     ${data.po_status === 'ordered' ? 'bg-blue-100 text-blue-700' :
-                                      data.po_status === 'delivered' ? 'bg-green-100 text-green-700' :
-                                      data.po_status === 'cancelled' ? 'bg-rose-100 text-rose-700' :
-                                      'bg-gray-100 text-gray-700'}">${data.po_status.charAt(0).toUpperCase() + data.po_status.slice(1)}</span>
+                                    data.po_status === 'delivered' ? 'bg-green-100 text-green-700' :
+                                    data.po_status === 'cancelled' ? 'bg-rose-100 text-rose-700' :
+                                    'bg-gray-100 text-gray-700'}">${data.po_status.charAt(0).toUpperCase() + data.po_status.slice(1)}</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -311,14 +320,17 @@
                     </div>`;
                 document.getElementById('viewPOModal').classList.remove('hidden');
             })
-            .catch(() => showMessage('Error loading purchase order details', 'error'));
+            .catch((err) => {
+                console.error(err);
+                showMessage('Error loading purchase order details', 'error');
+            });
         }
 
-        function openApproveModal(id) {
-            currentId = id;
-            /* ajax fetch then fill modal */
-            document.getElementById('approvePOModal').classList.remove('hidden');
-        }
+        // This function is still defined in approve.blade.php
+        // function openApproveModal(id) { ... }
+        
+        // This function is still defined in reject.blade.php
+        // function openRejectModal(id) { ... }
 
         // Delegate clicks for action buttons
         document.addEventListener('click', (e) => {
@@ -328,6 +340,7 @@
             const action = btn.dataset.action;
             if (action === 'view') openViewModal(id);
             else if (action === 'approve') openApproveModal(id);
+            else if (action === 'reject') openRejectModal(id); // <-- ***** FIX: Added this action *****
         });
     </script>
 @endpush
