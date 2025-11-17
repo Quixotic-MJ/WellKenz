@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str; // Import Str facade for slugs
+use Illuminate\Support\Facades\Hash; // Import Hash facade
 
 class AdminController extends Controller
 {
@@ -103,10 +105,10 @@ class AdminController extends Controller
 
     public function itemRequests()
     {
-        $totalRequests   = DB::table('item_requests')->count();
-        $pendingRequests = DB::table('item_requests')->where('item_req_status','pending')->count();
-        $approvedRequests= DB::table('item_requests')->where('item_req_status','approved')->count();
-        $rejectedRequests= DB::table('item_requests')->where('item_req_status','rejected')->count();
+        $totalRequests    = DB::table('item_requests')->count();
+        $pendingRequests  = DB::table('item_requests')->where('item_req_status','pending')->count();
+        $approvedRequests = DB::table('item_requests')->where('item_req_status','approved')->count();
+        $rejectedRequests = DB::table('item_requests')->where('item_req_status','rejected')->count();
 
         $requests = DB::table('item_requests as ir')
             ->leftJoin('users as u1','u1.user_id','=','ir.requested_by')
@@ -146,25 +148,17 @@ class AdminController extends Controller
         $transactions->getCollection()->transform(function($row){
             $row->item  = (object)['item_name' => $row->item_name, 'current_stock' => $row->item_stock];
             $row->user  = (object)['name' => $row->user_name];
-            $row->quantity = $row->trans_quantity; // blade uses quantity
-            $row->inventory_transaction_id = $row->trans_id; // blade expects this id
+            $row->quantity = $row->trans_quantity;
+            $row->inventory_transaction_id = $row->trans_id;
             
-            // For stock-out transactions, check for acknowledge receipts through purchase orders
             if ($row->trans_type === 'out' && $row->ar_id) {
-                $row->acknowledgeReceipt = (object)[
-                    'id' => $row->ar_id,
-                    'ar_ref' => $row->ar_ref
-                ];
+                $row->acknowledgeReceipt = (object)['id' => $row->ar_id, 'ar_ref' => $row->ar_ref];
             } else {
                 $row->acknowledgeReceipt = null;
             }
             
-            // For stock-in transactions, check for memos through purchase orders
             if ($row->trans_type === 'in' && $row->memo_id) {
-                $row->memo = (object)[
-                    'id' => $row->memo_id,
-                    'memo_ref' => $row->memo_ref
-                ];
+                $row->memo = (object)['id' => $row->memo_id, 'memo_ref' => $row->memo_ref];
             } else {
                 $row->memo = null;
             }
@@ -194,19 +188,25 @@ class AdminController extends Controller
 
         $categories = DB::table('categories')->select('cat_id','cat_name')->orderBy('cat_name')->get();
 
-        // **** THIS IS THE NEW DATA FOR YOUR FEATURE ****
         $pendingItemCreations = DB::table('approved_request_items as ari')
-            ->join('requisitions as r', 'r.req_id', '=', 'ari.req_id')
-            ->join('users as u', 'u.user_id', '=', 'r.requested_by')
+            ->leftJoin('requisitions as r', 'r.req_id', '=', 'ari.req_id')
+            ->leftJoin('users as u_req', 'u_req.user_id', '=', 'r.requested_by')
+            ->leftJoin('item_requests as ir', DB::raw("ari.req_ref"), '=', DB::raw("'IR-' || ir.item_req_id"))
+            ->leftJoin('users as u_ir', 'u_ir.user_id', '=', 'ir.requested_by')
             ->where('ari.created_as_item', false)
-            ->whereNull('ari.item_id') // Only get ones not yet linked to an item
-            ->select('ari.req_item_id', 'ari.item_name', 'ari.item_unit', 'ari.item_description', 'u.name as requester_name')
+            ->whereNull('ari.item_id') 
+            ->select(
+                'ari.req_item_id', 
+                'ari.item_name', 
+                'ari.item_unit', 
+                'ari.item_description', 
+                DB::raw('COALESCE(u_req.name, u_ir.name, \'Unknown\') as requester_name')
+            )
             ->get();
-        // ************************************************
-
+        
         return view('Admin.Inventory.item_management', compact(
             'categoriesCount','totalItems','lowStockCount','expiringCount','items','categories',
-            'pendingItemCreations' // <-- Pass new data to the view
+            'pendingItemCreations'
         ));
     }
 
@@ -261,16 +261,7 @@ class AdminController extends Controller
         $po = DB::table('purchase_orders as p')
             ->leftJoin('suppliers as s', 's.sup_id', '=', 'p.sup_id')
             ->leftJoin('requisitions as r', 'r.req_id', '=', 'p.req_id')
-            ->select(
-                'p.po_id',
-                'p.po_ref',
-                'p.po_status',
-                'p.expected_delivery_date',
-                'p.total_amount',
-                'p.delivery_address',
-                's.sup_name',
-                'r.req_ref'
-            )
+            ->select('p.po_id', 'p.po_ref', 'p.po_status', 'p.expected_delivery_date', 'p.total_amount', 'p.delivery_address', 's.sup_name', 'r.req_ref')
             ->where('p.po_id', $id)
             ->first();
 
@@ -280,47 +271,26 @@ class AdminController extends Controller
 
         $items = DB::table('purchase_items as pi')
             ->leftJoin('items as i', 'i.item_id', '=', 'pi.item_id')
-            ->select(
-                'i.item_name',
-                'pi.pi_quantity as quantity',
-                'i.item_unit as unit',
-                'pi.pi_unit_price as unit_price',
-                'pi.pi_subtotal as subtotal'
-            )
+            ->select('i.item_name', 'pi.pi_quantity as quantity', 'i.item_unit as unit', 'pi.pi_unit_price as unit_price', 'pi.pi_subtotal as subtotal')
             ->where('pi.po_id', $id)
             ->get();
 
-        return response()->json([
-            'success' => true,
-            'po' => $po,
-            'items' => $items,
-        ]);
+        return response()->json(['success' => true, 'po' => $po, 'items' => $items]);
     }
 
     public function purchaseOrderStatusUpdate(Request $request, $id)
     {
-        $data = $request->validate([
-            'po_status' => 'required|in:draft,ordered,delivered,cancelled'
-        ]);
+        $data = $request->validate(['po_status' => 'required|in:draft,ordered,delivered,cancelled']);
 
         $updated = DB::table('purchase_orders')
             ->where('po_id', $id)
-            ->update([
-                'po_status' => $data['po_status'],
-                'updated_at' => now()
-            ]);
+            ->update(['po_status' => $data['po_status'], 'updated_at' => now()]);
 
         if (!$updated) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Purchase order not found'
-            ], 404);
+            return response()->json(['success' => false, 'message' => 'Purchase order not found'], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Purchase order status updated successfully'
-        ]);
+        return response()->json(['success' => true, 'message' => 'Purchase order status updated successfully']);
     }
 
     public function transactionShow($id)
@@ -330,14 +300,7 @@ class AdminController extends Controller
                 ->leftJoin('items as i', 'i.item_id', '=', 't.item_id')
                 ->leftJoin('users as u', 'u.user_id', '=', 't.trans_by')
                 ->leftJoin('purchase_orders as po', 'po.po_id', '=', 't.po_id')
-                ->select(
-                    't.*',
-                    'i.item_name',
-                    'i.item_code',
-                    'i.item_unit',
-                    'u.name as user_name',
-                    'po.po_ref'
-                )
+                ->select('t.*', 'i.item_name', 'i.item_code', 'i.item_unit', 'u.name as user_name', 'po.po_ref')
                 ->where('t.trans_id', $id)
                 ->first();
 
@@ -361,19 +324,13 @@ class AdminController extends Controller
         }
     }
 
-    // Acknowledge Receipts
     public function acknowledgeReceipts()
     {
         $ackReceipts = DB::table('acknowledge_receipts as ar')
             ->leftJoin('requisitions as r', 'r.req_id', '=', 'ar.req_id')
             ->leftJoin('users as u1', 'u1.user_id', '=', 'ar.issued_by')
             ->leftJoin('users as u2', 'u2.user_id', '=', 'ar.issued_to')
-            ->select(
-                'ar.*',
-                'r.req_ref',
-                'u1.name as issued_by_name',
-                'u2.name as issued_to_name'
-            )
+            ->select('ar.*', 'r.req_ref', 'u1.name as issued_by_name', 'u2.name as issued_to_name')
             ->orderByDesc('ar.created_at')
             ->paginate(15);
 
@@ -393,12 +350,7 @@ class AdminController extends Controller
             ->leftJoin('requisitions as r', 'r.req_id', '=', 'ar.req_id')
             ->leftJoin('users as u1', 'u1.user_id', '=', 'ar.issued_by')
             ->leftJoin('users as u2', 'u2.user_id', '=', 'ar.issued_to')
-            ->select(
-                'ar.*',
-                'r.req_ref',
-                'u1.name as issued_by_name',
-                'u2.name as issued_to_name'
-            )
+            ->select('ar.*', 'r.req_ref', 'u1.name as issued_by_name', 'u2.name as issued_to_name')
             ->where('ar.ar_id', $id)
             ->first();
 
@@ -413,7 +365,6 @@ class AdminController extends Controller
         return response()->json(['success' => true, 'acknowledge_receipt' => $ar]);
     }
 
-    // Memos
     public function memos()
     {
         $memos = DB::table('memos as m')
@@ -522,10 +473,7 @@ class AdminController extends Controller
     {
         $notification = DB::table('notifications as n')
             ->leftJoin('users as u', 'u.user_id', '=', 'n.user_id')
-            ->select(
-                'n.*',
-                'u.name as user_name'
-            )
+            ->select('n.*', 'u.name as user_name')
             ->where('n.notif_id', $id)
             ->first();
 
@@ -573,14 +521,11 @@ class AdminController extends Controller
             'reorder_level' => 'required|numeric|min:0',
             'item_expire_date' => 'nullable|date',
             'item_description' => 'nullable|string',
-            // **** ADD THIS VALIDATION RULE ****
             'approved_item_req_id' => 'nullable|integer|exists:approved_request_items,req_item_id',
         ]);
         
-        // Generate item_code simple scheme
         $code = 'ITM-'.strtoupper(substr(preg_replace('/\s+/', '', $data['item_name']),0,3)).'-'.str_pad((string) (DB::table('items')->max('item_id') + 1), 4, '0', STR_PAD_LEFT);
         
-        // **** GET THE NEW ITEM ID ****
         $newItemId = DB::table('items')->insertGetId([
             'item_code' => $code,
             'item_name' => $data['item_name'],
@@ -594,18 +539,16 @@ class AdminController extends Controller
             'last_updated' => now(),
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ], 'item_id');
 
-        // **** UPDATE THE APPROVED REQUEST IF IT EXISTS ****
         if (!empty($data['approved_item_req_id'])) {
             DB::table('approved_request_items')
                 ->where('req_item_id', $data['approved_item_req_id'])
                 ->update([
                     'created_as_item' => true,
-                    'item_id' => $newItemId // Link the new item
+                    'item_id' => $newItemId
                 ]);
         }
-        // ************************************************
 
         return response()->json(['success' => true]);
     }
@@ -659,7 +602,6 @@ class AdminController extends Controller
         return response()->json(['success' => (bool)$deleted, 'message' => $deleted ? 'Item deleted successfully' : 'Item not found']);
     }
 
-    // Requisition detail for modal
     public function showRequisition($id)
     {
         $items = DB::table('requisition_items as ri')
@@ -675,13 +617,11 @@ class AdminController extends Controller
         return response()->json(['items' => $items]);
     }
 
-    // Requisition Status Update (from previous fix)
     public function updateRequisitionStatus(Request $request, $id)
     {
-        // FIX 1: Validate 'req_status' and 'remarks', which are sent from the form
         $data = $request->validate([
-            'req_status' => 'required|in:approved,rejected', // Was 'status'
-            'remarks' => 'required_if:req_status,rejected|nullable|string|max:255', // Was 'req_reject_reason'
+            'req_status' => 'required|in:approved,rejected', 
+            'remarks' => 'required_if:req_status,rejected|nullable|string|max:255', 
         ]);
 
         try {
@@ -695,31 +635,27 @@ class AdminController extends Controller
                 return response()->json(['success' => false, 'message' => 'This requisition has already been processed.'], 422);
             }
 
-            // FIX 2: Use the correct validated data keys
             $updateData = [
-                'req_status' => $data['req_status'], // Was $data['status']
+                'req_status' => $data['req_status'], 
                 'approved_by' => Auth::id(),
                 'updated_at' => now(),
             ];
 
-            if ($data['req_status'] === 'approved') { // Was $data['status']
+            if ($data['req_status'] === 'approved') { 
                 $updateData['approved_date'] = now()->toDateString();
                 $updateData['req_reject_reason'] = null;
             } else {
-                // Use 'remarks' from the form for the 'req_reject_reason' column
-                $updateData['req_reject_reason'] = $data['remarks']; // Was $data['req_reject_reason']
+                $updateData['req_reject_reason'] = $data['remarks']; 
                 $updateData['approved_date'] = null;
             }
 
             DB::table('requisitions')->where('req_id', $id)->update($updateData);
 
-            // Create a notification for the user who requested it
             $requesterId = $requisition->requested_by;
             if ($requesterId) {
-                // FIX 3: Use the correct variable for the notification message
                 DB::table('notifications')->insert([
-                    'notif_title' => 'Requisition ' . $data['req_status'], // Was $data['status']
-                    'notif_content' => 'Your requisition ' . $requisition->req_ref . ' has been ' . $data['req_status'] . '.', // Was $data['status']
+                    'notif_title' => 'Requisition ' . $data['req_status'], 
+                    'notif_content' => 'Your requisition ' . $requisition->req_ref . ' has been ' . $data['req_status'] . '.', 
                     'related_id' => $id,
                     'related_type' => 'requisition',
                     'user_id' => $requesterId,
@@ -730,7 +666,7 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Requisition has been ' . $data['req_status'] . '.' // Was $data['status']
+                'message' => 'Requisition has been ' . $data['req_status'] . '.' 
             ]);
 
         } catch (\Exception $e) {
@@ -739,10 +675,8 @@ class AdminController extends Controller
         }
     }
     
-    // Method to update Item Request status
     public function updateItemRequestStatus(Request $request, $id)
     {
-        // Validate 'item_req_status' and 'remarks' from the form
         $data = $request->validate([
             'item_req_status' => 'required|in:approved,rejected',
             'remarks' => 'required_if:item_req_status,rejected|nullable|string|max:255',
@@ -767,13 +701,27 @@ class AdminController extends Controller
 
             if ($data['item_req_status'] === 'approved') {
                 $updateData['item_req_reject_reason'] = null;
+
+                DB::table('approved_request_items')->insert([
+                    'req_id' => null,
+                    'item_id' => null,
+                    'item_name' => $itemRequest->item_req_name,
+                    'item_description' => $itemRequest->item_req_description,
+                    'item_unit' => $itemRequest->item_req_unit,
+                    'requested_quantity' => $itemRequest->item_req_quantity,
+                    'approved_quantity' => $itemRequest->item_req_quantity,
+                    'req_ref' => 'IR-' . $itemRequest->item_req_id,
+                    'created_as_item' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
             } else {
                 $updateData['item_req_reject_reason'] = $data['remarks'];
             }
 
             DB::table('item_requests')->where('item_req_id', $id)->update($updateData);
 
-            // Create a notification for the user who requested it
             $requesterId = $itemRequest->requested_by;
             if ($requesterId) {
                 DB::table('notifications')->insert([
@@ -916,7 +864,7 @@ class AdminController extends Controller
         try {
             DB::table('users')->insert([
                 'username' => $data['username'],
-                'password' => bcrypt($data['password']),
+                'password' => Hash::make($data['password']), // Use Hash::make
                 'role' => $data['role'],
                 'name' => $data['name'],
                 'position' => $data['position'],
@@ -988,20 +936,49 @@ class AdminController extends Controller
 
     public function toggleUserStatus(Request $request, $id)
     {
-        $result = DB::select('SELECT toggle_user_status(?) AS result', [$id]);
-        $result = json_decode($result[0]->result, true);
+        // **FIX**: Removed call to non-existent function
+        try {
+            $user = DB::table('users')->where('user_id', $id)->first();
+            if ($user) {
+                $newStatus = $user->status === 'active' ? 'inactive' : 'active';
+                DB::table('users')->where('user_id', $id)->update(['status' => $newStatus]);
+                $result = ['success' => true, 'message' => 'User status toggled successfully.'];
+            } else {
+                $result = ['success' => false, 'message' => 'User not found.'];
+            }
+        } catch (\Exception $e) {
+            $result = ['success' => false, 'message' => $e->getMessage()];
+        }
         return response()->json($result);
     }
 
+    // ******* THIS IS THE FUNCTION WITH THE FIX *******
     public function changeUserPassword(Request $request, $id)
     {
         $data = $request->validate([
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $result = DB::select('SELECT change_user_password(?, ?) AS result', [$id, bcrypt($data['password'])]);
-        $result = json_decode($result[0]->result, true);
+        $result = [];
+        try {
+            // **FIX**: Instead of DB::select, we use DB::table()->update()
+            $updated = DB::table('users')
+                ->where('user_id', $id)
+                ->update([
+                    'password' => Hash::make($data['password']), // Use Hash::make
+                    'updated_at' => now()
+                ]);
 
+            if ($updated) {
+                $result = ['success' => true, 'message' => 'Password updated successfully.'];
+            } else {
+                $result = ['success' => false, 'message' => 'User not found.'];
+            }
+        } catch (\Exception $e) {
+            $result = ['success' => false, 'message' => $e->getMessage()];
+        }
+        
+        // This part is correct and handles the redirect
         if ($request->expectsJson()) {
             return response()->json($result);
         } else {
@@ -1011,8 +988,21 @@ class AdminController extends Controller
 
     public function deleteUser($id)
     {
-        $result = DB::select('SELECT delete_user(?) AS result', [$id]);
-        $result = json_decode($result[0]->result, true);
+         // **FIX**: Removed call to non-existent function
+        $result = [];
+        try {
+            // You should add checks here (e.g., cannot delete user with transactions)
+            // For now, we just perform the delete.
+            $deleted = DB::table('users')->where('user_id', $id)->delete();
+            if ($deleted) {
+                $result = ['success' => true, 'message' => 'User deleted successfully.'];
+            } else {
+                $result = ['success' => false, 'message' => 'User not found.'];
+            }
+        } catch (\Exception $e) {
+             // Handle foreign key constraints, etc.
+            $result = ['success' => false, 'message' => 'Cannot delete this user. They may be linked to other records.'];
+        }
         return response()->json($result);
     }
 
@@ -1020,6 +1010,7 @@ class AdminController extends Controller
     public function composeNotificationPage()
     {
         $users = DB::table('users')->select('user_id', 'name')->orderBy('name')->get();
+        // **FIX**: The view path must match your file structure.
         return view('Admin.Notification.compose', compact('users'));
     }
 
@@ -1030,8 +1021,9 @@ class AdminController extends Controller
         $end = $request->get('end');
         $format = $request->get('format', 'web');
 
-        $data = [];
+        $data = collect();
         $title = '';
+        $chart = null;
 
         switch ($report) {
             case 'user-activity':
@@ -1039,42 +1031,190 @@ class AdminController extends Controller
                 $data = DB::table('users')
                     ->select('name', 'email', 'status', 'created_at', 'updated_at')
                     ->whereBetween('created_at', [$start, $end])
-                    ->orWhereBetween('updated_at', [$start, $end])
                     ->get();
                 break;
-            // Add other cases as needed
+            
+            case 'item-requests':
+                $title = 'Item Requests Report';
+                $data = DB::table('item_requests as ir')
+                    ->leftJoin('users as u1', 'u1.user_id', '=', 'ir.requested_by')
+                    ->leftJoin('users as u2', 'u2.user_id', '=', 'ir.approved_by')
+                    ->select('ir.item_req_name', 'ir.item_req_unit', 'ir.item_req_quantity', 'ir.item_req_status', 'u1.name as requester', 'u2.name as approver', 'ir.created_at')
+                    ->whereBetween('ir.created_at', [$start, $end])
+                    ->get();
+                break;
+
+            case 'requisitions':
+                $title = 'Requisition History Report';
+                $data = DB::table('requisitions as r')
+                    ->leftJoin('users as u1', 'u1.user_id', '=', 'r.requested_by')
+                    ->leftJoin('users as u2', 'u2.user_id', '=', 'r.approved_by')
+                    ->select('r.req_ref', 'r.req_purpose', 'r.req_status', 'u1.name as requester', 'u2.name as approver', 'r.req_date', 'r.approved_date')
+                    ->whereBetween('r.req_date', [$start, $end])
+                    ->get();
+                break;
+            
+            case 'purchase-orders':
+                $title = 'Purchase Order Report';
+                $data = DB::table('purchase_orders as po')
+                    ->leftJoin('suppliers as s', 's.sup_id', '=', 'po.sup_id')
+                    ->select('po.po_ref', 's.sup_name', 'po.po_status', 'po.order_date', 'po.expected_delivery_date', 'po.total_amount')
+                    ->whereBetween('po.order_date', [$start, $end])
+                    ->get();
+                break;
+
+            case 'inventory-movements':
+                $title = 'Inventory Movement Report';
+                $data = DB::table('inventory_transactions as t')
+                    ->leftJoin('items as i', 'i.item_id', '=', 't.item_id')
+                    ->leftJoin('users as u', 'u.user_id', '=', 't.trans_by')
+                    ->select('t.trans_date', 'i.item_name', 't.trans_type', 't.trans_quantity', 'i.item_unit', 'u.name as user', 't.trans_remarks')
+                    ->whereBetween('t.trans_date', [$start, $end])
+                    ->orderBy('t.trans_date', 'desc')
+                    ->get();
+                break;
+
+            case 'expiry-low-stock':
+                $title = 'Expiry & Low-Stock Report';
+                
+                 $low = DB::table('items')
+                    ->whereColumn('item_stock', '<=', 'reorder_level')
+                    ->where('item_stock', '>', 0) 
+                    ->select('item_name', 'item_code', 'item_stock', 'reorder_level', 'item_unit')
+                    ->get();
+                
+                $exp = DB::table('items')
+                    ->whereNotNull('item_expire_date')
+                    ->whereBetween('item_expire_date', [$start, $end])
+                    ->select('item_name', 'item_code', 'item_stock', 'item_expire_date')
+                    ->get();
+
+                $data = [
+                    'low_stock' => $low,
+                    'expiry' => $exp
+                ];
+                break;
+            
+            case 'supplier-performance':
+                $title = 'Supplier Performance Report';
+                $data = DB::table('suppliers as s')
+                    ->leftJoin('purchase_orders as po', 'po.sup_id', '=', 's.sup_id')
+                    ->select('s.sup_name', 's.sup_status', DB::raw('COUNT(po.po_id) as total_orders'), DB::raw('SUM(po.total_amount) as total_value'))
+                    ->whereBetween('po.order_date', [$start, $end])
+                    ->groupBy('s.sup_name', 's.sup_status')
+                    ->orderBy('total_value', 'desc')
+                    ->get();
+                break;
+
+            case 'weekly-stock-in':
+                $title = 'Stock-In Summary by Item';
+                $data = DB::table('inventory_transactions as t')
+                    ->leftJoin('items as i', 'i.item_id', '=', 't.item_id')
+                    ->select('i.item_name', DB::raw('SUM(t.trans_quantity) as total_quantity_in'))
+                    ->where('t.trans_type', 'in')
+                    ->whereBetween('t.trans_date', [$start, $end])
+                    ->groupBy('i.item_name')
+                    ->orderBy('total_quantity_in', 'desc')
+                    ->get();
+                break;
+            
+            case 'negative-stock':
+                $title = 'Negative Stock Report';
+                $data = DB::table('items')
+                    ->select('item_name', 'item_code', 'item_stock', 'item_unit')
+                    ->where('item_stock', '<', 0)
+                    ->get();
+                break;
+
+            case 'ar-issuance':
+                $title = 'AR Issuance Report';
+                $data = DB::table('acknowledge_receipts as ar')
+                    ->leftJoin('users as u1', 'u1.user_id', '=', 'ar.issued_by')
+                    ->leftJoin('users as u2', 'u2.user_id', '=', 'ar.issued_to')
+                    ->leftJoin('requisitions as r', 'r.req_id', '=', 'ar.req_id')
+                    ->select('ar.ar_ref', 'r.req_ref', 'u1.name as issued_by', 'u2.name as issued_to', 'ar.issued_date', 'ar.ar_status')
+                    ->whereBetween('ar.issued_date', [$start, $end])
+                    ->get();
+                break;
+
             default:
                 if ($format === 'web') {
-                    return response()->json(['error' => 'Report not found'], 404);
+                    return response()->json(['error' => 'Report not found or not yet implemented.'], 404);
                 } else {
-                    abort(404);
+                    abort(404, 'Report not found.');
                 }
+        } // End switch
+
+        
+        // --- Generic Render Block ---
+
+        $isEmpty = false;
+        if (is_array($data)) {
+            $isEmpty = collect($data['low_stock'])->isEmpty() && collect($data['expiry'])->isEmpty();
+        } else {
+            $isEmpty = $data->isEmpty();
         }
 
-        if ($format === 'csv') {
-            $csv = "Name,Email,Status,Created,Updated\n";
-            foreach ($data as $row) {
-                $csv .= "\"{$row->name}\",\"{$row->email}\",\"{$row->status}\",\"{$row->created_at}\",\"{$row->updated_at}\"\n";
+        if ($isEmpty) {
+             if ($format === 'web') {
+                return response()->json([
+                    'title' => $title, 
+                    'html' => '<p class="text-gray-500 text-center py-8">No data found for the selected criteria.</p>', 
+                    'empty' => true
+                ]);
+             } else {
+                $title = $title ?? 'Report';
+                $html = "<h1>$title</h1><p>No data found for the selected criteria from $start to $end.</p>";
+                $pdf = Pdf::loadHTML($html);
+                return $pdf->download(Str::slug($title) . '.pdf');
+             }
+        }
+        
+        if ($format === 'pdf') {
+            // **FIX**: The view path must match your file structure.
+            $pdf = Pdf::loadView('Admin.Report.pdf', compact('title', 'report', 'start', 'end', 'data'));
+            return $pdf->setPaper('a4', 'landscape')->download(Str::slug($title) . '.pdf');
+        
+        } elseif ($format === 'csv') {
+            $dataToCsv = is_array($data) ? $data['low_stock'] : $data; 
+            
+            if ($dataToCsv->isEmpty()) {
+                 return response("No data for CSV export.", 200, ['Content-Type' => 'text/csv']);
             }
-            return response($csv)
-                ->header('Content-Type', 'text/csv')
-                ->header('Content-Disposition', 'attachment; filename="' . $title . '.csv"');
-        } elseif ($format === 'pdf') {
-            $html = '<h1>' . $title . '</h1><table border="1"><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Created</th><th>Updated</th></tr></thead><tbody>';
-            foreach ($data as $row) {
-                $html .= "<tr><td>{$row->name}</td><td>{$row->email}</td><td>{$row->status}</td><td>{$row->created_at}</td><td>{$row->updated_at}</td></tr>";
+            
+            $headers = array_keys((array)$dataToCsv->first());
+            $csv = implode(',', $headers) . "\n";
+            foreach ($dataToCsv as $row) {
+                 $csv .= implode(',', array_map(function($val) {
+                    return '"' . str_replace('"', '""', $val) . '"';
+                 }, array_values((array)$row))) . "\n";
             }
-            $html .= '</tbody></table>';
-            $pdf = Pdf::loadHTML($html);
-            return $pdf->download($title . '.pdf');
+            
+            return response($csv, 200, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . Str::slug($title) . '.csv"',
+            ]);
+
         } else {
-            // web
-            $html = '<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Updated</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">';
-            foreach ($data as $row) {
-                $html .= "<tr><td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{$row->name}</td><td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{$row->email}</td><td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{$row->status}</td><td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{$row->created_at}</td><td class='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>{$row->updated_at}</td></tr>";
+            // Web / JSON response
+            $html = "";
+            if(is_array($data)) {
+                 if(isset($data['low_stock']) && $data['low_stock']->isNotEmpty()) {
+                    $html .= "<h3>Low-Stock Items</h3>";
+                    // **FIX**: The view path must match your file structure.
+                    $html .= view('Admin.Report.table', ['data' => $data['low_stock']])->render();
+                 }
+                 if(isset($data['expiry']) && $data['expiry']->isNotEmpty()) {
+                    $html .= "<h3 class='mt-6'>Expiry Alerts</h3>";
+                    // **FIX**: The view path must match your file structure.
+                    $html .= view('Admin.Report.table', ['data' => $data['expiry']])->render();
+                 }
+            } else {
+                 // **FIX**: The view path must match your file structure.
+                 $html = view('Admin.Report.table', compact('data'))->render();
             }
-            $html .= '</tbody></table>';
-            return response()->json(['title' => $title, 'html' => $html]);
+
+            return response()->json(['title' => $title, 'html' => $html, 'chart' => $chart]);
         }
     }
 }

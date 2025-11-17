@@ -6,11 +6,9 @@
 @section('content')
 <div class="space-y-6">
 
-    <!-- toast -->
     <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
     <div id="errorMessage"  class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
-    <!-- header card -->
     <div class="bg-white border border-gray-200 rounded-lg p-6">
         <div class="flex items-center justify-between">
             <div>
@@ -24,7 +22,6 @@
         </div>
     </div>
 
-    <!-- live counts -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white border border-gray-200 rounded-lg p-5">
             <p class="text-xs text-gray-500 uppercase tracking-wider">Total</p>
@@ -44,7 +41,6 @@
         </div>
     </div>
 
-    <!-- notifications table -->
     <div class="bg-white border border-gray-200 rounded-lg">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">All Notifications</h3>
@@ -71,68 +67,97 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm" id="notificationsTable">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase cursor-pointer" onclick="sortTable('date')">Timestamp <i class="fas fa-sort ml-1"></i></th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Module</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Title</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Content</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">User</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
-                        <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200" id="notificationsTableBody">
-                    @foreach($notifications as $n)
-                    <tr class="hover:bg-gray-50 transition notif-row"
-                        data-module="{{ $n->related_type }}"
-                        data-read="{{ $n->is_read ? 'read' : 'unread' }}"
-                        data-date="{{ $n->created_at->format('Y-m-d H:i') }}">
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ $n->created_at->format('M d, Y H:i') }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ ucfirst(str_replace('_',' ',$n->related_type)) }}</td>
-                        <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $n->notif_title }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ Str::limit($n->notif_content,60) }}</td>
-                        <td class="px-6 py-4 text-sm text-gray-900">{{ $n->user->name ?? 'System' }}</td>
-                        <td class="px-6 py-4">
-                            @if($n->is_read)
-                                <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded">Read</span>
-                            @else
-                                <span class="inline-block px-2 py-1 bg-amber-100 text-amber-700 text-xs font-semibold rounded">Unread</span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center space-x-2">
-                                <button onclick="openViewModal({{ $n->notif_id }})"
-                                    class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
-                                    <i class="fas fa-eye text-sm"></i>
+        {{-- ****** START: THIS IS THE NEW NOTIFICATION LIST ****** --}}
+        <div class="divide-y divide-gray-200" id="notificationsTableBody">
+            @forelse($notifications as $n)
+                @php
+                    // Set icon and color based on module
+                    $icon = [
+                        'requisition' => 'fas fa-file-alt',
+                        'item_request' => 'fas fa-tags',
+                        'purchase_order' => 'fas fa-shopping-cart',
+                        'memo' => 'fas fa-sticky-note',
+                        'inventory' => 'fas fa-boxes',
+                        'announcement' => 'fas fa-bullhorn',
+                    ][$n->related_type] ?? 'fas fa-bell';
+
+                    $iconColor = [
+                        'requisition' => 'text-blue-500 bg-blue-50',
+                        'item_request' => 'text-indigo-500 bg-indigo-50',
+                        'purchase_order' => 'text-green-500 bg-green-50',
+                        'memo' => 'text-yellow-500 bg-yellow-50',
+                        'inventory' => 'text-gray-500 bg-gray-50',
+                        'announcement' => 'text-purple-500 bg-purple-50',
+                    ][$n->related_type] ?? 'text-gray-500 bg-gray-50';
+                @endphp
+
+                {{-- This div replaces the <tr>. All data- attributes are preserved for JS filtering --}}
+                <div class="notif-row flex items-start p-6 {{ !$n->is_read ? 'bg-amber-50 hover:bg-amber-100' : 'bg-white hover:bg-gray-50' }} transition"
+                     data-module="{{ $n->related_type }}"
+                     data-read="{{ $n->is_read ? 'read' : 'unread' }}"
+                     data-date="{{ $n->created_at->format('Y-m-d H:i') }}">
+                    
+                    <div class="mr-4 pt-1 flex-shrink-0">
+                        <span class="flex items-center justify-center h-10 w-10 rounded-full {{ $iconColor }}">
+                            <i class="{{ $icon }}"></i>
+                        </span>
+                    </div>
+
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm font-semibold text-gray-900">{{ $n->notif_title }}</p>
+                            <span class="text-xs text-gray-500 flex-shrink-0 ml-4">{{ $n->created_at->diffForHumans() }}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">{{ $n->notif_content }}</p>
+                        <div class="text-xs text-gray-500 mt-2">
+                            <span>User: <strong>{{ $n->user->name ?? 'System' }}</strong></span>
+                            <span class="mx-2">|</span>
+                            <span>Module: <strong>{{ ucfirst(str_replace('_',' ',$n->related_type)) }}</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="ml-4 pl-4 flex-shrink-0 pt-1">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="openViewModal({{ $n->notif_id }})"
+                                class="p-2 text-blue-600 hover:bg-blue-50 rounded transition" title="View">
+                                <i class="fas fa-eye text-sm"></i>
+                            </button>
+                            @if(!$n->is_read)
+                                <button onclick="markRead({{ $n->notif_id }})"
+                                    class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark read">
+                                    <i class="fas fa-check text-sm"></i>
                                 </button>
-                                @if(!$n->is_read)
-                                    <button onclick="markRead({{ $n->notif_id }})"
-                                        class="p-2 text-green-600 hover:bg-green-50 rounded transition" title="Mark read">
-                                        <i class="fas fa-check text-sm"></i>
-                                    </button>
-                                @endif
-                            </div>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <div class="p-6 text-center text-gray-500">
+                    No notifications found.
+                </div>
+            @endforelse
         </div>
+        {{-- ****** END: NEW NOTIFICATION LIST ****** --}}
+
 
         <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
             Showing <span id="visibleCount">{{ $notifications->count() }}</span> of {{ $notifications->total() }} notifications
         </div>
+        
+        {{-- Add pagination links --}}
+        @if ($notifications->hasPages())
+            <div class="px-6 py-4 border-t border-gray-200">
+                {{ $notifications->links() }}
+            </div>
+        @endif
     </div>
 
-    <!-- ====== MODALS  ====== -->
     @include('Admin.Notification.view')
     @include('Admin.Notification.compose')
 
 </div>
 
+{{-- The JavaScript is unchanged as it works with the new structure --}}
 <script>
 /* light helpers */
 let currentId = null;
@@ -154,7 +179,8 @@ function filterModule(val){
     let visible = 0;
     rows.forEach(r=>{
         const ok = val==='all' || r.dataset.module===val;
-        r.style.display = ok ? '' : 'none'; if(ok) visible++;
+        r.style.display = ok ? 'flex' : 'none'; // Use 'flex' instead of ''
+        if(ok) visible++;
     });
     document.getElementById('visibleCount').textContent = visible;
 }
@@ -163,7 +189,8 @@ function filterRead(val){
     let visible = 0;
     rows.forEach(r=>{
         const ok = val==='all' || r.dataset.read===val;
-        r.style.display = ok ? '' : 'none'; if(ok) visible++;
+        r.style.display = ok ? 'flex' : 'none'; // Use 'flex' instead of ''
+        if(ok) visible++;
     });
     document.getElementById('visibleCount').textContent = visible;
 }
@@ -171,7 +198,8 @@ function searchTable(q){
     const Q = q.toLowerCase(); const rows = document.querySelectorAll('.notif-row'); let visible=0;
     rows.forEach(r=>{
         const ok = r.textContent.toLowerCase().includes(Q);
-        r.style.display = ok ? '' : 'none'; if(ok) visible++;
+        r.style.display = ok ? 'flex' : 'none'; // Use 'flex' instead of ''
+        if(ok) visible++;
     });
     document.getElementById('visibleCount').textContent = visible;
     const btn = document.getElementById('clearBtn');
@@ -186,7 +214,7 @@ let sortField='date', sortDir='desc';
 function sortTable(f){
     if(sortField===f) sortDir=sortDir==='asc'?'desc':'asc'; else {sortField=f; sortDir='asc';}
     const tbody=document.getElementById('notificationsTableBody');
-    const rows=Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+    const rows=Array.from(tbody.querySelectorAll('.notif-row')); // Changed from <tr>
     rows.sort((a,b)=>{
         const A=a.dataset[f], B=b.dataset[f];
         return sortDir==='asc'?A.localeCompare(B):B.localeCompare(A);
@@ -200,7 +228,6 @@ function sortTable(f){
 /* modal openers */
 function openViewModal(id){
     currentId=id;
-    /* ajax fetch then fill modal */
     fetch(`/admin/notifications/${id}`,{
         headers:{'X-Requested-With':'XMLHttpRequest'}
     })
@@ -258,12 +285,41 @@ function markRead(id){
     .then(res=>{
         if(res.success){
             showMessage('Marked as read');
-            setTimeout(()=>location.reload(),500);
+            setTimeout(()=>location.reload(),500); // Reload to show the new "read" state
         }else{
             showMessage(res.message||'Error','error');
         }
     })
     .catch(()=>showMessage('Error','error'));
 }
+
+// Simple handler for the compose modal
+document.addEventListener('DOMContentLoaded', function() {
+    const composeForm = document.querySelector('#composeNotificationModal form');
+    if (composeForm) {
+        composeForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.success) {
+                    closeModals();
+                    showMessage('Announcement sent successfully!');
+                    setTimeout(() => location.reload(), 500);
+                } else {
+                    showMessage(res.message || 'Failed to send announcement', 'error');
+                }
+            })
+            .catch(() => showMessage('An error occurred', 'error'));
+        });
+    }
+});
 </script>
 @endsection

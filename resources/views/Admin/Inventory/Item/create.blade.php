@@ -12,24 +12,6 @@
             </div>
             <div class="p-6 grid grid-cols-2 gap-4 text-sm">
 
-                <div class="col-span-2">
-                    <label class="block font-medium text-gray-700 mb-1">Fill from Approved Request</label>
-                    <select id="fillFromRequestSelect" onchange="fillFormFromRequest(this)"
-                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400">
-                        <option value="">-- Select an approved item --</option>
-                        {{-- This variable is available from the parent item_management view --}}
-                        @if (isset($pendingItemCreations))
-                            @foreach ($pendingItemCreations as $req)
-                                <option value="{{ $req->req_item_id }}"
-                                    data-item-name="{{ e($req->item_name) }}"
-                                    data-item-unit="{{ e($req->item_unit) }}"
-                                    data-item-description="{{ e($req->item_description ?? '') }}">
-                                    {{ $req->item_name }} (Req by: {{ $req->requester_name }})
-                                </option>
-                            @endforeach
-                        @endif
-                    </select>
-                </div>
                 <div class="col-span-2"><label class="block font-medium text-gray-700 mb-1">Item Name</label><input
                         type="text" name="item_name" required
                         class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-400">

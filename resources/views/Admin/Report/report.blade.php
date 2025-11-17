@@ -244,6 +244,10 @@ function generateReport(report){
                 if(res.chart){ renderChart(res.chart); }
                 document.getElementById('reportResult').classList.remove('hidden');
                 window.scrollTo({top:document.getElementById('reportResult').offsetTop, behavior:'smooth'});
+            }else if(res.empty){
+                document.getElementById('reportTitle').textContent = res.title;
+                document.getElementById('reportTable').innerHTML   = res.html;
+                document.getElementById('reportResult').classList.remove('hidden');
             }else{
                 showMessage('No data for selected range','error');
             }

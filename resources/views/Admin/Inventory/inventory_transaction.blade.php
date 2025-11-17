@@ -111,7 +111,7 @@
                             @if($tx->trans_type === 'out' && $tx->acknowledgeReceipt)
                                 <a href="{{ url('/admin/acknowledge-receipts/' . $tx->acknowledgeReceipt->id) }}" class="text-blue-600 hover:underline">Ack</a>
                             @elseif($tx->trans_type === 'in' && $tx->memo)
-                                <a href="{{ url('/admin/memos/' . $tx->memo->id) }}" class="text-blue-600 hover:underline">Memo</a>
+                                <button onclick="openMemoModal({{ $tx->memo->id }})" class="text-blue-600 hover:underline bg-transparent border-none p-0 cursor-pointer">Memo</button>
                             @else
                                         —
                                     @endif
@@ -156,7 +156,7 @@ function showMessage(msg, type = 'success'){
     setTimeout(()=> div.classList.add('hidden'), 3000);
 }
 function closeModals(){
-    ['viewTransactionModal'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
+    ['viewTransactionModal', 'viewMemoModal'].forEach(id=>document.getElementById(id)?.classList.add('hidden'));
     currentId = null;
 }
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModals(); });
@@ -230,6 +230,26 @@ body.innerHTML = `
 document.getElementById('viewTransactionModal').classList.remove('hidden');
 })
 .catch(err => { console.error(err); showMessage('Failed to load transaction details','error'); });
+}
+
+/* memo modal opener */
+function openMemoModal(id){
+fetch(`/admin/memos/${id}`, { headers: { 'Accept':'application/json' }})
+.then(r => r.json())
+.then(data => {
+if (data.error) throw new Error(data.error);
+const memo = data.memo;
+const body = document.getElementById('viewMemoBody');
+body.innerHTML = `
+  <div><span class="text-gray-500">Memo Ref:</span> ${memo.memo_ref || '—'}</div>
+  <div><span class="text-gray-500">Remarks:</span> ${memo.memo_remarks || '—'}</div>
+  <div><span class="text-gray-500">Received Date:</span> ${memo.received_date || '—'}</div>
+  <div><span class="text-gray-500">Received By:</span> ${memo.receivedBy?.name || '—'}</div>
+  <div><span class="text-gray-500">PO Ref:</span> ${memo.po_ref || '—'}</div>
+`;
+document.getElementById('viewMemoModal').classList.remove('hidden');
+})
+.catch(err => { console.error(err); showMessage('Failed to load memo details','error'); });
 }
 </script>
 @endsection
