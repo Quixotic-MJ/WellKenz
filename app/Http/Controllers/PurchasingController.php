@@ -297,45 +297,79 @@ class PurchasingController extends Controller
         }
     }
 
-    public function purchasePrint($id)
-    {
-        $po = DB::table('purchase_orders')->where('po_id', $id)->first();
-        if(!$po) {
-            abort(404);
-        }
-
-        $po->items = DB::table('purchase_items as pi')
-            ->leftJoin('items as i', 'pi.item_id', '=', 'i.item_id')
-            ->where('pi.po_id', $id)
-            ->select('pi.pi_id', 'pi.item_id', 'pi.po_id', 'pi.pi_quantity as quantity', 'pi.pi_unit_price as unit_price', 'pi.pi_subtotal as lineTotal', 'i.item_name', 'i.item_unit as unit')
-            ->get();
-            
-        $po->supplier = DB::table('suppliers')->where('sup_id', $po->sup_id)->first();
-
-        // The print template requires 'creator' and 'approver' which are not
-        // in your 'purchase_orders' table. We'll set them to a default object.
-        $po->creator = (object)['name' => 'N/A'];
-        $po->approver = (object)['name' => 'N/A'];
-        
-        // The print template also requires $requestorNames
-        $requestorNames = 'N/A';
-        if ($po->req_id) {
-             $req = DB::table('requisitions as r')
-                ->join('users as u', 'r.requested_by', 'u.user_id')
-                ->where('r.req_id', $po->req_id)
-                ->select('u.name')
-                ->first();
-             if($req) {
-                $requestorNames = $req->name;
-             }
-        }
-
-        $data = [
-            'purchaseOrder' => $po,
-            'requestorNames' => $requestorNames,
-        ];
-        return view('Purchasing.Purchase.print', $data);
+   public function purchasePrint($id)
+{
+    /* ---------- 1. fetch the PO ---------- */
+    $po = DB::table('purchase_orders')->where('po_id', $id)->first();
+    if (!$po) {
+        abort(404);
     }
+
+    /* ---------- 2. supplier ---------- */
+    $supplier = DB::table('suppliers')->where('sup_id', $po->sup_id)->first();
+
+    /* ---------- 3. PO items ---------- */
+    $items = DB::table('purchase_items as pi')
+        ->leftJoin('items as i', 'pi.item_id', '=', 'i.item_id')
+        ->where('pi.po_id', $id)
+        ->select(
+            'i.item_name',
+            'i.item_unit as unit',
+            'pi.pi_quantity as quantity',
+            'pi.pi_unit_price as unit_price',
+            'pi.pi_subtotal as lineTotal'
+        )
+        ->get();
+
+    /* ---------- 4. users ---------- */
+    // Prepared By: Use current authenticated user (who is printing the PO)
+    $creator = DB::table('users')->where('user_id', Auth::id())->first();
+    
+    // Approved By: If PO was created from requisition, get requisition approver
+    $approver = null;
+    if ($po->req_id) {
+        $approver = DB::table('requisitions as r')
+            ->leftJoin('users as u', 'r.approved_by', '=', 'u.user_id')
+            ->where('r.req_id', $po->req_id)
+            ->select('u.user_id', 'u.name')
+            ->first();
+    }
+
+    /* ---------- 5. requester names (same logic you already use) ---------- */
+    $requestorNames = 'N/A';
+    if ($po->req_id) {
+        $req = DB::table('requisitions as r')
+            ->join('users as u', 'r.requested_by', 'u.user_id')
+            ->where('r.req_id', $po->req_id)
+            ->value('u.name');
+        if ($req) {
+            $requestorNames = $req;
+        }
+    }
+
+    /* ---------- 6. build the exact same object the blade expects ---------- */
+    $purchaseOrder = (object)[
+        'po_ref'        => $po->po_ref,
+        'created_at'    => $po->created_at,
+        'expected_delivery_date' => $po->expected_delivery_date,
+        'payment_terms' => 'Net 30', // Default payment terms since column doesn't exist in DB
+        'delivery_address' => $po->delivery_address,
+        'notes'         => $po->notes,
+        'supplier'      => $supplier ? (object)[
+            'name' => $supplier->sup_name,
+            'address' => $supplier->sup_address,
+            'contact_person' => $supplier->contact_person
+        ] : (object)['name' => 'N/A', 'address' => 'N/A', 'contact_person' => 'N/A'],
+        'creator'       => $creator ? (object)['name' => $creator->name] : (object)['name' => 'System'],
+        'approver'      => $approver ? (object)['name' => $approver->name] : (object)['name' => 'System'],
+        'items'         => $items,
+    ];
+
+    return view('Purchasing.Purchase.print', [
+        'purchaseOrder'  => $purchaseOrder,
+        'requestorNames' => $requestorNames,
+    ]);
+}
 
     /* -------------------------------------------------------------------------- */
     /* SUPPLIER MANAGEMENT                           */

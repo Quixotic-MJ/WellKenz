@@ -44,34 +44,37 @@
                 <h3>Supplier Details (Ship To)</h3>
                 <span class="label">Supplier:</span>
                 <span class="value">{{ $purchaseOrder->supplier->name ?? 'N/A' }}</span>
+
                 <span class="label">Address:</span>
                 <span class="value">{{ $purchaseOrder->supplier->address ?? 'N/A' }}</span>
+
                 <span class="label">Contact:</span>
                 <span class="value">{{ $purchaseOrder->supplier->contact_person ?? 'N/A' }}</span>
             </div>
+
             <div class="details-box">
                 <h3>Order Information</h3>
                 <span class="label">Date Created:</span>
                 <span class="value">{{ \Carbon\Carbon::parse($purchaseOrder->created_at)->format('M d, Y') }}</span>
+
+                <span class="label">Delivery Address:</span>
+                <span class="value">{{ $purchaseOrder->delivery_address ?? 'N/A' }}</span>
+
                 <span class="label">Expected Delivery Date:</span>
                 <span class="value">{{ $purchaseOrder->expected_delivery_date ? \Carbon\Carbon::parse($purchaseOrder->expected_delivery_date)->format('M d, Y') : '-' }}</span>
-                <span class="label">Payment Terms:</span>
-                <span class="value">{{ $purchaseOrder->payment_terms ?? 'N/A' }}</span>
+
             </div>
         </div>
 
+        {{-- Requesters (if available) --}}
         @if(!empty($requestorNames))
         <div class="details-box">
             <h3>Requesters</h3>
             <p class="value">{{ $requestorNames }}</p>
         </div>
-        @elseif(!empty($purchaseOrder->notes) && \Illuminate\Support\Str::startsWith($purchaseOrder->notes, 'Requesters: '))
-        <div class="details-box">
-            <h3>Requesters</h3>
-            <p class="value">{{ \Illuminate\Support\Str::after($purchaseOrder->notes, 'Requesters: ') }}</p>
-        </div>
         @endif
 
+        {{-- Items table --}}
         <table class="items-table">
             <thead>
                 <tr>
@@ -101,11 +104,13 @@
             </tbody>
         </table>
 
+        {{-- Notes --}}
         <div class="details-box" style="margin-top: 20px;">
             <h3>Notes & Terms</h3>
             <p style="font-size: 9pt;">{{ $purchaseOrder->notes ?? 'Please deliver goods on or before the expected delivery date.' }}</p>
         </div>
 
+        {{-- Signatures --}}
         <div class="signatures">
             <div>
                 <br>
