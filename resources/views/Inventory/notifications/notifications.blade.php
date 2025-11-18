@@ -66,12 +66,14 @@
 @push('scripts')
 <script>
     function viewNotification(id) {
-        window.location.href = `{{ route('inventory.notifications.show', ['id' => '']) }}${id}`;
+        const url = `{{ route('inventory.notifications.show', ':id') }}`.replace(':id', id);
+        window.location.href = url;
     }
 
     function markAsRead(event, id) {
         event.stopPropagation();
-        fetch(`{{ url('inventory/notifications') }}/${id}/mark-read`, {
+        const url = `{{ route('inventory.notifications.mark-read', ':id') }}`.replace(':id', id);
+        fetch(url, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
@@ -88,7 +90,8 @@
     }
 
     function markAllAsRead() {
-        fetch('{{ route("inventory.notifications.markAllRead") }}', {
+        const url = `{{ route('inventory.notifications.mark-all-read') }}`;
+        fetch(url, {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),

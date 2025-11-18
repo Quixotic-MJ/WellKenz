@@ -9,9 +9,6 @@
             <p class="text-gray-600 mt-1">Track and manage issued acknowledgment receipts</p>
         </div>
         <div class="flex space-x-2">
-            <button onclick="exportReceipts()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                Export Receipts
-            </button>
         </div>
     </div>
 
@@ -21,8 +18,8 @@
             <div class="flex justify-between items-center">
                 <h3 class="text-lg font-semibold text-gray-900">Issued Receipts</h3>
                 <div class="flex space-x-2">
-                    <input type="date" id="filter-date" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                    <select id="filter-status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <input type="date" id="filter-date" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="filter-status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">All Status</option>
                         <option value="issued">Issued</option>
                         <option value="confirmed">Confirmed</option>
@@ -46,7 +43,7 @@
                     @forelse($receipts as $receipt)
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $receipt->ar_ref }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $receipt->employee->name ?? 'N/A' }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $receipt->receiver->name ?? 'N/A' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $receipt->issued_date->format('M d, Y H:i') }}</td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 py-1 text-xs font-medium rounded-full {{ $receipt->ar_status === 'issued' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800' }}">
@@ -55,15 +52,17 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ auth()->user()->name ?? 'System' }}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 space-x-2">
-                            <button onclick="viewReceipt({{ $receipt->ar_id }})" class="hover:text-blue-800">View</button>
-                            <button onclick="printReceipt({{ $receipt->ar_id }})" class="hover:text-blue-800">Print</button>
+                            <!-- Updated to use new viewReceipt function -->
+                            <button onclick="viewReceipt({{ $receipt->ar_id }})" class="hover:text-blue-800 font-medium">View</button>
+                            <!-- Original printReceipt function is still used, but can be triggered from modal -->
+                            <button onclick="printReceipt({{ $receipt->ar_id }})" class="hover:text-blue-800 font-medium">Print</button>
                         </td>
                     </tr>
                     @empty
                     <tr>
                         <td colspan="6" class="px-6 py-4 text-center text-gray-500">No receipts found</td>
                     </tr>
-                    @endforelse
+                    @endForelse
                 </tbody>
             </table>
         </div>
@@ -75,21 +74,34 @@
     </div>
 </div>
 
+{{-- REMOVED THE MODAL HTML BLOCK --}}
+
 @push('scripts')
 <script>
+    {{-- REMOVED MODAL GLOBAL VARIABLES --}}
+    {{-- REMOVED DOMCONTENTLOADED LISTENER --}}
+    {{-- REMOVED showModal FUNCTION --}}
+
+    /**
+     * REVERTED: Opens view details in new window.
+     * @param {number} id - The AR ID
+     */
     function viewReceipt(id) {
-        // This would open a detailed view of the receipt
-        alert('View receipt functionality will be implemented for AR ID: ' + id);
+        // Use Laravel route helper for correct URL - navigate in same tab
+        const url = `{{ route('inventory.acknowledge-receipts.view', ':id') }}`.replace(':id', id);
+        window.location.href = url;
     }
 
+    /**
+     * Opens print view in new window. (Original function)
+     * @param {number} id - The AR ID
+     */
     function printReceipt(id) {
-        // This would generate a printable version of the receipt
-        alert('Print receipt functionality will be implemented for AR ID: ' + id);
+        // Use Laravel route helper for correct URL - navigate in same tab
+        const url = `{{ route('inventory.acknowledge-receipts.print', ':id') }}`.replace(':id', id);
+        window.location.href = url;
     }
 
-    function exportReceipts() {
-        alert('Export receipts functionality will be implemented');
-    }
 </script>
 @endpush
 @endsection

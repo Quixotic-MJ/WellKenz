@@ -7,7 +7,7 @@ use App\Models\Category;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseItem;
 use App\Models\InventoryTransaction;
-use App\Models\AcknowledgementReceipt;
+use App\Models\AcknowledgeReceipt;
 use App\Models\Memo;
 use App\Models\Notification;
 use App\Models\User;
@@ -700,7 +700,7 @@ class InventoryController extends Controller
             $employee = User::findOrFail($requisition->requested_by);
             
             // Create acknowledgment receipt
-            $ar = AcknowledgementReceipt::create([
+            $ar = AcknowledgeReceipt::create([
                 'ar_ref' => $request->ar_ref,
                 'ar_status' => 'issued',
                 'issued_date' => Carbon::today(),
@@ -840,7 +840,7 @@ class InventoryController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('Inventory.notifications', compact('notifications'));
+        return view('Inventory.notifications.notifications', compact('notifications'));
     }
 
     public function notificationShow($id)
@@ -1235,11 +1235,54 @@ class InventoryController extends Controller
 
     public function acknowledgeReceiptsIndex()
     {
-        $receipts = AcknowledgementReceipt::with('requisition', 'employee')
+        $receipts = AcknowledgeReceipt::with('requisition', 'receiver')
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('Inventory.acknowledge_receipts', compact('receipts'));
+        return view('Inventory.AR.acknowledge_receipts', compact('receipts'));
+    }
+
+    // 🟦 14. Acknowledge Receipt Actions
+    public function acknowledgeReceiptView($id)
+    {
+        try {
+            $receipt = AcknowledgeReceipt::with('requisition', 'receiver', 'issuer')
+                ->findOrFail($id);
+                
+            return view('Inventory.AR.view', compact('receipt'));
+        } catch (\Exception $e) {
+            return redirect()->route('inventory.acknowledge-receipts.index')->with('error', 'Receipt not found');
+        }
+    }
+
+    public function acknowledgeReceiptPrint($id)
+    {
+        try {
+            $receipt = AcknowledgeReceipt::with('requisition', 'receiver', 'issuer')
+                ->findOrFail($id);
+                
+            // Extract the related data for the print template
+            $receiver = $receipt->receiver;
+            $issuer = $receipt->issuer;
+            $items = $receipt->requisition ? $receipt->requisition->items : collect();
+                
+            return view('Inventory.AR.print', compact('receipt', 'receiver', 'issuer', 'items'));
+        } catch (\Exception $e) {
+            return redirect()->route('inventory.acknowledge-receipts.index')->with('error', 'Receipt not found');
+        }
+    }
+
+    public function acknowledgeReceiptExport()
+    {
+        try {
+            $receipts = AcknowledgeReceipt::with('requisition', 'receiver', 'issuer')
+                ->orderBy('created_at', 'desc')
+                ->get();
+                
+            return view('Inventory.AR.export', compact('receipts'));
+        } catch (\Exception $e) {
+            return redirect()->route('inventory.acknowledge-receipts.index')->with('error', 'Error loading receipts for export');
+        }
     }
 
     public function recentTransactions()

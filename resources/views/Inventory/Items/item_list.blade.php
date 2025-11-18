@@ -284,28 +284,9 @@
 
     // Modal functions
     function showAddItemModal() {
-        // Load categories for the modal
-        fetch('{{ route("inventory.items.list.data") }}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const categories = [...new Set(data.items.map(item => ({ 
-                        id: item.cat_id, 
-                        name: item.cat_name 
-                    })).filter(c => c.id && c.name))];
-                    
-                    const categorySelect = document.querySelector('#addItemModal select[name="cat_id"]');
-                    categorySelect.innerHTML = '<option value="">Select Category</option>';
-                    categories.forEach(cat => {
-                        const option = document.createElement('option');
-                        option.value = cat.id;
-                        option.textContent = cat.name;
-                        categorySelect.appendChild(option);
-                    });
-                }
-            });
-        
-        $('#addItemModal').modal('show');
+        // The categories are already loaded in the modal from the controller
+        const modal = new bootstrap.Modal(document.getElementById('addItemModal'));
+        modal.show();
     }
 
     function getItemShowUrl(itemId) {
@@ -323,7 +304,8 @@
             .then(data => {
                 if (data.success) {
                     populateEditModal(data.item);
-                    $('#editItemModal').modal('show');
+                    const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+                    modal.show();
                 } else {
                     showNotification('Error loading item details', 'error');
                 }
@@ -341,7 +323,8 @@
             .then(data => {
                 if (data.success) {
                     populateStockAdjustmentModal(data.item);
-                    $('#stockAdjustmentModal').modal('show');
+                    const modal = new bootstrap.Modal(document.getElementById('stockAdjustmentModal'));
+                    modal.show();
                 } else {
                     showNotification('Error loading item details', 'error');
                 }
@@ -392,6 +375,15 @@
         setTimeout(() => {
             notification.remove();
         }, 3000);
+    }
+
+    // Placeholder functions for modal population (to be implemented in modal files)
+    function populateEditModal(item) {
+        console.log('populateEditModal called with:', item);
+    }
+
+    function populateStockAdjustmentModal(item) {
+        console.log('populateStockAdjustmentModal called with:', item);
     }
 </script>
 @endpush

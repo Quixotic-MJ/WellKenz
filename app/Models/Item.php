@@ -25,4 +25,12 @@ class Item extends Model
         'updated_at' => 'datetime',
         'last_updated' => 'datetime',
     ];
+
+    /**
+     * Get the category that owns the item.
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class, 'cat_id', 'cat_id');
+    }
 }

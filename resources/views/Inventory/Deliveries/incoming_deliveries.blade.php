@@ -161,7 +161,7 @@
     function loadDeliveries() {
         const params = new URLSearchParams(currentFilters);
         
-        fetch(`{{ route('inventory.deliveries.incoming.api') }}?${params}`)
+        fetch(`{{ route('inventory.deliveries.incoming-data') }}?${params}`)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
