@@ -152,7 +152,7 @@ class PurchasingController extends Controller
                     'po_ref' => 'TEMP-' . time(), // Temporary reference
                     'po_status' => 'draft',
                     'order_date' => Carbon::now(),
-                    'delivery_address' => 'N/A (Update in Draft)', // Default
+                    'delivery_address' => '(Update in Draft)', // Default
                     'notes' => 'Created from Requisition(s): ' . implode(', ', $req_ids),
                     'total_amount' => 0, // Will be updated later
                     'req_id' => $req_ids[0], // Link to the first req_id
@@ -380,7 +380,7 @@ class PurchasingController extends Controller
         $suppliers = DB::table('suppliers')
             ->leftJoin(DB::raw('(SELECT sup_id, COUNT(*) as po_count FROM purchase_orders GROUP BY sup_id) as po'), 'suppliers.sup_id', '=', 'po.sup_id')
             ->select('suppliers.*', DB::raw('COALESCE(po.po_count, 0) as po_count'))
-            ->paginate(10);
+            ->get();
 
         return view('Purchasing.Supplier.supplier', ['suppliers' => $suppliers]);
     }
@@ -640,6 +640,60 @@ class PurchasingController extends Controller
         }
 
         return response()->json(['title' => $title, 'html' => $html]);
+    }
+
+    public function reportPrint($type)
+    {
+        $title = 'Report';
+        $html = '<p>Report data not available.</p>';
+
+        // Generate report data based on type
+        switch ($type) {
+            case 'po-by-supplier':
+                $title = 'Purchase Orders by Supplier';
+                $data = DB::table('purchase_orders as po')
+                        ->join('suppliers as s', 'po.sup_id', 's.sup_id')
+                        ->select('s.sup_name', DB::raw('COUNT(*) as po_count'), DB::raw('SUM(po.total_amount) as total_value'))
+                        ->groupBy('s.sup_name')
+                        ->get();
+                $html = $this->buildHtmlTable($data);
+                break;
+            case 'po-by-status':
+                $title = 'Purchase Orders by Status';
+                $data = DB::table('purchase_orders')
+                        ->select('po_status', DB::raw('COUNT(*) as count'), DB::raw('SUM(total_amount) as total_value'))
+                        ->groupBy('po_status')
+                        ->get();
+                $html = $this->buildHtmlTable($data);
+                break;
+            case 'delivery-performance':
+                $title = 'Delivery Performance';
+                $on_time = DB::table('purchase_orders as po')
+                         ->join('memos as m', 'po.po_ref', 'm.po_ref')
+                         ->where('po.expected_delivery_date', '>=', 'm.received_date')
+                         ->count();
+                $overdue = DB::table('purchase_orders as po')
+                         ->join('memos as m', 'po.po_ref', 'm.po_ref')
+                         ->where('po.expected_delivery_date', '<', 'm.received_date')
+                         ->count();
+                $html = "<p>On-Time Deliveries: <strong>$on_time</strong></p><p>Overdue Deliveries: <strong>$overdue</strong></p>";
+                break;
+            case 'monthly-spend':
+                $title = 'Monthly Spend';
+                $data = DB::table('purchase_orders')
+                        ->where('po_status', '!=', 'draft')
+                        ->select(DB::raw("TO_CHAR(order_date, 'YYYY-MM') as month"), DB::raw('SUM(total_amount) as total_spend'))
+                        ->groupBy('month')
+                        ->orderBy('month', 'desc')
+                        ->get();
+                $html = $this->buildHtmlTable($data);
+                break;
+        }
+
+        return view('Purchasing.printReport', [
+            'title' => $title,
+            'html' => $html
+        ]);
     }
 
     // Helper function to build HTML table for reports

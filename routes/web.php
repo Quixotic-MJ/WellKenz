@@ -187,13 +187,14 @@ Route::middleware(['auth'])->group(function () {
             /* --- Reports --- */
             Route::get('/report', [PurchasingController::class, 'reportIndex'])->name('report');
             Route::get('/reports/{type}', [PurchasingController::class, 'reportGenerate'])->name('reports.generate');
+            Route::get('/reports/{type}/print', [PurchasingController::class, 'reportPrint'])->name('reports.print');
 
 
             /* --- Notifications --- */
             Route::get('/notifications', [PurchasingController::class, 'notificationsIndex'])->name('notifications');
             Route::get('/notifications/{id}', [PurchasingController::class, 'notificationsView'])->name('notifications.view');
             Route::post('/notifications/{id}/mark-read', [PurchasingController::class, 'notificationsMarkRead'])->name('notifications.mark-read');
-            Route::post('/notifications/mark-all-read', [PurchasingController::class, 'notificationsMarkAllRead'])->name('notifications.mark-all-read');
+            Route::post('/notifications/mark-all-read', [PurchasingController::class, 'notificationsMarkAllRead'])->name('notifications.markAllRead');
             Route::get('/notifications/jump/{id}', [PurchasingController::class, 'notificationsJump'])->name('notifications.jump');
         });
 
@@ -244,3 +245,4 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/reports/print/inventory-health', [SupervisorController::class, 'printInventoryHealth'])->name('reports.print.inventory-health');
         });
 });
+

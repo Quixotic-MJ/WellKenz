@@ -118,7 +118,7 @@
         </div>
 
         <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500">
-            Showing <span id="visibleCount">{{ $suppliers->count() }}</span> of {{ $suppliers->total() }} suppliers
+            Showing <span id="visibleCount">{{ $suppliers->count() }}</span> of {{ $suppliers->count() }} suppliers
         </div>
     </div>
 

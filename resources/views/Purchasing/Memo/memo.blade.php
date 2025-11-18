@@ -255,12 +255,12 @@
                     if (!res.success) throw new Error(res.message || 'Error');
                     const po = res.po;
                     const items = res.items || [];
-                    // Auto-generate memo ref: DM-YYYYMMDD-<po_ref>
+                    // Auto-generate memo ref: MEMO-YYYY-###
                     const d = new Date();
                     const y = d.getFullYear();
-                    const m = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const memoRef = `DM-${y}${m}${day}-${po.po_ref}`;
+                    // Generate a random 3-digit number for uniqueness
+                    const randomNum = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+                    const memoRef = `MEMO-${y}-${randomNum}`;
                     const form = document.getElementById('deliveryForm');
                     if (form.memo_ref) form.memo_ref.value = memoRef;
                     // build rows

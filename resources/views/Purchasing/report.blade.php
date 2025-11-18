@@ -4,14 +4,14 @@
 @section('breadcrumb','Procurement Reports')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6 print:space-y-4">
 
     <!-- toast -->
     <div id="successMessage" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded"></div>
     <div id="errorMessage"  class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded"></div>
 
     <!-- 1. header card -->
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
+    <div class="bg-white border border-gray-200 rounded-lg p-6 print:border-0 print:p-0">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-semibold text-gray-900">Procurement Reports</h1>
@@ -25,7 +25,7 @@
     </div>
 
     <!-- 2. quick tiles -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 print:hidden">
         <button onclick="loadReport('po-by-supplier')" 
             class="bg-white border border-gray-200 rounded-lg p-5 text-left hover:shadow transition">
             <div class="flex items-center justify-between mb-2">
@@ -80,7 +80,7 @@
         <div class="flex items-center justify-between mb-4">
             <h3 id="reportTitle" class="text-lg font-semibold text-gray-900"></h3>
             <div class="flex items-center space-x-2">
-                <button onclick="window.print()" class="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm rounded">
+                <button onclick="openPrintView()" class="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm rounded">
                     <i class="fas fa-print mr-1"></i>Print
                 </button>
                 <button onclick="downloadCSV()" class="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm rounded">
@@ -92,7 +92,7 @@
     </div>
 
     <!-- 4. fallback: recent POs (default view) -->
-    <div class="bg-white border border-gray-200 rounded-lg">
+    <div class="bg-white border border-gray-200 rounded-lg print:hidden">
         <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
             <h3 class="text-lg font-semibold text-gray-900">Recent Purchase Orders</h3>
             <a href="{{ route('purchasing.approved.index') }}" class="text-xs font-medium text-gray-600 hover:text-gray-900 uppercase tracking-wider">View All →</a>
@@ -150,7 +150,9 @@ function showMessage(msg, type = 'success'){
 }
 
 /* ===== load dynamic report ===== */
+let currentReportType = null;
 function loadReport(type){
+    currentReportType = type;
     fetch(`/purchasing/reports/${type}`,{
         headers:{'X-Requested-With':'XMLHttpRequest'}
     })
@@ -162,6 +164,15 @@ function loadReport(type){
         document.getElementById('reportContainer').scrollIntoView({behavior:'smooth'});
     })
     .catch(() => showMessage('Report unavailable','error'));
+}
+
+/* ===== open print view ===== */
+function openPrintView(){
+    if(!currentReportType){
+        showMessage('Please load a report first','error');
+        return;
+    }
+    window.open(`/purchasing/reports/${currentReportType}/print`, '_blank');
 }
 
 /* ===== csv export ===== */
@@ -181,14 +192,5 @@ function downloadCSV(){
     a.click(); window.URL.revokeObjectURL(url);
 }
 
-/* ===== print friendly ===== */
-function beforePrint(){
-    document.getElementById('reportContainer')?.classList.remove('hidden');
-}
-function afterPrint(){
-    /* optional reset */
-}
-window.onbeforeprint = beforePrint;
-window.onafterprint  = afterPrint;
 </script>
 @endsection
