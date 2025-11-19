@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'WellKenz - Cakes & Pastries')</title>
-    
-    <!-- CSRF Token for AJAX requests -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>@yield('title', 'WellKenz - Cakes & Pastries')</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,17 +12,8 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Bootstrap CSS and JS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
-    @stack('css')
     
     <!-- Custom Styles matching the sidebar theme -->
     <script>
@@ -130,7 +119,7 @@
 <body class="antialiased body-pattern font-sans">
     <div class="flex h-screen">
         <!-- Sidebar -->
-        @include('Inventory.layout.sidebar')
+        @include('Employee.layout.sidebar')
         
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
@@ -191,6 +180,6 @@
         });
     </script>
     
-    @stack('scripts')
+    @yield('scripts')
 </body>
 </html>

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'WellKenz - Cakes & Pastries')</title>
     
     <!-- Tailwind CSS -->
@@ -13,7 +14,6 @@
 
    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 
-    @stack('css')
     
     <!-- Custom Styles matching the sidebar theme -->
     <script>
@@ -118,8 +118,12 @@
 </head>
 <body class="antialiased body-pattern font-sans">
     <div class="flex h-screen">
-        <!-- Sidebar -->
-        @include('Supervisor.layout.sidebar')
+        <!-- Dynamic Sidebar Loading -->
+        @if(request()->is('supervisor*'))
+            @include('Supervisor.layout.sidebar')
+        @else
+            @include('Admin.layout.sidebar')
+        @endif
         
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
@@ -138,7 +142,9 @@
         // Toggle sidebar
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('collapsed');
+            if (sidebar) {
+                sidebar.classList.toggle('collapsed');
+            }
         }
 
         // Set active menu item
@@ -146,16 +152,21 @@
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active-menu');
             });
-            document.getElementById(menuId).classList.add('active-menu');
+            const menuElement = document.getElementById(menuId);
+            if (menuElement) {
+                menuElement.classList.add('active-menu');
+            }
         }
 
         // Toggle dropdowns
         function toggleNotifications() {
-            document.getElementById('notificationsDropdown').classList.toggle('hidden');
+            const dropdown = document.getElementById('notificationsDropdown');
+            if (dropdown) dropdown.classList.toggle('hidden');
         }
 
         function toggleProfile() {
-            document.getElementById('profileDropdown').classList.toggle('hidden');
+            const dropdown = document.getElementById('profileDropdown');
+            if (dropdown) dropdown.classList.toggle('hidden');
         }
 
         // Close dropdowns when clicking outside
@@ -173,13 +184,8 @@
                 profileDropdown.classList.add('hidden');
             }
         });
-
-        // Set dashboard as active by default
-        document.addEventListener('DOMContentLoaded', function() {
-            setActiveMenu('menu-dashboard');
-        });
     </script>
     
-    @stack('scripts')
+    @yield('scripts')
 </body>
 </html>

@@ -70,7 +70,7 @@ class AdminController extends Controller
             ->limit(5)
             ->get();
 
-        return view('Admin.dashboard', compact('metrics', 'lowStock', 'expiry', 'txns', 'acts'));
+        return view('Admin.system_overview', compact('metrics', 'lowStock', 'expiry', 'txns', 'acts'));
     }
 
     public function requisitions()
