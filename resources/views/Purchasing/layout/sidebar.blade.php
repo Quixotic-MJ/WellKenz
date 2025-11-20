@@ -27,31 +27,34 @@
                 <!-- 1. DASHBOARD -->
                 <li>
                     <a href="{{ Route::has('purchasing.dashboard') ? route('purchasing.dashboard') : '#' }}"
+                        id="menu-purchasing-dashboard"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.dashboard') ? 'active-menu' : '' }}">
                         <i class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Procurement Home</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Procurement Hub</span>
                     </a>
                 </li>
 
-                <!-- 2. PURCHASE ORDERS (The Workflow) -->
+                <!-- 2. PURCHASE ORDERS -->
                 <li class="pt-4">
                     <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Purchase Orders</div>
                 </li>
 
-                <!-- Create New PO -->
+                <!-- Create PO -->
                 <li>
                     <a href="{{ Route::has('purchasing.po.create') ? route('purchasing.po.create') : '#' }}"
+                        id="menu-purchasing-po-create"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.create') ? 'active-menu' : '' }}">
                         <i class="fas fa-plus-circle w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create New PO</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create PO</span>
                     </a>
                 </li>
 
                 <!-- Drafts -->
                 <li>
                     <a href="{{ Route::has('purchasing.po.drafts') ? route('purchasing.po.drafts') : '#' }}"
+                        id="menu-purchasing-po-drafts"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.drafts') ? 'active-menu' : '' }}">
-                        <i class="fas fa-pencil-ruler w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-edit w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Drafts</span>
                     </a>
                 </li>
@@ -59,86 +62,112 @@
                 <!-- Open Orders -->
                 <li>
                     <a href="{{ Route::has('purchasing.po.open') ? route('purchasing.po.open') : '#' }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.open') ? 'active-menu' : '' }}">
-                        <i class="fas fa-paper-plane w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Open Orders (Sent)</span>
+                        id="menu-purchasing-po-open"
+                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.open') ? 'active-menu' : '' }}">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-clock w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Open Orders</span>
+                        </div>
+                        <span class="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">7</span>
                     </a>
                 </li>
 
-                <!-- Partial / Backorders -->
+                <!-- Partial Orders -->
                 <li>
                     <a href="{{ Route::has('purchasing.po.partial') ? route('purchasing.po.partial') : '#' }}"
-                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.partial') ? 'active-menu' : '' }}">
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-exclamation-triangle w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Partial / Backorders</span>
-                        </div>
-                        <!-- Warning Badge -->
-                        <span class="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">!</span>
+                        id="menu-purchasing-po-partial"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.partial') ? 'active-menu' : '' }}">
+                        <i class="fas fa-truck-loading w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Partial Orders</span>
                     </a>
                 </li>
 
                 <!-- Completed History -->
                 <li>
                     <a href="{{ Route::has('purchasing.po.history') ? route('purchasing.po.history') : '#' }}"
+                        id="menu-purchasing-po-history"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.history') ? 'active-menu' : '' }}">
-                        <i class="fas fa-archive w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-history w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Completed History</span>
                     </a>
                 </li>
 
                 <!-- 3. SUPPLIERS -->
                 <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Suppliers</div>
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Supplier Management</div>
                 </li>
 
-                <!-- Vendor Masterlist -->
+                <!-- Supplier Masterlist -->
                 <li>
                     <a href="{{ Route::has('purchasing.suppliers.index') ? route('purchasing.suppliers.index') : '#' }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.suppliers.index') ? 'active-menu' : '' }}">
-                        <i class="fas fa-address-book w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Vendor Masterlist</span>
+                        id="menu-purchasing-suppliers-index"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.suppliers*') ? 'active-menu' : '' }}">
+                        <i class="fas fa-truck w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Supplier Masterlist</span>
                     </a>
                 </li>
 
                 <!-- Price Lists -->
                 <li>
                     <a href="{{ Route::has('purchasing.suppliers.prices') ? route('purchasing.suppliers.prices') : '#' }}"
+                        id="menu-purchasing-suppliers-prices"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.suppliers.prices') ? 'active-menu' : '' }}">
                         <i class="fas fa-tags w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Price Lists</span>
                     </a>
                 </li>
 
-                <!-- 4. REPORTS -->
+                <!-- 4. REPORTS & ANALYSIS -->
                 <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Reports</div>
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Reports & Analysis</div>
                 </li>
 
                 <!-- Purchase History -->
                 <li>
                     <a href="{{ Route::has('purchasing.reports.history') ? route('purchasing.reports.history') : '#' }}"
+                        id="menu-purchasing-reports-history"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.reports.history') ? 'active-menu' : '' }}">
-                        <i class="fas fa-chart-pie w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Spending Analysis</span>
+                        <i class="fas fa-chart-bar w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Purchase History</span>
                     </a>
                 </li>
 
                 <!-- Supplier Performance -->
                 <li>
                     <a href="{{ Route::has('purchasing.reports.performance') ? route('purchasing.reports.performance') : '#' }}"
+                        id="menu-purchasing-reports-performance"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.reports.performance') ? 'active-menu' : '' }}">
-                        <i class="fas fa-stopwatch w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <i class="fas fa-star w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Supplier Performance</span>
                     </a>
                 </li>
 
-                <!-- RTV Logs -->
+                <!-- RTV Reports -->
                 <li>
                     <a href="{{ Route::has('purchasing.reports.rtv') ? route('purchasing.reports.rtv') : '#' }}"
+                        id="menu-purchasing-reports-rtv"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.reports.rtv') ? 'active-menu' : '' }}">
                         <i class="fas fa-undo-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">RTV Logs (Returns)</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">RTV Reports</span>
+                    </a>
+                </li>
+
+                <!-- 5. SYSTEM -->
+                <li class="pt-4">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">System</div>
+                </li>
+
+                <!-- Notifications -->
+                <li>
+                    <a href="{{ Route::has('purchasing.notifications') ? route('purchasing.notifications') : '#' }}"
+                        id="menu-purchasing-notifications"
+                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.notifications') ? 'active-menu' : '' }}">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
+                        </div>
+                        <!-- Badge for unread notifications -->
+                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">2</span>
                     </a>
                 </li>
 
@@ -149,8 +178,16 @@
 
 <style>
     .active-menu {
-        background-color: rgba(255, 255, 255, 0.15);
+        background-color: rgba(255, 255, 255, 0.15) !important;
         color: white !important;
         border-left-color: #D2691E !important; /* caramel color */
+    }
+    
+    .active-menu i {
+        color: white !important;
+    }
+    
+    .active-menu span {
+        color: white !important;
     }
 </style>

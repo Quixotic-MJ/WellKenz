@@ -12,10 +12,29 @@ class NotificationComposer
         $unreadNotificationsCount = 0;
         $recentNotifications = collect([]);
 
-        if (Auth::check()) {
-            $user = Auth::user();
-            $unreadNotificationsCount = $user->getUnreadNotificationsCount();
-            $recentNotifications = $user->getRecentNotifications(5);
+        try {
+            if (Auth::check()) {
+                $user = Auth::user();
+                if ($user && $user->exists) {
+                    // Set default notification data - implement proper notification system later
+                    $unreadNotificationsCount = 0;
+                    $recentNotifications = collect([]);
+                } else {
+                    // If user doesn't exist (invalid session), logout
+                    Auth::logout();
+                    session()->invalidate();
+                    session()->regenerateToken();
+                }
+            }
+        } catch (\Exception $e) {
+            // Handle any database/authentication errors
+            if (Auth::check()) {
+                Auth::logout();
+                session()->invalidate();
+                session()->regenerateToken();
+            }
+            // Log error for debugging
+            \Log::error('NotificationComposer error: ' . $e->getMessage());
         }
 
         $view->with('unreadNotificationsCount', $unreadNotificationsCount)

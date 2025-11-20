@@ -124,7 +124,7 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
-            @include('Admin.layout.header')
+            @include('Employee.layout.header')
             
             <!-- Page Content -->
             <main class="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -141,12 +141,18 @@
             sidebar.classList.toggle('collapsed');
         }
 
-        // Set active menu item
+        // Set active menu item (optional manual override)
         function setActiveMenu(menuId) {
+            // Remove active class from all menu items
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active-menu');
             });
-            document.getElementById(menuId).classList.add('active-menu');
+            
+            // Add active class to specific menu item if it exists
+            const menuItem = document.getElementById(menuId);
+            if (menuItem) {
+                menuItem.classList.add('active-menu');
+            }
         }
 
         // Toggle dropdowns
@@ -174,9 +180,12 @@
             }
         });
 
-        // Set dashboard as active by default
+        // Set dashboard as active by default if no menu is currently active
         document.addEventListener('DOMContentLoaded', function() {
-            setActiveMenu('menu-dashboard');
+            const activeMenu = document.querySelector('.menu-item.active-menu');
+            if (!activeMenu) {
+                setActiveMenu('menu-employee-dashboard');
+            }
         });
     </script>
     

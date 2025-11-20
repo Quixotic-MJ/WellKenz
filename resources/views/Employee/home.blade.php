@@ -1,4 +1,4 @@
-@extends('Admin.layout.app')
+@extends('Employee.layout.app')
 
 @section('content')
 <div class="space-y-6">
@@ -54,7 +54,7 @@
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">My Active Requests</h3>
-            <a href="{{ route('staff.requisitions.history') }}" class="text-xs text-blue-600 hover:underline">View History</a>
+            <a href="{{ route('employee.requisitions.history') }}" class="text-xs text-blue-600 hover:underline">View History</a>
         </div>
 
         <div class="space-y-3">
@@ -94,7 +94,7 @@
 
     {{-- 4. QUICK ACTIONS GRID (Touch Friendly) --}}
     <div class="grid grid-cols-2 gap-4">
-        <a href="{{ route('staff.requisitions.create') }}" class="flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-chocolate rounded-xl hover:bg-orange-50 transition group cursor-pointer">
+        <a href="{{ route('employee.requisitions.create') }}" class="flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-chocolate rounded-xl hover:bg-orange-50 transition group cursor-pointer">
             <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-chocolate mb-3 group-hover:scale-110 transition-transform">
                 <i class="fas fa-plus text-xl"></i>
             </div>
@@ -102,7 +102,7 @@
             <span class="text-[10px] text-gray-500">Restock your station</span>
         </a>
 
-        <a href="{{ route('staff.production.log') }}" class="flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-green-500 rounded-xl hover:bg-green-50 transition group cursor-pointer">
+        <a href="{{ route('employee.production.log') }}" class="flex flex-col items-center justify-center p-6 bg-white border-2 border-dashed border-green-500 rounded-xl hover:bg-green-50 transition group cursor-pointer">
             <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-3 group-hover:scale-110 transition-transform">
                 <i class="fas fa-clipboard-check text-xl"></i>
             </div>

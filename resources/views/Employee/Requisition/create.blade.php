@@ -1,4 +1,4 @@
-@extends('Admin.layout.app')
+@extends('Employee.layout.app')
 
 @section('content')
 <div class="flex flex-col lg:flex-row h-[calc(100vh-8rem)] gap-6">

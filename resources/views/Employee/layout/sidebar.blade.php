@@ -26,8 +26,9 @@
                 
                 <!-- 1. DASHBOARD -->
                 <li>
-                    <a href="{{ Route::has('staff.dashboard') ? route('staff.dashboard') : '#' }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.dashboard') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('employee.dashboard') ? route('employee.dashboard') : '#' }}"
+                        id="menu-employee-dashboard"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.dashboard') ? 'active-menu' : '' }}">
                         <i class="fas fa-home w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My Hub</span>
                     </a>
@@ -40,8 +41,9 @@
 
                 <!-- New Request (Add to Cart) -->
                 <li>
-                    <a href="{{ Route::has('staff.requisitions.create') ? route('staff.requisitions.create') : '#' }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.requisitions.create') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('employee.requisitions.create') ? route('employee.requisitions.create') : '#' }}"
+                        id="menu-employee-requisitions-create"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.requisitions.create') ? 'active-menu' : '' }}">
                         <i class="fas fa-shopping-basket w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">New Request</span>
                     </a>
@@ -49,8 +51,9 @@
 
                 <!-- My History -->
                 <li>
-                    <a href="{{ Route::has('staff.requisitions.history') ? route('staff.requisitions.history') : '#' }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.requisitions.history') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('employee.requisitions.history') ? route('employee.requisitions.history') : '#' }}"
+                        id="menu-employee-requisitions-history"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.requisitions.history') ? 'active-menu' : '' }}">
                         <i class="fas fa-history w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My History</span>
                     </a>
@@ -63,8 +66,9 @@
 
                 <!-- Log Output -->
                 <li>
-                    <a href="{{ Route::has('staff.production.log') ? route('staff.production.log') : '#' }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.production.log') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('employee.production.log') ? route('employee.production.log') : '#' }}"
+                        id="menu-employee-production-log"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.production.log') ? 'active-menu' : '' }}">
                         <i class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Log Output</span>
                     </a>
@@ -72,10 +76,25 @@
 
                 <!-- View Recipes -->
                 <li>
-                    <a href="{{ Route::has('staff.recipes.index') ? route('staff.recipes.index') : '#' }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.recipes.index') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('employee.recipes.index') ? route('employee.recipes.index') : '#' }}"
+                        id="menu-employee-recipes"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.recipes.index') ? 'active-menu' : '' }}">
                         <i class="fas fa-book-open w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">View Recipes</span>
+                    </a>
+                </li>
+
+                <!-- Notifications -->
+                <li>
+                    <a href="{{ Route::has('employee.notifications') ? route('employee.notifications') : '#' }}"
+                        id="menu-employee-notifications"
+                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.notifications') ? 'active-menu' : '' }}">
+                        <div class="flex items-center space-x-3">
+                            <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
+                        </div>
+                        <!-- Badge for unread notifications -->
+                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">3</span>
                     </a>
                 </li>
 
@@ -86,8 +105,16 @@
 
 <style>
     .active-menu {
-        background-color: rgba(255, 255, 255, 0.15);
+        background-color: rgba(255, 255, 255, 0.15) !important;
         color: white !important;
         border-left-color: #D2691E !important; /* caramel color */
+    }
+    
+    .active-menu i {
+        color: white !important;
+    }
+    
+    .active-menu span {
+        color: white !important;
     }
 </style>

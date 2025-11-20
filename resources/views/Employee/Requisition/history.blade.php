@@ -1,4 +1,4 @@
-@extends('Admin.layout.app')
+@extends('Employee.layout.app')
 
 @section('content')
 <div class="space-y-6">
@@ -9,7 +9,7 @@
             <h1 class="text-2xl font-bold text-gray-900">My Request History</h1>
             <p class="text-sm text-gray-500 mt-1">Track the status of your ingredient requisitions.</p>
         </div>
-        <a href="{{ route('staff.requisitions.create') }}" class="inline-flex items-center justify-center px-4 py-2 bg-chocolate text-white text-sm font-medium rounded-lg hover:bg-chocolate-dark transition shadow-sm">
+        <a href="{{ route('employee.requisitions.create') }}" class="inline-flex items-center justify-center px-4 py-2 bg-chocolate text-white text-sm font-medium rounded-lg hover:bg-chocolate-dark transition shadow-sm">
             <i class="fas fa-plus mr-2"></i> New Request
         </a>
     </div>

@@ -119,11 +119,11 @@
                 <button id="profileBtn" onclick="toggleProfile()" 
                         class="flex items-center space-x-2 p-1.5 hover:bg-cream-bg transition-colors focus:outline-none square-button">
                     <div class="w-8 h-8 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
-                        <span class="text-white text-sm font-bold">AD</span>
+                        <span class="text-white text-sm font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
                     </div>
                     <div class="hidden lg:block text-left pr-1">
-                        <p class="text-sm font-semibold text-text-dark leading-none">Admin User</p>
-                        <p class="text-xs text-text-muted leading-none mt-0.5">Administrator</p>
+                        <p class="text-sm font-semibold text-text-dark leading-none">{{ auth()->user()->name }}</p>
+                        <p class="text-xs text-text-muted leading-none mt-0.5">{{ ucfirst(auth()->user()->role) }}</p>
                     </div>
                     <i class="fas fa-chevron-down text-text-muted text-xs hidden lg:block"></i>
                 </button>
@@ -133,22 +133,22 @@
                     <div class="p-4 border-b-2 border-border-soft bg-cream-bg rounded-t-lg">
                         <div class="flex items-center space-x-3 mb-2">
                             <div class="w-10 h-10 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
-                                <span class="text-white text-base font-bold">AD</span>
+                                <span class="text-white text-base font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-text-dark">Admin User</p>
-                                <p class="text-xs text-text-muted">Administrator</p>
+                                <p class="text-sm font-bold text-text-dark">{{ auth()->user()->name }}</p>
+                                <p class="text-xs text-text-muted">{{ ucfirst(auth()->user()->role) }}</p>
                             </div>
                         </div>
                         <p class="text-xs text-text-muted mt-2 border-t border-border-soft pt-2 truncate">
-                            admin_main • Administrator
+                            {{ auth()->user()->name }} • {{ ucfirst(auth()->user()->role) }}
                         </p>
                         <p class="text-xs text-text-muted truncate">
-                            admin@wellkenz.com
+                            {{ auth()->user()->email }}
                         </p>
                         <div class="flex items-center mt-1">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                Active
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ auth()->user()->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                {{ auth()->user()->is_active ? 'Active' : 'Inactive' }}
                             </span>
                         </div>
                     </div>

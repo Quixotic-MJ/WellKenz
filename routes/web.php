@@ -73,6 +73,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         return view('Admin.system.backup');
     })->name('backups');
 
+    // Notifications
+    Route::get('/notifications', function () {
+        return view('Admin.notification');
+    })->name('notifications');
+
 });
 
 
@@ -93,6 +98,11 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
     Route::get('/approvals/purchase-requests', function () {
         return view('Supervisor.approvals.purchase_request');
     })->name('approvals.purchase-requests');
+
+    // Notifications
+    Route::get('/notifications', function () {
+        return view('Supervisor.notification');
+    })->name('notifications');
 
     // Inventory Oversight
     Route::get('/inventory', function () {
@@ -180,6 +190,11 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
         return view('Purchasing.reports.RTV'); 
     })->name('reports.rtv');
 
+    // Notifications
+    Route::get('/notifications', function () { 
+        return view('Purchasing.notification'); 
+    })->name('notifications');
+
 });
 
 
@@ -227,6 +242,11 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         return view('Inventory.stock_management.stock_transfer'); 
     })->name('stock.transfer');
 
+    // Notifications
+    Route::get('/notifications', function () { 
+        return view('Inventory.notification'); 
+    })->name('notifications');
+
 });
 
 
@@ -257,5 +277,10 @@ Route::middleware(['auth', 'role:employee'])->prefix('employee')->name('employee
     Route::get('/recipes', function () { 
         return view('Employee.production.recipe'); 
     })->name('recipes.index');
+
+    // Notifications
+    Route::get('/notifications', function () { 
+        return view('Employee.notification'); 
+    })->name('notifications');
 
 });

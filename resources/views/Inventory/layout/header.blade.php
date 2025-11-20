@@ -14,7 +14,7 @@
                 <i class="fas fa-birthday-cake text-caramel text-xl"></i>
                 <span class="font-display font-bold text-text-dark text-lg hidden sm:block">WellKenz</span>
                 <span class="text-border-soft mx-2 hidden sm:block">/</span>
-                <span class="text-text-muted text-xs uppercase tracking-wider hidden md:block">@yield('breadcrumb', 'Dashboard')</span>
+                <span class="text-text-muted text-xs uppercase tracking-wider hidden md:block">@yield('breadcrumb', 'Employee Portal')</span>
             </div>
         </div>
 
