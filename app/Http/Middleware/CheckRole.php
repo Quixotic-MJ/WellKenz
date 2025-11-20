@@ -17,14 +17,16 @@ class CheckRole
 
         $user = Auth::user();
 
-        // Check if user is active
-        if ($user->status !== 'active') {
+        // 1. Check Boolean is_active (Matches Schema)
+        if (!$user->is_active) {
             Auth::logout();
-            return redirect()->route('login')->with('error', 'Your account has been deactivated. Please contact administrator.');
+            return redirect()->route('login')->with('error', 'Your account has been deactivated.');
         }
 
+        // 2. Role Check
+        // If the route requires 'admin', but user is 'employee', abort.
         if ($user->role !== $role) {
-            abort(403, 'Unauthorized access. Required role: ' . $role);
+            abort(403, 'Unauthorized access. You are logged in as ' . ucfirst($user->role) . ', but this page requires ' . ucfirst($role) . '.');
         }
 
         return $next($request);

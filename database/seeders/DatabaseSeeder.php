@@ -3,70 +3,190 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB; // <-- THIS IS REQUIRED
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
 class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        $this->call([
-            // Users (must be first - other tables reference users)
-            AdminSeeder::class,
-            EmployeeSeeder::class,
-            
-            // Master data (categories and suppliers)
-            CategoriesSeeder::class,
-            SuppliersSeeder::class,
-            
-            // Items (referenced by many tables)
-            ItemsSeeder::class,
-            
-            // Item requests and requisitions
-            ItemRequestsSeeder::class,
-            RequisitionsSeeder::class,
-            RequisitionItemsSeeder::class,
-            
-            // New approved request items table
-            ApprovedRequestItemsSeeder::class,
-            
-            // Purchase orders and related tables
-            PurchaseOrdersSeeder::class,
-            PurchaseItemsSeeder::class,
-            
-            // Transactions and receipts
-            InventoryTransactionsSeeder::class,
-            AcknowledgeReceiptsSeeder::class,
-            
-            // Supporting tables
-            MemosSeeder::class,
-            NotificationsSeeder::class,
-        ]);
+        // 1. CLEANUP (Disable Foreign Keys to truncate safely)
+        DB::statement('TRUNCATE TABLE users RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE suppliers RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE categories RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE items RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE purchase_orders RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE purchase_order_items RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE receiving_reports RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE inventory_batches RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE requisitions RESTART IDENTITY CASCADE');
+        DB::statement('TRUNCATE TABLE requisition_items RESTART IDENTITY CASCADE');
 
-        // ====================================================================
-        // **** THIS IS THE FIX ****
-        // This block re-synchronizes all the auto-increment counters
-        // after the seeders have manually inserted data.
-        // ====================================================================
-        
-        $this->command->info('Syncing auto-increment counters...');
-        
-        DB::select("SELECT setval('users_user_id_seq', COALESCE((SELECT MAX(user_id) FROM users), 1), (SELECT MAX(user_id) IS NOT NULL FROM users));");
-        DB::select("SELECT setval('categories_cat_id_seq', COALESCE((SELECT MAX(cat_id) FROM categories), 1), (SELECT MAX(cat_id) IS NOT NULL FROM categories));");
-        DB::select("SELECT setval('suppliers_sup_id_seq', COALESCE((SELECT MAX(sup_id) FROM suppliers), 1), (SELECT MAX(sup_id) IS NOT NULL FROM suppliers));");
-        DB::select("SELECT setval('items_item_id_seq', COALESCE((SELECT MAX(item_id) FROM items), 1), (SELECT MAX(item_id) IS NOT NULL FROM items));");
-        DB::select("SELECT setval('item_requests_item_req_id_seq', COALESCE((SELECT MAX(item_req_id) FROM item_requests), 1), (SELECT MAX(item_req_id) IS NOT NULL FROM item_requests));");
-        DB::select("SELECT setval('requisitions_req_id_seq', COALESCE((SELECT MAX(req_id) FROM requisitions), 1), (SELECT MAX(req_id) IS NOT NULL FROM requisitions));");
-        DB::select("SELECT setval('requisition_items_req_item_id_seq', COALESCE((SELECT MAX(req_item_id) FROM requisition_items), 1), (SELECT MAX(req_item_id) IS NOT NULL FROM requisition_items));");
-        DB::select("SELECT setval('approved_request_items_req_item_id_seq', COALESCE((SELECT MAX(req_item_id) FROM approved_request_items), 1), (SELECT MAX(req_item_id) IS NOT NULL FROM approved_request_items));");
-        DB::select("SELECT setval('purchase_orders_po_id_seq', COALESCE((SELECT MAX(po_id) FROM purchase_orders), 1), (SELECT MAX(po_id) IS NOT NULL FROM purchase_orders));");
-        DB::select("SELECT setval('purchase_items_pi_id_seq', COALESCE((SELECT MAX(pi_id) FROM purchase_items), 1), (SELECT MAX(pi_id) IS NOT NULL FROM purchase_items));");
-        DB::select("SELECT setval('inventory_transactions_trans_id_seq', COALESCE((SELECT MAX(trans_id) FROM inventory_transactions), 1), (SELECT MAX(trans_id) IS NOT NULL FROM inventory_transactions));");
-        DB::select("SELECT setval('acknowledge_receipts_ar_id_seq', COALESCE((SELECT MAX(ar_id) FROM acknowledge_receipts), 1), (SELECT MAX(ar_id) IS NOT NULL FROM acknowledge_receipts));");
-        DB::select("SELECT setval('memos_memo_id_seq', COALESCE((SELECT MAX(memo_id) FROM memos), 1), (SELECT MAX(memo_id) IS NOT NULL FROM memos));");
-        
-        // ** THIS LINE IS NOW FIXED (not_id -> notif_id) **
-        DB::select("SELECT setval('notifications_notif_id_seq', COALESCE((SELECT MAX(notif_id) FROM notifications), 1), (SELECT MAX(notif_id) IS NOT NULL FROM notifications));");
+        // ==========================================
+        // 2. SEED USERS (The 5 Core Roles)
+        // Password for everyone: "password"
+        // ==========================================
+        $users = [
+            ['name' => 'Admin Aris', 'email' => 'admin@bakery.com', 'role' => 'admin'],
+            ['name' => 'Supervisor Maam Sarah', 'email' => 'supervisor@bakery.com', 'role' => 'supervisor'],
+            ['name' => 'Buyer Ben', 'email' => 'purchasing@bakery.com', 'role' => 'purchasing'],
+            ['name' => 'Bodega Boy Jun', 'email' => 'inventory@bakery.com', 'role' => 'inventory'],
+            ['name' => 'Baker Juan', 'email' => 'baker@bakery.com', 'role' => 'employee'],
+        ];
 
-        $this->command->info('All counters re-synced!');
+        foreach ($users as $user) {
+            DB::table('users')->insert([
+                'name' => $user['name'],
+                'email' => $user['email'],
+                'password_hash' => Hash::make('password'), // Laravel standard hashing
+                'role' => $user['role'],
+                'is_active' => true,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // ==========================================
+        // 3. SEED SUPPLIERS (Cebu Context)
+        // ==========================================
+        $suppliers = [
+            ['name' => 'General Milling Corp', 'lead_time' => 2, 'tin' => '123-456-789'],
+            ['name' => 'Carbon Market Egg Vendor', 'lead_time' => 1, 'tin' => '987-654-321'],
+            ['name' => 'San Miguel Packaging', 'lead_time' => 5, 'tin' => '444-555-666'],
+            ['name' => 'Cebu Dairy Distributors', 'lead_time' => 3, 'tin' => '111-222-333'],
+            ['name' => 'Metro Gaisano Wholesale', 'lead_time' => 1, 'tin' => '777-888-999'],
+        ];
+
+        foreach ($suppliers as $s) {
+            DB::table('suppliers')->insert([
+                'name' => $s['name'],
+                'lead_time_days' => $s['lead_time'],
+                'tin_number' => $s['tin'],
+                'created_at' => now(),
+            ]);
+        }
+
+        // ==========================================
+        // 4. SEED CATEGORIES & ITEMS (The "Truth")
+        // ==========================================
+        $categories = ['Ingredients', 'Packaging', 'Dairy', 'Cleaning'];
+        foreach ($categories as $cat) {
+            DB::table('categories')->insert(['name' => $cat]);
+        }
+
+        // Items Array: [CatID, Name, PurchaseUnit, StockUnit, Conversion, ReorderLvl, Perishable]
+        $items = [
+            [1, 'Bread Flour', 'Sack', 'kg', 25.00, 50.00, false], // 1 Sack = 25kg
+            [1, 'White Sugar', 'Sack', 'kg', 50.00, 20.00, false], // 1 Sack = 50kg
+            [3, 'Fresh Eggs (Large)', 'Tray', 'pcs', 30.00, 100.00, true], // 1 Tray = 30pcs
+            [3, 'Full Cream Milk', 'Box', 'liters', 12.00, 10.00, true], // 1 Box = 12 Liters
+            [1, 'Yeast', 'Pack', 'grams', 500.00, 1000.00, true], // 1 Pack = 500g
+            [2, 'Cake Box (10x10)', 'Bundle', 'pcs', 100.00, 200.00, false],
+            [1, 'Unsalted Butter', 'Block', 'grams', 225.00, 5000.00, true],
+            [1, 'Cocoa Powder', 'Tin', 'grams', 1000.00, 3000.00, false],
+        ];
+
+        foreach ($items as $i) {
+            DB::table('items')->insert([
+                'category_id' => $i[0],
+                'name' => $i[1],
+                'sku' => 'SKU-' . strtoupper(substr($i[1], 0, 3)) . rand(100, 999),
+                'purchase_unit' => $i[2],
+                'stock_unit' => $i[3],
+                'conversion_factor' => $i[4],
+                'reorder_level' => $i[5],
+                'is_perishable' => $i[6],
+                'created_at' => now(),
+            ]);
+        }
+
+        // ==========================================
+        // 5. GENERATE 20 PURCHASE ORDERS & BATCHES
+        // This populates the Warehouse
+        // ==========================================
+        for ($x = 1; $x <= 20; $x++) {
+            $status = ($x <= 15) ? 'completed' : 'ordered'; // First 15 delivered, 5 pending
+            $supplierId = rand(1, 5);
+            
+            // Create PO
+            $poId = DB::table('purchase_orders')->insertGetId([
+                'po_number' => 'PO-2023-' . str_pad($x, 4, '0', STR_PAD_LEFT),
+                'supplier_id' => $supplierId,
+                'created_by_user_id' => 3, // Purchasing Officer
+                'status' => $status,
+                'total_amount' => rand(5000, 20000),
+                'ordered_at' => Carbon::now()->subDays(rand(5, 30)),
+                'created_at' => now(),
+            ]);
+
+            // Add Random Items to PO
+            $itemId = rand(1, 8);
+            $qty = rand(5, 20); // e.g., 5 Sacks
+            
+            DB::table('purchase_order_items')->insert([
+                'purchase_order_id' => $poId,
+                'item_id' => $itemId,
+                'requested_qty' => $qty,
+                'received_qty' => ($status == 'completed') ? $qty : 0,
+                'unit_price' => rand(500, 2500),
+            ]);
+
+            // IF COMPLETED: Create Receiving Report & FIFO Batch
+            if ($status == 'completed') {
+                // 1. Create Receiving Report
+                $rrId = DB::table('receiving_reports')->insertGetId([
+                    'purchase_order_id' => $poId,
+                    'received_by_user_id' => 4, // Inventory Staff
+                    'reference_no' => 'DR-' . rand(10000, 99999),
+                    'remarks' => 'Received in good condition',
+                    'received_at' => now(),
+                ]);
+
+                // 2. Calculate Stock Unit Qty (Sacks -> Kg)
+                $item = DB::table('items')->where('id', $itemId)->first();
+                $stockQty = $qty * $item->conversion_factor;
+
+                // 3. Create Inventory Batch (FIFO)
+                DB::table('inventory_batches')->insert([
+                    'item_id' => $itemId,
+                    'receiving_report_id' => $rrId,
+                    'batch_code' => 'BATCH-' . date('Ymd') . '-' . $poId,
+                    'initial_qty' => $stockQty,
+                    'current_qty' => $stockQty, // Full batch
+                    'cost_per_unit' => rand(10, 100),
+                    'expiry_date' => ($item->is_perishable) ? Carbon::now()->addDays(rand(7, 90)) : null,
+                    'created_at' => now(),
+                ]);
+            }
+        }
+
+        // ==========================================
+        // 6. GENERATE 20 REQUISITIONS (Baker Requests)
+        // Some Approved, Some Pending
+        // ==========================================
+        for ($y = 1; $y <= 20; $y++) {
+            $reqStatus = ($y <= 10) ? 'approved' : 'pending';
+            
+            $reqId = DB::table('requisitions')->insertGetId([
+                'control_no' => 'REQ-' . date('m') . '-' . str_pad($y, 4, '0', STR_PAD_LEFT),
+                'requested_by_user_id' => 5, // Baker Juan
+                'status' => $reqStatus,
+                'approved_by_user_id' => ($reqStatus == 'approved') ? 2 : null, // Supervisor Sarah
+                'approved_at' => ($reqStatus == 'approved') ? now() : null,
+                'remarks' => 'Production for ' . date('l'),
+                'created_at' => now(),
+            ]);
+
+            // Add Item to Requisition
+            $reqItem = rand(1, 8);
+            DB::table('requisition_items')->insert([
+                'requisition_id' => $reqId,
+                'item_id' => $reqItem,
+                'requested_qty' => rand(2, 10), // Requesting 2-10 KG/PCS
+                'issued_qty' => 0, // Not issued yet for this seed
+                'notes' => 'Urgent'
+            ]);
+        }
     }
 }

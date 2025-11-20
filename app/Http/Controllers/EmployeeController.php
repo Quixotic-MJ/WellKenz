@@ -14,7 +14,7 @@ use App\Models\Notification;
 use App\Models\AcknowledgeReceipt;
 use Carbon\Carbon;
 
-class StaffController extends Controller
+class EmployeeController extends Controller
 {
     /**
      * Show the staff (employee) dashboard.

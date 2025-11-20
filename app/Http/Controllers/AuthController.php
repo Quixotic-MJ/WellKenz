@@ -5,8 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB; // This is no longer strictly needed for this file
-use App\Models\User; // This is now used
+use App\Models\User; 
 
 class AuthController extends Controller
 {
@@ -17,49 +16,55 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        // 1. Validate Email instead of Username
         $credentials = $request->validate([
-            'username' => 'required|string',
+            'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
-        $user = User::where('username', $credentials['username'])->first();
+        // 2. Fetch User
+        $user = User::where('email', $credentials['email'])->first();
 
-        // Check if user exists, password is correct, and user is active
-        if ($user && Hash::check($credentials['password'], $user->password)) {
-            // Check if user is active
-            if ($user->status !== 'active') {
-                return back()->with('error', 'Your account has been deactivated. Please contact administrator.')->withInput();
+        // 3. Check Password against 'password_hash' column from your Schema
+        // Note: Standard Laravel uses 'password', but your schema uses 'password_hash'
+        if ($user && Hash::check($credentials['password'], $user->password_hash)) {
+            
+            // 4. Check if user is active (Boolean check based on schema)
+            if (!$user->is_active) {
+                return back()->with('error', 'Your account is deactivated. Please contact the Admin.')->withInput();
             }
 
+            // Log the user in
             Auth::login($user);
             
-            // Store role in session for individual middleware
+            // Store role in session for easy access
             session(['role' => $user->role]);
             session(['user_name' => $user->name]);
-            session(['user_position' => $user->position]);
             
-            // Redirect based on user role
+            // 5. Redirect based on the 5 defined roles
             return $this->redirectToDashboard($user->role);
         }
 
-        return back()->with('error', 'Invalid credentials. Please try again.')->withInput();
+        return back()->with('error', 'Invalid email or password. Please try again.')->withInput();
     }
 
     private function redirectToDashboard($role)
     {
+        // Matches the 'user_role' ENUM in your database
         switch ($role) {
             case 'admin':
                 return redirect()->route('admin.dashboard');
-            case 'employee':
-                return redirect()->route('staff.dashboard');
-            case 'inventory':
-                return redirect()->route('inventory.dashboard');
-            case 'purchasing':
-                return redirect()->route('purchasing.dashboard');
             case 'supervisor':
                 return redirect()->route('supervisor.dashboard');
+            case 'purchasing':
+                return redirect()->route('purchasing.dashboard');
+            case 'inventory':
+                return redirect()->route('inventory.dashboard');
+            case 'employee': // This is the Baker
+                return redirect()->route('employee.dashboard');
             default:
-                return redirect()->route('login')->with('error', 'Unknown user role.');
+                Auth::logout();
+                return redirect()->route('login')->with('error', 'Role not recognized. Contact Admin.');
         }
     }
 

@@ -11,92 +11,74 @@
         <!-- Logo Section -->
         <div class="p-6 border-b border-white/10">
             <div class="flex items-center space-x-3">
-                <div
-                    class="w-10 h-10 bg-caramel/20 backdrop-blur-sm flex items-center justify-center border border-caramel/30 flex-shrink-0">
-                    <i class="fas fa-birthday-cake text-caramel text-lg animate-float"></i>
+                <div class="w-10 h-10 bg-caramel/20 backdrop-blur-sm flex items-center justify-center border border-caramel/30 flex-shrink-0">
+                    <i class="fas fa-user-tag text-caramel text-lg animate-float"></i>
                 </div>
                 <div class="sidebar-text transition-opacity duration-300">
                     <h1 class="font-display text-xl font-bold tracking-wide">WellKenz</h1>
-                    <p class="text-xs text-white/60 uppercase tracking-widest">Cakes & Pastries</p>
+                    <p class="text-xs text-white/60 uppercase tracking-widest">Employee Portal</p>
                 </div>
             </div>
         </div>
 
         <nav class="flex-1 overflow-y-auto py-4 no-scrollbar">
             <ul class="space-y-1 px-3">
-                <!-- Dashboard -->
+                
+                <!-- 1. DASHBOARD -->
                 <li>
-                    <a href="{{ route('staff.dashboard') }}"
+                    <a href="{{ Route::has('staff.dashboard') ? route('staff.dashboard') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.dashboard') ? 'active-menu' : '' }}">
-                        <i class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Dashboard</span>
+                        <i class="fas fa-home w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My Hub</span>
                     </a>
                 </li>
 
-                <!-- Requisition Section -->
-                <li class="pt-2">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Requisition Management</div>
+                <!-- 2. REQUISITIONS (Get Ingredients) -->
+                <li class="pt-4">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Requisitions</div>
                 </li>
 
-                <!-- Create Requisition -->
+                <!-- New Request (Add to Cart) -->
                 <li>
-                    <a href="{{ route('staff.requisitions.create') }}"
+                    <a href="{{ Route::has('staff.requisitions.create') ? route('staff.requisitions.create') : '#' }}"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.requisitions.create') ? 'active-menu' : '' }}">
-                        <i class="fas fa-plus-circle w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create Requisition</span>
+                        <i class="fas fa-shopping-basket w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">New Request</span>
                     </a>
                 </li>
 
-                <!-- My Requisitions -->
+                <!-- My History -->
                 <li>
-                    <a href="{{ route('staff.requisitions.index') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.requisitions.index') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('staff.requisitions.history') ? route('staff.requisitions.history') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.requisitions.history') ? 'active-menu' : '' }}">
                         <i class="fas fa-history w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My Requisitions</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My History</span>
                     </a>
                 </li>
 
-                <!-- Item Request Section -->
-                <li class="pt-2">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Item Requests</div>
+                <!-- 3. PRODUCTION -->
+                <li class="pt-4">
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Production</div>
                 </li>
 
-                <!-- Item Request -->
+                <!-- Log Output -->
                 <li>
-                    <a href="{{ route('staff.item-requests.index') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.item-requests.index') ? 'active-menu' : '' }}">
+                    <a href="{{ Route::has('staff.production.log') ? route('staff.production.log') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.production.log') ? 'active-menu' : '' }}">
                         <i class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Item Requests</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Log Output</span>
                     </a>
                 </li>
 
-                <!-- Acknowledgement Section -->
-                <li class="pt-2">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Acknowledgement</div>
-                </li>
-
-                <!-- Receipt -->
+                <!-- View Recipes -->
                 <li>
-                    <a href="{{ route('staff.ar') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.ar') ? 'active-menu' : '' }}">
-                        <i class="fas fa-receipt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Acknowledgement Receipt</span>
+                    <a href="{{ Route::has('staff.recipes.index') ? route('staff.recipes.index') : '#' }}"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.recipes.index') ? 'active-menu' : '' }}">
+                        <i class="fas fa-book-open w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">View Recipes</span>
                     </a>
                 </li>
 
-                <!-- System Section -->
-                <li class="pt-2">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">System</div>
-                </li>
-
-                <!-- Notification -->
-                <li>
-                    <a href="{{ route('staff.notifications') }}"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('staff.notifications') ? 'active-menu' : '' }}">
-                        <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
-                    </a>
-                </li>
             </ul>
         </nav>
     </div>
@@ -105,7 +87,7 @@
 <style>
     .active-menu {
         background-color: rgba(255, 255, 255, 0.15);
-        color: white;
+        color: white !important;
         border-left-color: #D2691E !important; /* caramel color */
     }
 </style>
