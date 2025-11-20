@@ -9,9 +9,26 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
+// DEBUGGING: Temporarily remove HasUuids to test if this is the issue
+// use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasUuids;
+    use HasFactory, Notifiable;
+
+    /**
+     * The data type of the primary key ID.
+     *
+     * @var string
+     */
+    protected $keyType = 'int';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = true;
 
     /**
      * The table associated with the model.
@@ -28,7 +45,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password_hash',
+        'password',
         'role',
         'is_active',
     ];
@@ -94,5 +111,83 @@ class User extends Authenticatable
     public function isActive()
     {
         return $this->is_active;
+    }
+
+    /**
+     * Get the user's profile.
+     */
+    public function profile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    /**
+     * Get the formatted role name.
+     *
+     * @return string
+     */
+    public function getFormattedRoleAttribute()
+    {
+        $roleMap = [
+            'admin' => 'Administrator',
+            'supervisor' => 'Supervisor', 
+            'purchasing' => 'Purchasing Officer',
+            'inventory' => 'Inventory Manager',
+            'employee' => 'Staff'
+        ];
+        
+        return $roleMap[$this->role] ?? ucfirst($this->role);
+    }
+
+    /**
+     * Get the user's initials for avatar.
+     *
+     * @return string
+     */
+    public function getInitialsAttribute()
+    {
+        $name = $this->name ?? '';
+        if (empty($name)) {
+            return 'U';
+        }
+        
+        $words = explode(' ', trim($name));
+        if (count($words) >= 2) {
+            return strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
+        }
+        
+        return strtoupper(substr($name, 0, 2));
+    }
+
+    /**
+     * Get the last login time formatted for display.
+     *
+     * @return string
+     */
+    public function getFormattedLastLoginAttribute()
+    {
+        if (!$this->last_login_at) {
+            return 'Never';
+        }
+        
+        return $this->last_login_at->diffForHumans();
+    }
+
+    /**
+     * Get the role color class for UI.
+     *
+     * @return string
+     */
+    public function getRoleColorClassAttribute()
+    {
+        $colorMap = [
+            'admin' => 'bg-purple-100 text-purple-800',
+            'supervisor' => 'bg-blue-100 text-blue-800',
+            'purchasing' => 'bg-green-100 text-green-800',
+            'inventory' => 'bg-orange-100 text-orange-800',
+            'employee' => 'bg-gray-100 text-gray-800'
+        ];
+        
+        return $colorMap[$this->role] ?? 'bg-gray-100 text-gray-800';
     }
 }

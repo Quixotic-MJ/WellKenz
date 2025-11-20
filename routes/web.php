@@ -29,18 +29,29 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('Admin.system_overview');
-    })->name('dashboard');
+    Route::get('/dashboard', [AdminController::class, 'systemOverview'])->name('dashboard');
 
     // User Management
-    Route::get('/users', function () {
-        return view('Admin.user_management.all_user');
-    })->name('users.index');
+    Route::get('/users', [AdminController::class, 'allUsers'])->name('users.index');
+    Route::get('/roles', [AdminController::class, 'userRoles'])->name('roles.index');
 
-    Route::get('/roles', function () {
-        return view('Admin.user_management.roles');
-    })->name('roles.index');
+    // User Management AJAX routes - KEEP route model binding
+    Route::post('/users', [AdminController::class, 'createUser'])->name('users.store');
+    Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
+    Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+    Route::patch('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
+    Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
+    Route::get('/users/search', [AdminController::class, 'searchUsers'])->name('users.search');
+    
+    // User password management - KEEP route model binding
+    Route::post('/users/{user}/reset-password', [AdminController::class, 'resetUserPassword'])->name('users.reset-password');
+    Route::post('/users/{user}/change-password', [AdminController::class, 'changeUserPassword'])->name('users.change-password');
+    Route::post('/users/bulk-operations', [AdminController::class, 'bulkUserOperations'])->name('users.bulk-operations');
+
+    // Role Management routes
+    Route::get('/roles/{role}/details', [AdminController::class, 'getRoleDetails'])->name('roles.details');
+    Route::post('/roles/{role}/permissions', [AdminController::class, 'saveRolePermissions'])->name('roles.permissions');
+    Route::get('/roles/{role}/permissions', [AdminController::class, 'getRolePermissions'])->name('roles.permissions.get');
 
     // Master Files
     Route::get('/items', function () {

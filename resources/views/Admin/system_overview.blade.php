@@ -14,8 +14,8 @@
                 <p class="text-sm text-gray-500 mt-1">Here is your system configuration overview.</p>
             </div>
             <div class="text-right">
-                <p class="text-sm text-gray-900 font-medium">October 24, 2023</p>
-                <p class="text-xs text-gray-500 mt-1">Tuesday</p>
+                <p class="text-sm text-gray-900 font-medium">{{ $currentDate }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ $currentDay }}</p>
             </div>
         </div>
     </div>
@@ -28,9 +28,9 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Active Users</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">24</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ $activeUsers }}</p>
                     <p class="text-xs text-green-600 mt-1 flex items-center">
-                        <i class="fas fa-check-circle mr-1"></i> All Active
+                        <i class="fas fa-check-circle mr-1"></i> {{ $inactiveUsers }} Inactive
                     </p>
                 </div>
                 <div class="w-12 h-12 bg-blue-50 flex items-center justify-center rounded-lg">
@@ -44,8 +44,8 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Items (SKU)</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">1,450</p>
-                    <p class="text-xs text-gray-500 mt-1">Across 12 Categories</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($totalItems) }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Across {{ $categoryCount }} Categories</p>
                 </div>
                 <div class="w-12 h-12 bg-amber-50 flex items-center justify-center rounded-lg">
                     <i class="fas fa-database text-amber-600 text-xl"></i>
@@ -98,21 +98,21 @@
                         <div class="w-2 h-2 rounded-full bg-amber-500"></div>
                         <span class="text-sm text-gray-600">Pending Approval</span>
                     </div>
-                    <span class="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">5</span>
+                    <span class="px-2.5 py-0.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">{{ $requisitions['pendingApproval'] }}</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-2 h-2 rounded-full bg-green-500"></div>
                         <span class="text-sm text-gray-600">Approved Today</span>
                     </div>
-                    <span class="px-2.5 py-0.5 bg-green-100 text-green-800 text-xs font-bold rounded-full">12</span>
+                    <span class="px-2.5 py-0.5 bg-green-100 text-green-800 text-xs font-bold rounded-full">{{ $requisitions['approvedToday'] }}</span>
                 </div>
                 <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-2 h-2 rounded-full bg-red-500"></div>
                         <span class="text-sm text-gray-600">Rejected</span>
                     </div>
-                    <span class="px-2.5 py-0.5 bg-red-100 text-red-800 text-xs font-bold rounded-full">1</span>
+                    <span class="px-2.5 py-0.5 bg-red-100 text-red-800 text-xs font-bold rounded-full">{{ $requisitions['rejected'] }}</span>
                 </div>
             </div>
         </div>
@@ -127,20 +127,20 @@
             <div class="grid grid-cols-3 gap-4 text-center">
                 <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
                     <p class="text-xs text-gray-500 uppercase">Draft</p>
-                    <p class="text-xl font-bold text-gray-800 mt-1">3</p>
+                    <p class="text-xl font-bold text-gray-800 mt-1">{{ $purchaseOrders['draft'] }}</p>
                 </div>
                 <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
                     <p class="text-xs text-blue-500 uppercase">Ordered</p>
-                    <p class="text-xl font-bold text-blue-800 mt-1">8</p>
+                    <p class="text-xl font-bold text-blue-800 mt-1">{{ $purchaseOrders['ordered'] }}</p>
                 </div>
                 <div class="p-3 bg-green-50 rounded-lg border border-green-100">
                     <p class="text-xs text-green-500 uppercase">Delivered</p>
-                    <p class="text-xl font-bold text-green-800 mt-1">45</p>
+                    <p class="text-xl font-bold text-green-800 mt-1">{{ $purchaseOrders['delivered'] }}</p>
                 </div>
             </div>
             
             <div class="mt-4 pt-4 border-t border-gray-100">
-                <p class="text-xs text-gray-500">Avg. Delivery Time: <span class="font-semibold text-gray-900">2.5 Days</span></p>
+                <p class="text-xs text-gray-500">Avg. Delivery Time: <span class="font-semibold text-gray-900">{{ $purchaseOrders['averageDeliveryTime'] }} Days</span></p>
             </div>
         </div>
     </div>
@@ -152,33 +152,22 @@
         <div class="lg:col-span-1 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Low Stock Alerts</h3>
-                <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">3</span>
+                <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">{{ $lowStockCount }}</span>
             </div>
             <div class="space-y-3">
-                <!-- Static Item 1 -->
+                @forelse($lowStockAlerts as $alert)
                 <div class="p-3 border-l-4 border-red-500 bg-red-50 rounded">
-                    <p class="text-sm font-bold text-gray-900">All-Purpose Flour (Sack)</p>
+                    <p class="text-sm font-bold text-gray-900">{{ $alert['name'] }}</p>
                     <div class="flex justify-between items-end mt-1">
-                        <p class="text-xs text-gray-600">Current: <span class="font-bold text-red-600">2</span></p>
-                        <p class="text-xs text-gray-500">Reorder Lvl: 10</p>
+                        <p class="text-xs text-gray-600">Current: <span class="font-bold text-red-600">{{ number_format($alert['current_stock'], 1) }} {{ $alert['unit'] }}</span></p>
+                        <p class="text-xs text-gray-500">Reorder Lvl: {{ number_format($alert['reorder_level'], 1) }} {{ $alert['unit'] }}</p>
                     </div>
                 </div>
-                <!-- Static Item 2 -->
-                <div class="p-3 border-l-4 border-red-500 bg-red-50 rounded">
-                    <p class="text-sm font-bold text-gray-900">White Sugar (50kg)</p>
-                    <div class="flex justify-between items-end mt-1">
-                        <p class="text-xs text-gray-600">Current: <span class="font-bold text-red-600">5</span></p>
-                        <p class="text-xs text-gray-500">Reorder Lvl: 15</p>
-                    </div>
+                @empty
+                <div class="p-4 text-center">
+                    <p class="text-xs text-gray-400 italic">No low stock items found.</p>
                 </div>
-                <!-- Static Item 3 -->
-                <div class="p-3 border-l-4 border-red-500 bg-red-50 rounded">
-                    <p class="text-sm font-bold text-gray-900">Vanilla Extract (Liter)</p>
-                    <div class="flex justify-between items-end mt-1">
-                        <p class="text-xs text-gray-600">Current: <span class="font-bold text-red-600">1</span></p>
-                        <p class="text-xs text-gray-500">Reorder Lvl: 5</p>
-                    </div>
-                </div>
+                @endforelse
             </div>
         </div>
 
@@ -186,22 +175,19 @@
         <div class="lg:col-span-1 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide">Expiring Soon</h3>
-                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">2</span>
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold">{{ count($expiringBatches) }}</span>
             </div>
             <div class="space-y-3">
-                <!-- Static Item 1 -->
+                @forelse($expiringBatches as $batch)
                 <div class="p-3 border-l-4 border-amber-500 bg-amber-50 rounded">
-                    <p class="text-sm font-bold text-gray-900">Fresh Milk (Batch #882)</p>
-                    <p class="text-xs text-amber-700 mt-1 font-medium">Expires: Tomorrow</p>
+                    <p class="text-sm font-bold text-gray-900">{{ $batch['item_name'] }}</p>
+                    <p class="text-xs text-amber-700 mt-1 font-medium">{{ $batch['expiry_status'] }}</p>
                 </div>
-                <!-- Static Item 2 -->
-                <div class="p-3 border-l-4 border-amber-500 bg-amber-50 rounded">
-                    <p class="text-sm font-bold text-gray-900">Heavy Cream (Batch #901)</p>
-                    <p class="text-xs text-amber-700 mt-1 font-medium">Expires: Oct 28, 2023</p>
-                </div>
+                @empty
                 <div class="p-4 text-center">
-                    <p class="text-xs text-gray-400 italic">No other items expiring within 7 days.</p>
+                    <p class="text-xs text-gray-400 italic">No items expiring within 7 days.</p>
                 </div>
+                @endforelse
             </div>
         </div>
 
@@ -239,45 +225,24 @@
                 <a href="#" class="text-xs font-bold text-blue-600 uppercase tracking-wider">View Masterlist →</a>
             </div>
             <div class="space-y-0 divide-y divide-gray-100">
-                <!-- Static Entry 1 -->
+                @forelse($recentUpdates as $update)
                 <div class="py-3 flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded bg-blue-50 flex items-center justify-center text-blue-600">
-                            <i class="fas fa-edit text-xs"></i>
+                            <i class="{{ $update['icon'] }} text-xs"></i>
                         </div>
                         <div>
-                            <p class="text-sm font-medium text-gray-900">Price Updated: Cake Flour</p>
-                            <p class="text-xs text-gray-500">New Price: ₱950.00 / Sack</p>
+                            <p class="text-sm font-medium text-gray-900">{{ $update['description'] }}</p>
+                            <p class="text-xs text-gray-500">{{ $update['user_name'] }}</p>
                         </div>
                     </div>
-                    <span class="text-xs text-gray-400">10 mins ago</span>
+                    <span class="text-xs text-gray-400">{{ $update['time_ago'] }}</span>
                 </div>
-                <!-- Static Entry 2 -->
-                <div class="py-3 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600">
-                            <i class="fas fa-plus text-xs"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">New Item Added</p>
-                            <p class="text-xs text-gray-500">"Pink Birthday Candles"</p>
-                        </div>
-                    </div>
-                    <span class="text-xs text-gray-400">1 hr ago</span>
+                @empty
+                <div class="py-3 flex items-center justify-center">
+                    <span class="text-xs text-gray-400 italic">No recent updates found.</span>
                 </div>
-                <!-- Static Entry 3 -->
-                <div class="py-3 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-600">
-                            <i class="fas fa-trash text-xs"></i>
-                        </div>
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">Supplier Removed</p>
-                            <p class="text-xs text-gray-500">ABC Packaging Corp.</p>
-                        </div>
-                    </div>
-                    <span class="text-xs text-gray-400">2 hrs ago</span>
-                </div>
+                @endforelse
             </div>
         </div>
 
@@ -288,33 +253,25 @@
                 <a href="#" class="text-xs font-bold text-gray-600 uppercase tracking-wider">Full Audit →</a>
             </div>
             <div class="space-y-4">
-                <!-- Log 1 -->
+                @forelse($securityLogs as $log)
+                <div class="flex items-start gap-3">
+                    <div class="mt-1 w-2 h-2 rounded-full {{ $log['color'] }} flex-shrink-0"></div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-900 font-medium">{{ $log['description'] }}</p>
+                        <p class="text-xs text-gray-600 mt-0.5">{{ $log['details'] }}</p>
+                        <p class="text-xs text-gray-400 mt-0.5">{{ $log['time_ago'] }}</p>
+                    </div>
+                </div>
+                @empty
                 <div class="flex items-start gap-3">
                     <div class="mt-1 w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-900 font-medium">Manual Backup Completed</p>
-                        <p class="text-xs text-gray-600 mt-0.5">Admin initiated a full database backup.</p>
-                        <p class="text-xs text-gray-400 mt-0.5">Just now</p>
+                        <p class="text-sm text-gray-900 font-medium">System Activity Normal</p>
+                        <p class="text-xs text-gray-600 mt-0.5">No security events recorded.</p>
+                        <p class="text-xs text-gray-400 mt-0.5">All systems operating normally</p>
                     </div>
                 </div>
-                <!-- Log 2 -->
-                <div class="flex items-start gap-3">
-                    <div class="mt-1 w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-900 font-medium">User Role Modified</p>
-                        <p class="text-xs text-gray-600 mt-0.5">User "J. Doe" promoted to Supervisor.</p>
-                        <p class="text-xs text-gray-400 mt-0.5">3 hours ago</p>
-                    </div>
-                </div>
-                <!-- Log 3 -->
-                <div class="flex items-start gap-3">
-                    <div class="mt-1 w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"></div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm text-gray-900 font-medium">Failed Login Attempt</p>
-                        <p class="text-xs text-gray-600 mt-0.5">3 failed attempts from IP 192.168.1.45</p>
-                        <p class="text-xs text-gray-400 mt-0.5">Yesterday at 4:00 PM</p>
-                    </div>
-                </div>
+                @endforelse
             </div>
         </div>
     </div>

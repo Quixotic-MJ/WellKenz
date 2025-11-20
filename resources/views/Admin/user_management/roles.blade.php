@@ -19,132 +19,77 @@
 
     {{-- 2. ROLE CARDS --}}
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        
-        {{-- Role 1: Administrator --}}
+        @forelse($roleData as $role)
         <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
             <div class="p-6 border-b border-gray-100">
                 <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
-                        <i class="fas fa-user-astronaut text-xl"></i>
+                    <div class="w-12 h-12 {{ $role['color'] }} rounded-lg flex items-center justify-center text-white">
+                        <i class="{{ $role['icon'] }} text-xl"></i>
                     </div>
-                    <span class="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-0.5 rounded-full">System Owner</span>
+                    <span class="{{ $role['color'] }} text-xs font-bold px-2.5 py-0.5 rounded-full">{{ $role['category'] }}</span>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900">Administrator</h3>
-                <p class="text-sm text-gray-500 mt-1">Full access to all system configurations, user management, and financial reports.</p>
+                <h3 class="text-lg font-bold text-gray-900">{{ $role['formatted_role'] }}</h3>
+                <p class="text-sm text-gray-500 mt-1">{{ $role['description'] }}</p>
             </div>
             <div class="p-4 bg-gray-50 border-t border-gray-100">
                 <div class="flex items-center justify-between">
                     <div class="flex -space-x-2">
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-500 ring-2 ring-white text-xs font-medium text-white">AD</span>
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-400 ring-2 ring-white text-xs font-medium text-white">JD</span>
+                        @foreach($role['users']->take(3) as $user)
+                            <span class="inline-flex items-center justify-center h-8 w-8 rounded-full {{ $role['color'] }} ring-2 ring-white text-xs font-medium text-white">
+                                {{ $user->initials }}
+                            </span>
+                        @endforeach
+                        @if($role['user_count'] > 3)
+                            <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-300 ring-2 ring-white text-xs font-medium text-gray-600">
+                                +{{ $role['user_count'] - 3 }}
+                            </span>
+                        @endif
                     </div>
-                    <span class="text-xs text-gray-500">2 Users assigned</span>
+                    <span class="text-xs text-gray-500">{{ $role['user_count'] }} user{{ $role['user_count'] != 1 ? 's' : '' }} assigned</span>
                 </div>
                 <div class="mt-4 flex gap-2">
-                    <button class="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
+                    <button class="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition" onclick="viewRoleDetails('{{ $role['role'] }}')">
                         View Details
                     </button>
-                    <button class="px-3 py-2 text-sm text-white bg-purple-600 rounded hover:bg-purple-700 transition" onclick="openPermissionsModal('Administrator')">
+                    <button class="px-3 py-2 text-sm text-white rounded hover:opacity-90 transition {{ $role['color'] }}" onclick="openPermissionsModal('{{ $role['formatted_role'] }}', '{{ $role['role'] }}')">
                         <i class="fas fa-cogs"></i>
                     </button>
                 </div>
             </div>
         </div>
-
-        {{-- Role 2: Supervisor --}}
-        <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div class="p-6 border-b border-gray-100">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
-                        <i class="fas fa-user-tie text-xl"></i>
-                    </div>
-                    <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-0.5 rounded-full">Management</span>
-                </div>
-                <h3 class="text-lg font-bold text-gray-900">Supervisor</h3>
-                <p class="text-sm text-gray-500 mt-1">Can approve requisitions, view audit logs, and manage inventory adjustments.</p>
-            </div>
-            <div class="p-4 bg-gray-50 border-t border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div class="flex -space-x-2">
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-500 ring-2 ring-white text-xs font-medium text-white">MJ</span>
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-400 ring-2 ring-white text-xs font-medium text-white">AK</span>
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-gray-300 ring-2 ring-white text-xs font-medium text-gray-600">+1</span>
-                    </div>
-                    <span class="text-xs text-gray-500">3 Users assigned</span>
-                </div>
-                <div class="mt-4 flex gap-2">
-                    <button class="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
-                        View Details
-                    </button>
-                    <button class="px-3 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 transition" onclick="openPermissionsModal('Supervisor')">
-                        <i class="fas fa-cogs"></i>
-                    </button>
-                </div>
+        @empty
+        <div class="col-span-full text-center py-12">
+            <div class="flex flex-col items-center">
+                <i class="fas fa-users text-gray-300 text-4xl mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No Roles Found</h3>
+                <p class="text-gray-500">Start by creating your first role to organize user permissions.</p>
             </div>
         </div>
+        @endforelse
+    </div>
 
-        {{-- Role 3: Head Baker --}}
-        <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div class="p-6 border-b border-gray-100">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
-                        <i class="fas fa-bread-slice text-xl"></i>
-                    </div>
-                    <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full">Operational</span>
-                </div>
-                <h3 class="text-lg font-bold text-gray-900">Head Baker</h3>
-                <p class="text-sm text-gray-500 mt-1">Restricted to Item Requests, Recipe Viewing, and Production Modules.</p>
-            </div>
-            <div class="p-4 bg-gray-50 border-t border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div class="flex -space-x-2">
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-amber-500 ring-2 ring-white text-xs font-medium text-white">CK</span>
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-amber-400 ring-2 ring-white text-xs font-medium text-white">DL</span>
-                    </div>
-                    <span class="text-xs text-gray-500">5 Users assigned</span>
-                </div>
-                <div class="mt-4 flex gap-2">
-                    <button class="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
-                        View Details
-                    </button>
-                    <button class="px-3 py-2 text-sm text-white bg-amber-600 rounded hover:bg-amber-700 transition" onclick="openPermissionsModal('Head Baker')">
-                        <i class="fas fa-cogs"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
+</div>
 
-        {{-- Role 4: Sales Staff --}}
-        <div class="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-            <div class="p-6 border-b border-gray-100">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
-                        <i class="fas fa-cash-register text-xl"></i>
-                    </div>
-                    <span class="bg-green-100 text-green-800 text-xs font-bold px-2.5 py-0.5 rounded-full">Frontline</span>
-                </div>
-                <h3 class="text-lg font-bold text-gray-900">Sales Staff</h3>
-                <p class="text-sm text-gray-500 mt-1">Limited access to POS, Order Entry, and Customer Directory only.</p>
+<!-- ROLE DETAILS MODAL -->
+<div id="roleDetailsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeRoleDetailsModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+            <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg leading-6 font-bold text-gray-900" id="roleDetailsTitle">Role Details</h3>
+                <button onclick="closeRoleDetailsModal()" class="text-gray-400 hover:text-gray-500 focus:outline-none">
+                    <span class="sr-only">Close</span>
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div class="p-4 bg-gray-50 border-t border-gray-100">
-                <div class="flex items-center justify-between">
-                    <div class="flex -space-x-2">
-                        <span class="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-500 ring-2 ring-white text-xs font-medium text-white">SL</span>
-                    </div>
-                    <span class="text-xs text-gray-500">8 Users assigned</span>
-                </div>
-                <div class="mt-4 flex gap-2">
-                    <button class="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
-                        View Details
-                    </button>
-                    <button class="px-3 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700 transition" onclick="openPermissionsModal('Sales Staff')">
-                        <i class="fas fa-cogs"></i>
-                    </button>
-                </div>
+
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 max-h-[60vh] overflow-y-auto" id="roleDetailsContent">
+                <!-- Content will be loaded dynamically -->
             </div>
         </div>
     </div>
-
 </div>
 
 <!-- PERMISSIONS MATRIX MODAL -->
@@ -176,7 +121,7 @@
                                 <p class="text-xs text-gray-500">Can see list of all staff members</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer" checked>
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="view_users" checked>
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
                             </label>
                         </div>
@@ -186,14 +131,14 @@
                                 <p class="text-xs text-gray-500">Can add new staff or change details</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer"> <!-- Unchecked for Supervisor -->
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="manage_users"> <!-- Unchecked for most roles -->
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- Inventory & Requisition Group (Critical for Supervisor vs Baker) -->
+                <!-- Inventory & Requisition Group -->
                 <div class="mb-6">
                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 border-b pb-1">Inventory & Requisition</h4>
                     <div class="space-y-3">
@@ -203,34 +148,34 @@
                                 <p class="text-xs text-gray-500">Can create requests for raw materials</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer" checked>
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="create_requisitions" checked>
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
                             </label>
                         </div>
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-900">Approve Requisitions</p>
-                                <p class="text-xs text-gray-500">Can approve/reject requests from Bakers</p>
+                                <p class="text-xs text-gray-500">Can approve/reject requests from staff</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer" checked> 
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="approve_requisitions"> 
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
                             </label>
                         </div>
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-gray-900">Manage Suppliers</p>
-                                <p class="text-xs text-gray-500">Can edit supplier list and prices</p>
+                                <p class="text-sm font-medium text-gray-900">Manage Inventory</p>
+                                <p class="text-xs text-gray-500">Can view and adjust stock levels</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer">
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="manage_inventory">
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <!-- System Group -->
+                <!-- System & Reports Group -->
                 <div class="mb-2">
                     <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 border-b pb-1">System & Reports</h4>
                     <div class="space-y-3">
@@ -240,17 +185,27 @@
                                 <p class="text-xs text-gray-500">Can see who did what in the system</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer" checked>
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="view_audit_logs" checked>
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
                             </label>
                         </div>
                         <div class="flex items-center justify-between">
                             <div>
-                                <p class="text-sm font-medium text-gray-900">Download Backups</p>
-                                <p class="text-xs text-gray-500">Full database export access</p>
+                                <p class="text-sm font-medium text-gray-900">Download Reports</p>
+                                <p class="text-xs text-gray-500">Can generate and download system reports</p>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" class="sr-only peer">
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="download_reports">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">System Administration</p>
+                                <p class="text-xs text-gray-500">Full system configuration access</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" class="sr-only peer permission-checkbox" data-permission="system_admin">
                                 <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-chocolate"></div>
                             </label>
                         </div>
@@ -261,7 +216,7 @@
 
             <!-- Modal Footer -->
             <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="savePermissions()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
                     Save Changes
                 </button>
                 <button type="button" onclick="document.getElementById('roleModal').classList.add('hidden')" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
@@ -273,12 +228,132 @@
 </div>
 
 <script>
-    function openPermissionsModal(roleName) {
+    let currentRole = null;
+    let currentRoleName = '';
+
+    function openPermissionsModal(roleName, roleKey) {
+        currentRole = roleKey;
+        currentRoleName = roleName;
         document.getElementById('modalTitle').innerText = 'Edit Permissions: ' + roleName;
         document.getElementById('roleModal').classList.remove('hidden');
         
-        // In a real app, you would fetch and check/uncheck boxes via AJAX here
-        // For this demo, we'll just show the modal with default Supervisor-like settings
+        // Load permissions for this role from the server
+        loadRolePermissions(roleKey);
+    }
+
+    function viewRoleDetails(roleKey) {
+        // Fetch role details and users
+        fetch(`/admin/roles/${roleKey}/details`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('roleDetailsTitle').innerText = `${data.formatted_role} Details`;
+                document.getElementById('roleDetailsContent').innerHTML = generateRoleDetailsHTML(data);
+                document.getElementById('roleDetailsModal').classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading role details');
+            });
+    }
+
+    function closeRoleDetailsModal() {
+        document.getElementById('roleDetailsModal').classList.add('hidden');
+    }
+
+    function generateRoleDetailsHTML(data) {
+        let html = `
+            <div class="space-y-6">
+                <div class="flex items-start space-x-4">
+                    <div class="w-16 h-16 ${data.color} rounded-lg flex items-center justify-center text-white">
+                        <i class="${data.icon} text-2xl"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-xl font-bold text-gray-900">${data.formatted_role}</h4>
+                        <p class="text-sm text-gray-500 mt-1">${data.description}</p>
+                        <span class="inline-block mt-2 ${data.color} text-xs font-bold px-2.5 py-0.5 rounded-full">${data.category}</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h5 class="text-lg font-medium text-gray-900 mb-3">Assigned Users (${data.user_count})</h5>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+
+        data.users.forEach(user => {
+            html += `
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div class="h-10 w-10 rounded-full ${data.color} flex items-center justify-center text-white font-bold">
+                        ${user.initials}
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-900">${user.name}</p>
+                        <p class="text-sm text-gray-500">${user.email}</p>
+                        ${user.profile?.department ? `<p class="text-xs text-gray-400">${user.profile.department}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return html;
+    }
+
+    function loadRolePermissions(roleKey) {
+        // In a real application, you would fetch this from the server
+        // For demo purposes, we'll simulate permission loading based on role
+        const rolePermissions = {
+            'admin': ['view_users', 'manage_users', 'create_requisitions', 'approve_requisitions', 'manage_inventory', 'view_audit_logs', 'download_reports', 'system_admin'],
+            'supervisor': ['view_users', 'create_requisitions', 'approve_requisitions', 'view_audit_logs', 'download_reports'],
+            'purchasing': ['view_users', 'create_requisitions', 'manage_inventory', 'download_reports'],
+            'inventory': ['view_users', 'create_requisitions', 'manage_inventory'],
+            'employee': ['create_requisitions']
+        };
+
+        const permissions = rolePermissions[roleKey] || [];
+        
+        // Set checkboxes based on permissions
+        document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+            const permission = checkbox.dataset.permission;
+            checkbox.checked = permissions.includes(permission);
+        });
+    }
+
+    function savePermissions() {
+        // Collect all permission checkboxes
+        const permissions = [];
+        document.querySelectorAll('.permission-checkbox').forEach(checkbox => {
+            if (checkbox.checked) {
+                permissions.push(checkbox.dataset.permission);
+            }
+        });
+
+        // Send to server
+        fetch(`/admin/roles/${currentRole}/permissions`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ permissions })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Permissions updated successfully!');
+                document.getElementById('roleModal').classList.add('hidden');
+            } else {
+                alert(data.message || 'Error updating permissions');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating permissions');
+        });
     }
 </script>
 
