@@ -11,6 +11,8 @@ class RequisitionItem extends Model
 
     protected $table = 'requisition_items';
 
+    public $timestamps = false;
+
     protected $fillable = [
         'requisition_id',
         'item_id',

@@ -1,7 +1,7 @@
 @extends('Admin.layout.app')
 
 @section('content')
-<div class="max-w-5xl mx-auto space-y-6 relative pb-20">
+<div class="w-full px-4 sm:px-6 lg:px-8 space-y-6 relative pb-20">
 
     {{-- 1. HEADER & TABS --}}
     <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

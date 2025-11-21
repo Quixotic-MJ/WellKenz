@@ -302,31 +302,30 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
 Route::middleware(['auth', 'role:employee'])->prefix('employee')->name('employee.')->group(function () {
     
     // Dashboard
-    Route::get('/dashboard', function () { 
-        return view('Employee.home'); 
-    })->name('dashboard');
+    Route::get('/dashboard', [EmployeeController::class, 'home'])->name('dashboard');
 
     // Requisitions
-    Route::get('/requisitions/create', function () { 
-        return view('Employee.requisition.create'); 
-    })->name('requisitions.create');
-
-    Route::get('/requisitions/history', function () { 
-        return view('Employee.requisition.history'); 
-    })->name('requisitions.history');
+    Route::get('/requisitions/create', [EmployeeController::class, 'showCreateRequisition'])->name('requisitions.create');
+    Route::post('/requisitions', [EmployeeController::class, 'createRequisition'])->name('requisitions.store');
+    Route::get('/requisitions/history', [EmployeeController::class, 'requisitionHistory'])->name('requisitions.history');
+    Route::get('/requisitions/{requisition}/details', [EmployeeController::class, 'getRequisitionDetails'])->name('requisitions.details');
+    
+    // Requisition Actions
+    Route::post('/requisitions/{requisition}/confirm-receipt', [EmployeeController::class, 'confirmReceipt'])->name('requisitions.confirm-receipt');
 
     // Production
-    Route::get('/production/log', function () { 
-        return view('Employee.production.log'); 
-    })->name('production.log');
-
-    Route::get('/recipes', function () { 
-        return view('Employee.production.recipe'); 
-    })->name('recipes.index');
+    Route::get('/production/log', [EmployeeController::class, 'productionLog'])->name('production.log');
+    Route::post('/production/log', [EmployeeController::class, 'storeProduction'])->name('production.store');
+    Route::get('/recipes', [EmployeeController::class, 'recipes'])->name('recipes.index');
+    Route::get('/recipes/{recipe}/details', [EmployeeController::class, 'getRecipeDetails'])->name('recipes.details');
+    Route::post('/recipes', [EmployeeController::class, 'createRecipe'])->name('recipes.store');
 
     // Notifications
-    Route::get('/notifications', function () { 
-        return view('Employee.notification'); 
-    })->name('notifications');
+    Route::get('/notifications', [EmployeeController::class, 'notifications'])->name('notifications');
+    Route::post('/notifications/{notification}/mark-read', [EmployeeController::class, 'markNotificationAsRead'])->name('notifications.mark-read');
+    Route::post('/notifications/mark-all-read', [EmployeeController::class, 'markAllNotificationsAsRead'])->name('notifications.mark-all-read');
+
+    // AJAX endpoints
+    Route::get('/items/search', [EmployeeController::class, 'getItemsForRequisition'])->name('items.search');
 
 });

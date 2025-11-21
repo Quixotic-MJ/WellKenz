@@ -10,6 +10,9 @@ class Notification extends Model
 {
     protected $table = 'notifications';
 
+    // Disable automatic timestamp management since the table doesn't have updated_at column
+    public $timestamps = false;
+
     protected $fillable = [
         'user_id',
         'title',
@@ -19,7 +22,8 @@ class Notification extends Model
         'is_read',
         'action_url',
         'metadata',
-        'expires_at'
+        'expires_at',
+        'created_at'
     ];
 
     protected $casts = [
