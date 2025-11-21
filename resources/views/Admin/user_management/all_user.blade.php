@@ -53,6 +53,80 @@
         window.location.href = "{{ url('/admin/users') }}";
     }
 
+    // --- 6. Search and Filter Functionality ---
+
+    // Debounce function to limit API calls
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Apply filters and search
+    function applyFilters() {
+        const searchTerm = document.getElementById('searchInput').value;
+        const roleFilter = document.getElementById('roleFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        
+        // Build query parameters
+        const params = new URLSearchParams();
+        
+        if (searchTerm.trim()) {
+            params.append('search', searchTerm.trim());
+        }
+        if (roleFilter) {
+            params.append('role', roleFilter);
+        }
+        if (statusFilter) {
+            params.append('status', statusFilter);
+        }
+        
+        // Redirect with parameters
+        const baseUrl = "{{ url('/admin/users') }}";
+        const queryString = params.toString();
+        const newUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+        
+        window.location.href = newUrl;
+    }
+
+    // Setup search and filter event listeners
+    function setupSearchAndFilters() {
+        const searchInput = document.getElementById('searchInput');
+        const roleFilter = document.getElementById('roleFilter');
+        const statusFilter = document.getElementById('statusFilter');
+
+        // Search input with debounce
+        if (searchInput) {
+            const debouncedSearch = debounce(applyFilters, 500);
+            searchInput.addEventListener('input', debouncedSearch);
+        }
+
+        // Filter dropdowns
+        if (roleFilter) {
+            roleFilter.addEventListener('change', applyFilters);
+        }
+        
+        if (statusFilter) {
+            statusFilter.addEventListener('change', applyFilters);
+        }
+
+        // Handle Enter key in search input
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applyFilters();
+                }
+            });
+        }
+    }
+
     // --- 2. Custom Notification & Confirmation Logic ---
 
     // Show simple Success/Error modal
@@ -277,7 +351,64 @@
         });
     }
 
-    // --- 5. Standard Edit/Save Functions ---
+    // --- 5. Event Listeners Setup ---
+
+    function setupEventListeners() {
+        // User status toggle event listeners
+        document.querySelectorAll('.user-status-toggle').forEach(toggle => {
+            toggle.addEventListener('change', function(e) {
+                const userId = this.dataset.userId;
+                const isChecked = this.checked;
+                confirmToggleStatus(userId, isChecked);
+            });
+        });
+
+        // Select all users checkbox
+        const selectAllCheckbox = document.getElementById('selectAllUsers');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', function() {
+                const userCheckboxes = document.querySelectorAll('.user-checkbox');
+                userCheckboxes.forEach(checkbox => {
+                    checkbox.checked = selectAllCheckbox.checked;
+                });
+            });
+        }
+
+        // User form submission
+        const userForm = document.getElementById('userForm');
+        if (userForm) {
+            userForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveUser();
+            });
+        }
+
+        // Bulk action form
+        const bulkForm = document.getElementById('bulkActionForm');
+        if (bulkForm) {
+            bulkForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                submitBulkOperation();
+            });
+        }
+
+        // Update select all checkbox when individual checkboxes change
+        document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const allCheckboxes = document.querySelectorAll('.user-checkbox');
+                const checkedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+                const selectAllCheckbox = document.getElementById('selectAllUsers');
+                
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length;
+                }
+            });
+        });
+
+        console.log('Event listeners setup complete');
+    }
+
+    // --- 6. Standard Edit/Save Functions ---
 
     function editUser(userId) {
         isEditMode = true;
@@ -304,6 +435,13 @@
     function saveUser() {
         const form = document.getElementById('userForm');
         const formData = new FormData(form);
+        
+        // Convert FormData to JSON object
+        const data = {};
+        formData.forEach((value, key) => {
+            data[key] = value;
+        });
+        
         const url = isEditMode ? `${adminUsersBaseUrl}/${editingUserId}` : adminUsersBaseUrl;
         const method = isEditMode ? 'PUT' : 'POST';
 
@@ -311,9 +449,10 @@
             method: method,
             headers: {
                 'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             },
-            body: formData
+            body: JSON.stringify(data)
         })
         .then(response => {
             if (response.status === 422) {
@@ -674,6 +813,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Event listeners setup for user management...');
         setupEventListeners();
+        setupSearchAndFilters();
     });
 </script>
 @endpush

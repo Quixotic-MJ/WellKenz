@@ -52,42 +52,77 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/roles/{role}/details', [AdminController::class, 'getRoleDetails'])->name('roles.details');
     Route::post('/roles/{role}/permissions', [AdminController::class, 'saveRolePermissions'])->name('roles.permissions');
     Route::get('/roles/{role}/permissions', [AdminController::class, 'getRolePermissions'])->name('roles.permissions.get');
+    Route::post('/roles/create', [AdminController::class, 'createRole'])->name('roles.create');
 
     // Master Files
-    Route::get('/items', function () {
-        return view('Admin.master_files.item_masterlist');
-    })->name('items.index');
+    Route::get('/items', [AdminController::class, 'items'])->name('items.index');
+    Route::post('/items', [AdminController::class, 'createItem'])->name('items.store');
+    Route::get('/items/{item}/edit', [AdminController::class, 'editItem'])->name('items.edit');
+    Route::put('/items/{item}', [AdminController::class, 'updateItem'])->name('items.update');
+    Route::delete('/items/{item}', [AdminController::class, 'deleteItem'])->name('items.destroy');
+    Route::get('/items/data', [AdminController::class, 'getItemData'])->name('items.data');
 
-    Route::get('/categories', function () {
-        return view('Admin.master_files.categories');
-    })->name('categories.index');
+    // Categories Management
+    Route::get('/categories', [AdminController::class, 'categories'])->name('categories.index');
+    Route::post('/categories', [AdminController::class, 'createCategory'])->name('categories.store');
+    Route::get('/categories/{category}/edit', [AdminController::class, 'editCategory'])->name('categories.edit');
+    Route::put('/categories/{category}', [AdminController::class, 'updateCategory'])->name('categories.update');
+    Route::patch('/categories/{category}/toggle-status', [AdminController::class, 'toggleCategoryStatus'])->name('categories.toggle-status');
+    Route::delete('/categories/{category}', [AdminController::class, 'deleteCategory'])->name('categories.destroy');
+    Route::get('/categories/parent', [AdminController::class, 'getParentCategories'])->name('categories.parent');
+    Route::get('/categories/search', [AdminController::class, 'searchCategories'])->name('categories.search');
 
-    Route::get('/units', function () {
-        return view('Admin.master_files.unit_config');
-    })->name('units.index');
+    Route::get('/units', [AdminController::class, 'units'])->name('units.index');
+    Route::post('/units', [AdminController::class, 'createUnit'])->name('units.store');
+    Route::get('/units/{unit}/edit', [AdminController::class, 'editUnit'])->name('units.edit');
+    Route::put('/units/{unit}', [AdminController::class, 'updateUnit'])->name('units.update');
+    Route::patch('/units/{unit}/toggle-status', [AdminController::class, 'toggleUnitStatus'])->name('units.toggle-status');
+    Route::delete('/units/{unit}', [AdminController::class, 'deleteUnit'])->name('units.destroy');
+    Route::get('/units/base', [AdminController::class, 'getBaseUnits'])->name('units.base');
+    Route::get('/units/search', [AdminController::class, 'searchUnits'])->name('units.search');
 
     // External Partners
-    Route::get('/suppliers', function () {
-        return view('Admin.supplier.supplier_list');
-    })->name('suppliers.index');
+    Route::get('/suppliers', [AdminController::class, 'supplierList'])->name('suppliers.index');
+    Route::post('/suppliers', [AdminController::class, 'storeSupplier'])->name('suppliers.store');
+    Route::get('/suppliers/{supplier}/edit', [AdminController::class, 'editSupplier'])->name('suppliers.edit');
+    Route::put('/suppliers/{supplier}', [AdminController::class, 'updateSupplier'])->name('suppliers.update');
+    Route::patch('/suppliers/{supplier}/toggle-status', [AdminController::class, 'toggleSupplierStatus'])->name('suppliers.toggle-status');
+    Route::delete('/suppliers/{supplier}', [AdminController::class, 'deleteSupplier'])->name('suppliers.destroy');
 
     // System & Security
-    Route::get('/audit-logs', function () {
-        return view('Admin.system.audit_logs');
-    })->name('audit-logs');
+    Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
+    Route::post('/audit-logs/export', [AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
+    Route::get('/audit-logs/{auditLog}/export', [AdminController::class, 'exportAuditLogProof'])->name('audit-logs.proof-export');
+    Route::get('/audit-logs/{auditLog}', [AdminController::class, 'showAuditLog'])->name('audit-logs.show');
 
-    Route::get('/settings', function () {
-        return view('Admin.system.general_setting');
-    })->name('settings');
+    Route::get('/settings', [AdminController::class, 'generalSettings'])->name('settings');
+    Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
 
-    Route::get('/backups', function () {
-        return view('Admin.system.backup');
-    })->name('backups');
+    Route::get('/backups', [AdminController::class, 'backup'])->name('backups');
+    Route::post('/backups/create', [AdminController::class, 'createBackup'])->name('backups.create');
+    Route::get('/backups/download/{filename}', [AdminController::class, 'downloadBackup'])->name('backups.download');
+    Route::get('/backups/history', [AdminController::class, 'getBackupHistory'])->name('backups.history');
+    Route::post('/backups/restore', [AdminController::class, 'restoreBackup'])->name('backups.restore');
 
     // Notifications
-    Route::get('/notifications', function () {
-        return view('Admin.notification');
-    })->name('notifications');
+    Route::get('/notifications', [AdminController::class, 'notifications'])->name('notifications');
+    
+    // Notification management routes - More specific routes first to avoid model binding conflicts
+    Route::get('/notifications/header', [AdminController::class, 'getHeaderNotifications'])->name('notifications.header');
+    Route::get('/notifications/unread-count', [AdminController::class, 'getUnreadNotificationCount'])->name('notifications.unread_count');
+    Route::post('/notifications/mark-all-read', [AdminController::class, 'markAllNotificationsAsRead'])->name('notifications.mark_all_read');
+    Route::post('/notifications', [AdminController::class, 'createNotification'])->name('notifications.store');
+    Route::post('/notifications/bulk-operations', [AdminController::class, 'bulkNotificationOperations'])->name('notifications.bulk_operations');
+    
+    // Routes with model binding - with constraints to prevent conflicts
+    Route::get('/notifications/{notification}', [AdminController::class, 'getNotificationDetails'])->name('notifications.show')
+        ->where('notification', '[0-9]+');
+    Route::post('/notifications/{notification}/mark-read', [AdminController::class, 'markNotificationAsRead'])->name('notifications.mark_read')
+        ->where('notification', '[0-9]+');
+    Route::post('/notifications/{notification}/mark-unread', [AdminController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread')
+        ->where('notification', '[0-9]+');
+    Route::delete('/notifications/{notification}', [AdminController::class, 'deleteNotification'])->name('notifications.destroy')
+        ->where('notification', '[0-9]+');
 
 });
 

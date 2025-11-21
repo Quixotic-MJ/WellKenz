@@ -1,11 +1,11 @@
 <!-- HEADER COMPONENT START -->
-<header class="bg-white shadow-sm border-b-2 border-border-soft component-body">
+<header class="bg-white shadow-sm border-b-2 border-border-soft component-body sticky top-0 z-30">
     
     <div class="flex items-center justify-between px-4 sm:px-6 py-3">
         <!-- Left Section -->
         <div class="flex items-center space-x-3">
             <!-- Toggle Sidebar Button -->
-            <button onclick="toggleSidebar()" class="p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors square-button">
+            <button onclick="toggleSidebar()" class="p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors square-button rounded-lg">
                 <i class="fas fa-bars text-base"></i>
             </button>
             
@@ -24,9 +24,9 @@
             <div class="hidden md:block relative">
                 <div class="relative">
                     <input type="text" placeholder="Search..." 
-                        class="pl-10 pr-4 py-2 bg-white border border-border-soft
+                        class="pl-10 pr-4 py-2 bg-white border border-border-soft rounded-lg
                                placeholder-text-muted text-text-dark text-sm
-                               focus:outline-none focus:border-caramel transition-colors w-40 lg:w-64 square-button">
+                               focus:outline-none focus:border-caramel focus:ring-1 focus:ring-caramel transition-all w-40 lg:w-64">
                     <i class="fas fa-search absolute left-3 top-2.5 text-text-muted text-xs"></i>
                 </div>
             </div>
@@ -34,151 +34,282 @@
             <!-- Notifications -->
             <div class="relative" role="menu">
                 <button id="notificationsBtn" onclick="toggleNotifications()" 
-                        class="square-button p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors relative focus:outline-none">
-                    <i class="fas fa-bell text-base"></i>
-                    <!-- Static Count -->
-                    <span class="absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white" id="notificationCount">
-                        3
+                        class="p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors relative focus:outline-none rounded-lg">
+                    <i class="fas fa-bell text-lg"></i>
+                    <!-- Dynamic Count -->
+                    <span id="notificationCount" class="hidden absolute top-1 right-1 bg-red-500 text-white text-[10px] h-4 w-4 rounded-full flex items-center justify-center font-bold border-2 border-white">
+                        0
                     </span>
                 </button>
                 
                 <!-- Notifications Dropdown -->
-                <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white shadow-lg border-2 border-border-soft z-50 rounded-lg" role="menu">
-                    <div class="p-3 border-b-2 border-border-soft bg-cream-bg rounded-t-lg flex justify-between items-center">
-                        <h3 class="font-bold text-text-dark text-xs uppercase tracking-wider" id="notifHeader">
-                            Notifications (3)
+                <div id="notificationsDropdown" class="hidden absolute right-0 mt-3 w-80 sm:w-96 bg-white shadow-xl border border-gray-100 z-50 rounded-xl overflow-hidden origin-top-right transition-all duration-200 transform" role="menu">
+                    <!-- Header -->
+                    <div class="px-4 py-3 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-bold text-gray-800 text-sm" id="notifHeader">
+                            Notifications
                         </h3>
-                        <button onclick="markAllAsRead()" class="text-xs text-chocolate hover:text-chocolate-dark font-bold">
-                            Mark all as read
+                        <button onclick="markAllAsRead()" class="text-xs text-chocolate hover:text-chocolate-dark font-semibold hover:underline decoration-chocolate/30 underline-offset-2">
+                            Mark all read
                         </button>
                     </div>
-                    <div class="max-h-80 overflow-y-auto" id="notificationsList">
-                        
-                        <!-- Mock Notification 1 -->
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
-                             data-notification-id="1"
-                             onclick="markNotificationAsRead(1)">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-red-100 flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">Low Stock Alert</p>
-                                    <p class="text-xs text-text-muted mt-1">Cake Flour is below reorder level (5kg remaining).</p>
-                                    <p class="text-xs text-text-muted mt-2">2 mins ago</p>
-                                </div>
-                                <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1 unread-dot"></div>
-                            </div>
-                        </div>
-
-                        <!-- Mock Notification 2 -->
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
-                             data-notification-id="2"
-                             onclick="markNotificationAsRead(2)">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-blue-100 flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-file-invoice text-blue-600 text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">New Requisition</p>
-                                    <p class="text-xs text-text-muted mt-1">Baker John requested 50kg Sugar.</p>
-                                    <p class="text-xs text-text-muted mt-2">1 hour ago</p>
-                                </div>
-                                <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1 unread-dot"></div>
-                            </div>
-                        </div>
-
-                        <!-- Mock Notification 3 -->
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
-                             data-notification-id="3"
-                             onclick="markNotificationAsRead(3)">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-green-100 flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-check-circle text-green-600 text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">PO Delivered</p>
-                                    <p class="text-xs text-text-muted mt-1">Order #PO-882 from Golden Grain has arrived.</p>
-                                    <p class="text-xs text-text-muted mt-2">3 hours ago</p>
-                                </div>
-                                <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1 unread-dot"></div>
-                            </div>
-                        </div>
-
+                    
+                    <!-- Loading State -->
+                    <div id="notificationsLoading" class="p-8 text-center">
+                        <div class="animate-spin inline-block w-6 h-6 border-[3px] border-gray-200 border-t-chocolate rounded-full"></div>
+                        <p class="text-xs text-gray-400 mt-2 font-medium">Loading updates...</p>
                     </div>
-                    <div class="p-3 border-t-2 border-border-soft rounded-b-lg">
-                        <a href="#" class="block text-center text-xs font-bold text-chocolate hover:text-chocolate-dark transition uppercase tracking-wider">
-                            View All Notifications
-                        </a>
+                    
+                    <!-- Error State -->
+                    <div id="notificationsError" class="hidden p-6 text-center">
+                        <div class="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-exclamation text-red-500"></i>
+                        </div>
+                        <p class="text-xs text-red-500">Failed to load</p>
+                        <button onclick="loadHeaderNotifications()" class="text-xs text-gray-500 hover:text-gray-800 font-medium mt-1 underline">
+                            Try again
+                        </button>
                     </div>
+                    
+                    <!-- Empty State -->
+                    <div id="notificationsEmpty" class="hidden p-8 text-center">
+                        <div class="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-bell-slash text-gray-300 text-xl"></i>
+                        </div>
+                        <p class="text-sm font-medium text-gray-900">No new notifications</p>
+                        <p class="text-xs text-gray-500 mt-1">You're all caught up!</p>
+                    </div>
+                    
+                    <!-- Notifications List -->
+                    <div class="max-h-[24rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent" id="notificationsList">
+                        <!-- Notifications will be loaded here dynamically -->
+                    </div>
+                    
+                    <!-- View All Link -->
+                    <a href="{{ route('admin.notifications') }}" class="block p-3 text-center text-xs font-bold text-gray-500 hover:text-chocolate hover:bg-gray-50 transition border-t border-gray-100">
+                        VIEW ALL ACTIVITY
+                    </a>
                 </div>
             </div>
 
             <!-- Profile -->
             <div class="relative" role="menu">
                 <button id="profileBtn" onclick="toggleProfile()" 
-                        class="flex items-center space-x-2 p-1.5 hover:bg-cream-bg transition-colors focus:outline-none square-button">
-                    <div class="w-8 h-8 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
-                        <span class="text-white text-sm font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                        class="flex items-center space-x-2 p-1 hover:bg-cream-bg transition-colors focus:outline-none rounded-full border border-transparent hover:border-border-soft">
+                    <div class="w-8 h-8 bg-gradient-to-br from-caramel to-chocolate flex items-center justify-center rounded-full flex-shrink-0 shadow-sm">
+                        <span class="text-white text-xs font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
                     </div>
                     <div class="hidden lg:block text-left pr-1">
-                        <p class="text-sm font-semibold text-text-dark leading-none">{{ auth()->user()->name }}</p>
-                        <p class="text-xs text-text-muted leading-none mt-0.5">{{ ucfirst(auth()->user()->role) }}</p>
+                        <p class="text-sm font-bold text-text-dark leading-none">{{ auth()->user()->name }}</p>
+                        <p class="text-[10px] text-text-muted leading-none mt-1 font-medium uppercase">{{ ucfirst(auth()->user()->role) }}</p>
                     </div>
-                    <i class="fas fa-chevron-down text-text-muted text-xs hidden lg:block"></i>
+                    <i class="fas fa-chevron-down text-text-muted text-[10px] hidden lg:block ml-1"></i>
                 </button>
 
                 <!-- Profile Dropdown -->
-                <div id="profileDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white shadow-lg border-2 border-border-soft z-50 rounded-lg" role="menu">
-                    <div class="p-4 border-b-2 border-border-soft bg-cream-bg rounded-t-lg">
-                        <div class="flex items-center space-x-3 mb-2">
-                            <div class="w-10 h-10 bg-caramel flex items-center justify-center rounded-full flex-shrink-0">
-                                <span class="text-white text-base font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
+                <div id="profileDropdown" class="hidden absolute right-0 mt-3 w-60 bg-white shadow-xl border border-gray-100 z-50 rounded-xl overflow-hidden origin-top-right" role="menu">
+                    <div class="p-5 border-b border-gray-100 bg-gradient-to-b from-gray-50 to-white">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-caramel to-chocolate flex items-center justify-center rounded-full flex-shrink-0 shadow-md ring-4 ring-white">
+                                <span class="text-white text-lg font-bold">{{ strtoupper(substr(auth()->user()->name, 0, 2)) }}</span>
                             </div>
                             <div>
-                                <p class="text-sm font-bold text-text-dark">{{ auth()->user()->name }}</p>
-                                <p class="text-xs text-text-muted">{{ ucfirst(auth()->user()->role) }}</p>
+                                <p class="text-sm font-bold text-gray-900">{{ auth()->user()->name }}</p>
+                                <p class="text-xs text-gray-500">{{ auth()->user()->email }}</p>
                             </div>
                         </div>
-                        <p class="text-xs text-text-muted mt-2 border-t border-border-soft pt-2 truncate">
-                            {{ auth()->user()->name }} • {{ ucfirst(auth()->user()->role) }}
-                        </p>
-                        <p class="text-xs text-text-muted truncate">
-                            {{ auth()->user()->email }}
-                        </p>
-                        <div class="flex items-center mt-1">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ auth()->user()->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                        <div class="mt-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide {{ auth()->user()->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
                                 {{ auth()->user()->is_active ? 'Active' : 'Inactive' }}
                             </span>
                         </div>
                     </div>
                     <div class="p-2">
-                        <a href="#" class="flex items-center space-x-3 px-3 py-2 text-sm text-text-dark hover:bg-cream-bg transition rounded-md">
-                            <i class="fas fa-user text-text-muted w-4 text-center"></i>
-                            <span>My Profile</span>
-                        </a>
-                        <a href="#" class="flex items-center space-x-3 px-3 py-2 text-sm text-text-dark hover:bg-cream-bg transition rounded-md">
-                            <i class="fas fa-cog text-text-muted w-4 text-center"></i>
-                            <span>Settings</span>
+                        <a href="#" class="flex items-center space-x-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-chocolate transition rounded-lg group">
+                            <div class="w-8 h-8 rounded-lg bg-gray-50 text-gray-400 group-hover:bg-chocolate/10 group-hover:text-chocolate flex items-center justify-center transition-colors">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <span class="font-medium">My Profile</span>
                         </a>
                     </div>
-                    <div class="p-2 border-t-2 border-border-soft">
-                        <!-- Mock Logout -->
-                        <a href="/" class="flex items-center space-x-3 w-full px-3 py-2 text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark transition justify-center rounded-md">
-                            <i class="fas fa-sign-out-alt w-4 text-center"></i>
-                            <span>Sign Out</span>
-                        </a>
+                    <div class="p-2 border-t border-gray-100">
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="flex items-center space-x-2 w-full px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition rounded-lg">
+                                <i class="fas fa-sign-out-alt w-8 text-center"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </header>
-<!-- HEADER COMPONENT END -->
 
 <script>
     // Utility function to safely access elements
     const getEl = (id) => document.getElementById(id);
+
+    // Load header notifications from API
+    async function loadHeaderNotifications() {
+        const loadingEl = getEl('notificationsLoading');
+        const errorEl = getEl('notificationsError');
+        const emptyEl = getEl('notificationsEmpty');
+        const listEl = getEl('notificationsList');
+        const countEl = getEl('notificationCount');
+        const headerEl = getEl('notifHeader');
+
+        try {
+            // Show loading state
+            loadingEl.classList.remove('hidden');
+            errorEl.classList.add('hidden');
+            emptyEl.classList.add('hidden');
+            listEl.innerHTML = '';
+
+            const response = await fetch('{{ route("admin.notifications.header") }}', {
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                const notifications = data.notifications;
+                const unreadCount = data.unread_count;
+
+                // Hide loading
+                loadingEl.classList.add('hidden');
+
+                // Update count badge
+                if (unreadCount > 0) {
+                    countEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    countEl.classList.remove('hidden');
+                } else {
+                    countEl.classList.add('hidden');
+                }
+
+                // Update header
+                headerEl.textContent = `Notifications (${unreadCount})`;
+
+                // Show appropriate state
+                if (notifications.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                } else {
+                    // Render notifications
+                    listEl.innerHTML = notifications.map(notification => {
+                        const iconParts = notification.icon_class.split(' ');
+                        const bgColor = iconParts[1] || 'bg-gray-100';
+                        const textColor = iconParts[2] || 'text-gray-600';
+                        const icon = iconParts[0] || 'fas fa-bell';
+                        
+                        // Determine read status based on available properties
+                        const isRead = notification.read_at !== null;
+                        const containerClass = isRead ? 'bg-white hover:bg-gray-50' : 'bg-blue-50/40 hover:bg-blue-50/70';
+                        const titleClass = isRead ? 'text-gray-700 font-semibold' : 'text-gray-900 font-bold';
+                        const unreadDot = !isRead ? `<div class="w-2 h-2 bg-chocolate rounded-full flex-shrink-0 mt-1.5" title="Unread"></div>` : '';
+
+                        return `
+                            <div class="p-3 border-b border-gray-50 cursor-pointer transition-colors group ${containerClass}"
+                                 data-notification-id="${notification.id}"
+                                 onclick="handleNotificationClick(${notification.id}, '${notification.action_url}')">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex-shrink-0 mt-0.5">
+                                        <div class="w-9 h-9 ${bgColor} rounded-full flex items-center justify-center ring-1 ring-black/5">
+                                            <i class="${icon} ${textColor} text-xs"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex justify-between items-start">
+                                            <p class="text-sm ${titleClass} truncate pr-2">${notification.title}</p>
+                                            <span class="text-[10px] text-gray-400 whitespace-nowrap pt-0.5">${notification.time_ago}</span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">${notification.message}</p>
+                                    </div>
+                                    ${unreadDot}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+
+            } else {
+                throw new Error(data.message || 'Failed to load notifications');
+            }
+
+        } catch (error) {
+            console.error('Error loading notifications:', error);
+            loadingEl.classList.add('hidden');
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    // Handle notification click
+    async function handleNotificationClick(notificationId, actionUrl) {
+        try {
+            // Optimistic UI update: Remove unread highlighting immediately
+            const item = document.querySelector(`div[data-notification-id="${notificationId}"]`);
+            if(item) {
+                item.classList.remove('bg-blue-50/40', 'hover:bg-blue-50/70');
+                item.classList.add('bg-white', 'hover:bg-gray-50');
+                const dot = item.querySelector('.w-2.h-2.bg-chocolate');
+                if(dot) dot.remove();
+                const title = item.querySelector('p.text-sm');
+                if(title) {
+                    title.classList.remove('text-gray-900', 'font-bold');
+                    title.classList.add('text-gray-700', 'font-semibold');
+                }
+            }
+
+            // Update count locally
+            const countEl = getEl('notificationCount');
+            let currentCount = parseInt(countEl.textContent) || 0;
+            if (currentCount > 0) {
+                currentCount--;
+                countEl.textContent = currentCount > 99 ? '99+' : currentCount;
+                if (currentCount === 0) countEl.classList.add('hidden');
+            }
+
+            // Send request to backend
+            await fetch(`{{ route('admin.notifications.mark_read', ['notification' => '__ID__']) }}`.replace('__ID__', notificationId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            // Navigate
+            if (actionUrl && actionUrl !== 'null' && actionUrl !== '') {
+                window.location.href = actionUrl;
+            }
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    }
+
+    // Mark all notifications as read
+    async function markAllAsRead() {
+        try {
+            const response = await fetch('{{ route("admin.notifications.mark_all_read") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                loadHeaderNotifications();
+            }
+        } catch (error) {
+            console.error('Error marking all as read:', error);
+        }
+    }
 
     // Toggles the Notifications dropdown visibility
     function toggleNotifications() {
@@ -189,7 +320,14 @@
         if (profileDropdown) profileDropdown.classList.add('hidden');
         
         // Toggle self
-        if (notificationsDropdown) notificationsDropdown.classList.toggle('hidden');
+        if (notificationsDropdown) {
+            notificationsDropdown.classList.toggle('hidden');
+            
+            // Load notifications when opening
+            if (!notificationsDropdown.classList.contains('hidden')) {
+                loadHeaderNotifications();
+            }
+        }
     }
 
     // Toggles the Profile dropdown visibility
@@ -209,68 +347,8 @@
         const sidebar = getEl('sidebar');
         if (sidebar) {
             sidebar.classList.toggle('collapsed');
-            // Store sidebar state in localStorage
             const isCollapsed = sidebar.classList.contains('collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);
-        }
-    }
-
-    // Mock: Mark notification as read (Frontend Only)
-    function markNotificationAsRead(notificationId) {
-        // Update UI
-        const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
-        if (notificationItem) {
-            const unreadDot = notificationItem.querySelector('.unread-dot');
-            if (unreadDot) {
-                unreadDot.remove();
-                // Update notification count locally
-                updateNotificationCount(-1);
-            }
-        }
-    }
-
-    // Mock: Mark all notifications as read (Frontend Only)
-    function markAllAsRead() {
-        // Remove all unread indicators
-        document.querySelectorAll('.unread-dot').forEach(dot => dot.remove());
-        
-        // Update notification count to zero
-        const notificationCount = getEl('notificationCount');
-        if (notificationCount) {
-            notificationCount.remove();
-        }
-        
-        // Update the count in the header
-        const header = getEl('notifHeader');
-        if (header) header.textContent = 'Notifications (0)';
-    }
-
-    // Update notification count in the bell
-    function updateNotificationCount(change) {
-        const notificationCount = getEl('notificationCount');
-        let currentCount = parseInt(notificationCount?.textContent || 0);
-        currentCount += change;
-        
-        if (currentCount <= 0) {
-            if (notificationCount) notificationCount.remove();
-        } else {
-            if (!notificationCount) {
-                // Create new count badge if it doesn't exist and count > 0
-                const bell = getEl('notificationsBtn');
-                const badge = document.createElement('span');
-                badge.id = 'notificationCount';
-                badge.className = 'absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white';
-                badge.textContent = currentCount > 99 ? '99+' : currentCount;
-                bell.appendChild(badge);
-            } else {
-                notificationCount.textContent = currentCount > 99 ? '99+' : currentCount;
-            }
-        }
-        
-        // Update dropdown header
-        const header = getEl('notifHeader');
-        if (header) {
-            header.textContent = `Notifications (${Math.max(0, currentCount)})`;
         }
     }
 
@@ -281,12 +359,10 @@
         const notificationsDropdown = getEl('notificationsDropdown');
         const profileDropdown = getEl('profileDropdown');
         
-        // Close notifications if click is outside the button and the dropdown
         if (notificationsDropdown && notificationsBtn && !notificationsBtn.contains(event.target) && !notificationsDropdown.contains(event.target)) {
             notificationsDropdown.classList.add('hidden');
         }
         
-        // Close profile if click is outside the button and the dropdown
         if (profileDropdown && profileBtn && !profileBtn.contains(event.target) && !profileDropdown.contains(event.target)) {
             profileDropdown.classList.add('hidden');
         }
@@ -296,10 +372,16 @@
     document.addEventListener('DOMContentLoaded', function() {
         const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
         const sidebar = getEl('sidebar');
-        if (sidebar) {
-            if (sidebarCollapsed) {
-                sidebar.classList.add('collapsed');
-            }
+        if (sidebar && sidebarCollapsed) {
+            sidebar.classList.add('collapsed');
         }
+
+        // Load initial notification count
+        loadHeaderNotifications();
+        
+        // Refresh notifications every 60 seconds
+        setInterval(() => {
+            if (!document.hidden) loadHeaderNotifications();
+        }, 60000);
     });
 </script>

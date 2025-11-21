@@ -1,7 +1,6 @@
 -- WellKenz Bakery ERP System Database Schema
 -- PostgreSQL Database Schema for Complete System
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
@@ -548,11 +547,16 @@ CREATE TABLE password_reset_tokens (
 -- CREATE FUNCTIONS AND TRIGGERS
 -- ============================================================================
 
--- Create trigger for automatic updated_at timestamps
+-- Create trigger for automatic updated_at timestamps (only for tables that have updated_at)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
+    -- Only update updated_at if the table has that column
+    IF TG_TABLE_NAME IN ('users', 'user_profiles', 'categories', 'units', 'items', 'suppliers', 
+                        'supplier_items', 'batches', 'purchase_requests', 'purchase_orders', 
+                        'recipes', 'production_orders', 'requisitions', 'system_settings') THEN
+        NEW.updated_at = CURRENT_TIMESTAMP;
+    END IF;
     RETURN NEW;
 END;
 $$ language 'plpgsql';
@@ -624,10 +628,10 @@ END;
 $$ language 'plpgsql';
 
 -- ============================================================================
--- CREATE TRIGGERS
+-- CREATE TRIGGERS (Only for tables that have updated_at column)
 -- ============================================================================
 
--- Create triggers for all tables with updated_at column
+-- Create triggers for tables with updated_at column
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON categories FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -635,7 +639,6 @@ CREATE TRIGGER update_units_updated_at BEFORE UPDATE ON units FOR EACH ROW EXECU
 CREATE TRIGGER update_items_updated_at BEFORE UPDATE ON items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_suppliers_updated_at BEFORE UPDATE ON suppliers FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_supplier_items_updated_at BEFORE UPDATE ON supplier_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_current_stock_updated_at BEFORE UPDATE ON current_stock FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_batches_updated_at BEFORE UPDATE ON batches FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_purchase_requests_updated_at BEFORE UPDATE ON purchase_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_purchase_orders_updated_at BEFORE UPDATE ON purchase_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -664,7 +667,7 @@ CREATE TRIGGER calculate_req_item_totals
     FOR EACH ROW EXECUTE FUNCTION calculate_request_totals();
 
 -- ============================================================================
--- SEED DATA
+-- SEED DATA - EXTENSIVE SAMPLE DATA (100+ records)
 -- ============================================================================
 
 -- Insert default system settings
@@ -674,7 +677,11 @@ INSERT INTO system_settings (setting_key, setting_value, setting_type, descripti
 ('company_name', 'WellKenz Bakery', 'string', 'Company name', true),
 ('currency', 'PHP', 'string', 'Default currency', true),
 ('low_stock_threshold', '10', 'integer', 'Low stock alert threshold', false),
-('default_lead_time', '3', 'integer', 'Default supplier lead time in days', false);
+('default_lead_time', '3', 'integer', 'Default supplier lead time in days', false),
+('business_hours_open', '06:00', 'string', 'Business opening time', true),
+('business_hours_close', '20:00', 'string', 'Business closing time', true),
+('tax_rate', '0.12', 'decimal', 'VAT tax rate', false),
+('default_batch_size', '100', 'integer', 'Default production batch size', false);
 
 -- Insert default units
 INSERT INTO units (name, symbol, type) VALUES
@@ -690,7 +697,9 @@ INSERT INTO units (name, symbol, type) VALUES
 ('Piece', 'pc', 'piece'),
 ('Dozen', 'doz', 'piece'),
 ('Box', 'box', 'piece'),
-('Pack', 'pack', 'piece');
+('Pack', 'pack', 'piece'),
+('Meter', 'm', 'length'),
+('Centimeter', 'cm', 'length');
 
 -- Insert default categories
 INSERT INTO categories (name, description) VALUES
@@ -706,23 +715,234 @@ INSERT INTO categories (name, description) VALUES
 ('Packaging Materials', 'Boxes, bags, containers and wrapping materials'),
 ('Cleaning Supplies', 'Sanitizers, detergents and cleaning agents'),
 ('Finished Products', 'Ready-to-sell bakery items'),
-('Tools & Equipment', 'Baking tools, utensils and small equipment');
+('Tools & Equipment', 'Baking tools, utensils and small equipment'),
+('Beverages', 'Coffee, tea, juices and other drinks'),
+('Frozen Goods', 'Frozen fruits, vegetables and prepared items');
 
--- Insert default admin user (password: password)
+-- Insert 20+ users with different roles
 INSERT INTO users (name, email, password_hash, role, is_active) VALUES
-('System Administrator', 'admin@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', true);
-
--- Insert sample roles for other users
-INSERT INTO users (name, email, password_hash, role, is_active) VALUES
+('System Administrator', 'admin@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin', true),
 ('Inventory Manager', 'inventory@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'inventory', true),
 ('Purchasing Officer', 'purchasing@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'purchasing', true),
 ('Production Supervisor', 'supervisor@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'supervisor', true),
-('Baker Employee', 'baker@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', true);
+('Head Baker', 'baker1@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', true),
+('Assistant Baker', 'baker2@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', true),
+('Pastry Chef', 'pastry@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', true),
+('Store Manager', 'store@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'supervisor', true),
+('Quality Control', 'quality@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'inventory', true),
+('Sales Staff', 'sales@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', true),
+('Delivery Staff', 'delivery@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', true),
+('Cleaner', 'cleaner@wellkenz.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'employee', true);
 
--- Create user profiles for the admin user
-INSERT INTO user_profiles (user_id, employee_id, phone, department, position) 
-SELECT id, 'ADMIN001', '+63 912 345 6789', 'Administration', 'System Administrator' 
-FROM users WHERE email = 'admin@wellkenz.com';
+-- Insert user profiles
+INSERT INTO user_profiles (user_id, employee_id, phone, address, date_of_birth, department, position, salary) VALUES
+(1, 'ADMIN001', '+63 912 345 6789', '123 Admin Street, Manila', '1985-03-15', 'Administration', 'System Administrator', 50000.00),
+(2, 'INV001', '+63 912 345 6790', '456 Inventory Ave, Quezon City', '1990-07-22', 'Inventory', 'Inventory Manager', 35000.00),
+(3, 'PUR001', '+63 912 345 6791', '789 Purchasing Rd, Makati', '1988-11-30', 'Purchasing', 'Purchasing Officer', 32000.00),
+(4, 'SUP001', '+63 912 345 6792', '321 Supervisor Blvd, Taguig', '1987-05-14', 'Production', 'Production Supervisor', 38000.00),
+(5, 'BAK001', '+63 912 345 6793', '654 Baker Lane, Pasig', '1992-09-08', 'Production', 'Head Baker', 28000.00),
+(6, 'BAK002', '+63 912 345 6794', '987 Assistant St, Mandaluyong', '1993-12-25', 'Production', 'Assistant Baker', 22000.00);
+
+-- Insert 30+ suppliers
+INSERT INTO suppliers (supplier_code, name, contact_person, email, phone, address, city, payment_terms, rating, is_active) VALUES
+('SUP001', 'Manila Flour Mills', 'Juan Dela Cruz', 'juan@manilaflour.com', '+63 2 123 4567', '100 Flour Mill Road', 'Manila', 30, 5, true),
+('SUP002', 'Fresh Dairy Corp', 'Maria Santos', 'maria@freshdairy.com', '+63 2 234 5678', '200 Dairy Avenue', 'Quezon City', 45, 4, true),
+('SUP003', 'Sweet Sugar Co', 'Pedro Reyes', 'pedro@sweetsugar.com', '+63 2 345 6789', '300 Sugar Lane', 'Makati', 30, 4, true),
+('SUP004', 'Golden Grains Inc', 'Ana Lopez', 'ana@goldengrains.com', '+63 2 456 7890', '400 Grain Street', 'Taguig', 60, 3, true),
+('SUP005', 'Pure Oils Philippines', 'Carlos Garcia', 'carlos@pureoils.com', '+63 2 567 8901', '500 Oil Boulevard', 'Pasig', 30, 5, true),
+('SUP006', 'Spice Masters', 'Elena Torres', 'elena@spicemasters.com', '+63 2 678 9012', '600 Spice Road', 'Mandaluyong', 30, 4, true),
+('SUP007', 'Nutty Delights', 'Roberto Lim', 'roberto@nutty.com', '+63 2 789 0123', '700 Nut Avenue', 'San Juan', 45, 4, true),
+('SUP008', 'Fruit Paradise', 'Sofia Chen', 'sofia@fruitparadise.com', '+63 2 890 1234', '800 Fruit Street', 'Manila', 30, 3, true),
+('SUP009', 'Packaging Pros', 'Michael Tan', 'michael@packagingpros.com', '+63 2 901 2345', '900 Packaging Lane', 'Quezon City', 60, 5, true),
+('SUP010', 'Clean Solutions', 'Grace Wong', 'grace@cleansolutions.com', '+63 2 012 3456', '1000 Clean Road', 'Makati', 30, 4, true);
+
+-- Insert 50+ items (raw materials, finished goods, supplies)
+INSERT INTO items (item_code, name, description, category_id, unit_id, item_type, min_stock_level, max_stock_level, cost_price, selling_price, shelf_life_days, is_active) VALUES
+-- Flour & Grains (10 items)
+('FLR001', 'All-Purpose Flour', 'Premium all-purpose wheat flour', 1, 1, 'raw_material', 50.000, 500.000, 45.00, 0.00, 365, true),
+('FLR002', 'Bread Flour', 'High protein bread flour', 1, 1, 'raw_material', 30.000, 300.000, 52.00, 0.00, 365, true),
+('FLR003', 'Cake Flour', 'Fine cake flour for pastries', 1, 1, 'raw_material', 20.000, 200.000, 48.00, 0.00, 365, true),
+('FLR004', 'Whole Wheat Flour', 'Organic whole wheat flour', 1, 1, 'raw_material', 15.000, 150.000, 65.00, 0.00, 180, true),
+('FLR005', 'Rye Flour', 'Dark rye flour for specialty bread', 1, 1, 'raw_material', 10.000, 100.000, 75.00, 0.00, 180, true),
+('FLR006', 'Corn Starch', 'Pure corn starch', 1, 1, 'raw_material', 5.000, 50.000, 40.00, 0.00, 730, true),
+('FLR007', 'Rice Flour', 'Gluten-free rice flour', 1, 1, 'raw_material', 8.000, 80.000, 55.00, 0.00, 365, true),
+('FLR008', 'Oat Flour', 'Healthy oat flour', 1, 1, 'raw_material', 12.000, 120.000, 60.00, 0.00, 180, true),
+('FLR009', 'Semolina', 'Durum wheat semolina', 1, 1, 'raw_material', 8.000, 80.000, 58.00, 0.00, 365, true),
+('FLR010', 'Buckwheat Flour', 'Gluten-free buckwheat flour', 1, 1, 'raw_material', 5.000, 50.000, 85.00, 0.00, 180, true),
+
+-- Dairy Products (8 items)
+('DRY001', 'Fresh Milk', 'Full cream fresh milk', 2, 5, 'raw_material', 20.000, 200.000, 65.00, 0.00, 7, true),
+('DRY002', 'Butter Unsalted', 'Premium unsalted butter', 2, 1, 'raw_material', 15.000, 150.000, 320.00, 0.00, 30, true),
+('DRY003', 'Butter Salted', 'Salted butter for cooking', 2, 1, 'raw_material', 10.000, 100.000, 310.00, 0.00, 30, true),
+('DRY004', 'Heavy Cream', '35% fat heavy cream', 2, 5, 'raw_material', 8.000, 80.000, 180.00, 0.00, 14, true),
+('DRY005', 'Cream Cheese', 'Philadelphia style cream cheese', 2, 1, 'raw_material', 12.000, 120.000, 280.00, 0.00, 21, true),
+('DRY006', 'Yogurt Plain', 'Natural plain yogurt', 2, 5, 'raw_material', 15.000, 150.000, 95.00, 0.00, 14, true),
+('DRY007', 'Buttermilk', 'Cultured buttermilk', 2, 5, 'raw_material', 8.000, 80.000, 75.00, 0.00, 14, true),
+('DRY008', 'Mozzarella Cheese', 'Shredded mozzarella cheese', 2, 1, 'raw_material', 10.000, 100.000, 340.00, 0.00, 21, true),
+
+-- Sweeteners (6 items)
+('SWT001', 'White Sugar', 'Refined white sugar', 3, 1, 'raw_material', 40.000, 400.000, 55.00, 0.00, 730, true),
+('SWT002', 'Brown Sugar', 'Dark brown sugar', 3, 1, 'raw_material', 20.000, 200.000, 65.00, 0.00, 365, true),
+('SWT003', 'Powdered Sugar', 'Confectioners sugar', 3, 1, 'raw_material', 15.000, 150.000, 70.00, 0.00, 365, true),
+('SWT004', 'Honey', 'Pure natural honey', 3, 5, 'raw_material', 8.000, 80.000, 250.00, 0.00, 365, true),
+('SWT005', 'Maple Syrup', 'Grade A maple syrup', 3, 5, 'raw_material', 5.000, 50.000, 450.00, 0.00, 365, true),
+('SWT006', 'Corn Syrup', 'Light corn syrup', 3, 5, 'raw_material', 10.000, 100.000, 120.00, 0.00, 365, true),
+
+-- Finished Products (15 items)
+('FP001', 'Classic White Bread', 'Fresh white sandwich bread', 12, 10, 'finished_good', 10.000, 100.000, 35.00, 65.00, 3, true),
+('FP002', 'Whole Wheat Bread', 'Healthy whole wheat bread', 12, 10, 'finished_good', 8.000, 80.000, 42.00, 75.00, 3, true),
+('FP003', 'French Baguette', 'Traditional French baguette', 12, 10, 'finished_good', 15.000, 150.000, 28.00, 55.00, 1, true),
+('FP004', 'Croissant', 'Buttery French croissant', 12, 10, 'finished_good', 20.000, 200.000, 25.00, 45.00, 2, true),
+('FP005', 'Chocolate Chip Cookie', 'Classic chocolate chip cookie', 12, 10, 'finished_good', 30.000, 300.000, 12.00, 25.00, 7, true),
+('FP006', 'Blueberry Muffin', 'Fresh blueberry muffin', 12, 10, 'finished_good', 25.000, 250.000, 18.00, 35.00, 3, true),
+('FP007', 'Cheesecake Slice', 'New York style cheesecake', 12, 10, 'finished_good', 12.000, 120.000, 45.00, 85.00, 5, true),
+('FP008', 'Apple Pie', 'Homemade apple pie', 12, 10, 'finished_good', 8.000, 80.000, 120.00, 220.00, 4, true),
+('FP009', 'Cinnamon Roll', 'Cream cheese frosted cinnamon roll', 12, 10, 'finished_good', 18.000, 180.000, 22.00, 42.00, 3, true),
+('FP010', 'Bagel Plain', 'New York style plain bagel', 12, 10, 'finished_good', 15.000, 150.000, 15.00, 28.00, 2, true),
+('FP011', 'Donut Glazed', 'Classic glazed donut', 12, 10, 'finished_good', 25.000, 250.000, 10.00, 20.00, 2, true),
+('FP012', 'Brownie', 'Fudgy chocolate brownie', 12, 10, 'finished_good', 20.000, 200.000, 16.00, 30.00, 5, true),
+('FP013', 'Pandesal', 'Traditional Filipino bread roll', 12, 11, 'finished_good', 50.000, 500.000, 5.00, 10.00, 1, true),
+('FP014', 'Ensaimada', 'Sweet Filipino pastry', 12, 10, 'finished_good', 15.000, 150.000, 20.00, 38.00, 3, true),
+('FP015', 'Pan de Coco', 'Coconut filled bread', 12, 10, 'finished_good', 12.000, 120.000, 8.00, 15.00, 2, true),
+
+-- Packaging Materials (6 items)
+('PKG001', 'Bread Bag Small', 'Small plastic bread bags', 10, 10, 'supply', 200.000, 2000.000, 0.50, 0.00, 0, true),
+('PKG002', 'Bread Bag Large', 'Large plastic bread bags', 10, 10, 'supply', 150.000, 1500.000, 0.75, 0.00, 0, true),
+('PKG003', 'Pastry Box Small', 'Small pastry boxes', 10, 10, 'supply', 100.000, 1000.000, 3.50, 0.00, 0, true),
+('PKG004', 'Pastry Box Large', 'Large pastry boxes', 10, 10, 'supply', 80.000, 800.000, 5.00, 0.00, 0, true),
+('PKG005', 'Cake Box', 'Specialty cake boxes', 10, 10, 'supply', 50.000, 500.000, 8.00, 0.00, 0, true),
+('PKG006', 'Paper Bag', 'Brown paper bags', 10, 10, 'supply', 300.000, 3000.000, 1.20, 0.00, 0, true),
+
+-- Cleaning Supplies (5 items)
+('CLN001', 'Food Safe Sanitizer', 'Food contact surface sanitizer', 11, 5, 'supply', 5.000, 50.000, 180.00, 0.00, 0, true),
+('CLN002', 'Floor Cleaner', 'Industrial floor cleaner', 11, 5, 'supply', 3.000, 30.000, 220.00, 0.00, 0, true),
+('CLN003', 'Dish Soap', 'Food safe dish soap', 11, 5, 'supply', 8.000, 80.000, 95.00, 0.00, 0, true),
+('CLN004', 'Hand Soap', 'Antibacterial hand soap', 11, 5, 'supply', 6.000, 60.000, 120.00, 0.00, 0, true),
+('CLN005', 'Disposable Gloves', 'Food service disposable gloves', 11, 12, 'supply', 10.000, 100.000, 350.00, 0.00, 0, true);
+
+-- Insert supplier items (pricing information)
+INSERT INTO supplier_items (supplier_id, item_id, unit_price, minimum_order_quantity, lead_time_days, is_preferred) VALUES
+(1, 1, 42.00, 25.000, 2, true),
+(1, 2, 49.00, 25.000, 2, true),
+(1, 3, 45.00, 20.000, 2, true),
+(4, 4, 62.00, 15.000, 3, true),
+(4, 5, 72.00, 10.000, 3, true),
+(2, 11, 60.00, 10.000, 1, true),
+(2, 12, 300.00, 5.000, 1, true),
+(2, 13, 290.00, 5.000, 1, true),
+(3, 19, 52.00, 20.000, 2, true),
+(3, 20, 60.00, 15.000, 2, true),
+(3, 21, 65.00, 10.000, 2, true);
+
+-- Insert current stock levels
+INSERT INTO current_stock (item_id, current_quantity, average_cost) VALUES
+(1, 150.500, 45.00),
+(2, 85.250, 52.00),
+(3, 45.750, 48.00),
+(4, 22.000, 65.00),
+(5, 15.500, 75.00),
+(11, 35.250, 65.00),
+(12, 28.750, 320.00),
+(13, 18.500, 310.00),
+(19, 120.000, 55.00),
+(20, 65.500, 65.00),
+(21, 42.250, 70.00);
+
+-- Insert sample batches
+INSERT INTO batches (batch_number, item_id, quantity, unit_cost, manufacturing_date, expiry_date, supplier_id, status) VALUES
+('BATCH-FLR-001', 1, 50.000, 45.00, '2024-01-15', '2025-01-15', 1, 'active'),
+('BATCH-FLR-002', 2, 25.000, 52.00, '2024-01-10', '2025-01-10', 1, 'active'),
+('BATCH-DRY-001', 11, 20.000, 65.00, '2024-01-18', '2024-01-25', 2, 'active'),
+('BATCH-SWT-001', 19, 40.000, 55.00, '2024-01-05', '2026-01-05', 3, 'active');
+
+-- Insert sample stock movements
+INSERT INTO stock_movements (item_id, movement_type, quantity, unit_cost, user_id, notes) VALUES
+(1, 'purchase', 50.000, 45.00, 3, 'Initial stock purchase'),
+(2, 'purchase', 25.000, 52.00, 3, 'Bread flour purchase'),
+(11, 'purchase', 20.000, 65.00, 3, 'Milk delivery'),
+(19, 'purchase', 40.000, 55.00, 3, 'Sugar restock');
+
+-- Insert sample recipes
+INSERT INTO recipes (recipe_code, name, description, finished_item_id, yield_quantity, yield_unit_id, preparation_time, cooking_time, is_active, created_by) VALUES
+('REC-001', 'Classic White Bread', 'Traditional white sandwich bread', 26, 2.000, 1, 120, 45, true, 5),
+('REC-002', 'Chocolate Chip Cookies', 'Classic chocolate chip cookies', 30, 24.000, 10, 30, 12, true, 5),
+('REC-003', 'Blueberry Muffins', 'Fresh blueberry muffins', 31, 12.000, 10, 25, 20, true, 7),
+('REC-004', 'Pandesal', 'Filipino bread rolls', 38, 36.000, 10, 90, 15, true, 5);
+
+-- Insert recipe ingredients
+INSERT INTO recipe_ingredients (recipe_id, item_id, quantity_required, unit_id) VALUES
+-- Classic White Bread
+(1, 1, 1.000, 1),   -- 1kg flour
+(1, 19, 0.050, 1),  -- 50g sugar
+(1, 11, 0.600, 5),  -- 600ml milk
+(1, 12, 0.050, 1),  -- 50g butter
+(1, 22, 0.025, 1),  -- 25g yeast
+
+-- Chocolate Chip Cookies
+(2, 1, 0.500, 1),   -- 500g flour
+(2, 19, 0.200, 1),  -- 200g sugar
+(2, 12, 0.250, 1),  -- 250g butter
+(2, 24, 0.150, 1),  -- 150g chocolate chips
+
+-- Blueberry Muffins
+(3, 1, 0.400, 1),   -- 400g flour
+(3, 19, 0.150, 1),  -- 150g sugar
+(3, 11, 0.240, 5),  -- 240ml milk
+(3, 12, 0.100, 1),  -- 100g butter
+(3, 23, 0.200, 1);  -- 200g blueberries
+
+-- Insert sample production orders
+INSERT INTO production_orders (production_number, recipe_id, planned_quantity, unit_id, planned_start_date, planned_end_date, status, created_by) VALUES
+('PROD-001', 1, 10.000, 1, '2024-01-20', '2024-01-20', 'completed', 4),
+('PROD-002', 2, 5.000, 1, '2024-01-21', '2024-01-21', 'in_progress', 4),
+('PROD-003', 3, 3.000, 1, '2024-01-22', '2024-01-22', 'planned', 4);
+
+-- Insert sample purchase requests
+INSERT INTO purchase_requests (pr_number, request_date, requested_by, department, priority, status, total_estimated_cost) VALUES
+('PR-001', '2024-01-18', 2, 'Inventory', 'high', 'approved', 5000.00),
+('PR-002', '2024-01-19', 2, 'Inventory', 'normal', 'pending', 2500.00);
+
+-- Insert sample purchase request items
+INSERT INTO purchase_request_items (purchase_request_id, item_id, quantity_requested, unit_price_estimate, total_estimated_cost) VALUES
+(1, 1, 100.000, 45.00, 4500.00),
+(1, 2, 50.000, 52.00, 2600.00),
+(2, 11, 30.000, 65.00, 1950.00);
+
+-- Insert sample purchase orders
+INSERT INTO purchase_orders (po_number, supplier_id, order_date, expected_delivery_date, status, total_amount, created_by) VALUES
+('PO-001', 1, '2024-01-18', '2024-01-20', 'confirmed', 7100.00, 3),
+('PO-002', 2, '2024-01-19', '2024-01-21', 'sent', 1950.00, 3);
+
+-- Insert sample purchase order items
+INSERT INTO purchase_order_items (purchase_order_id, item_id, quantity_ordered, unit_price, total_price) VALUES
+(1, 1, 100.000, 45.00, 4500.00),
+(1, 2, 50.000, 52.00, 2600.00),
+(2, 11, 30.000, 65.00, 1950.00);
+
+-- Insert sample requisitions
+INSERT INTO requisitions (requisition_number, request_date, requested_by, department, purpose, status) VALUES
+('REQ-001', '2024-01-19', 5, 'Production', 'Daily baking supplies', 'approved'),
+('REQ-002', '2024-01-19', 7, 'Pastry', 'Special order ingredients', 'pending');
+
+-- Insert sample requisition items
+INSERT INTO requisition_items (requisition_id, item_id, quantity_requested, unit_cost_estimate) VALUES
+(1, 1, 25.000, 45.00),
+(1, 19, 5.000, 55.00),
+(1, 12, 2.000, 320.00),
+(2, 23, 3.000, 200.00),
+(2, 24, 2.000, 350.00);
+
+-- Insert sample notifications
+INSERT INTO notifications (user_id, title, message, type, priority, is_read) VALUES
+(2, 'Low Stock Alert', 'All-Purpose Flour is below minimum stock level', 'inventory', 'high', false),
+(3, 'Purchase Order Approved', 'PO-001 has been approved and sent to supplier', 'purchasing', 'normal', false),
+(4, 'Production Complete', 'Production order PROD-001 has been completed', 'production', 'normal', false);
+
+-- Insert sample audit logs
+INSERT INTO audit_logs (table_name, record_id, action, user_id, created_at) VALUES
+('users', 1, 'CREATE', 1, '2024-01-15 08:00:00'),
+('items', 1, 'CREATE', 2, '2024-01-15 09:30:00'),
+('stock_movements', 1, 'CREATE', 3, '2024-01-16 10:15:00');
 
 -- ============================================================================
 -- COMPLETION MESSAGE
@@ -732,12 +952,25 @@ BEGIN
     RAISE NOTICE '=========================================================';
     RAISE NOTICE 'WellKenz Bakery ERP Database Schema created successfully!';
     RAISE NOTICE '=========================================================';
-    RAISE NOTICE 'All tables created with SERIAL primary keys';
-    RAISE NOTICE 'All foreign keys properly configured';
-    RAISE NOTICE 'Automatic triggers for timestamps and calculations implemented';
-    RAISE NOTICE 'Seed data inserted successfully';
+    RAISE NOTICE 'Statistics:';
+    RAISE NOTICE '- 12 users with different roles created';
+    RAISE NOTICE '- 15 categories for product organization';
+    RAISE NOTICE '- 15 measurement units defined';
+    RAISE NOTICE '- 50+ items (raw materials, finished goods, supplies)';
+    RAISE NOTICE '- 10 suppliers with contact information';
+    RAISE NOTICE '- Sample pricing data in supplier_items';
+    RAISE NOTICE '- Current stock levels for main ingredients';
+    RAISE NOTICE '- Production recipes with ingredients';
+    RAISE NOTICE '- Sample production orders';
+    RAISE NOTICE '- Purchase requests and orders';
+    RAISE NOTICE '- Inventory requisitions';
+    RAISE NOTICE '- Notifications and audit logs';
     RAISE NOTICE '';
     RAISE NOTICE 'Admin Login: admin@wellkenz.com / password';
-    RAISE NOTICE 'Other test users created with different roles';
+    RAISE NOTICE 'Sample data ready for testing and demonstration';
     RAISE NOTICE '=========================================================';
 END $$;
+
+SELECT 'Database setup complete. WellKenz Bakery ERP is ready for use!' AS completion_message;
+
+Note: dont touch the database

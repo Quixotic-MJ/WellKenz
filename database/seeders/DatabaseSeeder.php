@@ -188,5 +188,10 @@ class DatabaseSeeder extends Seeder
                 'notes' => 'Urgent'
             ]);
         }
+
+        // ==========================================
+        // 7. SEED SAMPLE NOTIFICATIONS
+        // ==========================================
+        $this->call(NotificationSeeder::class);
     }
 }

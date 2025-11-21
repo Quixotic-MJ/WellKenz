@@ -10,7 +10,7 @@
         
         <div class="flex items-center justify-between relative z-10">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Good Morning, Admin</h1>
+                <h1 class="text-2xl font-bold text-gray-900">{{ $greeting }}, {{ $userName }}</h1>
                 <p class="text-sm text-gray-500 mt-1">Here is your system configuration overview.</p>
             </div>
             <div class="text-right">
@@ -58,11 +58,11 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Database Health</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">Good</p>
-                    <p class="text-xs text-gray-500 mt-1">Last Backup: 2h ago</p>
+                    <p class="text-2xl font-bold text-{{ $databaseHealth['status_color'] }}-600 mt-1">{{ $databaseHealth['status'] }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Last Backup: {{ $databaseHealth['last_backup'] }}</p>
                 </div>
-                <div class="w-12 h-12 bg-green-50 flex items-center justify-center rounded-lg">
-                    <i class="fas fa-server text-green-600 text-xl"></i>
+                <div class="w-12 h-12 bg-{{ $databaseHealth['status_color'] }}-50 flex items-center justify-center rounded-lg">
+                    <i class="fas fa-server text-{{ $databaseHealth['status_color'] }}-600 text-xl"></i>
                 </div>
             </div>
         </div>
@@ -72,8 +72,8 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Security Alerts</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">0</p>
-                    <p class="text-xs text-gray-500 mt-1">System Secure</p>
+                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ $securityAlertsCount }}</p>
+                    <p class="text-xs text-gray-500 mt-1">{{ $securityAlertsCount > 0 ? 'Review Required' : 'System Secure' }}</p>
                 </div>
                 <div class="w-12 h-12 bg-red-50 flex items-center justify-center rounded-lg">
                     <i class="fas fa-shield-alt text-red-600 text-xl"></i>
@@ -89,7 +89,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-lg font-bold text-gray-900">Requisition Status</h3>
-                <a href="#" class="text-xs text-blue-600 hover:underline">Manage Requisitions →</a>
+                <a href="{{ route('supervisor.approvals.requisitions') }}" class="text-xs text-blue-600 hover:underline">Manage Requisitions →</a>
             </div>
             
             <div class="space-y-4">
@@ -121,7 +121,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-lg font-bold text-gray-900">Purchase Orders</h3>
-                <a href="#" class="text-xs text-blue-600 hover:underline">View Orders →</a>
+                <a href="{{ route('purchasing.po.open') }}" class="text-xs text-blue-600 hover:underline">View Orders →</a>
             </div>
 
             <div class="grid grid-cols-3 gap-4 text-center">
@@ -195,19 +195,19 @@
         <div class="lg:col-span-1 bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-4">Config Shortcuts</h3>
             <div class="space-y-2">
-                <a href="#" class="flex items-center justify-between w-full px-4 py-3 bg-gray-900 text-white hover:bg-gray-800 transition rounded-lg shadow-sm group">
+                <a href="{{ route('admin.users.index') }}" class="flex items-center justify-between w-full px-4 py-3 bg-gray-900 text-white hover:bg-gray-800 transition rounded-lg shadow-sm group">
                     <span class="text-sm font-medium"><i class="fas fa-user-plus mr-2 text-gray-400 group-hover:text-white"></i>Create New User</span>
                     <i class="fas fa-chevron-right text-xs opacity-50"></i>
                 </a>
-                <a href="#" class="flex items-center justify-between w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 transition rounded-lg text-gray-700">
+                <a href="{{ route('admin.items.index') }}" class="flex items-center justify-between w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 transition rounded-lg text-gray-700">
                     <span class="text-sm font-medium"><i class="fas fa-box-open mr-2 text-gray-400"></i>Add New Item (SKU)</span>
                     <i class="fas fa-chevron-right text-xs opacity-50"></i>
                 </a>
-                <a href="#" class="flex items-center justify-between w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 transition rounded-lg text-gray-700">
+                <a href="{{ route('admin.backups') }}" class="flex items-center justify-between w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 transition rounded-lg text-gray-700">
                     <span class="text-sm font-medium"><i class="fas fa-cloud-download-alt mr-2 text-gray-400"></i>Download Backup</span>
                     <i class="fas fa-chevron-right text-xs opacity-50"></i>
                 </a>
-                <a href="#" class="flex items-center justify-between w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 transition rounded-lg text-gray-700">
+                <a href="{{ route('admin.audit-logs') }}" class="flex items-center justify-between w-full px-4 py-3 border border-gray-200 hover:bg-gray-50 transition rounded-lg text-gray-700">
                     <span class="text-sm font-medium"><i class="fas fa-file-contract mr-2 text-gray-400"></i>View Audit Logs</span>
                     <i class="fas fa-chevron-right text-xs opacity-50"></i>
                 </a>
@@ -222,7 +222,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-900">Recent Database Updates</h3>
-                <a href="#" class="text-xs font-bold text-blue-600 uppercase tracking-wider">View Masterlist →</a>
+                <a href="{{ route('admin.items.index') }}" class="text-xs font-bold text-blue-600 uppercase tracking-wider">View Masterlist →</a>
             </div>
             <div class="space-y-0 divide-y divide-gray-100">
                 @forelse($recentUpdates as $update)
@@ -250,7 +250,7 @@
         <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-bold text-gray-900">System Security Log</h3>
-                <a href="#" class="text-xs font-bold text-gray-600 uppercase tracking-wider">Full Audit →</a>
+                <a href="{{ route('admin.audit-logs') }}" class="text-xs font-bold text-gray-600 uppercase tracking-wider">Full Audit →</a>
             </div>
             <div class="space-y-4">
                 @forelse($securityLogs as $log)

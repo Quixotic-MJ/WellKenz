@@ -49,7 +49,7 @@ class Item extends Model
         return $this->belongsTo(Unit::class);
     }
 
-    public function currentStock()
+    public function currentStockRecord()
     {
         return $this->hasOne(CurrentStock::class);
     }
@@ -61,18 +61,18 @@ class Item extends Model
 
     public function getCurrentStockAttribute()
     {
-        return $this->currentStock ? $this->currentStock->current_quantity : 0;
+        return $this->currentStockRecord ? $this->currentStockRecord->current_quantity : 0;
     }
 
     public function isLowStock()
     {
-        $currentStock = $this->currentStock ? $this->currentStock->current_quantity : 0;
+        $currentStock = $this->currentStockRecord ? $this->currentStockRecord->current_quantity : 0;
         return $currentStock <= $this->reorder_point;
     }
 
     public function isOutOfStock()
     {
-        $currentStock = $this->currentStock ? $this->currentStock->current_quantity : 0;
+        $currentStock = $this->currentStockRecord ? $this->currentStockRecord->current_quantity : 0;
         return $currentStock <= 0;
     }
 }

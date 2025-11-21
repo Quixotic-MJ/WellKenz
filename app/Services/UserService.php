@@ -27,10 +27,10 @@ class UserService
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                  ->orWhere('email', 'ilike', "%{$search}%")
+                $q->where('name', 'LIKE', "%{$search}%")
+                  ->orWhere('email', 'LIKE', "%{$search}%")
                   ->orWhereHas('profile', function ($profileQuery) use ($search) {
-                      $profileQuery->where('employee_id', 'ilike', "%{$search}%");
+                      $profileQuery->where('employee_id', 'LIKE', "%{$search}%");
                   });
             });
         }
@@ -226,10 +226,10 @@ class UserService
 
         return User::with('profile')
             ->where(function ($q) use ($query) {
-                $q->where('name', 'ilike', "%{$query}%")
-                  ->orWhere('email', 'ilike', "%{$query}%")
+                $q->where('name', 'LIKE', "%{$query}%")
+                  ->orWhere('email', 'LIKE', "%{$query}%")
                   ->orWhereHas('profile', function ($profileQuery) use ($query) {
-                      $profileQuery->where('employee_id', 'ilike', "%{$query}%");
+                      $profileQuery->where('employee_id', 'LIKE', "%{$query}%");
                   });
             })
             ->limit($limit)
