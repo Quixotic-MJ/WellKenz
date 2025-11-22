@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\AuthController;
 
 // --- Import your controllers (Ready for when you move logic to controllers) ---
@@ -132,54 +133,50 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supervisor.')->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('Supervisor.Home');
-    })->name('dashboard');
+    Route::get('/dashboard', [SupervisorController::class, 'home'])->name('dashboard');
 
     // Approvals
-    Route::get('/approvals/requisitions', function () {
-        return view('Supervisor.approvals.requisition');
-    })->name('approvals.requisitions');
+    Route::get('/approvals/requisitions', [SupervisorController::class, 'requisitionApprovals'])->name('approvals.requisitions');
+    Route::get('/approvals/purchase-requests', [SupervisorController::class, 'purchaseRequestApprovals'])->name('approvals.purchase-requests');
 
-    Route::get('/approvals/purchase-requests', function () {
-        return view('Supervisor.approvals.purchase_request');
-    })->name('approvals.purchase-requests');
+    // Requisition Actions
+    Route::patch('/requisitions/{requisition}/approve', [SupervisorController::class, 'approveRequisition'])->name('requisitions.approve');
+    Route::patch('/requisitions/{requisition}/reject', [SupervisorController::class, 'rejectRequisition'])->name('requisitions.reject');
+    Route::patch('/requisitions/{requisition}/modify', [SupervisorController::class, 'modifyRequisitionQuantity'])->name('requisitions.modify');
+    Route::get('/requisitions/{requisition}/details', [SupervisorController::class, 'getRequisitionDetails'])->name('requisitions.details');
+    
+    // Purchase Request Actions
+    Route::patch('/purchase-requests/{purchaseRequest}/approve', [SupervisorController::class, 'approvePurchaseRequest'])->name('purchase-requests.approve');
+    Route::patch('/purchase-requests/{purchaseRequest}/reject', [SupervisorController::class, 'rejectPurchaseRequest'])->name('purchase-requests.reject');
+    Route::get('/purchase-requests/{purchaseRequest}/details', [SupervisorController::class, 'getPurchaseRequestDetails'])->name('purchase-requests.details');
+    
+    // Bulk Operations
+    Route::patch('/requisitions/bulk-approve', [SupervisorController::class, 'bulkApproveRequisitions'])->name('requisitions.bulk-approve');
+    Route::patch('/purchase-requests/bulk-approve', [SupervisorController::class, 'bulkApprovePurchaseRequests'])->name('purchase-requests.bulk-approve');
+    
+    // Statistics and Analytics
+    Route::get('/requisitions/statistics', [SupervisorController::class, 'getRequisitionStatistics'])->name('requisitions.statistics');
 
     // Notifications
-    Route::get('/notifications', function () {
-        return view('Supervisor.notification');
-    })->name('notifications');
+    Route::get('/notifications', [SupervisorController::class, 'notifications'])->name('notifications');
 
     // Inventory Oversight
-    Route::get('/inventory', function () {
-        return view('Supervisor.inventory.stock_level');
-    })->name('inventory.index');
-
-    Route::get('/inventory/history', function () {
-        return view('Supervisor.inventory.stock_card');
-    })->name('inventory.history');
-
-    Route::get('/inventory/adjustments', function () {
-        return view('Supervisor.inventory.adjustments');
-    })->name('inventory.adjustments');
+    Route::get('/inventory', [SupervisorController::class, 'stockLevel'])->name('inventory.index');
+    Route::get('/inventory/history', [SupervisorController::class, 'stockHistory'])->name('inventory.history');
+    Route::get('/inventory/history/{item}', [SupervisorController::class, 'stockCard'])->name('inventory.history.item');
+    Route::get('/inventory/adjustments', [SupervisorController::class, 'inventoryAdjustments'])->name('inventory.adjustments');
 
     // Reports
-    Route::get('/reports/yield', function () {
-        return view('Supervisor.reports.yield_variance');
-    })->name('reports.yield');
-
-    Route::get('/reports/expiry', function () {
-        return view('Supervisor.reports.expiry_report');
-    })->name('reports.expiry');
-
-    Route::get('/reports/cogs', function () {
-        return view('Supervisor.reports.COGS');
-    })->name('reports.cogs');
+    Route::get('/reports/yield', [SupervisorController::class, 'yieldVariance'])->name('reports.yield');
+    Route::get('/reports/expiry', [SupervisorController::class, 'expiryReport'])->name('reports.expiry');
+    Route::get('/reports/cogs', [SupervisorController::class, 'cogsReport'])->name('reports.cogs');
 
     // Settings
-    Route::get('/settings/stock-levels', function () {
-        return view('Supervisor.branch_setting');
-    })->name('settings.stock-levels');
+    Route::get('/settings/stock-levels', [SupervisorController::class, 'branchSetting'])->name('settings.stock-levels');
+
+    // AJAX endpoints for dashboard
+    Route::get('/stock-overview', [SupervisorController::class, 'getStockOverview'])->name('stock.overview');
+    Route::get('/production-metrics', [SupervisorController::class, 'getProductionMetrics'])->name('production.metrics');
 
 });
 
@@ -274,6 +271,16 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::get('/outbound/direct', function () { 
         return view('Inventory.outbound.direct_issuance'); 
     })->name('outbound.direct');
+
+    Route::get('/outbound/purchase-requests/create', [InventoryController::class, 'create'])->name('purchase-requests.create');
+
+    Route::post('/outbound/purchase-requests', [InventoryController::class, 'createPurchaseRequest'])->name('purchase-requests.store');
+
+    Route::get('/purchase-requests/{id}', [InventoryController::class, 'show'])->name('purchase-requests.show');
+
+    Route::delete('/purchase-requests/{id}', [InventoryController::class, 'destroy'])->name('purchase-requests.destroy');
+
+    Route::get('/purchase-requests/items', [InventoryController::class, 'getItems'])->name('purchase-requests.items');
 
     // Stock Mgmt
     Route::get('/stock/count', function () { 

@@ -24,7 +24,6 @@ From the view file and controller, the system requires:
 -- PostgreSQL Database Schema for Complete System
 
 -- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================

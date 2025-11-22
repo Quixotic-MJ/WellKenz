@@ -49,8 +49,10 @@
                             <i class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                             <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Requisitions</span>
                         </div>
-                        <!-- Badge for 5 Pending -->
-                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">5</span>
+                        <!-- Badge for Pending Requisitions -->
+                        @if($badgeCounts['pending_requisitions'] > 0)
+                            <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">{{ $badgeCounts['pending_requisitions'] }}</span>
+                        @endif
                     </a>
                 </li>
 
@@ -164,7 +166,9 @@
                             <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
                         </div>
                         <!-- Badge for unread notifications -->
-                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">3</span>
+                        @if($badgeCounts['unread_notifications'] > 0)
+                            <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">{{ $badgeCounts['unread_notifications'] }}</span>
+                        @endif
                     </a>
                 </li>
 

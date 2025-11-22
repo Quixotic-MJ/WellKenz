@@ -39,4 +39,17 @@ class RequisitionItem extends Model
     {
         return $this->belongsTo(Item::class);
     }
+
+    public function currentStockRecord()
+    {
+        // Get current stock through the item relationship
+        return $this->hasOneThrough(
+            CurrentStock::class,  // Final model
+            Item::class,          // Intermediate model  
+            'id',                 // Foreign key on intermediate table (items.id)
+            'item_id',            // Foreign key on final table (current_stock.item_id)
+            'item_id',            // Local key on this table (requisition_items.item_id)
+            'id'                  // Local key on intermediate table (items.id)
+        );
+    }
 }

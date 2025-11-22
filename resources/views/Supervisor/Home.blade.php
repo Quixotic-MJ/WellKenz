@@ -28,38 +28,27 @@
                         <i class="fas fa-hourglass-half mr-1"></i> Less than 24h supply
                     </p>
                 </div>
-                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">4 Items</span>
+                <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">{{ $criticalStockItems->count() }} Items</span>
             </div>
             <div class="flex-1 overflow-y-auto pr-1">
                 <ul class="space-y-2">
-                    <li class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
-                        <div class="flex items-center">
-                            <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                            <span class="text-xs font-bold text-gray-700">Fresh Milk</span>
-                        </div>
-                        <span class="text-xs font-bold text-red-600">2 L</span>
-                    </li>
-                    <li class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
-                        <div class="flex items-center">
-                            <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                            <span class="text-xs font-bold text-gray-700">Eggs (Large)</span>
-                        </div>
-                        <span class="text-xs font-bold text-red-600">12 Pcs</span>
-                    </li>
-                    <li class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
-                        <div class="flex items-center">
-                            <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                            <span class="text-xs font-bold text-gray-700">Strawberries</span>
-                        </div>
-                        <span class="text-xs font-bold text-red-600">0.5 kg</span>
-                    </li>
-                     <li class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
-                        <div class="flex items-center">
-                            <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                            <span class="text-xs font-bold text-gray-700">Yeast</span>
-                        </div>
-                        <span class="text-xs font-bold text-red-600">100 g</span>
-                    </li>
+                    @forelse($criticalStockItems as $item)
+                        <li class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                                <span class="text-xs font-bold text-gray-700">{{ $item['name'] }}</span>
+                            </div>
+                            <span class="text-xs font-bold text-red-600">{{ $item['quantity'] }} {{ $item['unit'] }}</span>
+                        </li>
+                    @empty
+                        <li class="flex justify-between items-center p-2 bg-green-50 rounded border border-green-100">
+                            <div class="flex items-center">
+                                <div class="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+                                <span class="text-xs font-bold text-gray-700">No critical stock items</span>
+                            </div>
+                            <span class="text-xs font-bold text-green-600">All Good!</span>
+                        </li>
+                    @endforelse
                 </ul>
             </div>
             <div class="mt-3 pt-2 border-t border-gray-100 text-center">
@@ -79,30 +68,19 @@
             
             <!-- CSS Bar Chart -->
             <div class="flex-1 flex items-end justify-around w-full space-x-2 pb-2 border-b border-gray-200">
-                <!-- Day 1 -->
-                <div class="flex flex-col items-center space-y-1 w-1/4 group relative">
-                    <div class="w-full flex items-end justify-center space-x-1 h-28">
-                        <div class="bg-blue-500 w-3 h-[80%] rounded-t shadow-sm transition-all hover:bg-blue-600 relative group-hover:opacity-90" title="Sales: 80%"></div>
-                        <div class="bg-orange-400 w-3 h-[75%] rounded-t shadow-sm transition-all hover:bg-orange-500 relative group-hover:opacity-90" title="Usage: 75%"></div>
+                @foreach($usageVsSalesData as $index => $data)
+                    <div class="flex flex-col items-center space-y-1 w-1/4 group relative">
+                        <div class="w-full flex items-end justify-center space-x-1 h-28">
+                            <div class="bg-blue-500 w-3 h-[{{ $data['sales'] }}%] rounded-t shadow-sm transition-all hover:bg-blue-600 relative group-hover:opacity-90" 
+                                 title="Sales: {{ number_format($data['sales_raw'], 1) }}"></div>
+                            <div class="bg-orange-400 w-3 h-[{{ $data['usage'] }}%] rounded-t shadow-sm transition-all hover:bg-orange-500 relative group-hover:opacity-90" 
+                                 title="Usage: {{ number_format($data['usage_raw'], 1) }}"></div>
+                        </div>
+                        <span class="text-[10px] {{ $index === count($usageVsSalesData) - 1 ? 'text-gray-800 font-bold' : 'text-gray-500 font-medium' }}">
+                            {{ $data['day'] }}
+                        </span>
                     </div>
-                    <span class="text-[10px] text-gray-500 font-medium">Mon</span>
-                </div>
-                <!-- Day 2 -->
-                <div class="flex flex-col items-center space-y-1 w-1/4 group">
-                    <div class="w-full flex items-end justify-center space-x-1 h-28">
-                        <div class="bg-blue-500 w-3 h-[60%] rounded-t shadow-sm transition-all hover:bg-blue-600" title="Sales: 60%"></div>
-                        <div class="bg-orange-400 w-3 h-[65%] rounded-t shadow-sm transition-all hover:bg-orange-500" title="Usage: 65%"></div>
-                    </div>
-                    <span class="text-[10px] text-gray-500 font-medium">Tue</span>
-                </div>
-                <!-- Day 3 -->
-                <div class="flex flex-col items-center space-y-1 w-1/4 group">
-                    <div class="w-full flex items-end justify-center space-x-1 h-28">
-                        <div class="bg-blue-500 w-3 h-[95%] rounded-t shadow-sm transition-all hover:bg-blue-600" title="Sales: 95%"></div>
-                        <div class="bg-orange-400 w-3 h-[92%] rounded-t shadow-sm transition-all hover:bg-orange-500" title="Usage: 92%"></div>
-                    </div>
-                    <span class="text-[10px] text-gray-800 font-bold">Today</span>
-                </div>
+                @endforeach
             </div>
 
             <div class="mt-3 flex justify-center gap-4 text-[10px] uppercase tracking-wide font-semibold">
@@ -118,15 +96,15 @@
                 <p class="text-xs text-gray-500 mt-1">Items requiring your immediate attention.</p>
             </div>
             <div class="text-center py-6">
-                <span class="text-6xl font-black text-gray-800 tracking-tight">5</span>
+                <span class="text-6xl font-black text-gray-800 tracking-tight">{{ $pendingApprovals['total'] }}</span>
                 <p class="text-sm text-amber-600 font-bold mt-2 uppercase tracking-wide">Action Items</p>
             </div>
             <div class="space-y-2">
                 <button class="w-full py-2 bg-amber-50 text-amber-700 text-xs font-bold rounded hover:bg-amber-100 transition flex items-center justify-center border border-amber-100">
-                    Requisitions (5)
+                    Requisitions ({{ $pendingApprovals['requisitions'] }})
                 </button>
                 <button class="w-full py-2 bg-white text-gray-600 text-xs font-bold rounded hover:bg-gray-50 transition flex items-center justify-center border border-gray-200">
-                    Purchase Requests (0)
+                    Purchase Requests ({{ $pendingApprovals['purchase_requests'] }})
                 </button>
             </div>
         </div>
@@ -144,61 +122,54 @@
             </div>
             <div class="divide-y divide-gray-100">
                 
-                {{-- Req 1 --}}
-                <div class="p-4 flex items-center justify-between hover:bg-gray-50 transition group">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-xs group-hover:bg-amber-200 transition">
-                            REQ
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <p class="text-sm font-bold text-gray-900">Baker John Doe</p>
-                                <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">2 mins ago</span>
+                @forelse($recentRequisitions as $requisition)
+                    <div class="p-4 flex items-center justify-between hover:bg-gray-50 transition group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-xs group-hover:bg-amber-200 transition">
+                                REQ
                             </div>
-                            <p class="text-xs text-gray-600 mt-0.5">Requesting: <span class="font-bold text-chocolate">50kg White Sugar</span></p>
-                            <p class="text-[10px] text-gray-400 italic mt-0.5">"For Wedding Cake Order #882"</p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-3 py-1.5 rounded transition font-bold border border-green-200">
-                            Approve
-                        </button>
-                        <button class="text-xs bg-white text-gray-600 hover:bg-red-50 hover:text-red-600 px-3 py-1.5 rounded transition font-medium border border-gray-200 hover:border-red-200">
-                            Reject
-                        </button>
-                        <button class="text-gray-400 hover:text-chocolate px-2">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                {{-- Req 2 --}}
-                <div class="p-4 flex items-center justify-between hover:bg-gray-50 transition group">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-xs group-hover:bg-amber-200 transition">
-                            REQ
-                        </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <p class="text-sm font-bold text-gray-900">Maria (Pastry)</p>
-                                <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">1 hr ago</span>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <p class="text-sm font-bold text-gray-900">{{ $requisition['requester_name'] }}</p>
+                                    <span class="text-[10px] bg-gray-100 text-gray-500 px-1.5 rounded">{{ $requisition['time_ago'] }}</span>
+                                </div>
+                                @if($requisition['main_item'])
+                                    <p class="text-xs text-gray-600 mt-0.5">Requesting: <span class="font-bold text-chocolate">{{ $requisition['main_item']['name'] }}</span></p>
+                                @endif
+                                @if($requisition['purpose'])
+                                    <p class="text-[10px] text-gray-400 italic mt-0.5">"{{ $requisition['purpose'] }}"</p>
+                                @endif
                             </div>
-                            <p class="text-xs text-gray-600 mt-0.5">Requesting: <span class="font-bold text-chocolate">10L Heavy Cream</span></p>
-                            <p class="text-[10px] text-gray-400 italic mt-0.5">"Stock Replenishment"</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <form method="POST" action="{{ route('supervisor.requisitions.approve', $requisition['id']) }}" style="display: inline;">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-3 py-1.5 rounded transition font-bold border border-green-200">
+                                    Approve
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ route('supervisor.requisitions.reject', $requisition['id']) }}" style="display: inline;">
+                                @csrf
+                                @method('PATCH')
+                                <button type="submit" class="text-xs bg-white text-gray-600 hover:bg-red-50 hover:text-red-600 px-3 py-1.5 rounded transition font-medium border border-gray-200 hover:border-red-200">
+                                    Reject
+                                </button>
+                            </form>
+                            <button class="text-gray-400 hover:text-chocolate px-2">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button class="text-xs bg-green-100 text-green-700 hover:bg-green-200 px-3 py-1.5 rounded transition font-bold border border-green-200">
-                            Approve
-                        </button>
-                        <button class="text-xs bg-white text-gray-600 hover:bg-red-50 hover:text-red-600 px-3 py-1.5 rounded transition font-medium border border-gray-200 hover:border-red-200">
-                            Reject
-                        </button>
-                        <button class="text-gray-400 hover:text-chocolate px-2">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
+                @empty
+                    <div class="p-8 text-center">
+                        <div class="text-gray-400 mb-2">
+                            <i class="fas fa-check-circle text-4xl"></i>
+                        </div>
+                        <p class="text-sm text-gray-600 font-medium">No pending requisitions</p>
+                        <p class="text-xs text-gray-500 mt-1">All requisitions are up to date!</p>
                     </div>
-                </div>
+                @endforelse
 
             </div>
         </div>

@@ -97,6 +97,16 @@
                     </a>
                 </li>
 
+                <!-- Create Purchase Request -->
+                <li>
+                    <a href="{{ Route::has('inventory.purchase-requests.create') ? route('inventory.purchase-requests.create') : '#' }}"
+                        id="menu-inventory-purchase-requests-create"
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.purchase-requests.create') ? 'active-menu' : '' }}">
+                        <i class="fas fa-cart-plus w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create Purchase Request</span>
+                    </a>
+                </li>
+
                 <!-- 4. STOCK MANAGEMENT -->
                 <li class="pt-4">
                     <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Stock Management</div>

@@ -128,7 +128,7 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
-            @include('Admin.layout.header')
+            @include('Supervisor.layout.header')
             
             <!-- Page Content -->
             <main class="flex-1 overflow-y-auto p-6 custom-scrollbar">
