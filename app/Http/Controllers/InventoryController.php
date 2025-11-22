@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\Item;
+use App\Models\Category;
+use App\Models\Unit;
+
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,37 +16,129 @@ use Illuminate\Support\Str;
 class InventoryController extends Controller
 {
     /**
-     * Display purchase requests for inventory staff
+     * Display purchase request interface with catalog and history
      */
     public function index()
     {
-        $user = Auth::user();
-        
-        // Get purchase requests (for now, show all)
-        $purchaseRequests = PurchaseRequest::with([
-            'requestedBy:id,name,email',
-            'purchaseRequestItems.item.unit'
-        ])
-        ->latest()
-        ->paginate(10);
-
-        // Calculate statistics
-        $pendingCount = PurchaseRequest::where('status', 'pending')->count();
-        $approvedCount = PurchaseRequest::where('status', 'approved')->count();
-
-        return view('Inventory.outbound.purchase_request', compact(
-            'purchaseRequests',
-            'pendingCount',
-            'approvedCount'
-        ));
+        return $this->create();
     }
 
     /**
      * Show the form for creating a new purchase request
+     * This serves as the main interface with catalog and history
      */
     public function create()
     {
-        return $this->index();
+        $user = Auth::user();
+        
+        // Get active items with current stock information from current_stock table
+        $items = Item::with([
+            'category',
+            'unit',
+            'currentStockRecord'
+        ])
+        ->where('is_active', true)
+        ->orderBy('name')
+        ->get()
+        ->map(function($item) {
+            // Get current stock from the relationship
+            $currentStock = $item->currentStockRecord ? 
+                $item->currentStockRecord->current_quantity : 0;
+            
+            // Ensure relationships exist with fallbacks
+            $category = $item->category ? [
+                'id' => $item->category->id,
+                'name' => $item->category->name
+            ] : ['id' => 0, 'name' => 'General'];
+            
+            $unit = $item->unit ? [
+                'id' => $item->unit->id,
+                'name' => $item->unit->name,
+                'symbol' => $item->unit->symbol
+            ] : ['id' => 0, 'name' => 'Piece', 'symbol' => 'pcs'];
+            
+            return (object) [
+                'id' => $item->id,
+                'item_code' => $item->item_code ?? 'N/A',
+                'name' => $item->name,
+                'description' => $item->description ?? '',
+                'category' => (object) $category,
+                'unit' => (object) $unit,
+                'cost_price' => (float) ($item->cost_price ?? 0),
+                'selling_price' => (float) ($item->selling_price ?? 0),
+                'current_stock' => (float) $currentStock,
+                'min_stock_level' => (float) ($item->min_stock_level ?? 0),
+                'max_stock_level' => (float) ($item->max_stock_level ?? 0),
+                'reorder_point' => (float) ($item->reorder_point ?? 0),
+                'stock_status' => $this->getStockStatus($item)
+            ];
+        });
+
+        // Get active categories for filtering
+        $categories = Category::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        // Get user's default department
+        $defaultDepartment = $user->userProfile?->department ?? 'Inventory';
+
+        // Get purchase request history with filtering
+        $purchaseRequests = PurchaseRequest::with([
+            'requestedBy:id,name,email',
+            'purchaseRequestItems.item.unit'
+        ])
+        ->where('requested_by', $user->id) // Only show user's own requests
+        ->when(request('status'), function($query, $status) {
+            if ($status !== 'all') {
+                $query->where('status', $status);
+            }
+        })
+        ->when(request('department'), function($query, $department) {
+            if ($department !== 'all') {
+                $query->where('department', 'like', '%' . $department . '%');
+            }
+        })
+        ->when(request('search'), function($query, $search) {
+            $query->where(function($q) use ($search) {
+                $q->where('pr_number', 'like', '%' . $search . '%')
+                  ->orWhere('department', 'like', '%' . $search . '%')
+                  ->orWhere('notes', 'like', '%' . $search . '%');
+            });
+        })
+        ->latest('created_at')
+        ->paginate(10)
+        ->withQueryString();
+
+        // Calculate statistics for the current user
+        $stats = [
+            'total' => PurchaseRequest::where('requested_by', $user->id)->count(),
+            'pending' => PurchaseRequest::where('requested_by', $user->id)
+                ->where('status', 'pending')->count(),
+            'approved' => PurchaseRequest::where('requested_by', $user->id)
+                ->where('status', 'approved')->count(),
+            'rejected' => PurchaseRequest::where('requested_by', $user->id)
+                ->where('status', 'rejected')->count(),
+            'draft' => PurchaseRequest::where('requested_by', $user->id)
+                ->where('status', 'draft')->count(),
+        ];
+
+        // Get unique departments for filter dropdown
+        $departments = PurchaseRequest::where('requested_by', $user->id)
+            ->distinct()
+            ->whereNotNull('department')
+            ->where('department', '!=', '')
+            ->pluck('department')
+            ->sort()
+            ->values();
+
+        return view('Inventory.outbound.purchase_request', compact(
+            'items',
+            'categories',
+            'defaultDepartment',
+            'stats',
+            'departments',
+            'purchaseRequests'
+        ));
     }
 
     /**
@@ -221,21 +316,169 @@ class InventoryController extends Controller
     }
 
     /**
-     * Get items for dropdown selection
+     * Get items for dropdown selection with filtering (API endpoint)
      */
-    public function getItems()
+    public function getItems(Request $request)
     {
         try {
-            $items = Item::select('id', 'name', 'item_code', 'unit_id')
-                ->with('unit:id,name')
-                ->where('status', 'active')
-                ->orderBy('name')
-                ->get();
+            $query = Item::with(['category', 'unit', 'currentStockRecord'])
+                ->where('is_active', true);
 
-            return response()->json($items);
+            // Apply search filter
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', '%' . $search . '%')
+                      ->orWhere('item_code', 'like', '%' . $search . '%')
+                      ->orWhere('description', 'like', '%' . $search . '%');
+                });
+            }
+
+            // Apply category filter
+            if ($request->has('category_id') && $request->category_id !== 'all') {
+                $query->where('category_id', $request->category_id);
+            }
+
+            // Apply stock status filter
+            if ($request->has('stock_status') && $request->stock_status !== 'all') {
+                $stockStatus = $request->stock_status;
+                $query->whereHas('currentStockRecord', function($q) use ($stockStatus) {
+                    // This will be filtered in the map function
+                });
+            }
+
+            $items = $query->orderBy('name')
+                ->get()
+                ->map(function($item) {
+                    // Get current stock from the relationship
+                    $currentStock = $item->currentStockRecord ? 
+                        $item->currentStockRecord->current_quantity : 0;
+                    
+                    $category = $item->category ? [
+                        'id' => $item->category->id,
+                        'name' => $item->category->name
+                    ] : ['id' => 0, 'name' => 'General'];
+                    
+                    $unit = $item->unit ? [
+                        'id' => $item->unit->id,
+                        'name' => $item->unit->name,
+                        'symbol' => $item->unit->symbol
+                    ] : ['id' => 0, 'name' => 'Piece', 'symbol' => 'pcs'];
+                    
+                    return [
+                        'id' => $item->id,
+                        'item_code' => $item->item_code ?? 'N/A',
+                        'name' => $item->name,
+                        'description' => $item->description ?? '',
+                        'category' => $category,
+                        'unit' => $unit,
+                        'cost_price' => (float) ($item->cost_price ?? 0),
+                        'selling_price' => (float) ($item->selling_price ?? 0),
+                        'current_stock' => (float) $currentStock,
+                        'min_stock_level' => (float) ($item->min_stock_level ?? 0),
+                        'max_stock_level' => (float) ($item->max_stock_level ?? 0),
+                        'reorder_point' => (float) ($item->reorder_point ?? 0),
+                        'stock_status' => $this->getStockStatus($item),
+                        'stock_percentage' => $item->max_stock_level > 0 ? 
+                            ($currentStock / $item->max_stock_level * 100) : 0
+                    ];
+                });
+
+            // Apply stock status filter if needed
+            if ($request->has('stock_status') && $request->stock_status !== 'all') {
+                $items = $items->filter(function($item) use ($request) {
+                    return $item['stock_status'] === $request->stock_status;
+                })->values();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $items->values(),
+                'total' => $items->count()
+            ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching items: ' . $e->getMessage());
-            return response()->json([], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch items: ' . $e->getMessage(),
+                'data' => [],
+                'total' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Get stock status based on current vs reorder point
+     * Uses current_stock table data
+     */
+    private function getStockStatus($item)
+    {
+        // Get current stock from the relationship
+        $currentStock = $item->currentStockRecord ? 
+            $item->currentStockRecord->current_quantity : 0;
+        
+        $reorderPoint = $item->reorder_point ?? 0;
+        $maxLevel = $item->max_stock_level ?? 0;
+
+        if ($currentStock <= 0) {
+            return 'out_of_stock';
+        } elseif ($currentStock <= $reorderPoint) {
+            return 'low_stock';
+        } elseif ($maxLevel > 0 && $currentStock >= $maxLevel * 0.8) {
+            return 'high_stock';
+        } else {
+            return 'normal_stock';
+        }
+    }
+
+    /**
+     * Get categories for filter dropdown
+     */
+    public function getCategories()
+    {
+        try {
+            $categories = Category::where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'description']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $categories
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching categories: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch categories',
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Get user departments for autocomplete
+     */
+    public function getDepartments()
+    {
+        try {
+            $departments = PurchaseRequest::distinct()
+                ->whereNotNull('department')
+                ->where('department', '!=', '')
+                ->pluck('department')
+                ->sort()
+                ->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $departments
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching departments: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch departments',
+                'data' => []
+            ], 500);
         }
     }
 }

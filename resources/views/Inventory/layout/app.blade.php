@@ -124,7 +124,7 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
-            @include('Employee.layout.header')
+            @include('Inventory.layout.header')
             
             <!-- Page Content -->
             <main class="flex-1 overflow-y-auto p-6 custom-scrollbar">
@@ -184,7 +184,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const activeMenu = document.querySelector('.menu-item.active-menu');
             if (!activeMenu) {
-                setActiveMenu('menu-employee-dashboard');
+                setActiveMenu('menu-inventory-dashboard');
             }
         });
     </script>

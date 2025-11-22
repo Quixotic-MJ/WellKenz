@@ -272,15 +272,17 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         return view('Inventory.outbound.direct_issuance'); 
     })->name('outbound.direct');
 
+    // Purchase Requests - Main interface (catalog + history)
+    Route::get('/outbound/purchase-requests', [InventoryController::class, 'index'])->name('purchase-requests.index');
     Route::get('/outbound/purchase-requests/create', [InventoryController::class, 'create'])->name('purchase-requests.create');
-
     Route::post('/outbound/purchase-requests', [InventoryController::class, 'createPurchaseRequest'])->name('purchase-requests.store');
-
     Route::get('/purchase-requests/{id}', [InventoryController::class, 'show'])->name('purchase-requests.show');
-
     Route::delete('/purchase-requests/{id}', [InventoryController::class, 'destroy'])->name('purchase-requests.destroy');
 
+    // API endpoints for purchase requests
     Route::get('/purchase-requests/items', [InventoryController::class, 'getItems'])->name('purchase-requests.items');
+    Route::get('/purchase-requests/categories', [InventoryController::class, 'getCategories'])->name('purchase-requests.categories');
+    Route::get('/purchase-requests/departments', [InventoryController::class, 'getDepartments'])->name('purchase-requests.departments');
 
     // Stock Mgmt
     Route::get('/stock/count', function () { 
