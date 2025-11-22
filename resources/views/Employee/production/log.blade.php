@@ -92,8 +92,8 @@
                                     @enderror
                                 </div>
                                 
-                                <!-- Rejects -->
-                                <div>
+                                <!-- Rejects (Conditional) -->
+                                <div class="rejects-field" style="display: none;">
                                     <label class="block text-xs font-bold text-red-600 uppercase tracking-wide mb-1.5">Waste / Rejects</label>
                                     <div class="relative">
                                         <input type="number" name="rejects" id="rejectsOutput" step="0.01" min="0" value="0" 
@@ -149,7 +149,9 @@
                                 <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Time</th>
                                 <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Product Details</th>
                                 <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Good</th>
-                                <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Reject</th>
+                                @if($todayProductions->first() && isset($todayProductions->first()->reject_quantity))
+                                    <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Reject</th>
+                                @endif
                                 <th class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                             </tr>
                         </thead>
@@ -167,7 +169,11 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-bold text-gray-900 leading-tight">
-                                                    {{ $production->recipe->finishedItem->name }}
+                                                    @if($production->recipe && $production->recipe->finishedItem)
+                                                        {{ $production->recipe->finishedItem->name }}
+                                                    @else
+                                                        <span class="text-gray-500 italic">Product unavailable</span>
+                                                    @endif
                                                 </p>
                                                 <p class="text-[10px] font-mono text-gray-500 mt-0.5 bg-gray-100 inline-block px-1.5 py-0.5 rounded">
                                                     {{ $production->batch_number ?? 'N/A' }}
@@ -178,18 +184,28 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-right">
                                         <span class="text-sm font-bold text-green-700 bg-green-50 px-2 py-1 rounded-md border border-green-100">
                                             {{ number_format($production->actual_quantity ?? 0, 0) }} 
-                                            <span class="text-[10px] font-normal text-green-600 uppercase">{{ $production->recipe->finishedItem->unit->symbol ?? 'pcs' }}</span>
+                                            <span class="text-[10px] font-normal text-green-600 uppercase">
+                                                @if($production->recipe && $production->recipe->finishedItem && $production->recipe->finishedItem->unit)
+                                                    {{ $production->recipe->finishedItem->unit->symbol }}
+                                                @elseif($production->unit)
+                                                    {{ $production->unit->symbol ?? 'pcs' }}
+                                                @else
+                                                    pcs
+                                                @endif
+                                            </span>
                                         </span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-right">
-                                        @if($production->reject_quantity > 0)
-                                            <span class="text-sm font-bold text-red-600 bg-red-50 px-2 py-1 rounded-md border border-red-100">
-                                                {{ number_format($production->reject_quantity, 0) }}
-                                            </span>
-                                        @else
-                                            <span class="text-xs text-gray-300">-</span>
-                                        @endif
-                                    </td>
+                                    @if($todayProductions->first() && isset($todayProductions->first()->reject_quantity))
+                                        <td class="px-6 py-4 whitespace-nowrap text-right">
+                                            @if(isset($production->reject_quantity) && $production->reject_quantity > 0)
+                                                <span class="text-sm font-bold text-red-600 bg-red-50 px-2 py-1 rounded-md border border-red-100">
+                                                    {{ number_format($production->reject_quantity, 0) }}
+                                                </span>
+                                            @else
+                                                <span class="text-xs text-gray-300">-</span>
+                                            @endif
+                                        </td>
+                                    @endif
                                     <td class="px-6 py-4 whitespace-nowrap text-right">
                                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold capitalize
                                             @if($production->status === 'completed') bg-green-100 text-green-800
@@ -197,13 +213,13 @@
                                             @else bg-gray-100 text-gray-800
                                             @endif">
                                             <span class="w-1.5 h-1.5 rounded-full bg-current mr-1.5"></span>
-                                            {{ ucfirst(str_replace('_', ' ', $production->status)) }}
+                                            {{ ucfirst(str_replace('_', ' ', $production->status ?? 'unknown')) }}
                                         </span>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="px-6 py-12 text-center">
+                                    <td colspan="{{ $todayProductions->first() && isset($todayProductions->first()->reject_quantity) ? '5' : '4' }}" class="px-6 py-12 text-center">
                                         <div class="flex flex-col items-center justify-center">
                                             <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
                                                 <i class="fas fa-clipboard text-3xl text-gray-300"></i>
@@ -280,7 +296,45 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     
-    // 1. Update Unit Display and Recipe Status based on product selection
+    // 1. Check if reject_quantity column exists and show/hide field accordingly
+    function checkRejectQuantitySupport() {
+        const rejectField = document.querySelector('.rejects-field');
+        const rejectInput = document.getElementById('rejectsOutput');
+        const confirmReject = document.getElementById('confReject');
+        
+        // Check if any production has reject_quantity data
+        fetch('/employee/production/check-reject-support', {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.supports_reject_quantity) {
+                // Show reject quantity field if supported
+                if (rejectField) rejectField.style.display = 'block';
+            } else {
+                // Hide reject quantity field if not supported
+                if (rejectField) rejectField.style.display = 'none';
+                if (rejectInput) {
+                    rejectInput.value = '0';
+                    rejectInput.disabled = true;
+                }
+                if (confirmReject) {
+                    confirmReject.parentElement.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.log('Error checking reject quantity support, defaulting to visible');
+            // If there's an error, default to showing the field
+            if (rejectField) rejectField.style.display = 'block';
+        });
+    }
+
+    // 2. Update Unit Display and Recipe Status based on product selection
     const productSelect = document.getElementById('productSelect');
     const unitDisplays = document.querySelectorAll('.unit-display');
     
@@ -312,8 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initial call if page reloads with value
     if(productSelect.value) updateUnits();
 
-
-    // 2. Modal Logic
+    // 3. Modal Logic
     const form = document.getElementById('productionForm');
     const confirmModal = document.getElementById('confirmModal');
     const confirmBtn = document.getElementById('confirmBtn');
@@ -349,6 +402,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Submit actual form
         form.submit();
     });
+
+    // 4. Initialize - check reject quantity support
+    checkRejectQuantitySupport();
 });
 </script>
 @endsection

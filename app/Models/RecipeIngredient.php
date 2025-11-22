@@ -9,6 +9,8 @@ class RecipeIngredient extends Model
 {
     use HasFactory;
 
+    public $timestamps = false;
+
     protected $table = 'recipe_ingredients';
 
     protected $fillable = [

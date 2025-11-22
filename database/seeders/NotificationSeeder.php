@@ -253,7 +253,105 @@ class NotificationSeeder extends Seeder
             DB::table('notifications')->insert($notification);
         }
 
+        // Add employee notifications for testing
+        $employeeNotifications = [
+            [
+                'user_id' => 5, // Employee (Baker)
+                'title' => 'Low Stock Alert: Bread Flour',
+                'message' => 'Bread flour inventory is running low (15kg remaining). Production will be affected if not restocked soon.',
+                'type' => 'inventory',
+                'priority' => 'urgent',
+                'is_read' => false,
+                'action_url' => '/employee/requisitions/create',
+                'metadata' => json_encode([
+                    'item' => 'Bread Flour',
+                    'current_stock' => '15kg',
+                    'minimum_required' => '50kg'
+                ]),
+                'created_at' => Carbon::now()->subMinutes(5),
+            ],
+            [
+                'user_id' => 5,
+                'title' => 'Recipe Update Required',
+                'message' => 'White Bread Recipe #WB-2024-01 has been updated by supervisor. Please review the new specifications.',
+                'type' => 'production',
+                'priority' => 'high',
+                'is_read' => false,
+                'action_url' => '/employee/recipes',
+                'metadata' => json_encode([
+                    'recipe' => 'White Bread #WB-2024-01',
+                    'updated_by' => 'Supervisor Sarah',
+                    'changes' => 'Mixing time reduced'
+                ]),
+                'created_at' => Carbon::now()->subMinutes(30),
+            ],
+            [
+                'user_id' => 5,
+                'title' => 'New Requisition Approved',
+                'message' => 'Your requisition for 25kg All-Purpose Flour has been approved and will be delivered tomorrow.',
+                'type' => 'purchasing',
+                'priority' => 'normal',
+                'is_read' => true,
+                'action_url' => '/employee/requisitions/history',
+                'metadata' => json_encode([
+                    'requisition_id' => 'REQ-2024-0156',
+                    'item' => 'All-Purpose Flour 25kg',
+                    'delivery_date' => 'Tomorrow 9AM'
+                ]),
+                'created_at' => Carbon::now()->subHours(2),
+            ],
+            [
+                'user_id' => 5,
+                'title' => 'Production Report Due',
+                'message' => 'Daily production log for today is due at 5:00 PM. Please submit your batch completion reports.',
+                'type' => 'system_info',
+                'priority' => 'normal',
+                'is_read' => true,
+                'action_url' => '/employee/production/log',
+                'metadata' => json_encode([
+                    'due_time' => '5:00 PM',
+                    'report_type' => 'Daily Production Log',
+                    'batches_completed' => '3'
+                ]),
+                'created_at' => Carbon::now()->subHours(4),
+            ],
+            [
+                'user_id' => 5,
+                'title' => 'Maintenance Scheduled',
+                'message' => 'Oven #2 will undergo maintenance from 2:00-4:00 PM tomorrow. Plan production accordingly.',
+                'type' => 'production',
+                'priority' => 'normal',
+                'is_read' => true,
+                'action_url' => null,
+                'metadata' => json_encode([
+                    'equipment' => 'Oven #2',
+                    'maintenance_time' => '2:00-4:00 PM',
+                    'impact' => 'Reduced capacity'
+                ]),
+                'created_at' => Carbon::now()->subDays(1),
+            ],
+            [
+                'user_id' => 6, // Another Employee (Assistant Baker)
+                'title' => 'Quality Check Reminder',
+                'message' => 'Reminder: Please conduct quality checks on finished products before packaging.',
+                'type' => 'quality',
+                'priority' => 'normal',
+                'is_read' => false,
+                'action_url' => '/employee/production/log',
+                'metadata' => json_encode([
+                    'check_type' => 'Quality Inspection',
+                    'frequency' => 'Every batch',
+                    'focus_areas' => 'Texture, Color, Taste'
+                ]),
+                'created_at' => Carbon::now()->subHours(1),
+            ],
+        ];
+
+        foreach ($employeeNotifications as $notification) {
+            DB::table('notifications')->insert($notification);
+        }
+
         $this->command->info('Sample notifications created successfully!');
-        $this->command->info('Total notifications created: ' . (count($notifications) + count($otherUserNotifications)));
+        $this->command->info('Total notifications created: ' . (count($notifications) + count($otherUserNotifications) + count($employeeNotifications)));
     }
 }

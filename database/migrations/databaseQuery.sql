@@ -387,7 +387,7 @@ CREATE INDEX idx_recipe_ingredients_item ON recipe_ingredients(item_id);
 -- ============================================================================
 -- PRODUCTION ORDERS TABLE
 -- ============================================================================
-CREATE TABLE production_orders (
+CREATE  (
     id SERIAL PRIMARY KEY,
     production_number VARCHAR(50) NOT NULL UNIQUE,
     recipe_id INTEGER NOT NULL REFERENCES recipes(id),

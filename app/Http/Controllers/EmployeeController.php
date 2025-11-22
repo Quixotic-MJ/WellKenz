@@ -11,6 +11,7 @@ use App\Models\Item;
 use App\Models\Category;
 use App\Models\Unit;
 use App\Models\Recipe;
+use App\Models\RecipeIngredient;
 use App\Models\ProductionOrder;
 use App\Models\Batch;
 use App\Models\StockMovement;
@@ -660,6 +661,155 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Update an existing recipe.
+     */
+    public function updateRecipe(Request $request, Recipe $recipe)
+    {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'recipe_code' => 'nullable|string|max:50|unique:recipes,recipe_code,' . $recipe->id,
+                'description' => 'nullable|string',
+                'finished_item_id' => 'required|exists:items,id',
+                'yield_quantity' => 'required|numeric|min:0.001',
+                'yield_unit_id' => 'required|exists:units,id',
+                'preparation_time' => 'nullable|integer|min:0',
+                'cooking_time' => 'nullable|integer|min:0',
+                'serving_size' => 'nullable|string|max:255',
+                'instructions' => 'nullable|string',
+                'notes' => 'nullable|string',
+                'ingredients' => 'required|array|min:1',
+                'ingredients.*.item_id' => 'required|exists:items,id',
+                'ingredients.*.quantity_required' => 'required|numeric|min:0.001',
+                'ingredients.*.unit_id' => 'required|exists:units,id',
+                'ingredients.*.notes' => 'nullable|string'
+            ]);
+
+            // Update recipe
+            $recipe->update([
+                'recipe_code' => $validated['recipe_code'] ?? $recipe->recipe_code,
+                'name' => $validated['name'],
+                'description' => $validated['description'],
+                'finished_item_id' => $validated['finished_item_id'],
+                'yield_quantity' => $validated['yield_quantity'],
+                'yield_unit_id' => $validated['yield_unit_id'],
+                'preparation_time' => $validated['preparation_time'] ?? 0,
+                'cooking_time' => $validated['cooking_time'] ?? 0,
+                'serving_size' => $validated['serving_size'],
+                'instructions' => $validated['instructions'],
+                'notes' => $validated['notes']
+            ]);
+
+            // Delete existing ingredients
+            RecipeIngredient::where('recipe_id', $recipe->id)->delete();
+
+            // Create new recipe ingredients
+            foreach ($validated['ingredients'] as $ingredientData) {
+                RecipeIngredient::create([
+                    'recipe_id' => $recipe->id,
+                    'item_id' => $ingredientData['item_id'],
+                    'quantity_required' => $ingredientData['quantity_required'],
+                    'unit_id' => $ingredientData['unit_id'],
+                    'is_optional' => false,
+                    'notes' => $ingredientData['notes']
+                ]);
+            }
+
+            // Create notification for supervisors about updated recipe
+            $supervisors = User::where('role', 'supervisor')->get();
+            foreach ($supervisors as $supervisor) {
+                Notification::create([
+                    'user_id' => $supervisor->id,
+                    'title' => 'Recipe Updated',
+                    'message' => Auth::user()->name . " has updated the recipe: {$validated['name']} ({$recipe->recipe_code}).",
+                    'type' => 'recipe',
+                    'priority' => 'normal',
+                    'created_at' => Carbon::now()
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Recipe updated successfully.',
+                'recipe' => [
+                    'id' => $recipe->id,
+                    'name' => $recipe->name,
+                    'recipe_code' => $recipe->recipe_code
+                ]
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Recipe update failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while updating the recipe. Please try again.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a recipe.
+     */
+    public function deleteRecipe(Recipe $recipe)
+    {
+        try {
+            // Check if recipe exists and is active
+            if (!$recipe->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Recipe not found or already deleted.'
+                ], 404);
+            }
+
+            // Check if there are production orders using this recipe
+            $productionOrderCount = ProductionOrder::where('recipe_id', $recipe->id)->count();
+            if ($productionOrderCount > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Cannot delete recipe. {$productionOrderCount} production order(s) are using this recipe."
+                ], 422);
+            }
+
+            $recipeName = $recipe->name;
+            $recipeCode = $recipe->recipe_code;
+
+            // Delete the recipe (this will cascade delete ingredients due to foreign key constraints)
+            $recipe->delete();
+
+            // Create notification for supervisors about deleted recipe
+            $supervisors = User::where('role', 'supervisor')->get();
+            foreach ($supervisors as $supervisor) {
+                Notification::create([
+                    'user_id' => $supervisor->id,
+                    'title' => 'Recipe Deleted',
+                    'message' => Auth::user()->name . " has deleted the recipe: {$recipeName} ({$recipeCode}).",
+                    'type' => 'recipe',
+                    'priority' => 'normal',
+                    'created_at' => Carbon::now()
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Recipe deleted successfully.'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Recipe deletion failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while deleting the recipe. Please try again.'
+            ], 500);
+        }
+    }
+
+    /**
      * Confirm receipt of incoming delivery.
      */
     public function confirmReceipt(Request $request, Requisition $requisition)
@@ -702,13 +852,29 @@ class EmployeeController extends Controller
     /**
      * Show notifications.
      */
-    public function notifications()
+    public function notifications(Request $request)
     {
-        $notifications = Notification::forCurrentUser()
+        $filter = $request->get('filter', 'all');
+        
+        // Calculate stats for the current user
+        $totalNotifications = Notification::forCurrentUser()->count();
+        $unreadNotifications = Notification::forCurrentUser('unread')->count();
+        $highPriorityNotifications = Notification::forCurrentUser('high')->count();
+        $urgentNotifications = Notification::forCurrentUser('urgent')->count();
+
+        // Apply the filter and get notifications
+        $notifications = Notification::forCurrentUser($filter)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return view('Employee.notification', compact('notifications'));
+        $stats = [
+            'total' => $totalNotifications,
+            'unread' => $unreadNotifications,
+            'high_priority' => $highPriorityNotifications,
+            'urgent' => $urgentNotifications
+        ];
+
+        return view('Employee.notification', compact('notifications', 'stats', 'filter'));
     }
 
     /**
@@ -733,6 +899,67 @@ class EmployeeController extends Controller
         Notification::markAllAsReadForCurrentUser();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Mark notification as unread.
+     */
+    public function markNotificationAsUnread(Notification $notification)
+    {
+        if ($notification->user_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $notification->markAsUnread();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Get header notifications for the current user.
+     */
+    public function getHeaderNotifications()
+    {
+        try {
+            // Get only the 5 most recent unread notifications for header display
+            $notifications = Notification::forCurrentUser()
+                ->where('is_read', false)
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($notification) {
+                    return [
+                        'id' => $notification->id,
+                        'title' => $notification->title,
+                        'message' => $notification->message,
+                        'time_ago' => $notification->getTimeAgoAttribute(),
+                        'action_url' => $notification->action_url,
+                        'icon_class' => $notification->getIconClass(),
+                        'read_at' => $notification->is_read ? now() : null,
+                        'priority' => $notification->priority,
+                        'type' => $notification->type,
+                        'created_at' => $notification->created_at
+                    ];
+                });
+
+            $unreadCount = Notification::unreadCountForCurrentUser();
+
+            return response()->json([
+                'success' => true,
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting header notifications: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load notifications',
+                'notifications' => [],
+                'unread_count' => 0
+            ], 500);
+        }
     }
 
     /**
@@ -797,5 +1024,25 @@ class EmployeeController extends Controller
                 })
             ]
         ]);
+    }
+
+    /**
+     * Check if reject quantity is supported (AJAX).
+     */
+    public function checkRejectQuantitySupport()
+    {
+        try {
+            // Check if the reject_quantity column exists in production_orders table
+            $hasRejectColumn = \Schema::hasColumn('production_orders', 'reject_quantity');
+            
+            return response()->json([
+                'supports_reject_quantity' => $hasRejectColumn
+            ]);
+        } catch (\Exception $e) {
+            // If there's an error, default to false (no support)
+            return response()->json([
+                'supports_reject_quantity' => false
+            ]);
+        }
     }
 }

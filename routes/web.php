@@ -316,13 +316,18 @@ Route::middleware(['auth', 'role:employee'])->prefix('employee')->name('employee
     // Production
     Route::get('/production/log', [EmployeeController::class, 'productionLog'])->name('production.log');
     Route::post('/production/log', [EmployeeController::class, 'storeProduction'])->name('production.store');
+    Route::get('/production/check-reject-support', [EmployeeController::class, 'checkRejectQuantitySupport'])->name('production.check-reject-support');
     Route::get('/recipes', [EmployeeController::class, 'recipes'])->name('recipes.index');
     Route::get('/recipes/{recipe}/details', [EmployeeController::class, 'getRecipeDetails'])->name('recipes.details');
     Route::post('/recipes', [EmployeeController::class, 'createRecipe'])->name('recipes.store');
+    Route::put('/recipes/{recipe}', [EmployeeController::class, 'updateRecipe'])->name('recipes.update');
+    Route::delete('/recipes/{recipe}', [EmployeeController::class, 'deleteRecipe'])->name('recipes.destroy');
 
     // Notifications
     Route::get('/notifications', [EmployeeController::class, 'notifications'])->name('notifications');
+    Route::get('/notifications/header', [EmployeeController::class, 'getHeaderNotifications'])->name('notifications.header');
     Route::post('/notifications/{notification}/mark-read', [EmployeeController::class, 'markNotificationAsRead'])->name('notifications.mark-read');
+    Route::post('/notifications/{notification}/mark-unread', [EmployeeController::class, 'markNotificationAsUnread'])->name('notifications.mark-unread');
     Route::post('/notifications/mark-all-read', [EmployeeController::class, 'markAllNotificationsAsRead'])->name('notifications.mark-all-read');
 
     // AJAX endpoints
