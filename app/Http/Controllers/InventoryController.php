@@ -771,4 +771,76 @@ class InventoryController extends Controller
         }
     }
 
+    /**
+     * Store a newly created purchase request
+     */
+    public function createPurchaseRequest(Request $request)
+    {
+        try {
+            $request->validate([
+                'department' => 'required|string|max:255',
+                'priority' => 'required|in:low,normal,high,urgent',
+                'request_date' => 'required|date',
+                'notes' => 'nullable|string',
+                'items' => 'required|array|min:1',
+                'items.*.item_id' => 'required|exists:items,id',
+                'items.*.quantity_requested' => 'required|numeric|min:0.01',
+                'items.*.unit_price_estimate' => 'required|numeric|min:0'
+            ]);
+
+            $user = Auth::user();
+
+            DB::beginTransaction();
+
+            // Generate PR number
+            $prNumber = 'PR-' . date('Y') . '-' . str_pad(PurchaseRequest::count() + 1, 4, '0', STR_PAD_LEFT);
+
+            // Calculate total
+            $totalEstimatedCost = 0;
+            foreach ($request->items as $item) {
+                $totalEstimatedCost += ($item['quantity_requested'] * $item['unit_price_estimate']);
+            }
+
+            // Create purchase request
+            $purchaseRequest = PurchaseRequest::create([
+                'pr_number' => $prNumber,
+                'requested_by' => $user->id,
+                'department' => $request->department,
+                'priority' => $request->priority,
+                'request_date' => $request->request_date,
+                'notes' => $request->notes,
+                'status' => 'pending',
+                'total_estimated_cost' => $totalEstimatedCost
+            ]);
+
+            // Create purchase request items
+            foreach ($request->items as $itemData) {
+                PurchaseRequestItem::create([
+                    'purchase_request_id' => $purchaseRequest->id,
+                    'item_id' => $itemData['item_id'],
+                    'quantity_requested' => $itemData['quantity_requested'],
+                    'unit_price_estimate' => $itemData['unit_price_estimate'],
+                    'total_estimated_cost' => ($itemData['quantity_requested'] * $itemData['unit_price_estimate'])
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Purchase Request created successfully',
+                'pr_number' => $prNumber
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::error('Error creating purchase request: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create purchase request: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
