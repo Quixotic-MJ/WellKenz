@@ -274,9 +274,17 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
 Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('inventory.')->group(function () {
     
     // Dashboard
-    Route::get('/dashboard', function () { 
-        return view('Inventory.home'); 
-    })->name('dashboard');
+    Route::get('/home', [InventoryController::class, 'home'])->name('dashboard');
+
+    // Purchase Orders
+    Route::get('/purchase-orders', [PurchaseController::class, 'index'])->name('purchase-orders.index');
+    Route::get('/purchase-orders/create', [PurchaseController::class, 'create'])->name('purchase-orders.create');
+    Route::get('/purchase-orders/{id}', [PurchaseController::class, 'show'])->name('purchase-orders.show');
+    
+    // Add the AJAX routes for the home page buttons
+    Route::post('/requisitions/{requisitionId}/start-picking', [InventoryController::class, 'startPicking'])->name('requisitions.start-picking');
+    Route::post('/batches/{batchId}/pick', [InventoryController::class, 'pickBatch'])->name('batches.pick');
+    
 
     // Inbound
     Route::get('/inbound/receive', function () { 
