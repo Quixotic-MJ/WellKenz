@@ -11,6 +11,9 @@ class CurrentStock extends Model
 
     protected $table = 'current_stock';
 
+    // Disable automatic timestamps since the table doesn't have updated_at
+    public $timestamps = false;
+
     protected $fillable = [
         'item_id',
         'current_quantity',

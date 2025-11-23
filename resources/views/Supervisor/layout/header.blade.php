@@ -36,9 +36,9 @@
                 <button id="notificationsBtn" onclick="toggleNotifications()" 
                         class="square-button p-2 text-text-muted hover:text-text-dark hover:bg-cream-bg transition-colors relative focus:outline-none">
                     <i class="fas fa-bell text-base"></i>
-                    <!-- Static Count -->
-                    <span class="absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white" id="notificationCount">
-                        3
+                    <!-- Dynamic Count -->
+                    <span class="absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white hidden" id="notificationCount">
+                        0
                     </span>
                 </button>
                 
@@ -46,68 +46,27 @@
                 <div id="notificationsDropdown" class="hidden absolute right-0 mt-2 w-80 bg-white shadow-lg border-2 border-border-soft z-50 rounded-lg" role="menu">
                     <div class="p-3 border-b-2 border-border-soft bg-cream-bg rounded-t-lg flex justify-between items-center">
                         <h3 class="font-bold text-text-dark text-xs uppercase tracking-wider" id="notifHeader">
-                            Notifications (3)
+                            Notifications (0)
                         </h3>
                         <button onclick="markAllAsRead()" class="text-xs text-chocolate hover:text-chocolate-dark font-bold">
                             Mark all as read
                         </button>
                     </div>
                     <div class="max-h-80 overflow-y-auto" id="notificationsList">
+                        <!-- Loading state -->
+                        <div id="notificationsLoading" class="p-4 text-center">
+                            <i class="fas fa-spinner fa-spin text-text-muted"></i>
+                            <p class="text-xs text-text-muted mt-2">Loading notifications...</p>
+                        </div>
                         
-                        <!-- Mock Notification 1 -->
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
-                             data-notification-id="1"
-                             onclick="markNotificationAsRead(1)">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-red-100 flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-exclamation-triangle text-red-600 text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">Low Stock Alert</p>
-                                    <p class="text-xs text-text-muted mt-1">Cake Flour is below reorder level (5kg remaining).</p>
-                                    <p class="text-xs text-text-muted mt-2">2 mins ago</p>
-                                </div>
-                                <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1 unread-dot"></div>
-                            </div>
+                        <!-- Empty state -->
+                        <div id="notificationsEmpty" class="p-4 text-center hidden">
+                            <i class="fas fa-bell-slash text-text-muted text-2xl"></i>
+                            <p class="text-xs text-text-muted mt-2">No new notifications</p>
                         </div>
-
-                        <!-- Mock Notification 2 -->
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
-                             data-notification-id="2"
-                             onclick="markNotificationAsRead(2)">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-blue-100 flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-file-invoice text-blue-600 text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">New Requisition</p>
-                                    <p class="text-xs text-text-muted mt-1">Baker John requested 50kg Sugar.</p>
-                                    <p class="text-xs text-text-muted mt-2">1 hour ago</p>
-                                </div>
-                                <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1 unread-dot"></div>
-                            </div>
-                        </div>
-
-                        <!-- Mock Notification 3 -->
-                        <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
-                             data-notification-id="3"
-                             onclick="markNotificationAsRead(3)">
-                            <div class="flex items-start space-x-3">
-                                <div class="w-8 h-8 bg-green-100 flex items-center justify-center flex-shrink-0 rounded-full">
-                                    <i class="fas fa-check-circle text-green-600 text-sm"></i>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-semibold text-text-dark">PO Delivered</p>
-                                    <p class="text-xs text-text-muted mt-1">Order #PO-882 from Golden Grain has arrived.</p>
-                                    <p class="text-xs text-text-muted mt-2">3 hours ago</p>
-                                </div>
-                                <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1 unread-dot"></div>
-                            </div>
-                        </div>
-
                     </div>
                     <div class="p-3 border-t-2 border-border-soft rounded-b-lg">
-                        <a href="#" class="block text-center text-xs font-bold text-chocolate hover:text-chocolate-dark transition uppercase tracking-wider">
+                        <a href="{{ route('supervisor.notifications') }}" class="block text-center text-xs font-bold text-chocolate hover:text-chocolate-dark transition uppercase tracking-wider">
                             View All Notifications
                         </a>
                     </div>
@@ -163,11 +122,13 @@
                         </a>
                     </div>
                     <div class="p-2 border-t-2 border-border-soft">
-                        <!-- Mock Logout -->
-                        <a href="/" class="flex items-center space-x-3 w-full px-3 py-2 text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark transition justify-center rounded-md">
-                            <i class="fas fa-sign-out-alt w-4 text-center"></i>
-                            <span>Sign Out</span>
-                        </a>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="flex items-center space-x-3 w-full px-3 py-2 text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark transition justify-center rounded-md">
+                                <i class="fas fa-sign-out-alt w-4 text-center"></i>
+                                <span>Sign Out</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -189,7 +150,14 @@
         if (profileDropdown) profileDropdown.classList.add('hidden');
         
         // Toggle self
-        if (notificationsDropdown) notificationsDropdown.classList.toggle('hidden');
+        if (notificationsDropdown) {
+            notificationsDropdown.classList.toggle('hidden');
+            
+            // Load notifications when opening dropdown
+            if (!notificationsDropdown.classList.contains('hidden')) {
+                loadHeaderNotifications();
+            }
+        }
     }
 
     // Toggles the Profile dropdown visibility
@@ -215,34 +183,137 @@
         }
     }
 
-    // Mock: Mark notification as read (Frontend Only)
-    function markNotificationAsRead(notificationId) {
-        // Update UI
-        const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
-        if (notificationItem) {
-            const unreadDot = notificationItem.querySelector('.unread-dot');
-            if (unreadDot) {
-                unreadDot.remove();
-                // Update notification count locally
-                updateNotificationCount(-1);
+    // Load header notifications from API
+    function loadHeaderNotifications() {
+        const notificationsList = getEl('notificationsList');
+        const loadingEl = getEl('notificationsLoading');
+        const emptyEl = getEl('notificationsEmpty');
+        
+        // Show loading
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (emptyEl) emptyEl.classList.add('hidden');
+        
+        fetch('{{ route("supervisor.notifications.header") }}', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
-        }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (loadingEl) loadingEl.classList.add('hidden');
+            
+            if (data.success && data.notifications.length > 0) {
+                // Clear existing notifications (except loading and empty states)
+                const existingNotifications = notificationsList.querySelectorAll('.notification-item');
+                existingNotifications.forEach(item => item.remove());
+                
+                // Add new notifications
+                data.notifications.forEach(notification => {
+                    const notificationHtml = createNotificationItem(notification);
+                    notificationsList.insertAdjacentHTML('beforeend', notificationHtml);
+                });
+                
+                if (emptyEl) emptyEl.classList.add('hidden');
+            } else {
+                // Show empty state
+                if (emptyEl) emptyEl.classList.remove('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading notifications:', error);
+            if (loadingEl) loadingEl.classList.add('hidden');
+            if (emptyEl) emptyEl.classList.remove('hidden');
+        });
     }
 
-    // Mock: Mark all notifications as read (Frontend Only)
+    // Create notification item HTML
+    function createNotificationItem(notification) {
+        const iconParts = notification.icon_class.split(' ');
+        const iconClass = iconParts[0] + ' ' + iconParts[1];
+        const bgClass = iconParts.slice(2).join(' ');
+        
+        return `
+            <div class="p-4 border-b border-border-soft hover:bg-cream-bg cursor-pointer transition-colors notification-item"
+                 data-notification-id="${notification.id}"
+                 onclick="markNotificationAsRead(${notification.id})">
+                <div class="flex items-start space-x-3">
+                    <div class="w-8 h-8 ${bgClass} flex items-center justify-center flex-shrink-0 rounded-full">
+                        <i class="${iconClass} text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-semibold text-text-dark">${notification.title}</p>
+                        <p class="text-xs text-text-muted mt-1">${notification.message}</p>
+                        <p class="text-xs text-text-muted mt-2">${notification.time_ago}</p>
+                    </div>
+                    <div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-1 unread-dot"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Mark notification as read
+    function markNotificationAsRead(notificationId) {
+        fetch(`/supervisor/notifications/${notificationId}/mark-read`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update UI
+                const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (notificationItem) {
+                    const unreadDot = notificationItem.querySelector('.unread-dot');
+                    if (unreadDot) {
+                        unreadDot.remove();
+                        // Update notification count
+                        updateNotificationCount(-1);
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error marking notification as read:', error);
+        });
+    }
+
+    // Mark all notifications as read
     function markAllAsRead() {
-        // Remove all unread indicators
-        document.querySelectorAll('.unread-dot').forEach(dot => dot.remove());
-        
-        // Update notification count to zero
-        const notificationCount = getEl('notificationCount');
-        if (notificationCount) {
-            notificationCount.remove();
-        }
-        
-        // Update the count in the header
-        const header = getEl('notifHeader');
-        if (header) header.textContent = 'Notifications (0)';
+        fetch('{{ route("supervisor.notifications.mark-all-read") }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove all unread indicators
+                document.querySelectorAll('.unread-dot').forEach(dot => dot.remove());
+                
+                // Update notification count to zero
+                const notificationCount = getEl('notificationCount');
+                if (notificationCount) {
+                    notificationCount.classList.add('hidden');
+                    notificationCount.textContent = '0';
+                }
+                
+                // Update the count in the header
+                const header = getEl('notifHeader');
+                if (header) header.textContent = 'Notifications (0)';
+            }
+        })
+        .catch(error => {
+            console.error('Error marking all as read:', error);
+        });
     }
 
     // Update notification count in the bell
@@ -252,17 +323,13 @@
         currentCount += change;
         
         if (currentCount <= 0) {
-            if (notificationCount) notificationCount.remove();
+            if (notificationCount) {
+                notificationCount.classList.add('hidden');
+                notificationCount.textContent = '0';
+            }
         } else {
-            if (!notificationCount) {
-                // Create new count badge if it doesn't exist and count > 0
-                const bell = getEl('notificationsBtn');
-                const badge = document.createElement('span');
-                badge.id = 'notificationCount';
-                badge.className = 'absolute -top-1 -right-1 bg-caramel text-white text-xs h-5 w-5 rounded-full flex items-center justify-center font-bold ring-2 ring-white';
-                badge.textContent = currentCount > 99 ? '99+' : currentCount;
-                bell.appendChild(badge);
-            } else {
+            if (notificationCount) {
+                notificationCount.classList.remove('hidden');
                 notificationCount.textContent = currentCount > 99 ? '99+' : currentCount;
             }
         }
@@ -272,6 +339,44 @@
         if (header) {
             header.textContent = `Notifications (${Math.max(0, currentCount)})`;
         }
+    }
+
+    // Load initial notification count
+    function loadNotificationCount() {
+        fetch('{{ route("supervisor.notifications.unread_count") }}', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const notificationCount = getEl('notificationCount');
+                const header = getEl('notifHeader');
+                
+                if (data.count > 0) {
+                    if (notificationCount) {
+                        notificationCount.classList.remove('hidden');
+                        notificationCount.textContent = data.count > 99 ? '99+' : data.count;
+                    }
+                    if (header) {
+                        header.textContent = `Notifications (${data.count})`;
+                    }
+                } else {
+                    if (notificationCount) {
+                        notificationCount.classList.add('hidden');
+                    }
+                    if (header) {
+                        header.textContent = 'Notifications (0)';
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error loading notification count:', error);
+        });
     }
 
     // Close dropdowns when clicking outside
@@ -292,8 +397,9 @@
         }
     });
 
-    // Restore sidebar state from localStorage
+    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
+        // Restore sidebar state from localStorage
         const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
         const sidebar = getEl('sidebar');
         if (sidebar) {
@@ -301,5 +407,11 @@
                 sidebar.classList.add('collapsed');
             }
         }
+        
+        // Load initial notification count
+        loadNotificationCount();
+        
+        // Refresh notification count every 60 seconds
+        setInterval(loadNotificationCount, 60000);
     });
 </script>

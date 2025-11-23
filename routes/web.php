@@ -159,20 +159,48 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
 
     // Notifications
     Route::get('/notifications', [SupervisorController::class, 'notifications'])->name('notifications');
+    
+    // Notification management routes - More specific routes first to avoid model binding conflicts
+    Route::get('/notifications/header', [SupervisorController::class, 'getHeaderNotifications'])->name('notifications.header');
+    Route::get('/notifications/unread-count', [SupervisorController::class, 'getUnreadNotificationCount'])->name('notifications.unread_count');
+    Route::post('/notifications/mark-all-read', [SupervisorController::class, 'markAllNotificationsAsRead'])->name('notifications.mark-all-read');
+    Route::post('/notifications/bulk-operations', [SupervisorController::class, 'bulkNotificationOperations'])->name('notifications.bulk-operations');
+    
+    // Routes with model binding - with constraints to prevent conflicts
+    Route::post('/notifications/{notification}/mark-read', [SupervisorController::class, 'markNotificationAsRead'])->name('notifications.mark-read')
+        ->where('notification', '[0-9]+');
+    Route::post('/notifications/{notification}/mark-unread', [SupervisorController::class, 'markNotificationAsUnread'])->name('notifications.mark-unread')
+        ->where('notification', '[0-9]+');
+    Route::delete('/notifications/{notification}', [SupervisorController::class, 'deleteNotification'])->name('notifications.destroy')
+        ->where('notification', '[0-9]+');
 
     // Inventory Oversight
-    Route::get('/inventory', [SupervisorController::class, 'stockLevel'])->name('inventory.index');
-    Route::get('/inventory/history', [SupervisorController::class, 'stockHistory'])->name('inventory.history');
-    Route::get('/inventory/history/{item}', [SupervisorController::class, 'stockCard'])->name('inventory.history.item');
+    Route::get('/inventory', [SupervisorController::class, 'stockLevel'])->name('inventory.stock-level');
+    Route::get('/inventory/export-csv', [SupervisorController::class, 'exportStockCSV'])->name('inventory.export-stock-csv');
+    Route::get('/inventory/print-report', [SupervisorController::class, 'printStockReport'])->name('inventory.print-stock-report');
+    Route::get('/inventory/history', [SupervisorController::class, 'stockHistory'])->name('inventory.stock-history');
+    Route::get('/inventory/card/{item}', [SupervisorController::class, 'stockCard'])->name('inventory.stock-card');
     Route::get('/inventory/adjustments', [SupervisorController::class, 'inventoryAdjustments'])->name('inventory.adjustments');
+    
+    // Inventory Adjustments API endpoints
+    Route::get('/inventory/adjustments/items/{item}', [SupervisorController::class, 'getItemDetails'])->name('inventory.adjustments.item-details');
+    Route::post('/inventory/adjustments', [SupervisorController::class, 'createAdjustment'])->name('inventory.adjustments.store');
+    Route::get('/inventory/adjustments/history', [SupervisorController::class, 'getAdjustmentHistory'])->name('inventory.adjustments.history');
 
     // Reports
-    Route::get('/reports/yield', [SupervisorController::class, 'yieldVariance'])->name('reports.yield');
     Route::get('/reports/expiry', [SupervisorController::class, 'expiryReport'])->name('reports.expiry');
-    Route::get('/reports/cogs', [SupervisorController::class, 'cogsReport'])->name('reports.cogs');
+    
+    // Use First List and Alerts
+    Route::get('/reports/print-use-first-list', [SupervisorController::class, 'printUseFirstList'])->name('reports.print_use_first_list');
+    Route::post('/reports/alert-bakers', [SupervisorController::class, 'alertBakers'])->name('reports.alert_bakers');
 
     // Settings
     Route::get('/settings/stock-levels', [SupervisorController::class, 'branchSetting'])->name('settings.stock-levels');
+    
+    // Stock Level Configuration AJAX endpoints
+    Route::post('/settings/stock-levels/update', [SupervisorController::class, 'updateMinimumStockLevel'])->name('settings.stock-levels.update');
+    Route::post('/settings/stock-levels/seasonal-adjustment', [SupervisorController::class, 'applySeasonalAdjustment'])->name('settings.stock-levels.seasonal-adjustment');
+    Route::get('/settings/stock-levels/data', [SupervisorController::class, 'getStockConfigurationData'])->name('settings.stock-levels.data');
 
     // AJAX endpoints for dashboard
     Route::get('/stock-overview', [SupervisorController::class, 'getStockOverview'])->name('stock.overview');
@@ -305,7 +333,10 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
 });
 
 
-// 5. STAFF / EMPLOYEE ROUTES (Baker)
+
+
+
+// 6. STAFF / EMPLOYEE ROUTES (Baker)
 // Security: Only users with role 'employee' can access
 // Note: AuthController redirects to 'employee.dashboard', so we name it 'employee.'
 Route::middleware(['auth', 'role:employee'])->prefix('employee')->name('employee.')->group(function () {

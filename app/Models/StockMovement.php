@@ -12,6 +12,9 @@ class StockMovement extends Model
 
     protected $table = 'stock_movements';
 
+    // Disable automatic timestamps since the table doesn't have updated_at
+    public $timestamps = false;
+
     protected $fillable = [
         'item_id',
         'movement_type',
@@ -23,7 +26,8 @@ class StockMovement extends Model
         'expiry_date',
         'location',
         'notes',
-        'user_id'
+        'user_id',
+        'created_at'
     ];
 
     protected $casts = [

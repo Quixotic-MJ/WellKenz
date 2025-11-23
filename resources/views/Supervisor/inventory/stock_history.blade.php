@@ -59,7 +59,7 @@
                                 {{ number_format($item->reorder_point, 2) }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <a href="{{ route('supervisor.inventory.history.item', $item->id) }}" 
+                                <a href="{{ route('supervisor.inventory.stock-card', $item->id) }}" 
                                    class="text-chocolate hover:text-chocolate-dark">
                                     View History
                                 </a>

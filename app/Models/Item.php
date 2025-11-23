@@ -75,4 +75,9 @@ class Item extends Model
         $currentStock = $this->currentStockRecord ? $this->currentStockRecord->current_quantity : 0;
         return $currentStock <= 0;
     }
+
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 }

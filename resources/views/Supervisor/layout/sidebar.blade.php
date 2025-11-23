@@ -73,9 +73,9 @@
 
                 <!-- Stock Levels -->
                 <li>
-                    <a href="{{ Route::has('supervisor.inventory.index') ? route('supervisor.inventory.index') : '#' }}"
+                    <a href="{{ Route::has('supervisor.inventory.stock-level') ? route('supervisor.inventory.stock-level') : '#' }}"
                         id="menu-supervisor-inventory-index"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.inventory.index') ? 'active-menu' : '' }}">
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.inventory.stock-level') ? 'active-menu' : '' }}">
                         <i class="fas fa-warehouse w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Stock Levels (Live)</span>
                     </a>
@@ -83,9 +83,9 @@
 
                 <!-- Stock Card (History) -->
                 <li>
-                    <a href="{{ Route::has('supervisor.inventory.history') ? route('supervisor.inventory.history') : '#' }}"
+                    <a href="{{ Route::has('supervisor.inventory.stock-history') ? route('supervisor.inventory.stock-history') : '#' }}"
                         id="menu-supervisor-inventory-history"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.inventory.history') ? 'active-menu' : '' }}">
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.inventory.stock-history') ? 'active-menu' : '' }}">
                         <i class="fas fa-history w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Stock Card / History</span>
                     </a>
@@ -106,16 +106,6 @@
                     <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Reports & Analytics</div>
                 </li>
 
-                <!-- Yield Variance -->
-                <li>
-                    <a href="{{ Route::has('supervisor.reports.yield') ? route('supervisor.reports.yield') : '#' }}"
-                        id="menu-supervisor-reports-yield"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.reports.yield') ? 'active-menu' : '' }}">
-                        <i class="fas fa-chart-line w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Yield Variance</span>
-                    </a>
-                </li>
-
                 <!-- Expiry Report -->
                 <li>
                     <a href="{{ Route::has('supervisor.reports.expiry') ? route('supervisor.reports.expiry') : '#' }}"
@@ -123,16 +113,6 @@
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.reports.expiry') ? 'active-menu' : '' }}">
                         <i class="fas fa-hourglass-end w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Expiry Report</span>
-                    </a>
-                </li>
-
-                <!-- COGS -->
-                <li>
-                    <a href="{{ Route::has('supervisor.reports.cogs') ? route('supervisor.reports.cogs') : '#' }}"
-                        id="menu-supervisor-reports-cogs"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('supervisor.reports.cogs') ? 'active-menu' : '' }}">
-                        <i class="fas fa-coins w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Cost of Goods (COGS)</span>
                     </a>
                 </li>
 
