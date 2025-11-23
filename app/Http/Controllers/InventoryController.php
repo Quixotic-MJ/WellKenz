@@ -6,16 +6,335 @@ use Illuminate\Http\Request;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\Item;
+use App\Models\PurchaseOrder;
+use App\Models\Batch;
+use App\Models\Requisition;
+use App\Models\StockMovement;
+use App\Models\CurrentStock;
+use App\Models\User;
+use App\Models\Notification;
 use App\Models\Category;
 use App\Models\Unit;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class InventoryController extends Controller
 {
     /**
+     * Display inventory dashboard home with auto-expiry notifications
+     */
+    public function home()
+    {
+        try {
+            // Pending Purchase Orders
+            $pendingPurchaseOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
+                ->whereIn('status', ['sent', 'confirmed', 'partial'])
+                ->orderBy('expected_delivery_date', 'desc')
+                ->limit(5)
+                ->get();
+
+            // Expiring batches with auto-notification check
+            $expiringBatches = Batch::with(['item.unit', 'supplier'])
+                ->whereIn('status', ['active', 'quarantine'])
+                ->where(function($query) {
+                    $query->whereBetween('expiry_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
+                        ->orWhereBetween('expiry_date', ['2024-01-01', '2024-12-31']);
+                })
+                ->orderBy('expiry_date')
+                ->limit(5)
+                ->get();
+
+            // Auto-create expiry notifications for critical batches
+            $this->createAutoExpiryNotifications($expiringBatches);
+
+            // Two separate requisition widgets
+            $pendingApprovalRequisitions = Requisition::with(['requestedBy', 'requisitionItems'])
+                ->where('status', 'pending')
+                ->orderBy('created_at', 'desc')
+                ->limit(3)
+                ->get();
+
+            $readyForPickingRequisitions = Requisition::with(['requestedBy', 'requisitionItems'])
+                ->where('status', 'approved')
+                ->orderBy('created_at', 'desc')
+                ->limit(3)
+                ->get();
+
+            // Inventory calculations
+            $inventoryValue = DB::table('current_stock')
+                ->join('items', 'current_stock.item_id', '=', 'items.id')
+                ->where('items.is_active', true)
+                ->select(DB::raw('COALESCE(SUM(current_stock.current_quantity * current_stock.average_cost), 0) as total_value'))
+                ->value('total_value') ?? 0;
+
+            $lowStockItemsCount = DB::table('items')
+                ->join('current_stock', 'items.id', '=', 'current_stock.item_id')
+                ->where('items.is_active', true)
+                ->whereRaw('current_stock.current_quantity <= items.min_stock_level')
+                ->where('current_stock.current_quantity', '>', 0)
+                ->count();
+
+            $activeItemsCount = Item::where('is_active', true)->count();
+            $todayMovementsCount = StockMovement::count();
+
+            return view('Inventory.home', compact(
+                'pendingPurchaseOrders',
+                'expiringBatches',
+                'pendingApprovalRequisitions',
+                'readyForPickingRequisitions',
+                'inventoryValue',
+                'lowStockItemsCount',
+                'activeItemsCount',
+                'todayMovementsCount'
+            ));
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading inventory dashboard: ' . $e->getMessage());
+            
+            return view('Inventory.home', [
+                'pendingPurchaseOrders' => collect(),
+                'expiringBatches' => collect(),
+                'pendingApprovalRequisitions' => collect(),
+                'readyForPickingRequisitions' => collect(),
+                'inventoryValue' => 0,
+                'lowStockItemsCount' => 0,
+                'activeItemsCount' => 0,
+                'todayMovementsCount' => 0
+            ]);
+        }
+    }
+
+    /**
+     * Automatically create notifications for expiring batches
+     */
+    private function createAutoExpiryNotifications($expiringBatches)
+    {
+        try {
+            foreach ($expiringBatches as $batch) {
+                $daysUntilExpiry = Carbon::parse($batch->expiry_date)->diffInDays(now());
+                
+                // Only create notifications for batches expiring within 3 days
+                if ($daysUntilExpiry <= 3) {
+                    $this->notifyExpiringBatch($batch, $daysUntilExpiry);
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error creating auto expiry notifications: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Notify relevant users about expiring batch
+     */
+    private function notifyExpiringBatch($batch, $daysUntilExpiry)
+    {
+        try {
+            // Check if notification already exists for this batch today
+            $existingNotification = Notification::where('metadata->batch_id', $batch->id)
+                ->whereDate('created_at', today())
+                ->where('type', 'batch_expiry')
+                ->first();
+
+            if ($existingNotification) {
+                return; // Notification already sent today
+            }
+
+            $priority = $this->getExpiryPriority($daysUntilExpiry);
+            $message = $this->getExpiryMessage($batch, $daysUntilExpiry, $priority);
+
+            // Notify Production Staff (employees)
+            $productionUsers = User::where('role', 'employee')
+                ->where('is_active', true)
+                ->get();
+
+            // Notify Supervisors
+            $supervisorUsers = User::where('role', 'supervisor')
+                ->where('is_active', true)
+                ->get();
+
+            $allUsers = $productionUsers->merge($supervisorUsers);
+
+            foreach ($allUsers as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => "🚨 {$priority} Priority: Item Expiring Soon",
+                    'message' => $message,
+                    'type' => 'batch_expiry',
+                    'priority' => $priority,
+                    'action_url' => '/inventory/batches?highlight=' . $batch->id,
+                    'metadata' => [
+                        'batch_id' => $batch->id,
+                        'batch_number' => $batch->batch_number,
+                        'item_name' => $batch->item->name,
+                        'expiry_date' => $batch->expiry_date,
+                        'days_until_expiry' => $daysUntilExpiry,
+                        'quantity' => $batch->quantity,
+                        'unit' => $batch->item->unit->symbol,
+                        'priority_level' => $priority
+                    ]
+                ]);
+            }
+
+            \Log::info("Auto expiry notification sent for batch {$batch->batch_number}", [
+                'batch_id' => $batch->id,
+                'days_until_expiry' => $daysUntilExpiry,
+                'notified_users' => $allUsers->count(),
+                'priority' => $priority
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error notifying expiring batch: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Determine priority level based on days until expiry
+     */
+    private function getExpiryPriority($daysUntilExpiry)
+    {
+        if ($daysUntilExpiry <= 1) return 'urgent';
+        if ($daysUntilExpiry <= 2) return 'high';
+        if ($daysUntilExpiry <= 3) return 'normal';
+        return 'low';
+    }
+
+    /**
+     * Generate appropriate expiry message
+     */
+    private function getExpiryMessage($batch, $daysUntilExpiry, $priority)
+    {
+        $urgencyText = [
+            'urgent' => 'EXPIRES TODAY',
+            'high' => 'Expires tomorrow',
+            'normal' => "Expires in {$daysUntilExpiry} days",
+            'low' => "Expires in {$daysUntilExpiry} days"
+        ];
+
+        return "🕒 {$urgencyText[$priority]}: {$batch->item->name} (Batch: {$batch->batch_number})\n\n" .
+               "📦 Quantity: {$batch->quantity} {$batch->item->unit->symbol}\n" .
+               "📅 Expiry Date: " . Carbon::parse($batch->expiry_date)->format('M d, Y') . "\n" .
+               "📍 Location: " . ($batch->location ?? 'Main Storage') . "\n\n" .
+               "💡 Action Required: Please prioritize usage of this batch in production.";
+    }
+
+    public function pickBatch($batchId)
+    {
+        try {
+            $batch = Batch::with(['item.unit', 'supplier'])->findOrFail($batchId);
+            
+            if ($batch->status !== 'active') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batch is not available for picking. Status: ' . $batch->status
+                ], 400);
+            }
+
+            $daysUntilExpiry = Carbon::parse($batch->expiry_date)->diffInDays(now());
+            $isSampleData = $batch->expiry_date < now()->toDateString();
+
+            DB::beginTransaction();
+
+            // Use 'quarantine' status instead of 'reserved'
+            $batch->update([
+                'status' => 'quarantine', // This will work with your constraint
+                'location' => 'FEFO_PRIORITY_ZONE',
+                'updated_at' => now()
+            ]);
+
+            // Create FEFO reservation record
+            $fefoNote = $isSampleData 
+                ? "FEFO Priority (Sample Data)" 
+                : "FEFO Priority - Expires in {$daysUntilExpiry} days";
+
+            DB::table('stock_movements')->insert([
+                'item_id' => $batch->item_id,
+                'movement_type' => 'adjustment',
+                'reference_number' => 'FEFO-' . $batch->batch_number . '-' . time(),
+                'quantity' => 0,
+                'unit_cost' => $batch->unit_cost,
+                'total_cost' => 0,
+                'batch_number' => $batch->batch_number,
+                'expiry_date' => $batch->expiry_date,
+                'location' => 'FEFO_PRIORITY_ZONE',
+                'notes' => $fefoNote,
+                'user_id' => Auth::id(),
+                'created_at' => now()
+            ]);
+
+            // Notify production team about FEFO reservation
+            $this->notifyFefoReservation($batch, $daysUntilExpiry, $isSampleData);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => $isSampleData
+                    ? "✅ FEFO Priority: Batch {$batch->batch_number} quarantined for priority usage! Production team notified."
+                    : "✅ FEFO Priority: Batch {$batch->batch_number} quarantined for priority usage! Expires in {$daysUntilExpiry} days. Production team notified.",
+                'is_sample_data' => $isSampleData,
+                'batch_status' => 'quarantine'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::error('Error picking batch for FEFO: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to quarantine batch: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Notify production team about FEFO reservation
+     */
+    private function notifyFefoReservation($batch, $daysUntilExpiry, $isSampleData)
+    {
+        try {
+            $productionUsers = User::where('role', 'employee')
+                ->where('is_active', true)
+                ->get();
+
+            $message = $isSampleData
+                ? "📍 FEFO QUARANTINE: {$batch->item->name} (Batch: {$batch->batch_number}) has been quarantined for priority FEFO usage. Please use this batch first in production."
+                : "📍 FEFO QUARANTINE: {$batch->item->name} (Batch: {$batch->batch_number}) has been quarantined for priority FEFO usage. Expires in {$daysUntilExpiry} days. Please use this batch first in production.";
+
+            foreach ($productionUsers as $user) {
+                Notification::create([
+                    'user_id' => $user->id,
+                    'title' => '🎯 FEFO Priority Batch Quarantined',
+                    'message' => $message,
+                    'type' => 'fefo_reservation',
+                    'priority' => $daysUntilExpiry <= 2 ? 'high' : 'normal',
+                    'action_url' => '/employee/recipes?highlight=' . $batch->item_id,
+                    'metadata' => [
+                        'batch_id' => $batch->id,
+                        'item_id' => $batch->item_id,
+                        'batch_number' => $batch->batch_number,
+                        'item_name' => $batch->item->name,
+                        'expiry_date' => $batch->expiry_date,
+                        'days_until_expiry' => $daysUntilExpiry,
+                        'reserved_by' => Auth::user()->name,
+                        'status' => 'quarantine'
+                    ]
+                ]);
+            }
+
+            \Log::info("FEFO quarantine notification sent", [
+                'batch_id' => $batch->id,
+                'notified_production_users' => $productionUsers->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error notifying FEFO quarantine: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Display purchase requests for inventory staff
      * Display purchase request interface with catalog and history
      */
     public function index()
@@ -142,78 +461,6 @@ class InventoryController extends Controller
     }
 
     /**
-     * Store a newly created purchase request
-     */
-    public function createPurchaseRequest(Request $request)
-    {
-        try {
-            $request->validate([
-                'department' => 'required|string|max:255',
-                'priority' => 'required|in:low,normal,high,urgent',
-                'request_date' => 'required|date',
-                'notes' => 'nullable|string',
-                'items' => 'required|array|min:1',
-                'items.*.item_id' => 'required|exists:items,id',
-                'items.*.quantity_requested' => 'required|numeric|min:0.01',
-                'items.*.unit_price_estimate' => 'required|numeric|min:0'
-            ]);
-
-            $user = Auth::user();
-
-            DB::beginTransaction();
-
-            // Generate PR number
-            $prNumber = 'PR-' . date('Y') . '-' . str_pad(PurchaseRequest::count() + 1, 4, '0', STR_PAD_LEFT);
-
-            // Calculate total
-            $totalEstimatedCost = 0;
-            foreach ($request->items as $item) {
-                $totalEstimatedCost += ($item['quantity_requested'] * $item['unit_price_estimate']);
-            }
-
-            // Create purchase request
-            $purchaseRequest = PurchaseRequest::create([
-                'pr_number' => $prNumber,
-                'requested_by' => $user->id,
-                'department' => $request->department,
-                'priority' => $request->priority,
-                'request_date' => $request->request_date,
-                'notes' => $request->notes,
-                'status' => 'pending',
-                'total_estimated_cost' => $totalEstimatedCost
-            ]);
-
-            // Create purchase request items
-            foreach ($request->items as $itemData) {
-                PurchaseRequestItem::create([
-                    'purchase_request_id' => $purchaseRequest->id,
-                    'item_id' => $itemData['item_id'],
-                    'quantity_requested' => $itemData['quantity_requested'],
-                    'unit_price_estimate' => $itemData['unit_price_estimate'],
-                    'total_estimated_cost' => ($itemData['quantity_requested'] * $itemData['unit_price_estimate'])
-                ]);
-            }
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Purchase Request created successfully',
-                'pr_number' => $prNumber
-            ]);
-
-        } catch (\Exception $e) {
-            DB::rollback();
-            \Log::error('Error creating purchase request: ' . $e->getMessage());
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to create purchase request: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
      * Display the specified purchase request
      */
     public function show($id)
@@ -321,6 +568,11 @@ class InventoryController extends Controller
     public function getItems(Request $request)
     {
         try {
+            $items = Item::select('id', 'name', 'item_code', 'unit_id')
+                ->with('unit:id,name')
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get();
             $query = Item::with(['category', 'unit', 'currentStockRecord'])
                 ->where('is_active', true);
 
@@ -481,4 +733,114 @@ class InventoryController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Quick action: Start picking for requisition
+     */
+    public function startPicking($requisitionId)
+    {
+        try {
+            // Use requisitionItems relationship (exists) instead of items (doesn't exist)
+            $requisition = Requisition::with(['requisitionItems', 'requestedBy'])->findOrFail($requisitionId);
+            
+            if ($requisition->status !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Requisition is not approved for picking. Current status: ' . $requisition->status
+                ], 400);
+            }
+
+            // Update requisition status to fulfilled
+            $requisition->update([
+                'status' => 'fulfilled',
+                'fulfilled_by' => Auth::id(),
+                'fulfilled_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Picking started for requisition ' . $requisition->requisition_number . ' with ' . $requisition->requisitionItems->count() . ' items'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error starting picking: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start picking: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Store a newly created purchase request
+     */
+    public function createPurchaseRequest(Request $request)
+    {
+        try {
+            $request->validate([
+                'department' => 'required|string|max:255',
+                'priority' => 'required|in:low,normal,high,urgent',
+                'request_date' => 'required|date',
+                'notes' => 'nullable|string',
+                'items' => 'required|array|min:1',
+                'items.*.item_id' => 'required|exists:items,id',
+                'items.*.quantity_requested' => 'required|numeric|min:0.01',
+                'items.*.unit_price_estimate' => 'required|numeric|min:0'
+            ]);
+
+            $user = Auth::user();
+
+            DB::beginTransaction();
+
+            // Generate PR number
+            $prNumber = 'PR-' . date('Y') . '-' . str_pad(PurchaseRequest::count() + 1, 4, '0', STR_PAD_LEFT);
+
+            // Calculate total
+            $totalEstimatedCost = 0;
+            foreach ($request->items as $item) {
+                $totalEstimatedCost += ($item['quantity_requested'] * $item['unit_price_estimate']);
+            }
+
+            // Create purchase request
+            $purchaseRequest = PurchaseRequest::create([
+                'pr_number' => $prNumber,
+                'requested_by' => $user->id,
+                'department' => $request->department,
+                'priority' => $request->priority,
+                'request_date' => $request->request_date,
+                'notes' => $request->notes,
+                'status' => 'pending',
+                'total_estimated_cost' => $totalEstimatedCost
+            ]);
+
+            // Create purchase request items
+            foreach ($request->items as $itemData) {
+                PurchaseRequestItem::create([
+                    'purchase_request_id' => $purchaseRequest->id,
+                    'item_id' => $itemData['item_id'],
+                    'quantity_requested' => $itemData['quantity_requested'],
+                    'unit_price_estimate' => $itemData['unit_price_estimate'],
+                    'total_estimated_cost' => ($itemData['quantity_requested'] * $itemData['unit_price_estimate'])
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Purchase Request created successfully',
+                'pr_number' => $prNumber
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::error('Error creating purchase request: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create purchase request: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
