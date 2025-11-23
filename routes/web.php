@@ -214,9 +214,7 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
 Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purchasing.')->group(function () {
     
     // Dashboard
-    Route::get('/dashboard', function () { 
-        return view('Purchasing.home'); 
-    })->name('dashboard');
+    Route::get('/dashboard', [PurchasingController::class, 'home'])->name('dashboard');
 
     // Purchase Orders
     Route::get('/po/create', function () { 
@@ -277,9 +275,9 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::get('/home', [InventoryController::class, 'home'])->name('dashboard');
 
     // Purchase Orders
-    Route::get('/purchase-orders', [PurchaseController::class, 'index'])->name('purchase-orders.index');
-    Route::get('/purchase-orders/create', [PurchaseController::class, 'create'])->name('purchase-orders.create');
-    Route::get('/purchase-orders/{id}', [PurchaseController::class, 'show'])->name('purchase-orders.show');
+    Route::get('/purchase-orders', [PurchasingController::class, 'index'])->name('purchase-orders.index');
+    Route::get('/purchase-orders/create', [PurchasingController::class, 'create'])->name('purchase-orders.create');
+    Route::get('/purchase-orders/{id}', [PurchasingController::class, 'show'])->name('purchase-orders.show');
     
     // Add the AJAX routes for the home page buttons
     Route::post('/requisitions/{requisitionId}/start-picking', [InventoryController::class, 'startPicking'])->name('requisitions.start-picking');
