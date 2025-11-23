@@ -380,13 +380,140 @@ const formatKey = (key) => {
 const formatValue = (val) => {
     if (val === true || val === 'true') return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Yes</span>';
     if (val === false || val === 'false') return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">No</span>';
-    if (val === null || val === 'null' || val === '') return '<span class="text-gray-400 italic">—</span>';
-    if (typeof val === 'object') return JSON.stringify(val);
+    if (val === null || val === 'null' || val === '' || val === 'undefined' || val === undefined) return '<span class="text-gray-400 italic">—</span>';
+    if (typeof val === 'object') {
+        console.log('Formatting object:', val);
+        return formatObjectValue(val);
+    }
     return val;
 };
 
+const formatObjectValue = (obj) => {
+    // Handle different types of objects with user-friendly formatting
+    if (obj === null || typeof obj !== 'object') return '—';
+    
+    // Check if it's a user profile object
+    if (obj.id && (obj.employee_id || obj.position || obj.department || obj.phone)) {
+        return formatUserProfile(obj);
+    }
+    
+    // Check if it's a simple object with few keys - show key info
+    const keys = Object.keys(obj);
+    if (keys.length <= 3) {
+        const items = keys.slice(0, 3).map(key => {
+            const value = obj[key];
+            const displayValue = formatValue(value);
+            return `<span class="inline-block bg-gray-100 rounded px-2 py-1 mr-1 mb-1 text-xs">
+                        <span class="font-medium">${formatKey(key)}:</span> 
+                        <span class="text-gray-700">${displayValue.length > 20 ? displayValue.substring(0, 20) + '...' : displayValue}</span>
+                    </span>`;
+        }).join('');
+        return `<div class="space-y-1">${items}</div>`;
+    }
+    
+    // For complex objects, show summary with expandable view
+    const summary = keys.slice(0, 2).map(key => {
+        const value = obj[key];
+        const displayValue = formatValue(value);
+        return `<span class="text-xs">${formatKey(key)}: ${displayValue.length > 15 ? displayValue.substring(0, 15) + '...' : displayValue}</span>`;
+    }).join(' • ');
+    
+    return `<div class="group relative">
+                <span class="text-sm text-gray-700">${summary}</span>
+                <span class="text-xs text-gray-400 ml-2">(+${keys.length - 2} more)</span>
+                <div class="hidden group-hover:block absolute z-10 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-64 top-0 left-0">
+                    <div class="text-xs font-bold text-gray-700 mb-2">Complete Data:</div>
+                    ${keys.map(key => {
+                        const value = obj[key];
+                        const displayValue = formatValue(value);
+                        return `<div class="mb-1">
+                                    <span class="text-xs font-medium text-gray-600">${formatKey(key)}:</span>
+                                    <span class="text-xs text-gray-800 ml-1">${displayValue.length > 50 ? displayValue.substring(0, 50) + '...' : displayValue}</span>
+                                </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+};
+
+const formatSimpleValue = (value) => {
+    if (value === null || value === '' || value === undefined) return '—';
+    
+    // Format monetary values
+    if (typeof value === 'string' && value.match(/^\d+\.?\d*$/)) {
+        const numValue = parseFloat(value);
+        if (numValue > 1000) {
+            return '₱' + numValue.toLocaleString();
+        }
+    }
+    
+    // Format date strings
+    if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString();
+        }
+    }
+    
+    return String(value);
+};
+
+const formatUserProfile = (profile) => {
+    const displayItems = [];
+    
+    if (profile.employee_id) {
+        displayItems.push(`<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 mr-1 mb-1">
+                              <i class="fas fa-id-card mr-1"></i>${profile.employee_id}
+                          </span>`);
+    }
+    
+    if (profile.position) {
+        displayItems.push(`<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800 mr-1 mb-1">
+                              <i class="fas fa-briefcase mr-1"></i>${profile.position}
+                          </span>`);
+    }
+    
+    if (profile.department) {
+        displayItems.push(`<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800 mr-1 mb-1">
+                              <i class="fas fa-building mr-1"></i>${profile.department}
+                          </span>`);
+    }
+    
+    if (profile.phone) {
+        displayItems.push(`<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800 mr-1 mb-1">
+                              <i class="fas fa-phone mr-1"></i>${profile.phone}
+                          </span>`);
+    }
+    
+    if (profile.salary) {
+        displayItems.push(`<span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800 mr-1 mb-1">
+                              <i class="fas fa-money-bill mr-1"></i>₱${parseFloat(profile.salary).toLocaleString()}
+                          </span>`);
+    }
+    
+    if (profile.address) {
+        displayItems.push(`<div class="text-xs text-gray-600 mt-1">
+                              <i class="fas fa-map-marker-alt mr-1"></i>${profile.address.length > 30 ? profile.address.substring(0, 30) + '...' : profile.address}
+                          </div>`);
+    }
+    
+    const otherFields = Object.keys(profile).filter(key => 
+        !['id', 'employee_id', 'position', 'department', 'phone', 'salary', 'address', 'created_at', 'updated_at'].includes(key)
+    );
+    
+    if (otherFields.length > 0) {
+        displayItems.push(`<div class="text-xs text-gray-400 mt-1">
+                              <i class="fas fa-info-circle mr-1"></i>+${otherFields.length} additional field${otherFields.length > 1 ? 's' : ''}
+                          </div>`);
+    }
+    
+    return `<div class="space-y-1">${displayItems.join('')}</div>`;
+};
+
 // Keys to ignore in the display (Technical timestamps and IDs)
-const ignoredKeys = ['id', 'created_at', 'updated_at', 'deleted_at', 'email_verified_at', 'remember_token'];
+const ignoredKeys = [
+    'id', 'created_at', 'updated_at', 'deleted_at', 'email_verified_at', 'remember_token',
+    'password_hash', 'user_id' // Hide sensitive or redundant fields
+];
 
 function openDetailModal(log) {
     const modal = document.getElementById('detailModal');
