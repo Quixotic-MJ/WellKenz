@@ -276,7 +276,7 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     // Dashboard
     Route::get('/home', [InventoryController::class, 'home'])->name('dashboard');
 
-    // Purchase Orders
+    // Purchase Orders (for viewing/managing POs)
     Route::get('/purchase-orders', [PurchaseController::class, 'index'])->name('purchase-orders.index');
     Route::get('/purchase-orders/create', [PurchaseController::class, 'create'])->name('purchase-orders.create');
     Route::get('/purchase-orders/{id}', [PurchaseController::class, 'show'])->name('purchase-orders.show');
@@ -286,10 +286,13 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::post('/batches/{batchId}/pick', [InventoryController::class, 'pickBatch'])->name('batches.pick');
     
 
-    // Inbound
-    Route::get('/inbound/receive', function () { 
-        return view('Inventory.inbound.receive_delivery'); 
-    })->name('inbound.receive');
+    // Receive Delivery Routes - FIXED: No duplicate routes
+    Route::get('/inbound/receive', [InventoryController::class, 'receiveDelivery'])->name('inbound.receive');
+    
+    // Use a different URL pattern for the AJAX endpoints
+    Route::get('/purchase-orders/{id}/receive', [InventoryController::class, 'getPurchaseOrder'])->name('purchase-orders.receive');
+    Route::get('/purchase-orders-search', [InventoryController::class, 'searchPurchaseOrder'])->name('purchase-orders.search'); // Changed route
+    Route::post('/receive-delivery/process', [InventoryController::class, 'processDelivery'])->name('receive-delivery.process');
 
     Route::get('/inbound/labels', function () { 
         return view('Inventory.inbound.print_batch_labels'); 

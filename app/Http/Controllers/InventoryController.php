@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
+use App\Models\PurchaseOrderItem;
+use App\Models\Supplier;
 use App\Models\Item;
 use App\Models\PurchaseOrder;
 use App\Models\Batch;
@@ -840,6 +842,298 @@ class InventoryController extends Controller
                 'success' => false,
                 'message' => 'Failed to create purchase request: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function receiveDelivery()
+    {
+        try {
+            // Get purchase orders that are ready for delivery (sent, confirmed, partial)
+            $purchaseOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems.item.unit'])
+                ->whereIn('status', ['sent', 'confirmed', 'partial'])
+                ->orderBy('expected_delivery_date', 'asc')
+                ->get();
+
+            return view('Inventory.inbound.receive_delivery', compact('purchaseOrders'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading receive delivery: ' . $e->getMessage());
+            return view('Inventory.inbound.receive_delivery', ['purchaseOrders' => collect()]);
+        }
+    }
+
+    /**
+     * Get purchase order details for receiving
+     */
+    public function getPurchaseOrder($id)
+    {
+        try {
+            $purchaseOrder = PurchaseOrder::with([
+                'supplier',
+                'purchaseOrderItems.item' => function($query) {
+                    $query->with(['unit', 'category']);
+                }
+            ])->findOrFail($id);
+
+            if (!in_array($purchaseOrder->status, ['sent', 'confirmed', 'partial'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This purchase order is not available for receiving'
+                ], 400);
+            }
+
+            $formattedItems = $purchaseOrder->purchaseOrderItems->map(function($item) {
+                $isPerishable = $item->item->shelf_life_days > 0;
+                
+                return [
+                    'id' => $item->id,
+                    'item_id' => $item->item_id,
+                    'item_name' => $item->item->name,
+                    'item_code' => $item->item->item_code,
+                    'sku' => $item->item->item_code,
+                    'quantity_ordered' => (float) $item->quantity_ordered,
+                    'quantity_received' => (float) $item->quantity_received,
+                    'quantity_remaining' => (float) $item->quantity_ordered - (float) $item->quantity_received,
+                    'unit_price' => (float) $item->unit_price,
+                    'unit_symbol' => $item->item->unit->symbol ?? 'pcs',
+                    'is_perishable' => $isPerishable,
+                    'shelf_life_days' => $item->item->shelf_life_days,
+                    'category_name' => $item->item->category->name ?? 'General'
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $purchaseOrder->id,
+                    'po_number' => $purchaseOrder->po_number,
+                    'supplier_name' => $purchaseOrder->supplier->name,
+                    'supplier_code' => $purchaseOrder->supplier->supplier_code,
+                    'order_date' => $purchaseOrder->order_date,
+                    'expected_delivery_date' => $purchaseOrder->expected_delivery_date,
+                    'status' => $purchaseOrder->status,
+                    'items' => $formattedItems,
+                    'total_items' => $formattedItems->count(),
+                    'can_receive' => in_array($purchaseOrder->status, ['sent', 'confirmed', 'partial'])
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching purchase order: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load purchase order details'
+            ], 500);
+        }
+    }
+
+    /**
+     * Process received delivery
+     */
+    public function processDelivery(Request $request)
+    {
+        try {
+            $request->validate([
+                'purchase_order_id' => 'required|exists:purchase_orders,id',
+                'items' => 'required|array|min:1',
+                'items.*.purchase_order_item_id' => 'required|exists:purchase_order_items,id',
+                'items.*.quantity_received' => 'required|numeric|min:0',
+                'items.*.batch_number' => 'nullable|string|max:100',
+                'items.*.expiry_date' => 'nullable|date',
+                'items.*.condition' => 'required|in:good,damaged,wet_stained,thawed,leaking'
+            ]);
+
+            DB::beginTransaction();
+
+            $purchaseOrder = PurchaseOrder::with(['purchaseOrderItems'])->findOrFail($request->purchase_order_id);
+            $user = Auth::user();
+            $allItemsComplete = true;
+
+            foreach ($request->items as $receivedItem) {
+                $poItem = PurchaseOrderItem::findOrFail($receivedItem['purchase_order_item_id']);
+                
+                $quantityReceived = (float) $receivedItem['quantity_received'];
+                $batchNumber = $receivedItem['batch_number'] ?? 'BATCH-' . strtoupper(Str::random(8));
+                $expiryDate = $receivedItem['expiry_date'] ?? null;
+                $condition = $receivedItem['condition'];
+
+                // Skip if no quantity received
+                if ($quantityReceived <= 0) {
+                    continue;
+                }
+
+                // Update purchase order item received quantity using query builder to avoid timestamp issues
+                $newReceivedQuantity = $poItem->quantity_received + $quantityReceived;
+                
+                // Use DB query builder instead of Eloquent to avoid updated_at
+                DB::table('purchase_order_items')
+                    ->where('id', $poItem->id)
+                    ->update([
+                        'quantity_received' => $newReceivedQuantity
+                    ]);
+
+                // Check if this item is now complete
+                if ($newReceivedQuantity < $poItem->quantity_ordered) {
+                    $allItemsComplete = false;
+                }
+
+                // Create batch record if perishable or batch number provided
+                $item = $poItem->item;
+                if ($item->shelf_life_days > 0 || !empty($receivedItem['batch_number'])) {
+                    $batch = Batch::create([
+                        'batch_number' => $batchNumber,
+                        'item_id' => $item->id,
+                        'quantity' => $quantityReceived,
+                        'unit_cost' => $poItem->unit_price,
+                        'manufacturing_date' => now()->toDateString(),
+                        'expiry_date' => $expiryDate ?? ($item->shelf_life_days > 0 ? 
+                            now()->addDays($item->shelf_life_days)->toDateString() : null),
+                        'supplier_id' => $purchaseOrder->supplier_id,
+                        'location' => 'Main Storage',
+                        'status' => $condition === 'good' ? 'active' : 'quarantine'
+                    ]);
+                }
+
+                // Create stock movement
+                StockMovement::create([
+                    'item_id' => $item->id,
+                    'movement_type' => 'purchase',
+                    'reference_number' => $purchaseOrder->po_number,
+                    'quantity' => $quantityReceived,
+                    'unit_cost' => $poItem->unit_price,
+                    'total_cost' => $quantityReceived * $poItem->unit_price,
+                    'batch_number' => $batchNumber,
+                    'expiry_date' => $expiryDate,
+                    'location' => 'Main Storage',
+                    'notes' => "Delivery received - Condition: " . $this->getConditionText($condition),
+                    'user_id' => $user->id
+                ]);
+
+                // Update current stock (trigger will handle this, but we can also update directly)
+                $this->updateCurrentStock($item->id, $quantityReceived, $poItem->unit_price);
+            }
+
+            // Update purchase order status
+            $newStatus = $allItemsComplete ? 'completed' : 'partial';
+            $purchaseOrder->update([
+                'status' => $newStatus,
+                'actual_delivery_date' => now()->toDateString()
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Delivery received successfully. PO status: ' . $newStatus,
+                'po_status' => $newStatus
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::error('Error processing delivery: ' . $e->getMessage());
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process delivery: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Search purchase orders by barcode/PO number
+     */
+    public function searchPurchaseOrder(Request $request)
+    {
+        try {
+            $searchTerm = $request->get('search');
+            
+            \Log::info("Searching for PO: {$searchTerm}");
+            
+            if (!$searchTerm) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please enter a PO number or barcode'
+                ], 400);
+            }
+
+            $purchaseOrder = PurchaseOrder::with(['supplier'])
+                ->where('po_number', 'like', '%' . $searchTerm . '%')
+                ->whereIn('status', ['sent', 'confirmed', 'partial'])
+                ->first();
+
+            \Log::info("Search results: " . ($purchaseOrder ? "Found PO {$purchaseOrder->po_number}" : "No PO found"));
+
+            if (!$purchaseOrder) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No active purchase order found with that number'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $purchaseOrder->id,
+                    'po_number' => $purchaseOrder->po_number,
+                    'supplier_name' => $purchaseOrder->supplier->name,
+                    'status' => $purchaseOrder->status
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error searching purchase order: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error searching purchase order'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get condition text for display
+     */
+    private function getConditionText($condition)
+    {
+        $conditions = [
+            'good' => 'Good',
+            'damaged' => 'Damaged',
+            'wet_stained' => 'Wet/Stained',
+            'thawed' => 'Thawed (Reject)',
+            'leaking' => 'Leaking'
+        ];
+
+        return $conditions[$condition] ?? 'Unknown';
+    }
+
+    /**
+     * Update current stock directly (as backup to trigger)
+     */
+    private function updateCurrentStock($itemId, $quantity, $unitCost)
+    {
+        try {
+            $currentStock = CurrentStock::where('item_id', $itemId)->first();
+            
+            if ($currentStock) {
+                // Update existing stock
+                $newQuantity = $currentStock->current_quantity + $quantity;
+                $newAverageCost = (($currentStock->current_quantity * $currentStock->average_cost) + ($quantity * $unitCost)) / $newQuantity;
+                
+                $currentStock->update([
+                    'current_quantity' => $newQuantity,
+                    'average_cost' => $newAverageCost,
+                    'last_updated' => now()
+                ]);
+            } else {
+                // Create new stock record
+                CurrentStock::create([
+                    'item_id' => $itemId,
+                    'current_quantity' => $quantity,
+                    'average_cost' => $unitCost,
+                    'last_updated' => now()
+                ]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error updating current stock: ' . $e->getMessage());
         }
     }
 
