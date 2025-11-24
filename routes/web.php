@@ -214,9 +214,7 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
 Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purchasing.')->group(function () {
     
     // Dashboard
-    Route::get('/dashboard', function () { 
-        return view('Purchasing.home'); 
-    })->name('dashboard');
+    Route::get('/dashboard', [PurchasingController::class, 'home'])->name('dashboard');
 
     // Purchase Orders
     Route::get('/po/create', function () { 
