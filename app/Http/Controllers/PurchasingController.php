@@ -432,42 +432,272 @@ class PurchasingController extends Controller
     }
 
     /**
-     * Show partial orders
+     * Show partial orders - redirect to history since partial orders view was removed
      */
     public function partialOrders()
     {
-        $partialOrders = PurchaseOrder::where('status', 'partial')
-            ->with(['supplier', 'purchaseOrderItems'])
-            ->orderBy('expected_delivery_date', 'asc')
-            ->paginate(15);
-
-        return view('Purchasing.purchase_orders.partial_orders', compact('partialOrders'));
+        return redirect('/purchasing/po/history');
     }
 
     /**
      * Show completed purchase orders history
      */
-    public function completedHistory()
+    public function completedHistory(Request $request)
     {
-        $completedOrders = PurchaseOrder::where('status', 'completed')
+        $query = PurchaseOrder::where('status', 'completed')
             ->with(['supplier', 'purchaseOrderItems'])
-            ->orderBy('actual_delivery_date', 'desc')
-            ->paginate(15);
+            ->orderBy('actual_delivery_date', 'desc');
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('po_number', 'ilike', "%{$search}%")
+                  ->orWhereHas('supplier', function($sq) use ($search) {
+                      $sq->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('supplier_code', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        // Apply date filters
+        if ($request->filled('date_from')) {
+            $query->whereDate('actual_delivery_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('actual_delivery_date', '<=', $request->date_to);
+        }
+
+        // Export functionality
+        if ($request->filled('export') && $request->export === 'csv') {
+            return $this->exportCompletedHistory($query->get());
+        }
+
+        $completedOrders = $query->paginate(15);
 
         return view('Purchasing.purchase_orders.completed_history', compact('completedOrders'));
     }
 
     /**
+     * Export completed history to CSV
+     */
+    private function exportCompletedHistory($orders)
+    {
+        $filename = 'completed_history_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($orders) {
+            $file = fopen('php://output', 'w');
+            
+            // Add CSV headers
+            fputcsv($file, [
+                'PO Number',
+                'Supplier',
+                'Order Date',
+                'Delivery Date',
+                'Total Amount',
+                'Status'
+            ]);
+            
+            // Add data rows
+            foreach ($orders as $order) {
+                fputcsv($file, [
+                    $order->po_number,
+                    $order->supplier->name ?? 'Unknown',
+                    $order->order_date->format('Y-m-d'),
+                    $order->actual_delivery_date ? $order->actual_delivery_date->format('Y-m-d') : 'N/A',
+                    $order->grand_total,
+                    $order->status
+                ]);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
      * Show suppliers list
      */
-    public function suppliers()
+    public function suppliers(Request $request)
     {
-        $suppliers = Supplier::where('is_active', true)
-            ->withCount(['purchaseOrders'])
+        // Build the query
+        $query = Supplier::query();
+
+        // Search functionality
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('supplier_code', 'ilike', "%{$search}%")
+                  ->orWhere('contact_person', 'ilike', "%{$search}%")
+                  ->orWhere('email', 'ilike', "%{$search}%")
+                  ->orWhere('phone', 'ilike', "%{$search}%")
+                  ->orWhere('tax_id', 'ilike', "%{$search}%");
+            });
+        }
+
+        // Status filter
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        // Payment terms filter
+        if ($request->filled('payment_terms')) {
+            $query->where('payment_terms', $request->payment_terms);
+        }
+
+        // Rating filter
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+
+        // Load relationships and get results
+        $suppliers = $query->withCount(['purchaseOrders'])
+            ->with(['batches' => function($query) {
+                $query->selectRaw('supplier_id, COUNT(*) as batch_count')->groupBy('supplier_id');
+            }, 'supplierItems' => function($query) {
+                $query->selectRaw('supplier_id, COUNT(*) as supplier_item_count')->groupBy('supplier_id');
+            }])
             ->orderBy('name')
             ->paginate(15);
 
-        return view('Purchasing.suppliers.supplier_masterlist', compact('suppliers'));
+        // Get unique payment terms for filter dropdown
+        $paymentTerms = Supplier::distinct()
+            ->whereNotNull('payment_terms')
+            ->orderBy('payment_terms')
+            ->pluck('payment_terms')
+            ->values();
+
+        // Get supplier statistics for the view
+        $stats = [
+            'total_suppliers' => Supplier::count(),
+            'active_suppliers' => Supplier::where('is_active', true)->count(),
+            'inactive_suppliers' => Supplier::where('is_active', false)->count(),
+            'avg_rating' => Supplier::whereNotNull('rating')->avg('rating') ?: 0,
+            'suppliers_with_po' => Supplier::has('purchaseOrders')->count(),
+        ];
+
+        return view('Purchasing.suppliers.supplier_masterlist', compact('suppliers', 'paymentTerms', 'stats'));
+    }
+
+    /**
+     * Store a new supplier
+     */
+    public function storeSupplier(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'supplier_code' => 'required|string|max:50|unique:suppliers,supplier_code',
+            'contact_person' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'mobile' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'province' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:20',
+            'tax_id' => 'nullable|string|max:50',
+            'payment_terms' => 'nullable|integer|min:0',
+            'credit_limit' => 'nullable|numeric|min:0',
+            'rating' => 'nullable|integer|min:1|max:5',
+            'is_active' => 'boolean',
+            'notes' => 'nullable|string',
+        ]);
+
+        Supplier::create($request->all());
+
+        return redirect()->route('purchasing.suppliers.index')
+            ->with('success', 'Supplier created successfully!');
+    }
+
+    /**
+     * Update supplier
+     */
+    public function updateSupplier(Request $request, Supplier $supplier)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'supplier_code' => 'required|string|max:50|unique:suppliers,supplier_code,' . $supplier->id,
+            'contact_person' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'mobile' => 'nullable|string|max:20',
+            'address' => 'nullable|string',
+            'city' => 'nullable|string|max:100',
+            'province' => 'nullable|string|max:100',
+            'postal_code' => 'nullable|string|max:20',
+            'tax_id' => 'nullable|string|max:50',
+            'payment_terms' => 'nullable|integer|min:0',
+            'credit_limit' => 'nullable|numeric|min:0',
+            'rating' => 'nullable|integer|min:1|max:5',
+            'is_active' => 'boolean',
+            'notes' => 'nullable|string',
+        ]);
+
+        $supplier->update($request->all());
+
+        return redirect()->route('purchasing.suppliers.index')
+            ->with('success', 'Supplier updated successfully!');
+    }
+
+    /**
+     * Delete supplier
+     */
+    public function destroySupplier(Supplier $supplier)
+    {
+        // Check for various foreign key constraints
+        $conflicts = [];
+        
+        // Check for purchase orders
+        if ($supplier->purchaseOrders()->count() > 0) {
+            $conflicts[] = 'purchase orders';
+        }
+        
+        // Check for batches (inventory records)
+        if (\App\Models\Batch::where('supplier_id', $supplier->id)->count() > 0) {
+            $conflicts[] = 'inventory batches';
+        }
+        
+        // Check for supplier items (pricing records)
+        if (\App\Models\SupplierItem::where('supplier_id', $supplier->id)->count() > 0) {
+            $conflicts[] = 'supplier item records';
+        }
+        
+        // If there are conflicts, show detailed error message
+        if (!empty($conflicts)) {
+            $conflictList = implode(', ', $conflicts);
+            return redirect()->back()
+                ->with('error', "Cannot delete supplier '{$supplier->name}' because it has existing {$conflictList}. Please remove all related records first or deactivate the supplier instead.");
+        }
+
+        $supplier->delete();
+
+        return redirect()->route('purchasing.suppliers.index')
+            ->with('success', 'Supplier deleted successfully!');
+    }
+
+    /**
+     * Toggle supplier status
+     */
+    public function toggleSupplierStatus(Supplier $supplier)
+    {
+        $supplier->update(['is_active' => !$supplier->is_active]);
+        
+        $status = $supplier->is_active ? 'activated' : 'deactivated';
+        
+        return redirect()->route('purchasing.suppliers.index')
+            ->with('success', "Supplier {$status} successfully!");
     }
 
     /**
@@ -578,8 +808,16 @@ class PurchasingController extends Controller
             'email' => $supplier->email,
             'address' => $supplier->address,
             'city' => $supplier->city,
+            'province' => $supplier->province,
+            'postal_code' => $supplier->postal_code,
+            'tax_id' => $supplier->tax_id,
             'payment_terms' => $supplier->payment_terms,
-            'rating' => $supplier->rating
+            'credit_limit' => $supplier->credit_limit,
+            'rating' => $supplier->rating,
+            'is_active' => $supplier->is_active,
+            'notes' => $supplier->notes,
+            'created_at' => $supplier->created_at,
+            'updated_at' => $supplier->updated_at
         ]);
     }
 
@@ -665,6 +903,7 @@ class PurchasingController extends Controller
             'expected_delivery_date' => 'required|date|after_or_equal:today',
             'notes' => 'nullable|string',
             'selected_pr_ids' => 'required|string',
+            'save_option' => 'required|in:draft,create',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|exists:items,id',
             'items.*.quantity_ordered' => 'required|numeric|min:0.001',
@@ -708,13 +947,16 @@ class PurchasingController extends Controller
             ];
         }
 
+        // Determine status based on save option
+        $status = $request->save_option === 'create' ? 'sent' : 'draft';
+
         // Create purchase order
         $purchaseOrder = PurchaseOrder::create([
             'po_number' => $poNumber,
             'supplier_id' => $request->supplier_id,
             'order_date' => Carbon::now()->toDateString(),
             'expected_delivery_date' => $request->expected_delivery_date,
-            'status' => 'draft',
+            'status' => $status,
             'total_amount' => $totalAmount,
             'grand_total' => $totalAmount,
             'payment_terms' => 30, // Default, you might want to get from supplier
@@ -744,8 +986,16 @@ class PurchasingController extends Controller
         // Update PR status to 'converted'
         PurchaseRequest::whereIn('id', $selectedPRIds)->update(['status' => 'converted']);
 
-        return redirect()->route('purchasing.po.drafts')
-            ->with('success', "Purchase Order {$poNumber} created successfully from " . count($selectedPRIds) . " purchase request(s)!");
+        // Determine redirect route and success message based on save option
+        if ($request->save_option === 'create') {
+            // Redirect to open orders for submitted POs
+            return redirect()->route('purchasing.po.open')
+                ->with('success', "Purchase Order {$poNumber} created and sent successfully from " . count($selectedPRIds) . " purchase request(s)!");
+        } else {
+            // Redirect to drafts for draft POs
+            return redirect()->route('purchasing.po.drafts')
+                ->with('success', "Purchase Order {$poNumber} saved as draft successfully from " . count($selectedPRIds) . " purchase request(s)!");
+        }
     }
 
     /**

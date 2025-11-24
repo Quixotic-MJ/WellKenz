@@ -14,7 +14,6 @@ class PurchaseOrder extends Model
     protected $fillable = [
         'po_number',
         'supplier_id',
-        'purchase_request_id',
         'order_date',
         'expected_delivery_date',
         'actual_delivery_date',
@@ -75,14 +74,6 @@ class PurchaseOrder extends Model
         return $this->status === 'completed';
     }
 
-    public function sourcePurchaseRequest()
-    {
-        return $this->belongsTo(PurchaseRequest::class, 'purchase_request_id');
-    }
-
-    /**
-     * Get source purchase requests through the link table
-     */
     public function sourcePurchaseRequests()
     {
         return $this->belongsToMany(PurchaseRequest::class, 'purchase_request_purchase_order_link', 'purchase_order_id', 'purchase_request_id');
@@ -226,7 +217,7 @@ class PurchaseOrder extends Model
      */
     public static function getDraftOrdersWithFilters($filters = [])
     {
-        $query = self::with(['supplier', 'purchaseOrderItems.item', 'createdBy', 'sourcePurchaseRequest'])
+        $query = self::with(['supplier', 'purchaseOrderItems.item', 'createdBy', 'sourcePurchaseRequests'])
             ->where('status', 'draft');
 
         // Apply filters

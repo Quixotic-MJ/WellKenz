@@ -237,6 +237,10 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
 
     // Suppliers
     Route::get('/suppliers', [PurchasingController::class, 'suppliers'])->name('suppliers.index');
+    Route::post('/suppliers', [PurchasingController::class, 'storeSupplier'])->name('suppliers.store');
+    Route::put('/suppliers/{supplier}', [PurchasingController::class, 'updateSupplier'])->name('suppliers.update');
+    Route::delete('/suppliers/{supplier}', [PurchasingController::class, 'destroySupplier'])->name('suppliers.destroy');
+    Route::patch('/suppliers/{supplier}/toggle-status', [PurchasingController::class, 'toggleSupplierStatus'])->name('suppliers.toggle-status');
     Route::get('/suppliers/prices', [PurchasingController::class, 'supplierPriceList'])->name('suppliers.prices');
 
     // Reports & Delivery
@@ -266,9 +270,9 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::get('/home', [InventoryController::class, 'home'])->name('dashboard');
 
     // Purchase Orders (for viewing/managing POs)
-    Route::get('/purchase-orders', [PurchaseController::class, 'index'])->name('purchase-orders.index');
-    Route::get('/purchase-orders/create', [PurchaseController::class, 'create'])->name('purchase-orders.create');
-    Route::get('/purchase-orders/{id}', [PurchaseController::class, 'show'])->name('purchase-orders.show');
+    Route::get('/purchase-orders', [PurchasingController::class, 'index'])->name('purchase-orders.index');
+    Route::get('/purchase-orders/create', [PurchasingController::class, 'create'])->name('purchase-orders.create');
+    Route::get('/purchase-orders/{id}', [PurchasingController::class, 'show'])->name('purchase-orders.show');
     
     // Add the AJAX routes for the home page buttons
     Route::post('/requisitions/{requisitionId}/start-picking', [InventoryController::class, 'startPicking'])->name('requisitions.start-picking');
