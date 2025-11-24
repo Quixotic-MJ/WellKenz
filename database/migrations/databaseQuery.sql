@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS production_consumption CASCADE;
 DROP TABLE IF EXISTS requisition_items CASCADE;
 DROP TABLE IF EXISTS purchase_order_items CASCADE;
 DROP TABLE IF EXISTS purchase_request_items CASCADE;
+DROP TABLE IF EXISTS purchase_request_purchase_order_link CASCADE;
 DROP TABLE IF EXISTS recipe_ingredients CASCADE;
 DROP TABLE IF EXISTS supplier_items CASCADE;
 DROP TABLE IF EXISTS stock_movements CASCADE;
@@ -28,6 +29,8 @@ DROP TABLE IF EXISTS categories CASCADE;
 DROP TABLE IF EXISTS units CASCADE;
 DROP TABLE IF EXISTS user_profiles CASCADE;
 DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS rtv_transactions CASCADE;
+DROP TABLE IF EXISTS rtv_items CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
@@ -340,6 +343,19 @@ CREATE TABLE purchase_order_items (
 CREATE INDEX idx_purchase_order_items_po ON purchase_order_items(purchase_order_id);
 CREATE INDEX idx_purchase_order_items_item ON purchase_order_items(item_id);
 
+
+CREATE TABLE purchase_request_purchase_order_link (
+    id SERIAL PRIMARY KEY,
+    purchase_request_id INTEGER NOT NULL REFERENCES purchase_requests(id) ON DELETE CASCADE,
+    purchase_order_id INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+    consolidated_by INTEGER NOT NULL REFERENCES users(id),
+    consolidated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(purchase_request_id, purchase_order_id)
+);
+
+CREATE INDEX idx_pr_po_link_pr ON purchase_request_purchase_order_link(purchase_request_id);
+CREATE INDEX idx_pr_po_link_po ON purchase_request_purchase_order_link(purchase_order_id);
 -- ============================================================================
 -- RECIPES TABLE (Production Recipes/Formulas)
 -- ============================================================================
@@ -496,6 +512,32 @@ CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
 CREATE INDEX idx_audit_logs_action ON audit_logs(action);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 
+CREATE TABLE rtv_transactions (
+    id SERIAL PRIMARY KEY,
+    rtv_number VARCHAR(50) NOT NULL UNIQUE,
+    purchase_order_id INTEGER REFERENCES purchase_orders(id),
+    supplier_id INTEGER REFERENCES suppliers(id),
+    return_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    total_value DECIMAL(12,2) DEFAULT 0.00,
+    notes TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Items being returned in each RTV transaction
+CREATE TABLE rtv_items (
+    id SERIAL PRIMARY KEY,
+    rtv_id INTEGER NOT NULL REFERENCES rtv_transactions(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES items(id),
+    quantity_returned DECIMAL(10,3) NOT NULL,
+    unit_cost DECIMAL(10,2) NOT NULL,
+    reason TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_rtv_transactions_po ON rtv_transactions(purchase_order_id);
+CREATE INDEX idx_rtv_items_item ON rtv_items(item_id);
 -- ============================================================================
 -- SYSTEM SETTINGS TABLE
 -- ============================================================================
@@ -973,4 +1015,4 @@ END $$;
 
 SELECT 'Database setup complete. WellKenz Bakery ERP is ready for use!' AS completion_message;
 
-Note: dont touch the database
+note: dont touch the database

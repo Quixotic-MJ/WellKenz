@@ -10,6 +10,8 @@ class ProductionConsumption extends Model
 {
     use HasFactory;
 
+    public $timestamps = false; // Disable automatic timestamps since table only has created_at
+
     protected $table = 'production_consumption';
 
     protected $fillable = [

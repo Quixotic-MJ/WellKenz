@@ -9,6 +9,8 @@ class PurchaseOrderItem extends Model
 {
     use HasFactory;
 
+    public $timestamps = false; // Disable automatic timestamps since table only has created_at
+
     protected $table = 'purchase_order_items';
 
     protected $fillable = [

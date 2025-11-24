@@ -2,130 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Item;
 use App\Models\PurchaseOrder;
+use App\Models\Supplier;
+use App\Models\CurrentStock;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseRequest;
-use App\Models\PurchaseRequestItem;
-use App\Models\Supplier;
-use App\Models\Item;
-use App\Models\SupplierItem;
-use App\Models\CurrentStock;
-use App\Models\SystemSetting;
+use App\Models\PurchaseRequestPurchaseOrderLink;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Validator;
 
 class PurchasingController extends Controller
 {
     /**
-     * Display the purchasing dashboard
+     * Show the purchasing dashboard/home page.
      */
     public function home()
     {
-        // 1. Get Low Stock Items (Below Reorder Point)
-        $allItems = Item::with(['currentStockRecord', 'unit'])->where('is_active', true)->get();
-        
-        $lowStockItems = $allItems->filter(function($item) {
-            $currentStock = $item->currentStockRecord ? floatval($item->currentStockRecord->current_quantity) : 0;
-            $reorderPoint = floatval($item->reorder_point);
-            $minStock = floatval($item->min_stock_level);
-            
-            // Consider low stock if current stock is below reorder point or min stock level
-            $isLowStock = ($reorderPoint > 0 && $currentStock <= $reorderPoint) || 
-                         ($minStock > 0 && $currentStock <= $minStock) ||
-                         ($currentStock <= 0 && ($reorderPoint > 0 || $minStock > 0));
-            
-            return $isLowStock;
-        })->sortBy(function($item) {
-            $currentStock = $item->currentStockRecord ? floatval($item->currentStockRecord->current_quantity) : 0;
-            return $currentStock;
-        })->take(5)->map(function($item) {
-            $currentStock = $item->currentStockRecord ? floatval($item->currentStockRecord->current_quantity) : 0;
-            $reorderPoint = floatval($item->reorder_point);
-            $minStock = floatval($item->min_stock_level);
-            
-            return [
-                'name' => $item->name,
-                'current_stock' => $currentStock,
-                'min_stock' => max($reorderPoint, $minStock),
-                'unit' => $item->unit->symbol ?? 'pcs',
-                'item_id' => $item->id
-            ];
-        })->values();
-
-        // 2. Get Open Purchase Orders (Financial Commitment)
-        $openPurchaseOrders = PurchaseOrder::whereIn('status', ['sent', 'confirmed'])
-            ->with(['supplier', 'purchaseOrderItems'])
-            ->get();
-        
-        $openPoValue = $openPurchaseOrders->sum('grand_total');
-        $openPoCount = $openPurchaseOrders->count();
-
-        // 3. Get Overdue Deliveries
-        $overdueDeliveries = PurchaseOrder::whereIn('status', ['sent', 'confirmed'])
-            ->where('expected_delivery_date', '<', now()->toDateString())
-            ->with(['supplier'])
-            ->orderBy('expected_delivery_date', 'asc')
-            ->limit(5)
-            ->get()
-            ->map(function($po) {
-                // Calculate days overdue correctly (current date - expected date)
-                $currentDate = now()->toDateString();
-                $expectedDate = $po->expected_delivery_date->toDateString();
-                $daysOverdue = \Carbon\Carbon::parse($currentDate)->diffInDays(\Carbon\Carbon::parse($expectedDate));
-                
-                return [
-                    'supplier_name' => $po->supplier->name,
-                    'supplier_phone' => $po->supplier->phone,
-                    'supplier_email' => $po->supplier->email,
-                    'supplier_contact_person' => $po->supplier->contact_person,
-                    'po_number' => $po->po_number,
-                    'days_overdue' => $daysOverdue,
-                    'expected_date' => $po->expected_delivery_date->format('Y-m-d')
-                ];
-            });
-
-        // 4. Get Recent Purchase Orders
-        $recentPurchaseOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems.item'])
-            ->latest()
-            ->limit(5)
-            ->get()
-            ->map(function($po) {
-                $itemCount = $po->purchaseOrderItems->count();
-                $totalQuantity = $po->purchaseOrderItems->sum('quantity_ordered');
-                
-                return [
-                    'po_number' => $po->po_number,
-                    'supplier_name' => $po->supplier->name,
-                    'total_amount' => $po->grand_total,
-                    'status' => $po->status,
-                    'item_count' => $itemCount,
-                    'total_quantity' => $totalQuantity,
-                    'created_at' => $po->created_at
-                ];
-            });
-
-        // 5. Get Frequent Suppliers (for quick lookup)
-        $frequentSuppliers = Supplier::where('is_active', true)
-            ->withCount(['purchaseOrders' => function($query) {
-                $query->where('created_at', '>=', now()->subMonths(3));
-            }])
-            ->orderBy('purchase_orders_count', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(function($supplier) {
-                return [
-                    'name' => $supplier->name,
-                    'phone' => $supplier->phone,
-                    'order_count' => $supplier->purchase_orders_count
-                ];
-            });
+        // Get all dashboard data
+        $lowStockItems = $this->getLowStockItems();
+        $openPoValue = $this->getOpenPurchaseOrderValue();
+        $openPoCount = $this->getOpenPurchaseOrderCount();
+        $overdueDeliveries = $this->getOverdueDeliveries();
+        $recentPurchaseOrders = $this->getRecentPurchaseOrders();
+        $frequentSuppliers = $this->getFrequentSuppliers();
 
         return view('Purchasing.home', compact(
             'lowStockItems',
-            'openPoValue',
+            'openPoValue', 
             'openPoCount',
             'overdueDeliveries',
             'recentPurchaseOrders',
@@ -134,362 +39,801 @@ class PurchasingController extends Controller
     }
 
     /**
-     * Display a listing of purchase orders
+     * Get items that are below reorder level (Low Stock Alerts)
      */
-    public function index()
+    private function getLowStockItems()
     {
-        $purchaseOrders = PurchaseOrder::with(['supplier', 'items.item', 'createdBy'])
-            ->latest()
-            ->paginate(20);
-
-        return view('Inventory.purchase-orders.index', compact('purchaseOrders'));
-    }
-
-    /**
-     * Show the form for creating a new purchase order
-     */
-    public function create()
-    {
-        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
-        $items = Item::where('is_active', true)->with('unit')->orderBy('name')->get();
-        
-        return view('Inventory.purchase-orders.create', compact('suppliers', 'items'));
-    }
-
-    /**
-     * Display the specified purchase order
-     */
-    public function show($id)
-    {
-        $purchaseOrder = PurchaseOrder::with([
-            'supplier', 
-            'items.item.unit', 
-            'createdBy',
-            'approvedBy'
-        ])->findOrFail($id);
-
-        return view('Inventory.purchase-orders.show', compact('purchaseOrder'));
-    }
-
-    /**
-     * Show the form for creating a new purchase order (Purchasing Module)
-     */
-    public function createPO(Request $request = null)
-    {
-        // Get approved purchase requests that haven't been converted to POs yet
-        $purchaseRequests = PurchaseRequest::where('status', 'approved')
-            ->with([
-                'requestedBy:id,name',
-                'purchaseRequestItems.item.unit',
-                'purchaseOrder' => function($query) {
-                    $query->select('id', 'purchase_request_id');
+        $items = Item::where('is_active', true)
+            ->with(['currentStockRecord', 'unit'])
+            ->get()
+            ->map(function ($item) {
+                $currentStock = $item->currentStockRecord ? $item->currentStockRecord->current_quantity : 0;
+                
+                // Check if stock is below reorder point
+                if ($currentStock <= $item->reorder_point) {
+                    return [
+                        'id' => $item->id,
+                        'name' => $item->name,
+                        'item_code' => $item->item_code,
+                        'current_stock' => $currentStock,
+                        'min_stock' => $item->reorder_point,
+                        'max_stock' => $item->max_stock_level,
+                        'unit' => $item->unit ? $item->unit->symbol : '',
+                        'percentage' => $item->reorder_point > 0 ? round(($currentStock / $item->reorder_point) * 100, 1) : 0
+                    ];
                 }
-            ])
-            ->whereDoesntHave('purchaseOrder') // Only PRs that haven't been converted to POs
-            ->orderBy('request_date', 'desc')
-            ->get();
-        
-        // If a specific purchase request is selected for conversion
-        $selectedPurchaseRequest = null;
-        $prePopulatedItems = [];
-        
-        if ($request->has('purchase_request_id')) {
-            $selectedPurchaseRequest = PurchaseRequest::where('id', $request->purchase_request_id)
-                ->where('status', 'approved')
-                ->whereDoesntHave('purchaseOrder')
-                ->with([
-                    'requestedBy:id,name',
-                    'purchaseRequestItems.item.unit',
-                    'purchaseRequestItems.item.currentStockRecord'
-                ])
-                ->firstOrFail();
-            
-            // Pre-populate items from the purchase request
-            foreach ($selectedPurchaseRequest->purchaseRequestItems as $prItem) {
-                $prePopulatedItems[] = [
-                    'id' => $prItem->item_id,
-                    'name' => $prItem->item->name,
-                    'item_code' => $prItem->item->item_code,
-                    'unit_symbol' => $prItem->item->unit->symbol ?? '',
-                    'quantity_requested' => $prItem->quantity_requested,
-                    'unit_price_estimate' => $prItem->unit_price_estimate,
-                    'total_estimated_cost' => $prItem->total_estimated_cost,
-                    'current_stock' => $prItem->item->currentStockRecord ? floatval($prItem->item->currentStockRecord->current_quantity) : 0,
+                return null;
+            })
+            ->filter()
+            ->sortByDesc('percentage')
+            ->values();
+
+        return $items;
+    }
+
+    /**
+     * Get total value of open purchase orders
+     */
+    private function getOpenPurchaseOrderValue()
+    {
+        $value = PurchaseOrder::whereIn('status', ['sent', 'confirmed', 'partial'])
+            ->sum('grand_total');
+
+        return $value ?: 0;
+    }
+
+    /**
+     * Get count of open purchase orders
+     */
+    private function getOpenPurchaseOrderCount()
+    {
+        return PurchaseOrder::whereIn('status', ['sent', 'confirmed', 'partial'])->count();
+    }
+
+    /**
+     * Get overdue deliveries
+     */
+    private function getOverdueDeliveries()
+    {
+        $overduePOs = PurchaseOrder::whereIn('status', ['sent', 'confirmed', 'partial'])
+            ->where('expected_delivery_date', '<', Carbon::now()->toDateString())
+            ->whereNull('actual_delivery_date')
+            ->with('supplier')
+            ->get()
+            ->map(function ($po) {
+                $daysOverdue = Carbon::parse($po->expected_delivery_date)->diffInDays(Carbon::now());
+                
+                return [
+                    'po_number' => $po->po_number,
+                    'supplier_name' => $po->supplier ? $po->supplier->name : 'Unknown Supplier',
+                    'supplier_contact_person' => $po->supplier ? $po->supplier->contact_person : null,
+                    'supplier_phone' => $po->supplier ? $po->supplier->phone : null,
+                    'supplier_email' => $po->supplier ? $po->supplier->email : null,
+                    'expected_delivery_date' => $po->expected_delivery_date,
+                    'days_overdue' => $daysOverdue,
+                    'grand_total' => $po->grand_total,
+                    'priority' => $daysOverdue > 7 ? 'urgent' : ($daysOverdue > 3 ? 'high' : 'normal')
                 ];
-            }
-        }
-        
-        // Get all active suppliers for dropdown
-        $suppliers = Supplier::where('is_active', true)
-            ->select('id', 'name', 'contact_person', 'payment_terms', 'phone', 'email')
-            ->orderBy('name')
-            ->get();
-        
-        // Get the next PO number
-        $nextPoNumber = $this->generatePONumber();
-        
-        // Get default settings
-        $defaultPaymentTerms = SystemSetting::where('setting_key', 'default_payment_terms')
-            ->value('setting_value') ?? '30';
-            
-        return view('Purchasing.purchase_orders.create_po', compact(
-            'purchaseRequests',
-            'selectedPurchaseRequest',
-            'prePopulatedItems',
-            'suppliers', 
-            'nextPoNumber', 
-            'defaultPaymentTerms'
-        ));
+            })
+            ->sortByDesc('days_overdue')
+            ->values();
+
+        return $overduePOs;
     }
 
     /**
-     * Store a newly created purchase order
+     * Get recent purchase orders for display
      */
-    public function storePO(Request $request)
+    private function getRecentPurchaseOrders()
     {
-        $validator = Validator::make($request->all(), [
-            'supplier_id' => 'required|exists:suppliers,id',
-            'order_date' => 'required|date',
-            'expected_delivery_date' => 'nullable|date|after_or_equal:order_date',
-            'purchase_request_id' => 'nullable|exists:purchase_requests,id',
-            'notes' => 'nullable|string',
-            'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:items,id',
-            'items.*.quantity' => 'required|numeric|min:0.001',
-            'items.*.unit_price' => 'required|numeric|min:0.01',
-        ], [
-            'supplier_id.required' => 'Please select a supplier',
-            'supplier_id.exists' => 'Selected supplier is invalid',
-            'order_date.required' => 'Order date is required',
-            'order_date.date' => 'Order date must be a valid date',
-            'expected_delivery_date.date' => 'Expected delivery date must be a valid date',
-            'expected_delivery_date.after_or_equal' => 'Expected delivery date must be after or equal to order date',
-            'purchase_request_id.exists' => 'Invalid purchase request selected',
-            'items.required' => 'At least one item is required',
-            'items.*.item_id.required' => 'Item is required for each row',
-            'items.*.item_id.exists' => 'One or more selected items are invalid',
-            'items.*.quantity.required' => 'Quantity is required for each item',
-            'items.*.quantity.min' => 'Quantity must be greater than 0',
-            'items.*.unit_price.required' => 'Unit price is required for each item',
-            'items.*.unit_price.min' => 'Unit price must be greater than 0',
-        ]);
+        $recentOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($po) {
+                return [
+                    'id' => $po->id,
+                    'po_number' => $po->po_number,
+                    'supplier_name' => $po->supplier ? $po->supplier->name : 'Unknown Supplier',
+                    'status' => $po->status,
+                    'total_amount' => $po->grand_total,
+                    'order_date' => $po->order_date,
+                    'expected_delivery_date' => $po->expected_delivery_date,
+                    'item_count' => $po->purchaseOrderItems->count(),
+                    'created_at' => $po->created_at,
+                    'is_overdue' => $this->isOrderOverdue($po)
+                ];
+            });
 
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        try {
-            DB::beginTransaction();
-
-            // Generate PO number
-            $poNumber = $this->generatePONumber();
-
-            // Create purchase order
-            $purchaseOrder = PurchaseOrder::create([
-                'po_number' => $poNumber,
-                'supplier_id' => $request->supplier_id,
-                'order_date' => $request->order_date,
-                'expected_delivery_date' => $request->expected_delivery_date,
-                'status' => 'draft',
-                'total_amount' => 0, // Will be calculated below
-                'tax_amount' => 0,
-                'discount_amount' => 0,
-                'grand_total' => 0,
-                'payment_terms' => $request->payment_terms ?? 30,
-                'notes' => $request->notes,
-                'created_by' => Auth::id(),
-                'purchase_request_id' => $request->purchase_request_id,
-            ]);
-
-            $totalAmount = 0;
-
-            // Create purchase order items
-            foreach ($request->items as $itemData) {
-                $quantity = floatval($itemData['quantity']);
-                $unitPrice = floatval($itemData['unit_price']);
-                $totalPrice = $quantity * $unitPrice;
-
-                PurchaseOrderItem::create([
-                    'purchase_order_id' => $purchaseOrder->id,
-                    'item_id' => $itemData['item_id'],
-                    'quantity_ordered' => $quantity,
-                    'quantity_received' => 0,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $totalPrice,
-                    'notes' => $itemData['notes'] ?? null,
-                ]);
-
-                $totalAmount += $totalPrice;
-            }
-
-            // Update purchase order totals
-            $purchaseOrder->update([
-                'total_amount' => $totalAmount,
-                'grand_total' => $totalAmount, // Can be updated later for tax/discount
-            ]);
-
-            // If this PO was created from a purchase request, mark it as converted
-            if ($request->has('purchase_request_id') && $request->purchase_request_id) {
-                $purchaseRequest = PurchaseRequest::find($request->purchase_request_id);
-                if ($purchaseRequest && $purchaseRequest->status === 'approved') {
-                    $purchaseRequest->update([
-                        'status' => 'converted',
-                        'converted_to_po_id' => $purchaseOrder->id,
-                    ]);
-                }
-            }
-
-            DB::commit();
-
-            $message = "Purchase Order {$poNumber} created successfully!";
-            if ($request->has('purchase_request_id') && $request->purchase_request_id) {
-                $message .= " Purchase Request has been marked as converted.";
-            }
-
-            return redirect()->route('purchasing.po.drafts')
-                ->with('success', $message);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            return redirect()->back()
-                ->with('error', 'Error creating purchase order: ' . $e->getMessage())
-                ->withInput();
-        }
+        return $recentOrders;
     }
 
     /**
-     * Generate the next purchase order number
+     * Get frequent suppliers (based on recent purchase orders)
+     */
+    private function getFrequentSuppliers()
+    {
+        // Get suppliers with most recent purchase orders
+        $frequentSuppliers = PurchaseOrder::selectRaw('supplier_id, COUNT(*) as order_count')
+            ->where('created_at', '>=', Carbon::now()->subDays(30)) // Last 30 days
+            ->whereIn('status', ['sent', 'confirmed', 'partial', 'completed'])
+            ->groupBy('supplier_id')
+            ->orderByDesc('order_count')
+            ->limit(10)
+            ->with('supplier')
+            ->get()
+            ->map(function ($result) {
+                if ($result->supplier) {
+                    return [
+                        'id' => $result->supplier->id,
+                        'name' => $result->supplier->name,
+                        'supplier_code' => $result->supplier->supplier_code,
+                        'contact_person' => $result->supplier->contact_person,
+                        'phone' => $result->supplier->phone,
+                        'email' => $result->supplier->email,
+                        'order_count' => $result->order_count,
+                        'rating' => $result->supplier->rating
+                    ];
+                }
+                return null;
+            })
+            ->filter()
+            ->values();
+
+        return $frequentSuppliers;
+    }
+
+    /**
+     * Check if a purchase order is overdue
+     */
+    private function isOrderOverdue($purchaseOrder)
+    {
+        return $purchaseOrder->expected_delivery_date && 
+               $purchaseOrder->expected_delivery_date->isPast() && 
+               !in_array($purchaseOrder->status, ['completed', 'cancelled']);
+    }
+
+    /**
+     * Generate a unique PO number
      */
     private function generatePONumber()
     {
-        $prefix = 'PO';
         $year = date('Y');
-        
-        // Get the last PO number for this year
-        $lastPo = PurchaseOrder::where('po_number', 'like', "{$prefix}-{$year}-%")
+        $lastPo = PurchaseOrder::where('po_number', 'like', "PO-{$year}-%")
             ->orderBy('po_number', 'desc')
             ->first();
-
+        
         if ($lastPo) {
-            // Extract the sequence number from the last PO
-            $lastSequence = (int) substr($lastPo->po_number, -3);
-            $nextSequence = $lastSequence + 1;
+            $lastNumber = (int) substr($lastPo->po_number, -6);
+            $newNumber = $lastNumber + 1;
         } else {
-            $nextSequence = 1;
+            $newNumber = 1;
         }
-
-        return sprintf('%s-%s-%03d', $prefix, $year, $nextSequence);
+        
+        return "PO-{$year}-" . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
     }
 
     /**
-     * Get supplier items with pricing (AJAX)
+     * API endpoint to search items for PO creation
      */
-    public function getSupplierItems(Request $request)
+    public function searchItems(Request $request)
     {
-        $supplierId = $request->get('supplier_id');
+        $query = $request->get('q', '');
         
-        if (!$supplierId) {
-            return response()->json(['items' => []]);
-        }
+        $items = Item::where('is_active', true)
+            ->where(function($q) use ($query) {
+                if ($query) {
+                    $q->where('name', 'ilike', "%{$query}%")
+                      ->orWhere('item_code', 'ilike', "%{$query}%");
+                }
+            })
+            ->with(['unit', 'currentStockRecord'])
+            ->orderBy('name')
+            ->limit(10)
+            ->get();
 
-        $supplierItems = SupplierItem::where('supplier_id', $supplierId)
-            ->with(['item.unit'])
+        return response()->json($items->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'item_code' => $item->item_code,
+                'unit' => $item->unit ? $item->unit->symbol : '',
+                'current_stock' => $item->currentStockRecord ? $item->currentStockRecord->current_quantity : 0,
+                'cost_price' => $item->cost_price,
+                'reorder_point' => $item->reorder_point
+            ];
+        }));
+    }
+
+    /**
+     * API endpoint to get supplier items with pricing
+     */
+    public function getSupplierItems(Supplier $supplier)
+    {
+        $supplierItems = \App\Models\SupplierItem::where('supplier_id', $supplier->id)
+            ->with('item.unit')
             ->get()
-            ->map(function($supplierItem) {
+            ->map(function ($supplierItem) {
                 return [
-                    'id' => $supplierItem->item->id,
-                    'name' => $supplierItem->item->name,
+                    'item_id' => $supplierItem->item_id,
+                    'item_name' => $supplierItem->item->name,
                     'item_code' => $supplierItem->item->item_code,
-                    'unit_symbol' => $supplierItem->item->unit->symbol ?? '',
+                    'unit_symbol' => $supplierItem->item->unit ? $supplierItem->item->unit->symbol : '',
+                    'supplier_item_code' => $supplierItem->supplier_item_code,
                     'unit_price' => $supplierItem->unit_price,
                     'minimum_order_quantity' => $supplierItem->minimum_order_quantity,
                     'lead_time_days' => $supplierItem->lead_time_days,
-                    'is_preferred' => $supplierItem->is_preferred,
+                    'is_preferred' => $supplierItem->is_preferred
                 ];
             });
 
-        return response()->json(['items' => $supplierItems]);
+        return response()->json($supplierItems);
     }
 
     /**
-     * Get all active items (AJAX for search)
+     * Get purchasing dashboard summary statistics
      */
-    public function getItems(Request $request)
+    public function getDashboardSummary()
     {
-        $search = $request->get('search', '');
-        $limit = $request->get('limit', 50);
+        $today = Carbon::now()->toDateString();
+        $thisWeek = Carbon::now()->startOfWeek()->toDateString();
+        $thisMonth = Carbon::now()->startOfMonth()->toDateString();
 
-        $items = Item::where('is_active', true)
-            ->with(['unit', 'currentStockRecord'])
-            ->when($search, function($query) use ($search) {
-                return $query->where(function($q) use ($search) {
-                    $q->where('name', 'ilike', "%{$search}%")
-                      ->orWhere('item_code', 'ilike', "%{$search}%");
-                });
-            })
-            ->limit($limit)
-            ->get()
-            ->map(function($item) {
-                $currentStock = $item->currentStockRecord ? floatval($item->currentStockRecord->current_quantity) : 0;
-                
-                return [
-                    'id' => $item->id,
-                    'name' => $item->name,
-                    'item_code' => $item->item_code,
-                    'unit_symbol' => $item->unit->symbol ?? '',
-                    'current_stock' => $currentStock,
-                    'min_stock_level' => floatval($item->min_stock_level),
-                    'reorder_point' => floatval($item->reorder_point),
-                ];
-            });
+        $summary = [
+            'today_orders' => PurchaseOrder::whereDate('order_date', $today)->count(),
+            'week_orders' => PurchaseOrder::whereDate('order_date', '>=', $thisWeek)->count(),
+            'month_orders' => PurchaseOrder::whereDate('order_date', '>=', $thisMonth)->count(),
+            'pending_approvals' => PurchaseOrder::where('status', 'draft')->count(),
+            'awaiting_delivery' => PurchaseOrder::whereIn('status', ['sent', 'confirmed'])->count(),
+            'low_stock_alerts' => $this->getLowStockItems()->count(),
+            'overdue_orders' => $this->getOverdueDeliveries()->count(),
+            'total_active_suppliers' => Supplier::where('is_active', true)->count(),
+            'average_delivery_time' => $this->getAverageDeliveryTime(),
+            'last_updated' => Carbon::now()->toISOString()
+        ];
 
-        return response()->json(['items' => $items]);
+        return response()->json($summary);
     }
 
     /**
-     * Get draft purchase orders
+     * Calculate average delivery time in days
+     */
+    private function getAverageDeliveryTime()
+    {
+        $completedOrders = PurchaseOrder::where('status', 'completed')
+            ->whereNotNull('actual_delivery_date')
+            ->whereNotNull('order_date')
+            ->limit(50) // Last 50 orders for calculation
+            ->get();
+
+        if ($completedOrders->isEmpty()) {
+            return 0;
+        }
+
+        $totalDays = 0;
+        $count = 0;
+
+        foreach ($completedOrders as $order) {
+            $days = $order->order_date->diffInDays($order->actual_delivery_date);
+            $totalDays += $days;
+            $count++;
+        }
+
+        return $count > 0 ? round($totalDays / $count, 1) : 0;
+    }
+
+    /**
+     * Show purchase orders list
+     */
+    public function purchaseOrders()
+    {
+        $purchaseOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        return view('Purchasing.purchase_orders.index', compact('purchaseOrders'));
+    }
+
+    /**
+     * Show purchase order details
+     */
+    public function showPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        $purchaseOrder->load(['supplier', 'purchaseOrderItems.item', 'createdBy', 'approvedBy']);
+        
+        return view('Purchasing.purchase_orders.show', compact('purchaseOrder'));
+    }
+
+    /**
+     * Show draft purchase orders
      */
     public function drafts()
     {
         $draftOrders = PurchaseOrder::where('status', 'draft')
-            ->with(['supplier', 'purchaseOrderItems', 'purchaseRequest'])
+            ->with([
+                'supplier', 
+                'purchaseOrderItems',
+                'sourcePurchaseRequests',
+                'createdBy'
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
+
+        // Add computed properties to each order
+        $draftOrders->getCollection()->transform(function ($order) {
+            // Total items count
+            $order->total_items_count = $order->purchaseOrderItems->count();
+            
+            // Total quantity ordered
+            $order->total_quantity_ordered = $order->purchaseOrderItems->sum('quantity_ordered');
+            
+            // Total quantity received
+            $order->total_quantity_received = $order->purchaseOrderItems->sum('quantity_received');
+            
+            // Formatted total
+            $order->formatted_total = '₱' . number_format($order->grand_total, 2);
+            
+            // Status badge HTML
+            $statusColors = [
+                'draft' => 'bg-gray-100 text-gray-800',
+                'sent' => 'bg-blue-100 text-blue-800',
+                'confirmed' => 'bg-yellow-100 text-yellow-800',
+                'partial' => 'bg-orange-100 text-orange-800',
+                'completed' => 'bg-green-100 text-green-800',
+                'cancelled' => 'bg-red-100 text-red-800'
+            ];
+            $order->status_badge = '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ' . 
+                                  ($statusColors[$order->status] ?? 'bg-gray-100 text-gray-800') . '">' . 
+                                  ucfirst($order->status) . '</span>';
+            
+            // Is overdue
+            $order->is_overdue = $order->expected_delivery_date && 
+                                $order->expected_delivery_date->isPast() && 
+                                !in_array($order->status, ['completed', 'cancelled']);
+            
+            // Delivery status
+            if ($order->expected_delivery_date) {
+                $daysDiff = $order->expected_delivery_date->diffInDays(now());
+                if ($daysDiff < 0) {
+                    $order->delivery_status = ['text' => abs($daysDiff) . ' days overdue', 'class' => 'text-red-500'];
+                } elseif ($daysDiff <= 3) {
+                    $order->delivery_status = ['text' => $daysDiff . ' days remaining', 'class' => 'text-orange-500'];
+                } else {
+                    $order->delivery_status = ['text' => $daysDiff . ' days remaining', 'class' => 'text-green-500'];
+                }
+            } else {
+                $order->delivery_status = ['text' => 'Not scheduled', 'class' => 'text-gray-500'];
+            }
+            
+            // Action capabilities
+            $order->action_capabilities = [
+                'can_edit' => in_array($order->status, ['draft']),
+                'can_submit' => in_array($order->status, ['draft']),
+                'can_delete' => in_array($order->status, ['draft']),
+            ];
+            
+            return $order;
+        });
 
         return view('Purchasing.purchase_orders.drafts', compact('draftOrders'));
     }
 
     /**
-     * Update draft purchase order
+     * Show open purchase orders
      */
-    public function updateDraft(Request $request, $id)
+    public function openOrders()
     {
-        $purchaseOrder = PurchaseOrder::where('id', $id)
-            ->where('status', 'draft')
-            ->firstOrFail();
+        $openOrders = PurchaseOrder::whereIn('status', ['sent', 'confirmed', 'partial'])
+            ->with(['supplier', 'purchaseOrderItems'])
+            ->orderBy('expected_delivery_date', 'asc')
+            ->paginate(15);
 
-        // Similar validation and logic as storePO method
-        // This would handle updating existing draft orders
-
-        return redirect()->route('purchasing.po.drafts')
-            ->with('success', 'Draft updated successfully!');
+        return view('Purchasing.purchase_orders.open_orders', compact('openOrders'));
     }
 
     /**
-     * Submit draft for approval
+     * Show partial orders
      */
-    public function submitForApproval($id)
+    public function partialOrders()
     {
-        $purchaseOrder = PurchaseOrder::where('id', $id)
-            ->where('status', 'draft')
-            ->firstOrFail();
+        $partialOrders = PurchaseOrder::where('status', 'partial')
+            ->with(['supplier', 'purchaseOrderItems'])
+            ->orderBy('expected_delivery_date', 'asc')
+            ->paginate(15);
 
-        $purchaseOrder->update(['status' => 'sent']);
+        return view('Purchasing.purchase_orders.partial_orders', compact('partialOrders'));
+    }
+
+    /**
+     * Show completed purchase orders history
+     */
+    public function completedHistory()
+    {
+        $completedOrders = PurchaseOrder::where('status', 'completed')
+            ->with(['supplier', 'purchaseOrderItems'])
+            ->orderBy('actual_delivery_date', 'desc')
+            ->paginate(15);
+
+        return view('Purchasing.purchase_orders.completed_history', compact('completedOrders'));
+    }
+
+    /**
+     * Show suppliers list
+     */
+    public function suppliers()
+    {
+        $suppliers = Supplier::where('is_active', true)
+            ->withCount(['purchaseOrders'])
+            ->orderBy('name')
+            ->paginate(15);
+
+        return view('Purchasing.suppliers.supplier_masterlist', compact('suppliers'));
+    }
+
+    /**
+     * Show supplier price list
+     */
+    public function supplierPriceList()
+    {
+        $suppliers = Supplier::where('is_active', true)
+            ->with(['purchaseOrders' => function($query) {
+                $query->latest()->limit(1);
+            }])
+            ->orderBy('name')
+            ->get();
+
+        return view('Purchasing.suppliers.pricelist', compact('suppliers'));
+    }
+
+    /**
+     * Show purchase history reports
+     */
+    public function purchaseHistory()
+    {
+        $purchaseHistory = PurchaseOrder::with(['supplier'])
+            ->where('status', 'completed')
+            ->orderBy('actual_delivery_date', 'desc')
+            ->paginate(20);
+
+        return view('Purchasing.reports.purchase_history', compact('purchaseHistory'));
+    }
+
+    /**
+     * Show supplier performance report
+     */
+    public function supplierPerformance()
+    {
+        $supplierPerformance = Supplier::withCount(['purchaseOrders' => function($query) {
+                $query->where('status', 'completed');
+            }])
+            ->with(['purchaseOrders' => function($query) {
+                $query->selectRaw('supplier_id, AVG(grand_total) as avg_order_value, COUNT(*) as total_orders')
+                    ->where('status', 'completed')
+                    ->groupBy('supplier_id');
+            }])
+            ->where('is_active', true)
+            ->orderBy('purchase_orders_count', 'desc')
+            ->get();
+
+        return view('Purchasing.reports.supplier_performance', compact('supplierPerformance'));
+    }
+
+    /**
+     * Show RTV (Return to Vendor) report
+     */
+    public function rtv()
+    {
+        // This would typically involve stock movements with return type
+        // For now, showing a placeholder
+        $rtvRecords = collect([]); // Placeholder
+
+        return view('Purchasing.reports.RTV', compact('rtvRecords'));
+    }
+
+    /**
+     * Show notifications page
+     */
+    public function notifications()
+    {
+        $notifications = \App\Models\Notification::forCurrentUser()
+            ->paginate(20);
+
+        return view('Purchasing.notification', compact('notifications'));
+    }
+
+    /**
+     * API endpoint to search suppliers for the home page vendor lookup
+     */
+    public function searchSuppliers(Request $request)
+    {
+        $query = $request->get('q', '');
+        
+        $suppliers = Supplier::where('is_active', true)
+            ->where(function($q) use ($query) {
+                if ($query) {
+                    $q->where('name', 'ilike', "%{$query}%")
+                      ->orWhere('supplier_code', 'ilike', "%{$query}%")
+                      ->orWhere('contact_person', 'ilike', "%{$query}%");
+                }
+            })
+            ->orderBy('name')
+            ->limit(10)
+            ->get(['id', 'name', 'supplier_code', 'contact_person', 'phone', 'email']);
+
+        return response()->json($suppliers);
+    }
+
+    /**
+     * API endpoint to get supplier details for contact info
+     */
+    public function getSupplierDetails(Supplier $supplier)
+    {
+        return response()->json([
+            'id' => $supplier->id,
+            'name' => $supplier->name,
+            'supplier_code' => $supplier->supplier_code,
+            'contact_person' => $supplier->contact_person,
+            'phone' => $supplier->phone,
+            'mobile' => $supplier->mobile,
+            'email' => $supplier->email,
+            'address' => $supplier->address,
+            'city' => $supplier->city,
+            'payment_terms' => $supplier->payment_terms,
+            'rating' => $supplier->rating
+        ]);
+    }
+
+    /**
+     * Show purchase order creation form
+     */
+    public function createPurchaseOrder()
+    {
+        // Get approved purchase requests with their items and relationships
+        $approvedRequests = PurchaseRequest::where('status', 'approved')
+            ->with([
+                'requestedBy',
+                'purchaseRequestItems.item.unit',
+                'purchaseRequestItems.item.category'
+            ])
+            ->orderBy('request_date', 'desc')
+            ->paginate(15);
+
+        // Get all active suppliers
+        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
+        
+        // Get unique departments from approved requests
+        $departments = PurchaseRequest::where('status', 'approved')
+            ->whereNotNull('department')
+            ->distinct()
+            ->pluck('department')
+            ->sort()
+            ->values();
+        
+        // Get non-paginated data for JavaScript
+        $approvedRequestsForJS = PurchaseRequest::where('status', 'approved')
+            ->with([
+                'requestedBy',
+                'purchaseRequestItems.item.unit',
+                'purchaseRequestItems.item.category'
+            ])
+            ->orderBy('request_date', 'desc')
+            ->get()
+            ->map(function ($pr) {
+                return [
+                    'id' => $pr->id,
+                    'pr_number' => $pr->pr_number,
+                    'department' => $pr->department,
+                    'priority' => $pr->priority,
+                    'total_estimated_cost' => (float) $pr->total_estimated_cost,
+                    'request_date' => $pr->request_date?->format('Y-m-d'),
+                    'requestedBy' => [
+                        'name' => $pr->requestedBy->name ?? 'N/A'
+                    ],
+                    'purchaseRequestItems' => $pr->purchaseRequestItems->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'item_id' => $item->item_id,
+                            'quantity_requested' => (float) $item->quantity_requested,
+                            'unit_price_estimate' => (float) $item->unit_price_estimate,
+                            'total_estimated_cost' => (float) $item->total_estimated_cost,
+                            'item' => [
+                                'id' => $item->item->id,
+                                'name' => $item->item->name,
+                                'item_code' => $item->item->item_code,
+                                'category' => [
+                                    'name' => $item->item->category->name ?? 'No Category'
+                                ],
+                                'unit' => [
+                                    'symbol' => $item->item->unit->symbol ?? 'pcs'
+                                ]
+                            ]
+                        ];
+                    })->toArray()
+                ];
+            })->toArray();
+        
+        return view('Purchasing.purchase_orders.create_po', compact('approvedRequests', 'suppliers', 'departments', 'approvedRequestsForJS'));
+    }
+
+    /**
+     * Store new purchase order from selected purchase requests
+     */
+    public function storePurchaseOrder(Request $request)
+    {
+        $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            'expected_delivery_date' => 'required|date|after_or_equal:today',
+            'notes' => 'nullable|string',
+            'selected_pr_ids' => 'required|string',
+            'items' => 'required|array|min:1',
+            'items.*.item_id' => 'required|exists:items,id',
+            'items.*.quantity_ordered' => 'required|numeric|min:0.001',
+            'items.*.unit_price' => 'required|numeric|min:0.01',
+            'items.*.source_pr_id' => 'required|exists:purchase_requests,id',
+        ]);
+
+        // Parse selected PR IDs
+        $selectedPRIds = array_map('intval', explode(',', $request->selected_pr_ids));
+        
+        // Verify all PR IDs exist and are approved
+        $purchaseRequests = PurchaseRequest::whereIn('id', $selectedPRIds)
+            ->where('status', 'approved')
+            ->get();
+
+        if ($purchaseRequests->count() !== count($selectedPRIds)) {
+            return redirect()->back()
+                ->with('error', 'Some selected purchase requests are invalid or not approved.')
+                ->withInput();
+        }
+
+        // Generate PO number
+        $poNumber = $this->generatePONumber();
+
+        $totalAmount = 0;
+        $poItems = [];
+
+        // Calculate totals and prepare items
+        foreach ($request->items as $itemData) {
+            $quantity = floatval($itemData['quantity_ordered']);
+            $unitPrice = floatval($itemData['unit_price']);
+            $totalPrice = $quantity * $unitPrice;
+            $totalAmount += $totalPrice;
+
+            $poItems[] = [
+                'item_id' => $itemData['item_id'],
+                'quantity_ordered' => $quantity,
+                'unit_price' => $unitPrice,
+                'total_price' => $totalPrice,
+                'source_pr_id' => $itemData['source_pr_id'],
+            ];
+        }
+
+        // Create purchase order
+        $purchaseOrder = PurchaseOrder::create([
+            'po_number' => $poNumber,
+            'supplier_id' => $request->supplier_id,
+            'order_date' => Carbon::now()->toDateString(),
+            'expected_delivery_date' => $request->expected_delivery_date,
+            'status' => 'draft',
+            'total_amount' => $totalAmount,
+            'grand_total' => $totalAmount,
+            'payment_terms' => 30, // Default, you might want to get from supplier
+            'notes' => $request->notes,
+            'created_by' => auth()->id(),
+        ]);
+
+        // Create purchase order items and link to PRs
+        foreach ($poItems as $item) {
+            PurchaseOrderItem::create(array_merge($item, [
+                'purchase_order_id' => $purchaseOrder->id,
+                'created_at' => Carbon::now(),
+            ]));
+        }
+
+        // Create links between purchase requests and purchase order
+        foreach ($selectedPRIds as $prId) {
+            PurchaseRequestPurchaseOrderLink::create([
+                'purchase_request_id' => $prId,
+                'purchase_order_id' => $purchaseOrder->id,
+                'consolidated_by' => auth()->id(),
+                'consolidated_at' => Carbon::now(),
+                'created_at' => Carbon::now(),
+            ]);
+        }
+
+        // Update PR status to 'converted'
+        PurchaseRequest::whereIn('id', $selectedPRIds)->update(['status' => 'converted']);
 
         return redirect()->route('purchasing.po.drafts')
-            ->with('success', "Purchase Order {$purchaseOrder->po_number} submitted for approval!");
+            ->with('success', "Purchase Order {$poNumber} created successfully from " . count($selectedPRIds) . " purchase request(s)!");
+    }
+
+    /**
+     * API endpoint to get dashboard metrics for real-time updates
+     */
+    public function getDashboardMetrics()
+    {
+        return response()->json([
+            'low_stock_count' => $this->getLowStockItems()->count(),
+            'open_po_value' => $this->getOpenPurchaseOrderValue(),
+            'open_po_count' => $this->getOpenPurchaseOrderCount(),
+            'overdue_deliveries' => $this->getOverdueDeliveries()->count(),
+            'last_updated' => Carbon::now()->toISOString()
+        ]);
+    }
+
+    /**
+     * Print purchase order
+     */
+    public function printPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        $purchaseOrder->load([
+            'supplier',
+            'purchaseOrderItems.item.unit',
+            'purchaseOrderItems.item.category',
+            'createdBy',
+            'approvedBy',
+            'sourcePurchaseRequests'
+        ]);
+
+        return view('Purchasing.purchase_orders.print_po', compact('purchaseOrder'));
+    }
+
+    /**
+     * Submit purchase order for approval
+     */
+    public function submitPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        if ($purchaseOrder->status !== 'draft') {
+            return redirect()->back()->with('error', 'Only draft purchase orders can be submitted.');
+        }
+
+        $purchaseOrder->update([
+            'status' => 'sent',
+            'approved_by' => auth()->id(),
+            'approved_at' => Carbon::now(),
+        ]);
+
+        return redirect()->route('purchasing.po.drafts')
+            ->with('success', "Purchase Order {$purchaseOrder->po_number} submitted for approval successfully!");
+    }
+
+    /**
+     * Edit purchase order
+     */
+    public function editPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        if ($purchaseOrder->status !== 'draft') {
+            return redirect()->back()->with('error', 'Only draft purchase orders can be edited.');
+        }
+
+        // Redirect to create page with the order data for editing
+        return redirect()->route('purchasing.po.create')
+            ->with('edit_order', $purchaseOrder->id);
+    }
+
+    /**
+     * Delete purchase order
+     */
+    public function destroyPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        if ($purchaseOrder->status !== 'draft') {
+            return redirect()->back()->with('error', 'Only draft purchase orders can be deleted.');
+        }
+
+        // Restore PR status to 'approved' if this PO was created from PRs
+        if ($purchaseOrder->sourcePurchaseRequests->count() > 0) {
+            $prIds = $purchaseOrder->sourcePurchaseRequests->pluck('id');
+            PurchaseRequest::whereIn('id', $prIds)->update(['status' => 'approved']);
+            
+            // Remove the links
+            PurchaseRequestPurchaseOrderLink::where('purchase_order_id', $purchaseOrder->id)->delete();
+        }
+
+        $poNumber = $purchaseOrder->po_number;
+        $purchaseOrder->delete();
+
+        return redirect()->route('purchasing.po.drafts')
+            ->with('success', "Purchase Order {$poNumber} deleted successfully!");
     }
 }

@@ -217,55 +217,43 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     Route::get('/dashboard', [PurchasingController::class, 'home'])->name('dashboard');
 
     // Purchase Orders
-    Route::get('/po/create', [PurchasingController::class, 'createPO'])->name('po.create');
-    Route::get('/po/create-from-pr/{purchaseRequest}', [PurchasingController::class, 'createPO'])->name('po.create-from-pr');
-    Route::post('/po/store', [PurchasingController::class, 'storePO'])->name('po.store');
-    Route::get('/po/drafts', [PurchasingController::class, 'drafts'])->name('po.drafts');
-    Route::patch('/po/{id}/submit', [PurchasingController::class, 'submitForApproval'])->name('po.submit');
-    Route::patch('/po/{id}/update-draft', [PurchasingController::class, 'updateDraft'])->name('po.update-draft');
+    Route::get('/po/create', [PurchasingController::class, 'createPurchaseOrder'])->name('po.create');
+    Route::post('/po', [PurchasingController::class, 'storePurchaseOrder'])->name('po.store');
     
-    // AJAX endpoints for dynamic functionality
-    Route::get('/ajax/supplier-items', [PurchasingController::class, 'getSupplierItems'])->name('ajax.supplier-items');
-    Route::get('/ajax/items', [PurchasingController::class, 'getItems'])->name('ajax.items');
-
-    Route::get('/po/open', function () { 
-        return view('Purchasing.purchase_orders.open_orders'); 
-    })->name('po.open');
-
-    Route::get('/po/partial', function () { 
-        return view('Purchasing.purchase_orders.partial_orders'); 
-    })->name('po.partial');
-
-    Route::get('/po/history', function () { 
-        return view('Purchasing.purchase_orders.completed_history'); 
-    })->name('po.history');
+    // Specific routes first - these must come before the generic {purchaseOrder} route
+    Route::get('/po/open', [PurchasingController::class, 'openOrders'])->name('po.open');
+    Route::get('/po/partial', [PurchasingController::class, 'partialOrders'])->name('po.partial');
+    Route::get('/po/history', [PurchasingController::class, 'completedHistory'])->name('po.history');
+    Route::get('/po/drafts', [PurchasingController::class, 'drafts'])->name('po.drafts');
+    
+    // Generic routes with {purchaseOrder} parameter - these must come after specific routes
+    Route::get('/po/{purchaseOrder}', [PurchasingController::class, 'showPurchaseOrder'])->name('po.show');
+    Route::get('/po/{purchaseOrder}/print', [PurchasingController::class, 'printPurchaseOrder'])->name('po.print');
+    
+    // PO Actions - these must come after the generic route
+    Route::patch('/po/{purchaseOrder}/submit', [PurchasingController::class, 'submitPurchaseOrder'])->name('po.submit');
+    Route::patch('/po/{purchaseOrder}/edit', [PurchasingController::class, 'editPurchaseOrder'])->name('po.edit');
+    Route::delete('/po/{purchaseOrder}', [PurchasingController::class, 'destroyPurchaseOrder'])->name('po.destroy');
 
     // Suppliers
-    Route::get('/suppliers', function () { 
-        return view('Purchasing.suppliers.supplier_masterlist'); 
-    })->name('suppliers.index');
-    
-    Route::get('/suppliers/prices', function () { 
-        return view('Purchasing.suppliers.pricelist'); 
-    })->name('suppliers.prices');
+    Route::get('/suppliers', [PurchasingController::class, 'suppliers'])->name('suppliers.index');
+    Route::get('/suppliers/prices', [PurchasingController::class, 'supplierPriceList'])->name('suppliers.prices');
 
     // Reports & Delivery
-    Route::get('/reports/history', function () { 
-        return view('Purchasing.reports.purchase_history'); 
-    })->name('reports.history');
-    
-    Route::get('/reports/performance', function () { 
-        return view('Purchasing.reports.supplier_performance'); 
-    })->name('reports.performance');
-    
-    Route::get('/reports/rtv', function () { 
-        return view('Purchasing.reports.RTV'); 
-    })->name('reports.rtv');
+    Route::get('/reports/history', [PurchasingController::class, 'purchaseHistory'])->name('reports.history');
+    Route::get('/reports/performance', [PurchasingController::class, 'supplierPerformance'])->name('reports.performance');
+    Route::get('/reports/rtv', [PurchasingController::class, 'rtv'])->name('reports.rtv');
 
     // Notifications
-    Route::get('/notifications', function () { 
-        return view('Purchasing.notification'); 
-    })->name('notifications');
+    Route::get('/notifications', [PurchasingController::class, 'notifications'])->name('notifications');
+
+    // API Routes for AJAX functionality
+    Route::get('/api/suppliers/search', [PurchasingController::class, 'searchSuppliers'])->name('api.suppliers.search');
+    Route::get('/api/suppliers/{supplier}', [PurchasingController::class, 'getSupplierDetails'])->name('api.suppliers.details');
+    Route::get('/api/items/search', [PurchasingController::class, 'searchItems'])->name('api.items.search');
+    Route::get('/api/suppliers/{supplier}/items', [PurchasingController::class, 'getSupplierItems'])->name('api.suppliers.items');
+    Route::get('/api/dashboard/metrics', [PurchasingController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
+    Route::get('/api/dashboard/summary', [PurchasingController::class, 'getDashboardSummary'])->name('api.dashboard.summary');
 
 });
 

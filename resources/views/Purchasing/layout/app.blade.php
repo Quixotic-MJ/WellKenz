@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'WellKenz - Cakes & Pastries')</title>
 
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -154,10 +157,18 @@
 
         // Set active menu item
         function setActiveMenu(menuId) {
+            // Remove active class from all menu items
             document.querySelectorAll('.menu-item').forEach(item => {
                 item.classList.remove('active-menu');
             });
-            document.getElementById(menuId).classList.add('active-menu');
+            
+            // Add active class to the specified menu item with null check
+            const menuElement = document.getElementById(menuId);
+            if (menuElement) {
+                menuElement.classList.add('active-menu');
+            } else {
+                console.warn(`Menu element with ID '${menuId}' not found`);
+            }
         }
 
         // Toggle dropdowns
@@ -189,7 +200,7 @@
 
         // Set dashboard as active by default
         document.addEventListener('DOMContentLoaded', function() {
-            setActiveMenu('menu-dashboard');
+            setActiveMenu('menu-purchasing-dashboard');
         });
     </script>
 
