@@ -26,6 +26,7 @@ class PurchaseOrder extends Model
         'notes',
         'created_by',
         'approved_by',
+        'purchase_request_id',
     ];
 
     protected $casts = [
@@ -57,6 +58,11 @@ class PurchaseOrder extends Model
     public function purchaseOrderItems()
     {
         return $this->hasMany(PurchaseOrderItem::class);
+    }
+
+    public function purchaseRequest()
+    {
+        return $this->belongsTo(PurchaseRequest::class);
     }
 
     public function isDraft()

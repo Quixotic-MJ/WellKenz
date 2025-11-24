@@ -217,13 +217,16 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     Route::get('/dashboard', [PurchasingController::class, 'home'])->name('dashboard');
 
     // Purchase Orders
-    Route::get('/po/create', function () { 
-        return view('Purchasing.purchase_orders.create_po'); 
-    })->name('po.create');
-
-    Route::get('/po/drafts', function () { 
-        return view('Purchasing.purchase_orders.drafts'); 
-    })->name('po.drafts');
+    Route::get('/po/create', [PurchasingController::class, 'createPO'])->name('po.create');
+    Route::get('/po/create-from-pr/{purchaseRequest}', [PurchasingController::class, 'createPO'])->name('po.create-from-pr');
+    Route::post('/po/store', [PurchasingController::class, 'storePO'])->name('po.store');
+    Route::get('/po/drafts', [PurchasingController::class, 'drafts'])->name('po.drafts');
+    Route::patch('/po/{id}/submit', [PurchasingController::class, 'submitForApproval'])->name('po.submit');
+    Route::patch('/po/{id}/update-draft', [PurchasingController::class, 'updateDraft'])->name('po.update-draft');
+    
+    // AJAX endpoints for dynamic functionality
+    Route::get('/ajax/supplier-items', [PurchasingController::class, 'getSupplierItems'])->name('ajax.supplier-items');
+    Route::get('/ajax/items', [PurchasingController::class, 'getItems'])->name('ajax.items');
 
     Route::get('/po/open', function () { 
         return view('Purchasing.purchase_orders.open_orders'); 

@@ -44,6 +44,11 @@ class PurchaseRequest extends Model
         return $this->hasMany(PurchaseRequestItem::class);
     }
 
+    public function purchaseOrder()
+    {
+        return $this->hasOne(PurchaseOrder::class);
+    }
+
     // Scopes
     public function scopePending($query)
     {
