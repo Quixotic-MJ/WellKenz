@@ -17,6 +17,8 @@ use App\Models\User;
 use App\Models\Notification;
 use App\Models\Category;
 use App\Models\Unit;
+use App\Models\RtvTransaction;
+use App\Models\RtvItem;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -701,6 +703,44 @@ class InventoryController extends Controller
             ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching categories: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch categories',
+                'data' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Get categories that have items (for RTV bulk operations)
+     */
+    public function getCategoriesForRtvBulk()
+    {
+        try {
+            $categories = Category::where('is_active', true)
+                ->whereHas('items', function($query) {
+                    $query->where('is_active', true);
+                })
+                ->withCount(['items' => function($query) {
+                    $query->where('is_active', true);
+                }])
+                ->orderBy('name')
+                ->get(['id', 'name', 'description'])
+                ->map(function($category) {
+                    return [
+                        'id' => $category->id,
+                        'name' => $category->name,
+                        'description' => $category->description,
+                        'items_count' => $category->items_count
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $categories
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching categories for RTV bulk: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to fetch categories',
@@ -2190,12 +2230,14 @@ class InventoryController extends Controller
     }
      /* Display batch labels printing interface
      */
-    public function printBatchLabels(Request $request)
+    /**
+     * Display batch logs interface
+     */
+    public function batchLogs(Request $request)
     {
         try {
-            // Build query for recently received batches
-            $query = Batch::with(['item.unit', 'supplier', 'stockMovements'])
-                ->whereIn('status', ['active', 'quarantine'])
+            // Build query for all batch records
+            $query = Batch::with(['item.unit', 'supplier', 'item.category'])
                 ->whereHas('item', function($q) {
                     $q->where('is_active', true);
                 });
@@ -2209,6 +2251,59 @@ class InventoryController extends Controller
                 $query->whereHas('item.category', function($q) use ($request) {
                     $q->where('id', $request->category_id);
                 });
+            }
+
+            // Date range filters
+            if ($request->has('date_range') && $request->date_range !== 'all') {
+                $now = now();
+                switch ($request->date_range) {
+                    case 'today':
+                        $query->whereDate('created_at', $now->toDateString());
+                        break;
+                    case 'week':
+                        $query->whereBetween('created_at', [$now->startOfWeek(), $now->endOfWeek()]);
+                        break;
+                    case 'month':
+                        $query->whereBetween('created_at', [$now->startOfMonth(), $now->endOfMonth()]);
+                        break;
+                    case 'quarter':
+                        $query->whereBetween('created_at', [$now->startOfQuarter(), $now->endOfQuarter()]);
+                        break;
+                }
+            }
+
+            // Advanced date filters
+            if ($request->has('manufacturing_date_from') && $request->manufacturing_date_from) {
+                $query->whereDate('manufacturing_date', '>=', $request->manufacturing_date_from);
+            }
+            if ($request->has('manufacturing_date_to') && $request->manufacturing_date_to) {
+                $query->whereDate('manufacturing_date', '<=', $request->manufacturing_date_to);
+            }
+            if ($request->has('expiry_date_from') && $request->expiry_date_from) {
+                $query->whereDate('expiry_date', '>=', $request->expiry_date_from);
+            }
+            if ($request->has('expiry_date_to') && $request->expiry_date_to) {
+                $query->whereDate('expiry_date', '<=', $request->expiry_date_to);
+            }
+
+            // Supplier filter
+            if ($request->has('supplier_id') && $request->supplier_id) {
+                $query->where('supplier_id', $request->supplier_id);
+            }
+
+            // Item type filter
+            if ($request->has('item_type') && $request->item_type) {
+                $query->whereHas('item', function($q) use ($request) {
+                    $q->where('item_type', $request->item_type);
+                });
+            }
+
+            // Quantity filters
+            if ($request->has('min_quantity') && $request->min_quantity) {
+                $query->where('quantity', '>=', $request->min_quantity);
+            }
+            if ($request->has('max_quantity') && $request->max_quantity) {
+                $query->where('quantity', '<=', $request->max_quantity);
             }
 
             if ($request->has('search') && !empty($request->search)) {
@@ -2225,58 +2320,131 @@ class InventoryController extends Controller
                 });
             }
 
-            // Filter by urgency (expiring soon)
-            if ($request->has('urgency') && $request->urgency !== 'all') {
-                $now = now();
-                switch ($request->urgency) {
-                    case 'critical':
-                        $query->whereBetween('expiry_date', [$now, $now->copy()->addDays(2)]);
+            // Sorting
+            $sortField = $request->get('sort', 'created_at');
+            $sortOrder = $request->get('order', 'desc');
+            
+            $allowedSortFields = ['batch_number', 'item_name', 'quantity', 'manufacturing_date', 'supplier', 'status', 'created_at'];
+            if (in_array($sortField, $allowedSortFields)) {
+                switch ($sortField) {
+                    case 'item_name':
+                        $query->join('items', 'batches.item_id', '=', 'items.id')
+                              ->orderBy('items.name', $sortOrder)
+                              ->select('batches.*');
                         break;
-                    case 'high':
-                        $query->whereBetween('expiry_date', [$now, $now->copy()->addDays(7)]);
+                    case 'supplier':
+                        $query->join('suppliers', 'batches.supplier_id', '=', 'suppliers.id')
+                              ->orderBy('suppliers.name', $sortOrder)
+                              ->select('batches.*');
                         break;
-                    case 'medium':
-                        $query->whereBetween('expiry_date', [$now->copy()->addDays(7), $now->copy()->addDays(14)]);
-                        break;
+                    default:
+                        $query->orderBy($sortField, $sortOrder);
                 }
+            } else {
+                $query->orderBy('created_at', 'desc');
             }
 
-            // Sort by creation date (newest first) and expiry date for prioritization
-            $query->orderByRaw('CASE WHEN expiry_date IS NOT NULL THEN expiry_date ELSE "9999-12-31" END ASC')
-                  ->orderBy('created_at', 'desc');
-
-            $batches = $query->paginate(12)->withQueryString();
+            $batches = $query->paginate(15)->withQueryString();
 
             // Get filter options
             $categories = Category::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+            $suppliers = Supplier::where('is_active', true)->orderBy('name')->get(['id', 'name']);
             
             // Get batch statistics
             $stats = [
-                'total' => Batch::whereIn('status', ['active', 'quarantine'])->count(),
-                'expiring_soon' => Batch::whereIn('status', ['active', 'quarantine'])
+                'total' => Batch::has('item')->count(),
+                'active' => Batch::has('item')->where('status', 'active')->count(),
+                'quarantine' => Batch::has('item')->where('status', 'quarantine')->count(),
+                'expired' => Batch::has('item')->where('status', 'expired')->count(),
+                'consumed' => Batch::has('item')->where('status', 'consumed')->count(),
+                'expiring_soon' => Batch::has('item')
+                    ->whereIn('status', ['active', 'quarantine'])
                     ->whereBetween('expiry_date', [now(), now()->addDays(7)])
-                    ->count(),
-                'perishable' => Batch::whereIn('status', ['active', 'quarantine'])
-                    ->whereHas('item', function($q) {
-                        $q->where('shelf_life_days', '>', 0);
-                    })
-                    ->count(),
-                'non_perishable' => Batch::whereIn('status', ['active', 'quarantine'])
-                    ->whereHas('item', function($q) {
-                        $q->where('shelf_life_days', 0);
-                    })
                     ->count(),
             ];
 
-            return view('Inventory.inbound.print_batch_labels', compact('batches', 'categories', 'stats'));
+            return view('Inventory.inbound.batch_logs', compact('batches', 'categories', 'suppliers', 'stats'));
 
         } catch (\Exception $e) {
-            \Log::error('Error loading batch labels: ' . $e->getMessage());
-            return view('Inventory.inbound.print_batch_labels', [
+            \Log::error('Error loading batch logs: ' . $e->getMessage());
+            return view('Inventory.inbound.batch_logs', [
                 'batches' => collect(),
                 'categories' => collect(),
-                'stats' => ['total' => 0, 'expiring_soon' => 0, 'perishable' => 0, 'non_perishable' => 0]
+                'suppliers' => collect(),
+                'stats' => ['total' => 0, 'active' => 0, 'quarantine' => 0, 'expired' => 0, 'consumed' => 0, 'expiring_soon' => 0]
             ]);
+        }
+    }
+
+    /**
+     * Edit batch form
+     */
+    public function editBatch($batchId)
+    {
+        // This would typically redirect to an edit form
+        // For now, we'll return a simple response
+        return redirect()->route('inventory.inbound.batch-logs')
+                        ->with('info', 'Batch editing functionality not yet implemented.');
+    }
+
+    /**
+     * Update batch status
+     */
+    public function updateBatchStatus(Request $request, $batchId)
+    {
+        try {
+            $request->validate([
+                'status' => 'required|in:active,quarantine,expired,consumed'
+            ]);
+
+            $batch = Batch::findOrFail($batchId);
+            $oldStatus = $batch->status;
+            $batch->status = $request->status;
+            $batch->save();
+
+            // Log the status change
+            \Log::info("Batch status updated", [
+                'batch_id' => $batch->id,
+                'batch_number' => $batch->batch_number,
+                'old_status' => $oldStatus,
+                'new_status' => $request->status,
+                'user_id' => auth()->id(),
+                'user_name' => auth()->user()->name
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch status updated successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating batch status: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update batch status'
+            ], 500);
+        }
+    }
+
+    /**
+     * Export batch logs
+     */
+    public function exportBatchLogs(Request $request)
+    {
+        try {
+            // This would typically generate an Excel/CSV file
+            // For now, we'll return a simple response
+            return response()->json([
+                'success' => true,
+                'message' => 'Export functionality not yet implemented'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error exporting batch logs: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to export batch logs'
+            ], 500);
         }
     }
 
@@ -2549,6 +2717,843 @@ class InventoryController extends Controller
                 'success' => false,
                 'message' => 'Failed to process batch labels printing: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Display batch lookup page
+     */
+    public function batchLookup()
+    {
+        try {
+            // Get recent active batches for initial display
+            $recentBatches = Batch::with(['item.unit', 'supplier'])
+                ->whereIn('status', ['active', 'quarantine'])
+                ->whereHas('item', function($query) {
+                    $query->where('is_active', true);
+                })
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+
+            return view('Inventory.stock_management.batch_lookup', compact('recentBatches'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading batch lookup: ' . $e->getMessage());
+            return view('Inventory.stock_management.batch_lookup', ['recentBatches' => collect()]);
+        }
+    }
+
+    /**
+     * Search batches by various criteria
+     */
+    public function searchBatches(Request $request)
+    {
+        try {
+            $request->validate([
+                'search' => 'required|string|min:1'
+            ]);
+
+            $searchTerm = trim($request->search);
+            
+            $query = Batch::with(['item.unit', 'supplier'])
+                ->whereHas('item', function($q) {
+                    $q->where('is_active', true);
+                });
+
+            // Search by batch number, item name, item code, or barcode
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('batch_number', 'ilike', "%{$searchTerm}%")
+                  ->orWhereHas('item', function($itemQuery) use ($searchTerm) {
+                      $itemQuery->where('name', 'ilike', "%{$searchTerm}%")
+                               ->orWhere('item_code', 'ilike', "%{$searchTerm}%")
+                               ->orWhere('barcode', 'ilike', "%{$searchTerm}%");
+                  })
+                  ->orWhereHas('supplier', function($supplierQuery) use ($searchTerm) {
+                      $supplierQuery->where('name', 'ilike', "%{$searchTerm}%");
+                  });
+            });
+
+            // Filter by status if specified
+            if ($request->has('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+
+            // Filter by expiry status if specified
+            if ($request->has('expiry_filter') && $request->expiry_filter !== 'all') {
+                $now = now();
+                switch ($request->expiry_filter) {
+                    case 'expired':
+                        $query->where('expiry_date', '<', $now->toDateString());
+                        break;
+                    case 'expiring_soon':
+                        $query->whereBetween('expiry_date', [
+                            $now->toDateString(),
+                            $now->copy()->addDays(7)->toDateString()
+                        ]);
+                        break;
+                    case 'no_expiry':
+                        $query->whereNull('expiry_date');
+                        break;
+                }
+            }
+
+            $batches = $query->orderByRaw('CASE WHEN expiry_date IS NOT NULL THEN expiry_date ELSE \'9999-12-31\'::date END ASC')
+                           ->orderBy('created_at', 'desc')
+                           ->limit(20)
+                           ->get();
+
+            // Transform batches for display
+            $transformedBatches = $batches->map(function($batch) {
+                return $this->transformBatchForDisplay($batch);
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => $transformedBatches,
+                'total' => $transformedBatches->count(),
+                'search_term' => $searchTerm
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error searching batches: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to search batches: ' . $e->getMessage(),
+                'data' => [],
+                'total' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Get batch details by ID
+     */
+    public function getBatchDetails($batchId)
+    {
+        try {
+            $batch = Batch::with(['item.unit', 'supplier'])
+                ->whereHas('item', function($query) {
+                    $query->where('is_active', true);
+                })
+                ->findOrFail($batchId);
+
+            return response()->json([
+                'success' => true,
+                'data' => $this->transformBatchForDisplay($batch)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting batch details: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Batch not found'
+            ], 404);
+        }
+    }
+
+    /**
+     * Transform batch data for display
+     */
+    private function transformBatchForDisplay($batch)
+    {
+        $now = now();
+        $expiryDate = $batch->expiry_date ? \Carbon\Carbon::parse($batch->expiry_date) : null;
+        $manufacturingDate = $batch->manufacturing_date ? \Carbon\Carbon::parse($batch->manufacturing_date) : null;
+        
+        // Calculate expiry status
+        $expiryStatus = 'no_expiry';
+        $expiryDays = null;
+        $isExpiringSoon = false;
+        $isExpired = false;
+
+        if ($expiryDate) {
+            $expiryDays = $now->diffInDays($expiryDate, false);
+            $isExpired = $expiryDays < 0;
+            $isExpiringSoon = !$isExpired && $expiryDays <= 7;
+            
+            if ($isExpired) {
+                $expiryStatus = 'expired';
+            } elseif ($isExpiringSoon) {
+                $expiryStatus = 'expiring_soon';
+            } else {
+                $expiryStatus = 'active';
+            }
+        }
+
+        // Determine status badge
+        $statusBadge = match($batch->status) {
+            'active' => ['class' => 'bg-green-100 text-green-800', 'text' => 'Active'],
+            'quarantine' => ['class' => 'bg-yellow-100 text-yellow-800', 'text' => 'Quarantine'],
+            'expired' => ['class' => 'bg-red-100 text-red-800', 'text' => 'Expired'],
+            'consumed' => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Consumed'],
+            default => ['class' => 'bg-gray-100 text-gray-800', 'text' => ucfirst($batch->status)]
+        };
+
+        // Add expiry warning for status badge
+        if ($isExpiringSoon && $batch->status === 'active') {
+            $statusBadge = ['class' => 'bg-red-100 text-red-800 animate-pulse', 'text' => 'Expiring Soon'];
+        }
+
+        return [
+            'id' => $batch->id,
+            'batch_number' => $batch->batch_number,
+            'item' => [
+                'id' => $batch->item->id,
+                'name' => $batch->item->name,
+                'item_code' => $batch->item->item_code,
+                'barcode' => $batch->item->barcode,
+                'unit' => [
+                    'symbol' => $batch->item->unit->symbol ?? 'pcs'
+                ]
+            ],
+            'supplier' => [
+                'name' => $batch->supplier->name ?? 'N/A'
+            ],
+            'quantity' => (float) $batch->quantity,
+            'unit_cost' => (float) $batch->unit_cost,
+            'manufacturing_date' => $manufacturingDate ? $manufacturingDate->format('M d, Y') : 'N/A',
+            'expiry_date' => $expiryDate ? $expiryDate->format('M d, Y') : 'No Expiry',
+            'expiry_date_raw' => $expiryDate ? $expiryDate->format('Y-m-d') : null,
+            'location' => $batch->location ?? 'Main Storage',
+            'status' => $batch->status,
+            'status_badge' => $statusBadge,
+            'expiry_status' => $expiryStatus,
+            'expiry_days' => $expiryDays,
+            'is_expired' => $isExpired,
+            'is_expiring_soon' => $isExpiringSoon,
+            'created_at' => $batch->created_at->format('M d, Y H:i'),
+            'icon' => $this->getBatchIcon($batch->item, $batch->status),
+            'priority_color' => $this->getBatchPriorityColor($batch, $isExpired, $isExpiringSoon)
+        ];
+    }
+
+    /**
+     * Get icon for batch based on item type and status
+     */
+    private function getBatchIcon($item, $status)
+    {
+        $itemType = $item->item_type ?? 'supply';
+        
+        $iconMap = [
+            'raw_material' => ['class' => 'fas fa-seedling', 'bg' => 'bg-green-100', 'color' => 'text-green-700'],
+            'finished_good' => ['class' => 'fas fa-birthday-cake', 'bg' => 'bg-purple-100', 'color' => 'text-purple-700'],
+            'semi_finished' => ['class' => 'fas fa-cookie-bite', 'bg' => 'bg-orange-100', 'color' => 'text-orange-700'],
+            'supply' => ['class' => 'fas fa-box', 'bg' => 'bg-blue-100', 'color' => 'text-blue-700'],
+        ];
+
+        $baseIcon = $iconMap[$itemType] ?? $iconMap['supply'];
+        
+        // Add status-based modifications
+        if ($status === 'quarantine') {
+            $baseIcon['color'] = 'text-yellow-700';
+        } elseif ($status === 'expired') {
+            $baseIcon['color'] = 'text-red-700';
+        }
+        
+        return $baseIcon;
+    }
+
+    /**
+     * Get priority color for batch border
+     */
+    private function getBatchPriorityColor($batch, $isExpired, $isExpiringSoon)
+    {
+        if ($isExpired) {
+            return 'border-red-500';
+        } elseif ($isExpiringSoon) {
+            return 'border-yellow-500';
+        } elseif ($batch->status === 'quarantine') {
+            return 'border-yellow-500';
+        } else {
+            return 'border-green-500';
+        }
+    }
+
+    // ============================================================================
+    // RTV (Return to Vendor) Methods
+    // ============================================================================
+
+    /**
+     * Display the RTV (Return to Vendor) Dock Log
+     */
+    public function indexRtv(Request $request)
+    {
+        try {
+            // Build the query for RTV transactions with relationships
+            $query = RtvTransaction::with([
+                'supplier',
+                'purchaseOrder',
+                'rtvItems.item.unit',
+                'createdBy:id,name'
+            ])->orderBy('created_at', 'desc');
+
+            // Apply search filter
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('rtv_number', 'ilike', "%{$search}%")
+                      ->orWhereHas('supplier', function($sq) use ($search) {
+                          $sq->where('name', 'ilike', "%{$search}%");
+                      })
+                      ->orWhere('notes', 'ilike', "%{$search}%")
+                      ->orWhereHas('rtvItems', function($rtvi) use ($search) {
+                          $rtvi->where('reason', 'ilike', "%{$search}%")
+                               ->orWhereHas('item', function($itemq) use ($search) {
+                                   $itemq->where('name', 'ilike', "%{$search}%")
+                                         ->orWhere('item_code', 'ilike', "%{$search}%");
+                               });
+                      });
+                });
+            }
+
+            // Apply status filter
+            if ($request->has('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+
+            // Apply supplier filter
+            if ($request->has('supplier_id') && $request->supplier_id !== 'all') {
+                $query->where('supplier_id', $request->supplier_id);
+            }
+
+            // Apply date range filter
+            if ($request->has('date_from') && !empty($request->date_from)) {
+                $query->whereDate('return_date', '>=', $request->date_from);
+            }
+            if ($request->has('date_to') && !empty($request->date_to)) {
+                $query->whereDate('return_date', '<=', $request->date_to);
+            }
+
+            // Paginate results
+            $rtvRecords = $query->paginate($request->get('per_page', 15))->withQueryString();
+
+            // Get summary statistics
+            $summary = [
+                'total_transactions' => RtvTransaction::count(),
+                'pending_transactions' => RtvTransaction::where('status', 'pending')->count(),
+                'processed_transactions' => RtvTransaction::where('status', 'processed')->count(),
+                'completed_transactions' => RtvTransaction::where('status', 'completed')->count(),
+                'total_value' => RtvTransaction::sum('total_value'),
+            ];
+
+            // Get suppliers for filter dropdown
+            $suppliers = Supplier::where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            return view('Inventory.inbound.RTV', compact('rtvRecords', 'summary', 'suppliers'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading RTV records: ' . $e->getMessage());
+            
+            return view('Inventory.inbound.RTV', [
+                'rtvRecords' => collect(),
+                'summary' => [
+                    'total_transactions' => 0,
+                    'pending_transactions' => 0,
+                    'processed_transactions' => 0,
+                    'completed_transactions' => 0,
+                    'total_value' => 0,
+                ],
+                'suppliers' => collect()
+            ]);
+        }
+    }
+
+    /**
+     * Get items for RTV creation (AJAX)
+     */
+    public function getItemsForRtv(Request $request)
+    {
+        try {
+            $query = Item::with(['unit', 'currentStockRecord', 'supplierItems.supplier'])
+                ->where('is_active', true);
+
+            // Apply search filter
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'ilike', "%{$search}%")
+                      ->orWhere('item_code', 'ilike', "%{$search}%")
+                      ->orWhere('description', 'ilike', "%{$search}%");
+                });
+            }
+
+            // Apply category filter
+            if ($request->has('category_id') && !empty($request->category_id)) {
+                $query->where('category_id', $request->category_id);
+            }
+
+            // Get total count for pagination
+            $total = $query->count();
+
+            // Apply pagination
+            $perPage = $request->get('per_page', 20);
+            $page = $request->get('page', 1);
+            $offset = ($page - 1) * $perPage;
+
+            $items = $query->orderBy('name')
+                ->offset($offset)
+                ->limit($perPage)
+                ->get()
+                ->map(function($item) {
+                    $currentStock = $item->currentStockRecord ? 
+                        $item->currentStockRecord->current_quantity : 0;
+                    
+                    return [
+                        'id' => $item->id,
+                        'item_code' => $item->item_code ?? 'N/A',
+                        'name' => $item->name,
+                        'description' => $item->description ?? '',
+                        'unit' => [
+                            'id' => $item->unit->id ?? 0,
+                            'symbol' => $item->unit->symbol ?? 'pcs'
+                        ],
+                        'current_stock' => (float) $currentStock,
+                        'cost_price' => (float) ($item->cost_price ?? 0),
+                        'has_suppliers' => $item->supplierItems->count() > 0,
+                        'suppliers' => $item->supplierItems->take(3)->map(function($supplierItem) {
+                            return [
+                                'id' => $supplierItem->supplier->id,
+                                'name' => $supplierItem->supplier->name,
+                                'unit_price' => (float) $supplierItem->unit_price
+                            ];
+                        })->values()
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $items,
+                'total' => $total
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching items for RTV: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch items',
+                'data' => [],
+                'total' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Get suppliers for RTV creation (AJAX)
+     */
+    public function getSuppliersForRtv(Request $request)
+    {
+        try {
+            $query = Supplier::where('is_active', true)
+                ->with(['supplierItems.item']);
+
+            // Apply search filter
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'ilike', "%{$search}%")
+                      ->orWhere('supplier_code', 'ilike', "%{$search}%")
+                      ->orWhere('contact_person', 'ilike', "%{$search}%");
+                });
+            }
+
+            $suppliers = $query->orderBy('name')
+                ->limit(15)
+                ->get()
+                ->map(function($supplier) {
+                    return [
+                        'id' => $supplier->id,
+                        'supplier_code' => $supplier->supplier_code,
+                        'name' => $supplier->name,
+                        'contact_person' => $supplier->contact_person,
+                        'phone' => $supplier->phone,
+                        'email' => $supplier->email,
+                        'city' => $supplier->city ?? '',
+                        'items_supplied' => $supplier->supplierItems->count()
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $suppliers,
+                'total' => $suppliers->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching suppliers for RTV: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch suppliers',
+                'data' => [],
+                'total' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Get purchase orders for supplier (AJAX)
+     */
+    public function getPurchaseOrdersForRtv(Request $request)
+    {
+        try {
+            $request->validate([
+                'supplier_id' => 'required|exists:suppliers,id'
+            ]);
+
+            $purchaseOrders = PurchaseOrder::with(['purchaseOrderItems.item.unit'])
+                ->where('supplier_id', $request->supplier_id)
+                ->whereIn('status', ['sent', 'confirmed', 'partial', 'completed'])
+                ->orderBy('order_date', 'desc')
+                ->limit(10)
+                ->get()
+                ->map(function($po) {
+                    return [
+                        'id' => $po->id,
+                        'po_number' => $po->po_number,
+                        'order_date' => $po->order_date->format('Y-m-d'),
+                        'expected_delivery_date' => $po->expected_delivery_date?->format('Y-m-d'),
+                        'status' => $po->status,
+                        'total_items' => $po->purchaseOrderItems->count(),
+                        'total_amount' => (float) $po->grand_total
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $purchaseOrders,
+                'total' => $purchaseOrders->count()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching purchase orders for RTV: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch purchase orders',
+                'data' => [],
+                'total' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Store a new RTV transaction
+     */
+    public function storeRtv(Request $request)
+    {
+        try {
+            $request->validate([
+                'supplier_id' => 'required|exists:suppliers,id',
+                'purchase_order_id' => 'nullable|exists:purchase_orders,id',
+                'return_date' => 'required|date',
+                'notes' => 'nullable|string|max:1000',
+                'items' => 'required|array|min:1',
+                'items.*.item_id' => 'required|exists:items,id',
+                'items.*.quantity_returned' => 'required|numeric|min:0.001',
+                'items.*.unit_cost' => 'required|numeric|min:0.01',
+                'items.*.reason' => 'required|string|max:500'
+            ]);
+
+            DB::beginTransaction();
+
+            $user = Auth::user();
+
+            // Generate RTV number
+            $rtvCount = RtvTransaction::whereYear('created_at', now()->year)->count();
+            $rtvNumber = 'RTV-' . now()->format('Y') . '-' . str_pad($rtvCount + 1, 4, '0', STR_PAD_LEFT);
+
+            // Calculate total value
+            $totalValue = 0;
+            foreach ($request->items as $item) {
+                $totalValue += ($item['quantity_returned'] * $item['unit_cost']);
+            }
+
+            // Create RTV transaction
+            $rtv = RtvTransaction::create([
+                'rtv_number' => $rtvNumber,
+                'purchase_order_id' => $request->purchase_order_id,
+                'supplier_id' => $request->supplier_id,
+                'return_date' => $request->return_date,
+                'status' => 'pending',
+                'total_value' => $totalValue,
+                'notes' => $request->notes,
+                'created_by' => $user->id
+            ]);
+
+            // Create RTV items
+            foreach ($request->items as $itemData) {
+                RtvItem::create([
+                    'rtv_id' => $rtv->id,
+                    'item_id' => $itemData['item_id'],
+                    'quantity_returned' => $itemData['quantity_returned'],
+                    'unit_cost' => $itemData['unit_cost'],
+                    'reason' => $itemData['reason']
+                ]);
+
+                // Create stock movement for return
+                StockMovement::create([
+                    'item_id' => $itemData['item_id'],
+                    'movement_type' => 'return',
+                    'reference_number' => $rtvNumber,
+                    'quantity' => -$itemData['quantity_returned'], // Negative for outgoing stock
+                    'unit_cost' => $itemData['unit_cost'],
+                    'total_cost' => -($itemData['quantity_returned'] * $itemData['unit_cost']),
+                    'notes' => "RTV Return - Reason: {$itemData['reason']}",
+                    'user_id' => $user->id
+                ]);
+            }
+
+            // Create notification for relevant users
+            $this->createRtvNotifications($rtv, $user);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'RTV transaction created successfully',
+                'rtv_number' => $rtvNumber,
+                'rtv_id' => $rtv->id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::error('Error creating RTV transaction: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create RTV transaction: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get RTV transaction details (AJAX)
+     */
+    public function getRtvDetails($id)
+    {
+        try {
+            $rtv = RtvTransaction::with([
+                'supplier',
+                'purchaseOrder',
+                'rtvItems.item.unit',
+                'createdBy:id,name'
+            ])->findOrFail($id);
+
+            $formattedItems = $rtv->rtvItems->map(function($item) {
+                return [
+                    'id' => $item->id,
+                    'item_name' => $item->item->name,
+                    'item_code' => $item->item->item_code,
+                    'quantity_returned' => (float) $item->quantity_returned,
+                    'unit_symbol' => $item->item->unit->symbol ?? 'pcs',
+                    'unit_cost' => (float) $item->unit_cost,
+                    'total_cost' => (float) $item->total_cost,
+                    'reason' => $item->reason,
+                    'formatted_quantity' => $item->formatted_quantity,
+                    'formatted_unit_cost' => $item->formatted_unit_cost,
+                    'formatted_total_cost' => $item->formatted_total_cost
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $rtv->id,
+                    'rtv_number' => $rtv->rtv_number,
+                    'supplier_name' => $rtv->supplier->name,
+                    'supplier_code' => $rtv->supplier->supplier_code,
+                    'po_number' => $rtv->purchaseOrder ? $rtv->purchaseOrder->po_number : null,
+                    'return_date' => $rtv->return_date->format('Y-m-d'),
+                    'return_date_formatted' => $rtv->return_date_formatted,
+                    'status' => $rtv->status,
+                    'status_badge' => $rtv->status_badge,
+                    'total_value' => (float) $rtv->total_value,
+                    'formatted_total_value' => $rtv->formatted_total_value,
+                    'notes' => $rtv->notes,
+                    'created_by' => $rtv->createdBy->name ?? 'Unknown',
+                    'created_at' => $rtv->created_at->format('Y-m-d H:i:s'),
+                    'items' => $formattedItems,
+                    'total_items' => $formattedItems->count()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching RTV details: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch RTV details'
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete RTV transaction
+     */
+    public function deleteRtv($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $rtv = RtvTransaction::findOrFail($id);
+
+            // Only allow deletion of pending RTVs
+            if ($rtv->status !== 'pending') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only pending RTV transactions can be deleted'
+                ], 400);
+            }
+
+            // Delete associated RTV items (this will cascade)
+            RtvItem::where('rtv_id', $rtv->id)->delete();
+
+            // Delete the RTV transaction
+            $rtv->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'RTV transaction deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            \Log::error('Error deleting RTV transaction: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete RTV transaction: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Print RTV slip
+     */
+    public function printRtvSlip($id)
+    {
+        try {
+            $rtv = RtvTransaction::with([
+                'supplier',
+                'purchaseOrder',
+                'rtvItems.item.unit',
+                'createdBy:id,name'
+            ])->findOrFail($id);
+
+            return view('Inventory.inbound.print_rtv_slip', compact('rtv'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error printing RTV slip: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate RTV slip'
+            ], 500);
+        }
+    }
+
+    /**
+     * Update RTV status
+     */
+    public function updateRtvStatus(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'status' => 'required|in:pending,processed,completed,cancelled'
+            ]);
+
+            $rtv = RtvTransaction::findOrFail($id);
+            $rtv->update(['status' => $request->status]);
+
+            // Create notification for status change
+            $user = Auth::user();
+            $this->createRtvStatusChangeNotification($rtv, $user, $request->status);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'RTV status updated successfully',
+                'status_badge' => $rtv->fresh()->status_badge
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error updating RTV status: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update RTV status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Create notifications for RTV operations
+     */
+    private function createRtvNotifications($rtv, $user)
+    {
+        try {
+            // Notify purchasing and supervisor users
+            $notificationRecipients = User::whereIn('role', ['purchasing', 'supervisor', 'admin'])
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($notificationRecipients as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'title' => '📦 New RTV Transaction Created',
+                    'message' => "RTV {$rtv->rtv_number} created for {$rtv->supplier->name} with total value of {$rtv->formatted_total_value}",
+                    'type' => 'rtv_created',
+                    'priority' => 'normal',
+                    'action_url' => '/inventory/inbound/rtv',
+                    'metadata' => [
+                        'rtv_id' => $rtv->id,
+                        'rtv_number' => $rtv->rtv_number,
+                        'supplier_name' => $rtv->supplier->name,
+                        'total_value' => $rtv->total_value,
+                        'created_by' => $user->name
+                    ]
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating RTV notifications: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Create notification for RTV status changes
+     */
+    private function createRtvStatusChangeNotification($rtv, $user, $newStatus)
+    {
+        try {
+            $statusLabels = [
+                'pending' => 'Pending Credit',
+                'processed' => 'In Process',
+                'completed' => 'Credit Received',
+                'cancelled' => 'Cancelled'
+            ];
+
+            $notificationRecipients = User::whereIn('role', ['purchasing', 'supervisor', 'admin'])
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($notificationRecipients as $recipient) {
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'title' => '🔄 RTV Status Updated',
+                    'message' => "RTV {$rtv->rtv_number} status changed to '{$statusLabels[$newStatus]}' by {$user->name}",
+                    'type' => 'rtv_status_change',
+                    'priority' => 'normal',
+                    'action_url' => '/inventory/inbound/rtv',
+                    'metadata' => [
+                        'rtv_id' => $rtv->id,
+                        'rtv_number' => $rtv->rtv_number,
+                        'old_status' => $rtv->getOriginal('status'),
+                        'new_status' => $newStatus,
+                        'updated_by' => $user->name
+                    ]
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating RTV status change notification: ' . $e->getMessage());
         }
     }
 

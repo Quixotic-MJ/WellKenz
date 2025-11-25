@@ -112,15 +112,6 @@
                     <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Stock Management</div>
                 </li>
 
-                <!-- Physical Count -->
-                <li>
-                    <a href="{{ Route::has('inventory.stock.count') ? route('inventory.stock.count') : '#' }}"
-                        id="menu-inventory-stock-count"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.stock.count') ? 'active-menu' : '' }}">
-                        <i class="fas fa-clipboard-list w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Physical Count</span>
-                    </a>
-                </li>
 
                 <!-- Batch Lookup -->
                 <li>
@@ -129,16 +120,6 @@
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.stock.lookup') ? 'active-menu' : '' }}">
                         <i class="fas fa-search-location w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
                         <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Batch Lookup</span>
-                    </a>
-                </li>
-
-                <!-- Stock Transfer -->
-                <li>
-                    <a href="{{ Route::has('inventory.stock.transfer') ? route('inventory.stock.transfer') : '#' }}"
-                        id="menu-inventory-stock-transfer"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.stock.transfer') ? 'active-menu' : '' }}">
-                        <i class="fas fa-exchange-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Stock Transfer</span>
                     </a>
                 </li>
                 

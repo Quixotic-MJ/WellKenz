@@ -310,14 +310,33 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::post('/receive-delivery/validate', [InventoryController::class, 'validateDeliveryData'])->name('receive-delivery.validate');
     Route::get('/receive-delivery/statistics', [InventoryController::class, 'getReceivingStatistics'])->name('receive-delivery.statistics');
 
-    // Batch Labels Printing Routes
-    Route::get('/inbound/labels', [InventoryController::class, 'printBatchLabels'])->name('inbound.labels');
+    // Batch Logs Routes
+    Route::get('/inbound/batch-logs', [InventoryController::class, 'batchLogs'])->name('inbound.batch-logs');
+    Route::get('/inbound/batch-logs/{id}/details', [InventoryController::class, 'getBatchDetails'])->name('inbound.batch-logs.details');
+    Route::get('/inbound/batch-logs/{id}/edit', [InventoryController::class, 'editBatch'])->name('inbound.batch-logs.edit');
+    Route::patch('/inbound/batch-logs/{id}/status', [InventoryController::class, 'updateBatchStatus'])->name('inbound.batch-logs.status');
+    Route::post('/inbound/batch-logs/export', [InventoryController::class, 'exportBatchLogs'])->name('inbound.batch-logs.export');
+
+    // Batch Labels Printing Routes (Keep separate)
+    Route::get('/inbound/labels', [InventoryController::class, 'batchLogs'])->name('inbound.labels');
     Route::get('/inbound/labels/batch/{batchId}', [InventoryController::class, 'getBatchForPrint'])->name('inbound.labels.batch');
     Route::post('/inbound/labels/print', [InventoryController::class, 'printBatchLabelsProcess'])->name('inbound.labels.print');
 
-    Route::get('/inbound/rtv', function () { 
-        return view('Inventory.inbound.RTV'); 
-    })->name('inbound.rtv');
+    // RTV (Return to Vendor) Routes
+    Route::get('/inbound/rtv', [InventoryController::class, 'indexRtv'])->name('inbound.rtv');
+    
+    // AJAX Routes for RTV operations
+    Route::get('/inbound/rtv/items', [InventoryController::class, 'getItemsForRtv'])->name('inbound.rtv.items');
+    Route::get('/inbound/rtv/suppliers', [InventoryController::class, 'getSuppliersForRtv'])->name('inbound.rtv.suppliers');
+    Route::get('/inbound/rtv/purchase-orders', [InventoryController::class, 'getPurchaseOrdersForRtv'])->name('inbound.rtv.purchase-orders');
+    Route::get('/inbound/rtv/categories', [InventoryController::class, 'getCategoriesForRtvBulk'])->name('inbound.rtv.categories');
+    
+    // RTV CRUD Operations
+    Route::post('/inbound/rtv', [InventoryController::class, 'storeRtv'])->name('inbound.rtv.store');
+    Route::get('/inbound/rtv/{id}/details', [InventoryController::class, 'getRtvDetails'])->name('inbound.rtv.details');
+    Route::delete('/inbound/rtv/{id}', [InventoryController::class, 'deleteRtv'])->name('inbound.rtv.delete');
+    Route::get('/inbound/rtv/{id}/print', [InventoryController::class, 'printRtvSlip'])->name('inbound.rtv.print');
+    Route::patch('/inbound/rtv/{id}/status', [InventoryController::class, 'updateRtvStatus'])->name('inbound.rtv.status');
 
     //// Outbound Routes
     Route::get('/outbound/fulfill', [InventoryController::class, 'fulfillRequests'])->name('outbound.fulfill');
@@ -346,9 +365,11 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         return view('Inventory.stock_management.physical_count'); 
     })->name('stock.count');
 
-    Route::get('/stock/lookup', function () { 
-        return view('Inventory.stock_management.batch_lookup'); 
-    })->name('stock.lookup');
+    Route::get('/stock/lookup', [InventoryController::class, 'batchLookup'])->name('stock.lookup');
+    
+    // AJAX routes for batch lookup
+    Route::get('/stock/lookup/search', [InventoryController::class, 'searchBatches'])->name('stock.lookup.search');
+    Route::get('/stock/lookup/batch/{id}', [InventoryController::class, 'getBatchDetails'])->name('stock.lookup.batch');
 
     Route::get('/stock/transfer', function () { 
         return view('Inventory.stock_management.stock_transfer'); 

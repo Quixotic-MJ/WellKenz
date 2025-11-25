@@ -85,4 +85,9 @@ class Item extends Model
     {
         return $this->hasMany(\App\Models\RtvItem::class);
     }
+
+    public function supplierItems()
+    {
+        return $this->hasMany(SupplierItem::class);
+    }
 }
