@@ -928,7 +928,7 @@ class InventoryController extends Controller
     }
 
     /**
-     * Process received delivery
+     * Process received delivery with comprehensive blind count methodology
      */
     public function processDelivery(Request $request)
     {
@@ -940,61 +940,107 @@ class InventoryController extends Controller
                 'items.*.quantity_received' => 'required|numeric|min:0',
                 'items.*.batch_number' => 'nullable|string|max:100',
                 'items.*.expiry_date' => 'nullable|date',
-                'items.*.condition' => 'required|in:good,damaged,wet_stained,thawed,leaking'
+                'items.*.condition' => 'required|in:good,damaged,wet_stained,thawed,leaking',
+                'items.*.receiving_notes' => 'nullable|string|max:500',
+                'items.*.damage_description' => 'nullable|string|max:500',
+                'items.*.estimated_expiry_days' => 'nullable|integer|min:1'
             ]);
 
             DB::beginTransaction();
 
-            $purchaseOrder = PurchaseOrder::with(['purchaseOrderItems'])->findOrFail($request->purchase_order_id);
+            $purchaseOrder = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])->findOrFail($request->purchase_order_id);
             $user = Auth::user();
             $allItemsComplete = true;
+            $discrepancies = [];
+            $quarantineItems = [];
+            $newlyCreatedBatches = [];
 
             foreach ($request->items as $receivedItem) {
                 $poItem = PurchaseOrderItem::findOrFail($receivedItem['purchase_order_item_id']);
+                $item = $poItem->item;
                 
                 $quantityReceived = (float) $receivedItem['quantity_received'];
-                $batchNumber = $receivedItem['batch_number'] ?? 'BATCH-' . strtoupper(Str::random(8));
-                $expiryDate = $receivedItem['expiry_date'] ?? null;
                 $condition = $receivedItem['condition'];
+                $batchNumber = $receivedItem['batch_number'] ?? null;
+                $expiryDate = $receivedItem['expiry_date'] ?? null;
+                $receivingNotes = $receivedItem['receiving_notes'] ?? '';
+                $damageDescription = $receivedItem['damage_description'] ?? '';
+                $estimatedExpiryDays = $receivedItem['estimated_expiry_days'] ?? null;
 
                 // Skip if no quantity received
                 if ($quantityReceived <= 0) {
                     continue;
                 }
 
-                // Update purchase order item received quantity using query builder to avoid timestamp issues
+                // Update purchase order item received quantity
                 $newReceivedQuantity = $poItem->quantity_received + $quantityReceived;
-                
-                // Use DB query builder instead of Eloquent to avoid updated_at
                 DB::table('purchase_order_items')
                     ->where('id', $poItem->id)
                     ->update([
                         'quantity_received' => $newReceivedQuantity
                     ]);
 
-                // Check if this item is now complete
-                if ($newReceivedQuantity < $poItem->quantity_ordered) {
+                // Check for discrepancies (partial receipts)
+                $orderedQuantity = (float) $poItem->quantity_ordered;
+                if ($newReceivedQuantity < $orderedQuantity) {
                     $allItemsComplete = false;
+                    $discrepancies[] = [
+                        'item_name' => $item->name,
+                        'ordered' => $orderedQuantity,
+                        'received' => $quantityReceived,
+                        'remaining' => $orderedQuantity - $newReceivedQuantity,
+                        'unit' => $item->unit->symbol ?? 'pcs'
+                    ];
                 }
 
-                // Create batch record if perishable or batch number provided
-                $item = $poItem->item;
-                if ($item->shelf_life_days > 0 || !empty($receivedItem['batch_number'])) {
-                    $batch = Batch::create([
-                        'batch_number' => $batchNumber,
-                        'item_id' => $item->id,
-                        'quantity' => $quantityReceived,
-                        'unit_cost' => $poItem->unit_price,
-                        'manufacturing_date' => now()->toDateString(),
-                        'expiry_date' => $expiryDate ?? ($item->shelf_life_days > 0 ? 
-                            now()->addDays($item->shelf_life_days)->toDateString() : null),
-                        'supplier_id' => $purchaseOrder->supplier_id,
-                        'location' => 'Main Storage',
-                        'status' => $condition === 'good' ? 'active' : 'quarantine'
-                    ]);
+                // Auto-generate batch number if not provided
+                if (!$batchNumber) {
+                    $batchNumber = $this->generateBatchNumber($item, $purchaseOrder->supplier);
                 }
 
-                // Create stock movement
+                // Auto-calculate expiry date for perishable items
+                if ($item->shelf_life_days > 0 && !$expiryDate) {
+                    $baseExpiryDays = $estimatedExpiryDays ?? $item->shelf_life_days;
+                    $expiryDate = now()->addDays($baseExpiryDays)->toDateString();
+                }
+
+                // Determine batch status based on quality condition
+                $batchStatus = $this->determineBatchStatus($condition);
+                if ($batchStatus === 'quarantine') {
+                    $quarantineItems[] = $item->name;
+                }
+
+                // Create comprehensive batch record
+                $batch = Batch::create([
+                    'batch_number' => $batchNumber,
+                    'item_id' => $item->id,
+                    'quantity' => $quantityReceived,
+                    'unit_cost' => $poItem->unit_price,
+                    'manufacturing_date' => now()->toDateString(),
+                    'expiry_date' => $expiryDate,
+                    'supplier_id' => $purchaseOrder->supplier_id,
+                    'location' => 'Main Storage',
+                    'status' => $batchStatus
+                ]);
+
+                $newlyCreatedBatches[] = [
+                    'batch_number' => $batchNumber,
+                    'item_name' => $item->name,
+                    'quantity' => $quantityReceived,
+                    'expiry_date' => $expiryDate,
+                    'condition' => $condition
+                ];
+
+                // Create detailed stock movement with quality information
+                $movementNotes = $this->buildMovementNotes(
+                    $purchaseOrder, 
+                    $condition, 
+                    $receivingNotes, 
+                    $damageDescription,
+                    $quantityReceived,
+                    $orderedQuantity
+                );
+
                 StockMovement::create([
                     'item_id' => $item->id,
                     'movement_type' => 'purchase',
@@ -1005,36 +1051,54 @@ class InventoryController extends Controller
                     'batch_number' => $batchNumber,
                     'expiry_date' => $expiryDate,
                     'location' => 'Main Storage',
-                    'notes' => "Delivery received - Condition: " . $this->getConditionText($condition),
+                    'notes' => $movementNotes,
                     'user_id' => $user->id
                 ]);
 
-                // Update current stock (trigger will handle this, but we can also update directly)
-                $this->updateCurrentStock($item->id, $quantityReceived, $poItem->unit_price);
+                // Update current stock using trigger (handled automatically)
+                // $this->updateCurrentStock($item->id, $quantityReceived, $poItem->unit_price);
             }
 
-            // Update purchase order status
+            // Update purchase order status and actual delivery date
             $newStatus = $allItemsComplete ? 'completed' : 'partial';
             $purchaseOrder->update([
                 'status' => $newStatus,
                 'actual_delivery_date' => now()->toDateString()
             ]);
 
+            // Create comprehensive notifications
+            $this->createDeliveryNotifications($purchaseOrder, $user, $discrepancies, $quarantineItems, $newlyCreatedBatches, $newStatus);
+
+            // Log delivery receipt for audit trail
+            $this->logDeliveryReceipt($purchaseOrder, $user, $discrepancies, $quarantineItems);
+
             DB::commit();
+
+            $responseMessage = $this->buildDeliveryResponseMessage($newStatus, $discrepancies, $quarantineItems, count($newlyCreatedBatches));
 
             return response()->json([
                 'success' => true,
-                'message' => 'Delivery received successfully. PO status: ' . $newStatus,
-                'po_status' => $newStatus
+                'message' => $responseMessage,
+                'po_status' => $newStatus,
+                'batches_created' => count($newlyCreatedBatches),
+                'discrepancies_count' => count($discrepancies),
+                'quarantine_items' => count($quarantineItems),
+                'batch_labels_url' => '/inventory/inbound/labels?batches=' . implode(',', array_column($newlyCreatedBatches, 'batch_number')),
+                'next_actions' => $this->getNextActions($newStatus, $quarantineItems, $discrepancies)
             ]);
 
         } catch (\Exception $e) {
             DB::rollback();
-            \Log::error('Error processing delivery: ' . $e->getMessage());
+            \Log::error('Error processing delivery: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'purchase_order_id' => $request->purchase_order_id,
+                'trace' => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to process delivery: ' . $e->getMessage()
+                'message' => 'Failed to process delivery: ' . $e->getMessage(),
+                'error_code' => 'DELIVERY_PROCESSING_FAILED'
             ], 500);
         }
     }
@@ -1135,6 +1199,462 @@ class InventoryController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error updating current stock: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Generate automatic batch number based on item, supplier and date
+     */
+    private function generateBatchNumber($item, $supplier)
+    {
+        $prefix = 'BATCH';
+        $itemCode = strtoupper(substr($item->item_code, 0, 3));
+        $supplierCode = strtoupper(substr($supplier->supplier_code, 0, 3));
+        $date = now()->format('Ymd');
+        $random = strtoupper(Str::random(4));
+        
+        return "{$prefix}-{$itemCode}-{$supplierCode}-{$date}-{$random}";
+    }
+
+    /**
+     * Determine batch status based on quality condition
+     */
+    private function determineBatchStatus($condition)
+    {
+        // Quality conditions that require quarantine
+        $quarantineConditions = ['damaged', 'wet_stained', 'thawed', 'leaking'];
+        
+        if (in_array($condition, $quarantineConditions)) {
+            return 'quarantine';
+        }
+        
+        return 'active';
+    }
+
+    /**
+     * Build detailed movement notes with quality information
+     */
+    private function buildMovementNotes($purchaseOrder, $condition, $receivingNotes, $damageDescription, $quantityReceived, $orderedQuantity)
+    {
+        $notes = [];
+        
+        // Basic delivery information
+        $notes[] = "Delivery received for PO: {$purchaseOrder->po_number}";
+        
+        // Quantity information
+        if ($quantityReceived < $orderedQuantity) {
+            $notes[] = "PARTIAL RECEIPT: {$quantityReceived} of {$orderedQuantity} units";
+        } else {
+            $notes[] = "Full receipt: {$quantityReceived} units";
+        }
+        
+        // Quality condition
+        $notes[] = "Condition: " . $this->getConditionText($condition);
+        
+        // Add receiving notes if provided
+        if (!empty($receivingNotes)) {
+            $notes[] = "Notes: {$receivingNotes}";
+        }
+        
+        // Add damage description if applicable
+        if (!empty($damageDescription) && $condition !== 'good') {
+            $notes[] = "Damage details: {$damageDescription}";
+        }
+        
+        // Add condition-specific notes
+        $conditionNotes = $this->getConditionSpecificNotes($condition);
+        if ($conditionNotes) {
+            $notes[] = $conditionNotes;
+        }
+        
+        return implode(' | ', $notes);
+    }
+
+    /**
+     * Get condition-specific notes for detailed tracking
+     */
+    private function getConditionSpecificNotes($condition)
+    {
+        $conditionNotes = [
+            'damaged' => 'REQUIRES DAMAGE ASSESSMENT - Contact supplier',
+            'wet_stained' => 'MOISTURE DAMAGE - Check storage conditions',
+            'thawed' => 'TEMPERATURE ABUSE - Temperature chain broken',
+            'leaking' => 'PACKAGING FAILURE - Potential contamination risk'
+        ];
+        
+        return $conditionNotes[$condition] ?? null;
+    }
+
+    /**
+     * Create comprehensive notifications for delivery receipt
+     */
+    private function createDeliveryNotifications($purchaseOrder, $user, $discrepancies, $quarantineItems, $newlyCreatedBatches, $newStatus)
+    {
+        try {
+            $notificationRecipients = User::whereIn('role', ['inventory', 'supervisor'])
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($notificationRecipients as $recipient) {
+                // Main delivery completion notification
+                Notification::create([
+                    'user_id' => $recipient->id,
+                    'title' => '📦 Delivery Received: ' . $purchaseOrder->po_number,
+                    'message' => $this->buildDeliveryNotificationMessage($purchaseOrder, $newStatus, $discrepancies, $quarantineItems),
+                    'type' => 'delivery_received',
+                    'priority' => $this->getDeliveryPriority($discrepancies, $quarantineItems),
+                    'action_url' => '/inventory/inbound/receive?po=' . $purchaseOrder->id,
+                    'metadata' => [
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'purchase_order_number' => $purchaseOrder->po_number,
+                        'supplier_name' => $purchaseOrder->supplier->name,
+                        'status' => $newStatus,
+                        'batches_created' => count($newlyCreatedBatches),
+                        'discrepancies_count' => count($discrepancies),
+                        'quarantine_items_count' => count($quarantineItems),
+                        'received_by' => $user->name,
+                        'received_at' => now()->toISOString()
+                    ]
+                ]);
+
+                // Separate notification for quality issues
+                if (!empty($quarantineItems)) {
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'title' => '⚠️ Quality Issues Detected',
+                        'message' => "The following items require quality assessment: " . implode(', ', $quarantineItems),
+                        'type' => 'quality_issue',
+                        'priority' => 'high',
+                        'action_url' => '/inventory/batches?status=quarantine',
+                        'metadata' => [
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'quarantine_items' => $quarantineItems,
+                            'purchase_order_number' => $purchaseOrder->po_number
+                        ]
+                    ]);
+                }
+
+                // Separate notification for discrepancies
+                if (!empty($discrepancies)) {
+                    $discrepancySummary = collect($discrepancies)->map(function($disc) {
+                        return "{$disc['item_name']}: {$disc['received']}/{$disc['ordered']} {$disc['unit']}";
+                    })->implode('; ');
+
+                    Notification::create([
+                        'user_id' => $recipient->id,
+                        'title' => '📋 Partial Receipts Detected',
+                        'message' => "Partial receipts found in PO {$purchaseOrder->po_number}: " . $discrepancySummary,
+                        'type' => 'partial_receipt',
+                        'priority' => 'normal',
+                        'action_url' => '/purchasing/po/' . $purchaseOrder->id,
+                        'metadata' => [
+                            'purchase_order_id' => $purchaseOrder->id,
+                            'discrepancies' => $discrepancies,
+                            'purchase_order_number' => $purchaseOrder->po_number
+                        ]
+                    ]);
+                }
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating delivery notifications: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Build delivery notification message
+     */
+    private function buildDeliveryNotificationMessage($purchaseOrder, $status, $discrepancies, $quarantineItems)
+    {
+        $message = "Delivery completed for {$purchaseOrder->po_number} from {$purchaseOrder->supplier->name}. ";
+        $message .= "PO Status: {$status}. ";
+        $message .= "Batches created: " . count($purchaseOrder->purchaseOrderItems) . ". ";
+
+        if (!empty($quarantineItems)) {
+            $message .= count($quarantineItems) . " items quarantined for quality assessment. ";
+        }
+
+        if (!empty($discrepancies)) {
+            $message .= count($discrepancies) . " items partially received - follow up required. ";
+        }
+
+        return $message;
+    }
+
+    /**
+     * Get delivery priority based on issues
+     */
+    private function getDeliveryPriority($discrepancies, $quarantineItems)
+    {
+        if (!empty($quarantineItems)) {
+            return 'high';
+        }
+        
+        if (!empty($discrepancies)) {
+            return 'normal';
+        }
+        
+        return 'low';
+    }
+
+    /**
+     * Log delivery receipt for audit trail
+     */
+    private function logDeliveryReceipt($purchaseOrder, $user, $discrepancies, $quarantineItems)
+    {
+        try {
+            $auditData = [
+                'purchase_order_id' => $purchaseOrder->id,
+                'purchase_order_number' => $purchaseOrder->po_number,
+                'supplier_name' => $purchaseOrder->supplier->name,
+                'received_by' => $user->name,
+                'received_at' => now()->toISOString(),
+                'status' => $purchaseOrder->status,
+                'total_items' => $purchaseOrder->purchaseOrderItems->count(),
+                'discrepancies' => count($discrepancies),
+                'quarantine_items' => count($quarantineItems),
+                'batch_numbers' => $purchaseOrder->purchaseOrderItems->pluck('batch_number')->filter()->toArray()
+            ];
+
+            DB::table('audit_logs')->insert([
+                'table_name' => 'purchase_orders',
+                'record_id' => $purchaseOrder->id,
+                'action' => 'UPDATE',
+                'old_values' => json_encode(['status' => $purchaseOrder->getOriginal('status')]),
+                'new_values' => json_encode(['status' => $purchaseOrder->status, 'delivery_data' => $auditData]),
+                'user_id' => $user->id,
+                'created_at' => now()
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error logging delivery receipt: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Build delivery response message
+     */
+    private function buildDeliveryResponseMessage($status, $discrepancies, $quarantineItems, $batchCount)
+    {
+        $message = "✅ Delivery processed successfully. ";
+        $message .= "PO status updated to '{$status}'. ";
+        $message .= "{$batchCount} batches created. ";
+
+        if (!empty($quarantineItems)) {
+            $message .= "⚠️ " . count($quarantineItems) . " items moved to quarantine for quality assessment. ";
+        }
+
+        if (!empty($discrepancies)) {
+            $message .= "📋 " . count($discrepancies) . " items partially received - supplier follow-up required. ";
+        }
+
+        $message .= "Stock levels updated and notifications sent to team.";
+
+        return $message;
+    }
+
+    /**
+     * Get next actions based on delivery results
+     */
+    private function getNextActions($status, $quarantineItems, $discrepancies)
+    {
+        $actions = [];
+
+        if (!empty($quarantineItems)) {
+            $actions[] = [
+                'type' => 'quality_check',
+                'title' => 'Quality Assessment Required',
+                'description' => 'Review and approve quarantined items',
+                'url' => '/inventory/batches?status=quarantine',
+                'priority' => 'high'
+            ];
+        }
+
+        if (!empty($discrepancies)) {
+            $actions[] = [
+                'type' => 'supplier_followup',
+                'title' => 'Follow up with Supplier',
+                'description' => 'Contact supplier about partial deliveries',
+                'url' => '/purchasing/po/' . request('purchase_order_id'),
+                'priority' => 'normal'
+            ];
+        }
+
+        if ($status === 'completed') {
+            $actions[] = [
+                'type' => 'print_labels',
+                'title' => 'Print Batch Labels',
+                'description' => 'Print labels for newly received items',
+                'url' => '/inventory/inbound/labels',
+                'priority' => 'low'
+            ];
+        }
+
+        return $actions;
+    }
+
+    /**
+     * Validate delivery data with comprehensive checks
+     */
+    public function validateDeliveryData(Request $request)
+    {
+        try {
+            $request->validate([
+                'purchase_order_id' => 'required|exists:purchase_orders,id'
+            ]);
+
+            $purchaseOrder = PurchaseOrder::with(['supplier', 'purchaseOrderItems.item'])->findOrFail($request->purchase_order_id);
+
+            // Validate PO is in receivable status
+            if (!in_array($purchaseOrder->status, ['sent', 'confirmed', 'partial'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'PO is not in receivable status',
+                    'valid' => false
+                ]);
+            }
+
+            // Pre-validate all items for potential issues
+            $validationResults = [];
+            foreach ($purchaseOrder->purchaseOrderItems as $poItem) {
+                $item = $poItem->item;
+                $remaining = $poItem->quantity_ordered - $poItem->quantity_received;
+                
+                $validation = [
+                    'purchase_order_item_id' => $poItem->id,
+                    'item_name' => $item->name,
+                    'item_code' => $item->item_code,
+                    'quantity_ordered' => (float) $poItem->quantity_ordered,
+                    'quantity_received' => (float) $poItem->quantity_received,
+                    'quantity_remaining' => (float) $remaining,
+                    'is_perishable' => $item->shelf_life_days > 0,
+                    'shelf_life_days' => $item->shelf_life_days,
+                    'unit_symbol' => $item->unit->symbol ?? 'pcs',
+                    'warnings' => []
+                ];
+
+                // Check for potential issues
+                if ($remaining <= 0) {
+                    $validation['warnings'][] = 'Item already fully received';
+                }
+
+                if ($item->shelf_life_days > 0) {
+                    $validation['warnings'][] = 'Perishable item - expiry date required';
+                }
+
+                // Check for temperature-sensitive items
+                $categoryName = $item->category->name ?? '';
+                if (stripos($categoryName, 'dairy') !== false || stripos($categoryName, 'frozen') !== false) {
+                    $validation['warnings'][] = 'Temperature-sensitive item - check condition carefully';
+                }
+
+                $validationResults[] = $validation;
+            }
+
+            return response()->json([
+                'success' => true,
+                'valid' => true,
+                'purchase_order' => [
+                    'id' => $purchaseOrder->id,
+                    'po_number' => $purchaseOrder->po_number,
+                    'supplier_name' => $purchaseOrder->supplier->name,
+                    'status' => $purchaseOrder->status,
+                    'expected_delivery_date' => $purchaseOrder->expected_delivery_date,
+                    'items' => $validationResults
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error validating delivery data: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to validate delivery data',
+                'valid' => false
+            ], 500);
+        }
+    }
+
+    /**
+     * Get receiving statistics for dashboard
+     */
+    public function getReceivingStatistics()
+    {
+        try {
+            $user = Auth::user();
+            
+            // Today's receipts
+            $todayReceipts = StockMovement::where('movement_type', 'purchase')
+                ->whereDate('created_at', today())
+                ->where('user_id', $user->id)
+                ->count();
+
+            // This week's receipts
+            $weekReceipts = StockMovement::where('movement_type', 'purchase')
+                ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])
+                ->where('user_id', $user->id)
+                ->count();
+
+            // Quality issues this month
+            $qualityIssues = DB::table('stock_movements')
+                ->join('items', 'stock_movements.item_id', '=', 'items.id')
+                ->join('categories', 'items.category_id', '=', 'categories.id')
+                ->where('movement_type', 'purchase')
+                ->whereMonth('stock_movements.created_at', now()->month)
+                ->where('stock_movements.user_id', $user->id)
+                ->where(function($query) {
+                    $query->where('notes', 'like', '%damaged%')
+                          ->orWhere('notes', 'like', '%wet_stained%')
+                          ->orWhere('notes', 'like', '%thawed%')
+                          ->orWhere('notes', 'like', '%leaking%');
+                })
+                ->count();
+
+            // Partial receipts this month
+            $partialReceipts = DB::table('purchase_order_items')
+                ->join('purchase_orders', 'purchase_order_items.purchase_order_id', '=', 'purchase_orders.id')
+                ->whereMonth('purchase_orders.updated_at', now()->month)
+                ->where('purchase_order_items.quantity_received', '>', 0)
+                ->whereColumn('purchase_order_items.quantity_received', '<', 'purchase_order_items.quantity_ordered')
+                ->count();
+
+            // Average processing time (simplified calculation)
+            $avgProcessingTime = 15; // Placeholder - would need detailed timing data
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'today_receipts' => $todayReceipts,
+                    'week_receipts' => $weekReceipts,
+                    'quality_issues' => $qualityIssues,
+                    'partial_receipts' => $partialReceipts,
+                    'avg_processing_time_minutes' => $avgProcessingTime,
+                    'performance_score' => $this->calculateReceivingPerformanceScore($todayReceipts, $qualityIssues, $partialReceipts)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting receiving statistics: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get statistics'
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculate receiving performance score
+     */
+    private function calculateReceivingPerformanceScore($receipts, $qualityIssues, $partialReceipts)
+    {
+        $baseScore = 100;
+        
+        // Deduct for quality issues (high penalty)
+        $baseScore -= ($qualityIssues * 10);
+        
+        // Deduct for partial receipts (medium penalty)
+        $baseScore -= ($partialReceipts * 5);
+        
+        // Ensure score stays within 0-100 range
+        return max(0, min(100, $baseScore));
     }
 
     /**
@@ -1668,6 +2188,161 @@ class InventoryController extends Controller
             ], 500);
         }
     }
+     /* Display batch labels printing interface
+     */
+    public function printBatchLabels(Request $request)
+    {
+        try {
+            // Build query for recently received batches
+            $query = Batch::with(['item.unit', 'supplier', 'stockMovements'])
+                ->whereIn('status', ['active', 'quarantine'])
+                ->whereHas('item', function($q) {
+                    $q->where('is_active', true);
+                });
+
+            // Apply filters based on request parameters
+            if ($request->has('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->has('category_id') && $request->category_id !== 'all') {
+                $query->whereHas('item.category', function($q) use ($request) {
+                    $q->where('id', $request->category_id);
+                });
+            }
+
+            if ($request->has('search') && !empty($request->search)) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('batch_number', 'like', '%' . $search . '%')
+                      ->orWhereHas('item', function($itemQuery) use ($search) {
+                          $itemQuery->where('name', 'like', '%' . $search . '%')
+                                   ->orWhere('item_code', 'like', '%' . $search . '%');
+                      })
+                      ->orWhereHas('supplier', function($supplierQuery) use ($search) {
+                          $supplierQuery->where('name', 'like', '%' . $search . '%');
+                      });
+                });
+            }
+
+            // Filter by urgency (expiring soon)
+            if ($request->has('urgency') && $request->urgency !== 'all') {
+                $now = now();
+                switch ($request->urgency) {
+                    case 'critical':
+                        $query->whereBetween('expiry_date', [$now, $now->copy()->addDays(2)]);
+                        break;
+                    case 'high':
+                        $query->whereBetween('expiry_date', [$now, $now->copy()->addDays(7)]);
+                        break;
+                    case 'medium':
+                        $query->whereBetween('expiry_date', [$now->copy()->addDays(7), $now->copy()->addDays(14)]);
+                        break;
+                }
+            }
+
+            // Sort by creation date (newest first) and expiry date for prioritization
+            $query->orderByRaw('CASE WHEN expiry_date IS NOT NULL THEN expiry_date ELSE "9999-12-31" END ASC')
+                  ->orderBy('created_at', 'desc');
+
+            $batches = $query->paginate(12)->withQueryString();
+
+            // Get filter options
+            $categories = Category::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+            
+            // Get batch statistics
+            $stats = [
+                'total' => Batch::whereIn('status', ['active', 'quarantine'])->count(),
+                'expiring_soon' => Batch::whereIn('status', ['active', 'quarantine'])
+                    ->whereBetween('expiry_date', [now(), now()->addDays(7)])
+                    ->count(),
+                'perishable' => Batch::whereIn('status', ['active', 'quarantine'])
+                    ->whereHas('item', function($q) {
+                        $q->where('shelf_life_days', '>', 0);
+                    })
+                    ->count(),
+                'non_perishable' => Batch::whereIn('status', ['active', 'quarantine'])
+                    ->whereHas('item', function($q) {
+                        $q->where('shelf_life_days', 0);
+                    })
+                    ->count(),
+            ];
+
+            return view('Inventory.inbound.print_batch_labels', compact('batches', 'categories', 'stats'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading batch labels: ' . $e->getMessage());
+            return view('Inventory.inbound.print_batch_labels', [
+                'batches' => collect(),
+                'categories' => collect(),
+                'stats' => ['total' => 0, 'expiring_soon' => 0, 'perishable' => 0, 'non_perishable' => 0]
+            ]);
+        }
+    }
+
+    /**
+     * Get batch details for printing
+     */
+    public function getBatchForPrint($batchId)
+    {
+        try {
+            $batch = Batch::with(['item.unit', 'supplier'])
+                ->where('id', $batchId)
+                ->whereIn('status', ['active', 'quarantine'])
+                ->first();
+
+            if (!$batch) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batch not found or not available for printing'
+                ], 404);
+            }
+
+            // Generate QR code data
+            $qrCodeData = [
+                'batch_number' => $batch->batch_number,
+                'item_name' => $batch->item->name,
+                'item_code' => $batch->item->item_code,
+                'quantity' => $batch->quantity,
+                'unit' => $batch->item->unit->symbol ?? 'pcs',
+                'manufacturing_date' => $batch->manufacturing_date?->format('Y-m-d'),
+                'expiry_date' => $batch->expiry_date?->format('Y-m-d'),
+                'supplier' => $batch->supplier->name ?? 'N/A',
+                'location' => $batch->location ?? 'Main Storage',
+                'generated_at' => now()->format('Y-m-d H:i:s')
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'batch' => [
+                        'id' => $batch->id,
+                        'batch_number' => $batch->batch_number,
+                        'item_name' => $batch->item->name,
+                        'item_code' => $batch->item->item_code,
+                        'sku' => $batch->item->item_code,
+                        'quantity' => (float) $batch->quantity,
+                        'unit_symbol' => $batch->item->unit->symbol ?? 'pcs',
+                        'manufacturing_date' => $batch->manufacturing_date?->format('M d, Y'),
+                        'expiry_date' => $batch->expiry_date?->format('M d, Y'),
+                        'supplier_name' => $batch->supplier->name ?? 'N/A',
+                        'location' => $batch->location ?? 'Main Storage',
+                        'status' => $batch->status,
+                        'is_perishable' => $batch->item->shelf_life_days > 0,
+                        'days_until_expiry' => $batch->expiry_date ? now()->diffInDays($batch->expiry_date, false) : null,
+                    ],
+                    'qr_code_data' => json_encode($qrCodeData)
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting batch for print: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get batch details'
+            ], 500);
+        }
+    }
 
     /**
      * Delete specific notification
@@ -1790,6 +2465,91 @@ class InventoryController extends Controller
         $iconClass = $this->getIconClass();
         $parts = explode(' ', $iconClass);
         return $parts[3] ?? 'bg-gray-100';
+    }
+    
+    /**
+     *Process batch labels printing
+     */
+    public function printBatchLabelsProcess(Request $request)
+    {
+        try {
+            $request->validate([
+                'batch_selections' => 'required|array|min:1',
+                'batch_selections.*.batch_id' => 'required|exists:batches,id',
+                'batch_selections.*.quantity' => 'required|integer|min:1|max:1000'
+            ]);
+
+            $user = Auth::user();
+            $printedBatches = [];
+            $errors = [];
+
+            foreach ($request->batch_selections as $selection) {
+                try {
+                    $batch = Batch::with(['item.unit', 'supplier'])
+                        ->where('id', $selection['batch_id'])
+                        ->whereIn('status', ['active', 'quarantine'])
+                        ->first();
+
+                    if (!$batch) {
+                        $errors[] = "Batch not found: ID {$selection['batch_id']}";
+                        continue;
+                    }
+
+                    $quantity = (int) $selection['quantity'];
+
+                    // Create print job record (you might want to create a print_jobs table)
+                    $printJob = [
+                        'batch_id' => $batch->id,
+                        'batch_number' => $batch->batch_number,
+                        'item_name' => $batch->item->name,
+                        'quantity' => $quantity,
+                        'printed_by' => $user->id,
+                        'printed_at' => now(),
+                        'qr_code_data' => json_encode([
+                            'batch_number' => $batch->batch_number,
+                            'item_name' => $batch->item->name,
+                            'item_code' => $batch->item->item_code,
+                            'quantity' => $batch->quantity,
+                            'unit' => $batch->item->unit->symbol ?? 'pcs',
+                            'manufacturing_date' => $batch->manufacturing_date?->format('Y-m-d'),
+                            'expiry_date' => $batch->expiry_date?->format('Y-m-d'),
+                            'supplier' => $batch->supplier->name ?? 'N/A',
+                        ])
+                    ];
+
+                    $printedBatches[] = $printJob;
+
+                    // Log the printing activity
+                    \Log::info("Batch labels printed", [
+                        'batch_id' => $batch->id,
+                        'batch_number' => $batch->batch_number,
+                        'quantity' => $quantity,
+                        'user_id' => $user->id,
+                        'user_name' => $user->name
+                    ]);
+
+                } catch (\Exception $e) {
+                    $errors[] = "Error processing batch ID {$selection['batch_id']}: " . $e->getMessage();
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => count($printedBatches) . ' batch label jobs created successfully',
+                'printed_count' => count($printedBatches),
+                'error_count' => count($errors),
+                'errors' => $errors,
+                'print_jobs' => $printedBatches,
+                'print_ready' => true // This would trigger the browser print dialog
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error processing batch labels printing: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process batch labels printing: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
 }
