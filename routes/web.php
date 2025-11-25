@@ -354,10 +354,14 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         return view('Inventory.stock_management.stock_transfer'); 
     })->name('stock.transfer');
 
-    // Notifications
-    Route::get('/notifications', function () { 
-        return view('Inventory.notification'); 
-    })->name('notifications');
+    // Notification routes
+    Route::get('/notifications', [InventoryController::class, 'notifications'])->name('notifications');
+    Route::get('/notifications/stats', [InventoryController::class, 'getNotificationStats'])->name('notifications.stats');
+    Route::post('/notifications/mark-all-read', [InventoryController::class, 'markAllNotificationsAsRead'])->name('notifications.mark_all_read');
+    Route::post('/notifications/{notification}/mark-read', [InventoryController::class, 'markNotificationAsRead'])->name('notifications.mark_read');
+    Route::post('/notifications/{notification}/mark-unread', [InventoryController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread');
+    Route::delete('/notifications/{notification}', [InventoryController::class, 'deleteNotification'])->name('notifications.delete');
+    Route::post('/notifications/bulk-operations', [InventoryController::class, 'bulkNotificationOperations'])->name('notifications.bulk_operations');
 
 });
 
