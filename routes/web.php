@@ -298,17 +298,22 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::post('/batches/{batchId}/pick', [InventoryController::class, 'pickBatch'])->name('batches.pick');
     
 
-    // Receive Delivery Routes - FIXED: No duplicate routes
+    // Receive Delivery Routes - Enhanced with comprehensive blind count methodology
     Route::get('/inbound/receive', [InventoryController::class, 'receiveDelivery'])->name('inbound.receive');
     
-    // Use a different URL pattern for the AJAX endpoints
+    // Core delivery processing routes
     Route::get('/purchase-orders/{id}/receive', [InventoryController::class, 'getPurchaseOrder'])->name('purchase-orders.receive');
-    Route::get('/purchase-orders-search', [InventoryController::class, 'searchPurchaseOrder'])->name('purchase-orders.search'); // Changed route
+    Route::get('/purchase-orders-search', [InventoryController::class, 'searchPurchaseOrder'])->name('purchase-orders.search');
     Route::post('/receive-delivery/process', [InventoryController::class, 'processDelivery'])->name('receive-delivery.process');
+    
+    // Enhanced delivery validation and statistics
+    Route::post('/receive-delivery/validate', [InventoryController::class, 'validateDeliveryData'])->name('receive-delivery.validate');
+    Route::get('/receive-delivery/statistics', [InventoryController::class, 'getReceivingStatistics'])->name('receive-delivery.statistics');
 
-    Route::get('/inbound/labels', function () { 
-        return view('Inventory.inbound.print_batch_labels'); 
-    })->name('inbound.labels');
+    // Batch Labels Printing Routes
+    Route::get('/inbound/labels', [InventoryController::class, 'printBatchLabels'])->name('inbound.labels');
+    Route::get('/inbound/labels/batch/{batchId}', [InventoryController::class, 'getBatchForPrint'])->name('inbound.labels.batch');
+    Route::post('/inbound/labels/print', [InventoryController::class, 'printBatchLabelsProcess'])->name('inbound.labels.print');
 
     Route::get('/inbound/rtv', function () { 
         return view('Inventory.inbound.RTV'); 
