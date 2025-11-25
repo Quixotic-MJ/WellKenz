@@ -193,5 +193,6 @@ class DatabaseSeeder extends Seeder
         // 7. SEED SAMPLE NOTIFICATIONS
         // ==========================================
         $this->call(NotificationSeeder::class);
+        $this->call(PurchasingNotificationSeeder::class);
     }
 }

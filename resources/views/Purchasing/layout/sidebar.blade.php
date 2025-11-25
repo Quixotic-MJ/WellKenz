@@ -119,16 +119,6 @@
                     </a>
                 </li>
 
-                <!-- Supplier Performance -->
-                <li>
-                    <a href="{{ Route::has('purchasing.reports.performance') ? route('purchasing.reports.performance') : '#' }}"
-                        id="menu-purchasing-reports-performance"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.reports.performance') ? 'active-menu' : '' }}">
-                        <i class="fas fa-star w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Supplier Performance</span>
-                    </a>
-                </li>
-
                 <!-- RTV Reports -->
                 <li>
                     <a href="{{ Route::has('purchasing.reports.rtv') ? route('purchasing.reports.rtv') : '#' }}"

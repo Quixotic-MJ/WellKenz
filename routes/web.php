@@ -232,7 +232,8 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     
     // PO Actions - these must come after the generic route
     Route::patch('/po/{purchaseOrder}/submit', [PurchasingController::class, 'submitPurchaseOrder'])->name('po.submit');
-    Route::patch('/po/{purchaseOrder}/edit', [PurchasingController::class, 'editPurchaseOrder'])->name('po.edit');
+    Route::patch('/po/{purchaseOrder}/acknowledge', [PurchasingController::class, 'acknowledgePurchaseOrder'])->name('po.acknowledge');
+    Route::get('/po/{purchaseOrder}/edit', [PurchasingController::class, 'editPurchaseOrder'])->name('po.edit');
     Route::delete('/po/{purchaseOrder}', [PurchasingController::class, 'destroyPurchaseOrder'])->name('po.destroy');
 
     // Suppliers
@@ -242,6 +243,12 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     Route::delete('/suppliers/{supplier}', [PurchasingController::class, 'destroySupplier'])->name('suppliers.destroy');
     Route::patch('/suppliers/{supplier}/toggle-status', [PurchasingController::class, 'toggleSupplierStatus'])->name('suppliers.toggle-status');
     Route::get('/suppliers/prices', [PurchasingController::class, 'supplierPriceList'])->name('suppliers.prices');
+    Route::get('/suppliers/prices/export', [PurchasingController::class, 'exportSupplierPriceList'])->name('suppliers.prices.export');
+    Route::get('/suppliers/prices/update', [PurchasingController::class, 'showPriceUpdate'])->name('suppliers.prices.update');
+    Route::get('/suppliers/prices/update/{supplierItem}', [PurchasingController::class, 'showPriceUpdate'])->name('suppliers.prices.update.single');
+    Route::patch('/suppliers/prices/{supplierItem}', [PurchasingController::class, 'updateSupplierItemPrice'])->name('suppliers.prices.update.item');
+    Route::post('/suppliers/prices/bulk-update', [PurchasingController::class, 'bulkUpdateSupplierPrices'])->name('suppliers.prices.bulk-update');
+    Route::get('/suppliers/items-for-edit', [PurchasingController::class, 'getSupplierItemsForEdit'])->name('suppliers.items-for-edit');
 
     // Reports & Delivery
     Route::get('/reports/history', [PurchasingController::class, 'purchaseHistory'])->name('reports.history');
@@ -250,14 +257,26 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
 
     // Notifications
     Route::get('/notifications', [PurchasingController::class, 'notifications'])->name('notifications');
+    
+    // Notification management routes
+    Route::get('/notifications/stats', [PurchasingController::class, 'getNotificationStats'])->name('notifications.stats');
+    Route::post('/notifications/mark-all-read', [PurchasingController::class, 'markAllNotificationsAsRead'])->name('notifications.mark_all_read');
+    Route::post('/notifications/bulk-operations', [PurchasingController::class, 'bulkNotificationOperations'])->name('notifications.bulk_operations');
+    
+    // Routes with model binding
+    Route::post('/notifications/{notification}/mark-read', [PurchasingController::class, 'markNotificationAsRead'])->name('notifications.mark_read');
+    Route::post('/notifications/{notification}/mark-unread', [PurchasingController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread');
+    Route::delete('/notifications/{notification}', [PurchasingController::class, 'deleteNotification'])->name('notifications.destroy');
 
     // API Routes for AJAX functionality
     Route::get('/api/suppliers/search', [PurchasingController::class, 'searchSuppliers'])->name('api.suppliers.search');
     Route::get('/api/suppliers/{supplier}', [PurchasingController::class, 'getSupplierDetails'])->name('api.suppliers.details');
     Route::get('/api/items/search', [PurchasingController::class, 'searchItems'])->name('api.items.search');
     Route::get('/api/suppliers/{supplier}/items', [PurchasingController::class, 'getSupplierItems'])->name('api.suppliers.items');
+    Route::post('/api/suppliers/{supplier}/items-for-prs', [PurchasingController::class, 'getSupplierItemsForPRs'])->name('api.suppliers.items-for-prs');
     Route::get('/api/dashboard/metrics', [PurchasingController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
     Route::get('/api/dashboard/summary', [PurchasingController::class, 'getDashboardSummary'])->name('api.dashboard.summary');
+    Route::get('/api/purchase-requests/{purchaseRequest}', [PurchasingController::class, 'getPurchaseRequestDetails'])->name('api.purchase-requests.details');
 
 });
 

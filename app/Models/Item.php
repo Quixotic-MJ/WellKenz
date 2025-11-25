@@ -80,4 +80,9 @@ class Item extends Model
     {
         return $this->hasMany(StockMovement::class);
     }
+
+    public function rtvItems()
+    {
+        return $this->hasMany(\App\Models\RtvItem::class);
+    }
 }

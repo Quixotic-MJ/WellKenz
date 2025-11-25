@@ -9,6 +9,9 @@ use App\Models\CurrentStock;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestPurchaseOrderLink;
+use App\Models\SupplierItem;
+use App\Models\RtvTransaction;
+use App\Models\RtvItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -421,12 +424,37 @@ class PurchasingController extends Controller
     /**
      * Show open purchase orders
      */
-    public function openOrders()
+    public function openOrders(Request $request)
     {
-        $openOrders = PurchaseOrder::whereIn('status', ['sent', 'confirmed', 'partial'])
-            ->with(['supplier', 'purchaseOrderItems'])
-            ->orderBy('expected_delivery_date', 'asc')
-            ->paginate(15);
+        $query = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
+            ->whereIn('status', ['sent', 'confirmed', 'partial']);
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('po_number', 'ilike', "%{$search}%")
+                  ->orWhereHas('supplier', function($sq) use ($search) {
+                      $sq->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('supplier_code', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        // Apply supplier filter
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Apply status filter
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Apply sorting
+        $query->orderBy('expected_delivery_date', 'asc');
+
+        $openOrders = $query->paginate($request->get('per_page', 15));
 
         return view('Purchasing.purchase_orders.open_orders', compact('openOrders'));
     }
@@ -460,7 +488,32 @@ class PurchasingController extends Controller
             });
         }
 
-        // Apply date filters
+        // Apply supplier filter
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Apply date filters using the date_filter field from the form
+        if ($request->filled('date_filter')) {
+            $now = Carbon::now();
+            switch ($request->date_filter) {
+                case 'today':
+                    $query->whereDate('actual_delivery_date', $now->toDateString());
+                    break;
+                case 'week':
+                    $query->whereBetween('actual_delivery_date', [$now->startOfWeek(), $now->endOfWeek()]);
+                    break;
+                case 'month':
+                    $query->whereMonth('actual_delivery_date', $now->month)
+                          ->whereYear('actual_delivery_date', $now->year);
+                    break;
+                case 'year':
+                    $query->whereYear('actual_delivery_date', $now->year);
+                    break;
+            }
+        }
+
+        // Legacy date range filters (fallback)
         if ($request->filled('date_from')) {
             $query->whereDate('actual_delivery_date', '>=', $request->date_from);
         }
@@ -474,7 +527,7 @@ class PurchasingController extends Controller
             return $this->exportCompletedHistory($query->get());
         }
 
-        $completedOrders = $query->paginate(15);
+        $completedOrders = $query->paginate($request->get('per_page', 15));
 
         return view('Purchasing.purchase_orders.completed_history', compact('completedOrders'));
     }
@@ -703,16 +756,315 @@ class PurchasingController extends Controller
     /**
      * Show supplier price list
      */
-    public function supplierPriceList()
+    public function supplierPriceList(Request $request)
     {
+        // Build query for supplier items with relationships
+        $query = \App\Models\SupplierItem::with([
+            'supplier',
+            'item.unit',
+            'item.category'
+        ])->whereHas('supplier', function($q) {
+            $q->where('is_active', true);
+        })->whereHas('item', function($q) {
+            $q->where('is_active', true);
+        });
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('item', function($itemQuery) use ($search) {
+                    $itemQuery->where('name', 'ilike', "%{$search}%")
+                              ->orWhere('item_code', 'ilike', "%{$search}%");
+                });
+            });
+        }
+
+        // Apply supplier filter
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Order by supplier_id and item_id for consistent ordering
+        $supplierItems = $query->orderBy('supplier_id')
+            ->orderBy('item_id')
+            ->paginate(20);
+
+        // Get all active suppliers for filter dropdown
         $suppliers = Supplier::where('is_active', true)
-            ->with(['purchaseOrders' => function($query) {
-                $query->latest()->limit(1);
-            }])
             ->orderBy('name')
+            ->get(['id', 'name']);
+
+        // Get statistics for the view
+        $stats = [
+            'total_supplier_items' => \App\Models\SupplierItem::whereHas('supplier', function($q) {
+                $q->where('is_active', true);
+            })->whereHas('item', function($q) {
+                $q->where('is_active', true);
+            })->count(),
+            'total_active_suppliers' => Supplier::where('is_active', true)->count(),
+            'preferred_supplier_items' => \App\Models\SupplierItem::where('is_preferred', true)->whereHas('supplier', function($q) {
+                $q->where('is_active', true);
+            })->whereHas('item', function($q) {
+                $q->where('is_active', true);
+            })->count(),
+        ];
+
+        return view('Purchasing.suppliers.pricelist', compact('supplierItems', 'suppliers', 'stats'));
+    }
+
+    /**
+     * Show price update form
+     */
+    public function showPriceUpdate(Request $request, \App\Models\SupplierItem $supplierItem = null)
+    {
+        // If specific supplier item is provided, show update form for that item
+        if ($supplierItem) {
+            $supplierItem->load(['supplier', 'item.unit']);
+            return view('Purchasing.suppliers.update_price', compact('supplierItem'));
+        }
+
+        // Otherwise show bulk update interface
+        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
+        $items = Item::where('is_active', true)->orderBy('name')->get();
+
+        return view('Purchasing.suppliers.bulk_price_update', compact('suppliers', 'items'));
+    }
+
+    /**
+     * Update single supplier item price
+     */
+    public function updateSupplierItemPrice(Request $request, \App\Models\SupplierItem $supplierItem)
+    {
+        $request->validate([
+            'unit_price' => 'required|numeric|min:0.01',
+            'minimum_order_quantity' => 'required|numeric|min:0.001',
+            'lead_time_days' => 'required|integer|min:0',
+            'is_preferred' => 'boolean',
+            'notes' => 'nullable|string',
+        ]);
+
+        $supplierItem->update([
+            'unit_price' => $request->unit_price,
+            'minimum_order_quantity' => $request->minimum_order_quantity,
+            'lead_time_days' => $request->lead_time_days,
+            'is_preferred' => $request->is_preferred ?? false,
+        ]);
+
+        // Log the price update in audit trail if needed
+        if (class_exists('App\Models\AuditLog')) {
+            \App\Models\AuditLog::create([
+                'table_name' => 'supplier_items',
+                'record_id' => $supplierItem->id,
+                'action' => 'UPDATE',
+                'old_values' => $supplierItem->getOriginal(),
+                'new_values' => $supplierItem->fresh()->toArray(),
+                'user_id' => auth()->id(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Price updated successfully!',
+            'data' => [
+                'unit_price' => $supplierItem->unit_price,
+                'minimum_order_quantity' => $supplierItem->minimum_order_quantity,
+                'lead_time_days' => $supplierItem->lead_time_days,
+                'is_preferred' => $supplierItem->is_preferred,
+                'updated_at' => $supplierItem->updated_at->format('M d, Y H:i')
+            ]
+        ]);
+    }
+
+    /**
+     * Bulk update supplier item prices
+     */
+    public function bulkUpdateSupplierPrices(Request $request)
+    {
+        $request->validate([
+            'updates' => 'required|array',
+            'updates.*.supplier_item_id' => 'required|exists:supplier_items,id',
+            'updates.*.unit_price' => 'required|numeric|min:0.01',
+            'updates.*.minimum_order_quantity' => 'required|numeric|min:0.001',
+            'updates.*.lead_time_days' => 'required|integer|min:0',
+            'updates.*.is_preferred' => 'boolean',
+        ]);
+
+        $updatedCount = 0;
+        $errors = [];
+
+        foreach ($request->updates as $update) {
+            try {
+                $supplierItem = SupplierItem::find($update['supplier_item_id']);
+                if ($supplierItem) {
+                    $oldData = $supplierItem->toArray();
+                    
+                    $supplierItem->update([
+                        'unit_price' => $update['unit_price'],
+                        'minimum_order_quantity' => $update['minimum_order_quantity'],
+                        'lead_time_days' => $update['lead_time_days'],
+                        'is_preferred' => $update['is_preferred'] ?? false,
+                    ]);
+
+                    $updatedCount++;
+
+                    // Log each update if AuditLog exists
+                    if (class_exists('App\Models\AuditLog')) {
+                        \App\Models\AuditLog::create([
+                            'table_name' => 'supplier_items',
+                            'record_id' => $supplierItem->id,
+                            'action' => 'UPDATE',
+                            'old_values' => $oldData,
+                            'new_values' => $supplierItem->toArray(),
+                            'user_id' => auth()->id(),
+                            'ip_address' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                        ]);
+                    }
+                }
+            } catch (\Exception $e) {
+                $errors[] = "Failed to update item ID {$update['supplier_item_id']}: " . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Successfully updated {$updatedCount} price records.",
+            'updated_count' => $updatedCount,
+            'errors' => $errors
+        ]);
+    }
+
+    /**
+     * Get supplier items for editing (API endpoint)
+     */
+    public function getSupplierItemsForEdit(Request $request)
+    {
+        $supplierId = $request->get('supplier_id');
+        $itemIds = $request->get('item_ids', []);
+
+        $query = \App\Models\SupplierItem::with(['supplier', 'item.unit', 'item.category'])
+            ->whereHas('supplier', function($q) use ($supplierId) {
+                if ($supplierId) {
+                    $q->where('id', $supplierId);
+                }
+                $q->where('is_active', true);
+            })
+            ->whereHas('item', function($q) {
+                $q->where('is_active', true);
+            });
+
+        if (!empty($itemIds)) {
+            $query->whereIn('item_id', $itemIds);
+        }
+
+        $supplierItems = $query->get();
+
+        return response()->json($supplierItems->map(function($item) {
+            return [
+                'id' => $item->id,
+                'supplier_id' => $item->supplier_id,
+                'item_id' => $item->item_id,
+                'supplier_name' => $item->supplier->name,
+                'item_name' => $item->item->name,
+                'item_code' => $item->item->item_code,
+                'unit_symbol' => $item->item->unit->symbol ?? '',
+                'current_unit_price' => $item->unit_price,
+                'current_min_order_qty' => $item->minimum_order_quantity,
+                'current_lead_time' => $item->lead_time_days,
+                'is_preferred' => $item->is_preferred,
+            ];
+        }));
+    }
+
+    /**
+     * Export supplier price list to CSV
+     */
+    public function exportSupplierPriceList(Request $request)
+    {
+        // Build query similar to supplierPriceList but get all records
+        $query = \App\Models\SupplierItem::with([
+            'supplier',
+            'item.unit',
+            'item.category'
+        ])->whereHas('supplier', function($q) {
+            $q->where('is_active', true);
+        })->whereHas('item', function($q) {
+            $q->where('is_active', true);
+        });
+
+        // Apply same filters as the main view
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->whereHas('item', function($itemQuery) use ($search) {
+                    $itemQuery->where('name', 'ilike', "%{$search}%")
+                              ->orWhere('item_code', 'ilike', "%{$search}%");
+                });
+            });
+        }
+
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Order by supplier_id and item_id for consistent ordering
+        $supplierItems = $query->orderBy('supplier_id')
+            ->orderBy('item_id')
             ->get();
 
-        return view('Purchasing.suppliers.pricelist', compact('suppliers'));
+        $filename = 'supplier_pricelist_' . date('Y-m-d_H-i-s') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function() use ($supplierItems) {
+            $file = fopen('php://output', 'w');
+            
+            // Add CSV headers
+            fputcsv($file, [
+                'Item Code',
+                'Item Name',
+                'Category',
+                'Supplier Code',
+                'Supplier Name',
+                'Unit Price',
+                'Unit',
+                'Minimum Order Qty',
+                'Lead Time (Days)',
+                'Preferred Status',
+                'Last Purchase Price',
+                'Last Purchase Date',
+                'Updated At'
+            ]);
+            
+            // Add data rows
+            foreach ($supplierItems as $supplierItem) {
+                fputcsv($file, [
+                    $supplierItem->item->item_code ?? '',
+                    $supplierItem->item->name ?? '',
+                    $supplierItem->item->category->name ?? '',
+                    $supplierItem->supplier->supplier_code ?? '',
+                    $supplierItem->supplier->name ?? '',
+                    $supplierItem->unit_price,
+                    $supplierItem->item->unit->symbol ?? '',
+                    $supplierItem->minimum_order_quantity,
+                    $supplierItem->lead_time_days,
+                    $supplierItem->is_preferred ? 'Preferred' : 'Alternate',
+                    $supplierItem->last_purchase_price ?? '',
+                    $supplierItem->last_purchase_date ? $supplierItem->last_purchase_date->format('Y-m-d') : '',
+                    $supplierItem->updated_at ? $supplierItem->updated_at->format('Y-m-d H:i:s') : ''
+                ]);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /**
@@ -729,46 +1081,285 @@ class PurchasingController extends Controller
     }
 
     /**
-     * Show supplier performance report
+     * Show supplier performance report - Redirected to purchase history
+     * This functionality has been removed, redirecting to purchase history instead
      */
     public function supplierPerformance()
     {
-        $supplierPerformance = Supplier::withCount(['purchaseOrders' => function($query) {
-                $query->where('status', 'completed');
-            }])
-            ->with(['purchaseOrders' => function($query) {
-                $query->selectRaw('supplier_id, AVG(grand_total) as avg_order_value, COUNT(*) as total_orders')
-                    ->where('status', 'completed')
-                    ->groupBy('supplier_id');
-            }])
-            ->where('is_active', true)
-            ->orderBy('purchase_orders_count', 'desc')
-            ->get();
-
-        return view('Purchasing.reports.supplier_performance', compact('supplierPerformance'));
+        return redirect()->route('purchasing.reports.history')
+            ->with('info', 'Supplier performance report functionality has been integrated into the purchase history view.');
     }
 
     /**
      * Show RTV (Return to Vendor) report
      */
-    public function rtv()
+    public function rtv(Request $request)
     {
-        // This would typically involve stock movements with return type
-        // For now, showing a placeholder
-        $rtvRecords = collect([]); // Placeholder
+        // Build the query for RTV transactions with relationships
+        $query = RtvTransaction::with([
+            'supplier',
+            'purchaseOrder',
+            'rtvItems.item.unit',
+            'createdBy'
+        ])->orderBy('return_date', 'desc');
 
-        return view('Purchasing.reports.RTV', compact('rtvRecords'));
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('rtv_number', 'ilike', "%{$search}%")
+                  ->orWhereHas('supplier', function($sq) use ($search) {
+                      $sq->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('supplier_code', 'ilike', "%{$search}%");
+                  })
+                  ->orWhereHas('purchaseOrder', function($poq) use ($search) {
+                      $poq->where('po_number', 'ilike', "%{$search}%");
+                  })
+                  ->orWhereHas('rtvItems', function($rtvi) use ($search) {
+                      $rtvi->whereHas('item', function($itemq) use ($search) {
+                          $itemq->where('name', 'ilike', "%{$search}%")
+                                ->orWhere('item_code', 'ilike', "%{$search}%");
+                      })->orWhere('reason', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        // Apply supplier filter
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Apply status filter
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Apply date filters
+        if ($request->filled('date_from')) {
+            $query->whereDate('return_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('return_date', '<=', $request->date_to);
+        }
+
+        // Paginate results
+        $rtvRecords = $query->paginate($request->get('per_page', 15));
+
+        // Get summary statistics
+        $summary = $this->getRtvSummaryStats();
+
+        // Get suppliers for filter dropdown
+        $suppliers = Supplier::where('is_active', true)
+            ->whereHas('rtvTransactions')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('Purchasing.reports.RTV', compact('rtvRecords', 'summary', 'suppliers'));
+    }
+
+    /**
+     * Get RTV summary statistics
+     */
+    private function getRtvSummaryStats(): array
+    {
+        $currentYear = date('Y');
+        
+        // Total returned value this year
+        $totalReturnedYtd = RtvTransaction::whereYear('return_date', $currentYear)
+            ->sum('total_value') ?: 0;
+
+        // Pending credits (status = 'pending')
+        $pendingCredits = RtvTransaction::where('status', 'pending')
+            ->sum('total_value') ?: 0;
+
+        // Total RTV transactions this year
+        $totalTransactionsYtd = RtvTransaction::whereYear('return_date', $currentYear)->count();
+
+        // Average return value
+        $averageReturnValue = RtvTransaction::whereYear('return_date', $currentYear)
+            ->avg('total_value') ?: 0;
+
+        return [
+            'total_returned_ytd' => $totalReturnedYtd,
+            'pending_credits' => $pendingCredits,
+            'total_transactions_ytd' => $totalTransactionsYtd,
+            'average_return_value' => $averageReturnValue,
+        ];
     }
 
     /**
      * Show notifications page
      */
-    public function notifications()
+    public function notifications(Request $request)
     {
-        $notifications = \App\Models\Notification::forCurrentUser()
-            ->paginate(20);
+        // Get filter from request (default to 'all')
+        $filter = $request->get('filter', 'all');
+        
+        // Build the notifications query
+        $query = \App\Models\Notification::forCurrentUser($filter);
+        
+        // Paginate results
+        $notifications = $query->paginate(20);
+        
+        // Get notification statistics for the current user
+        $stats = [
+            'total' => \App\Models\Notification::forCurrentUser()->count(),
+            'unread' => \App\Models\Notification::forCurrentUser('unread')->count(),
+            'high_priority' => \App\Models\Notification::forCurrentUser('high')->count(),
+            'urgent' => \App\Models\Notification::forCurrentUser('urgent')->count(),
+        ];
 
-        return view('Purchasing.notification', compact('notifications'));
+        return view('Purchasing.notification', compact('notifications', 'stats', 'filter'));
+    }
+
+    /**
+     * Get notification statistics for AJAX updates
+     */
+    public function getNotificationStats()
+    {
+        $stats = [
+            'total' => \App\Models\Notification::forCurrentUser()->count(),
+            'unread' => \App\Models\Notification::forCurrentUser('unread')->count(),
+            'high_priority' => \App\Models\Notification::forCurrentUser('high')->count(),
+            'urgent' => \App\Models\Notification::forCurrentUser('urgent')->count(),
+        ];
+
+        return response()->json($stats);
+    }
+
+    /**
+     * Mark specific notification as read
+     */
+    public function markNotificationAsRead(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->markAsRead();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as read'
+        ]);
+    }
+
+    /**
+     * Mark specific notification as unread
+     */
+    public function markNotificationAsUnread(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->markAsUnread();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as unread'
+        ]);
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllNotificationsAsRead()
+    {
+        try {
+            \Log::info('Mark all read called for user: ' . auth()->id());
+            
+            $query = \App\Models\Notification::where('user_id', auth()->id())
+                ->where('is_read', false);
+            
+            $count = $query->count();
+            \Log::info("Found {$count} unread notifications to mark as read");
+            
+            $query->update(['is_read' => true]);
+            
+            \Log::info("Marked {$count} notifications as read");
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read',
+                'updated_count' => $count
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in markAllNotificationsAsRead: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete specific notification
+     */
+    public function deleteNotification(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification deleted successfully'
+        ]);
+    }
+
+    /**
+     * Bulk operations on notifications
+     */
+    public function bulkNotificationOperations(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:mark_read,mark_unread,delete',
+            'notification_ids' => 'required|array',
+            'notification_ids.*' => 'exists:notifications,id'
+        ]);
+
+        $notificationIds = $request->notification_ids;
+        $action = $request->action;
+
+        // Ensure all notifications belong to the current user
+        $notifications = \App\Models\Notification::whereIn('id', $notificationIds)
+            ->where('user_id', auth()->id())
+            ->get();
+
+        if ($notifications->count() !== count($notificationIds)) {
+            return response()->json(['success' => false, 'message' => 'Some notifications not found or unauthorized'], 403);
+        }
+
+        switch ($action) {
+            case 'mark_read':
+                \App\Models\Notification::markMultipleAsRead($notificationIds);
+                $message = 'Notifications marked as read';
+                break;
+            case 'mark_unread':
+                foreach ($notifications as $notification) {
+                    $notification->markAsUnread();
+                }
+                $message = 'Notifications marked as unread';
+                break;
+            case 'delete':
+                \App\Models\Notification::whereIn('id', $notificationIds)
+                    ->where('user_id', auth()->id())
+                    ->delete();
+                $message = 'Notifications deleted successfully';
+                break;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
     }
 
     /**
@@ -819,6 +1410,174 @@ class PurchasingController extends Controller
             'created_at' => $supplier->created_at,
             'updated_at' => $supplier->updated_at
         ]);
+    }
+
+    /**
+     * Get purchase request details for purchasing users
+     */
+    public function getPurchaseRequestDetails(PurchaseRequest $purchaseRequest)
+    {
+        try {
+            // Only allow access to approved purchase requests
+            if ($purchaseRequest->status !== 'approved') {
+                return response()->json([
+                    'message' => 'Purchase request is not approved or not available for viewing.'
+                ], 403);
+            }
+
+            $purchaseRequest->load([
+                'requestedBy:id,name,email',
+                'approvedBy:id,name,email',
+                'purchaseRequestItems' => function($query) {
+                    $query->with([
+                        'item:id,name,item_code,unit_id',
+                        'item.unit:id,name,symbol'
+                    ]);
+                }
+            ]);
+
+            return response()->json([
+                'purchaseRequest' => $purchaseRequest
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching purchase request details: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch purchase request details.'
+            ], 500);
+        }
+    }
+
+    /**
+     * API endpoint to get supplier items for selected purchase requests
+     * Only returns items that both: 1) are in the selected PRs, and 2) the supplier provides
+     */
+    public function getSupplierItemsForPRs(Request $request, Supplier $supplier)
+    {
+        try {
+            $request->validate([
+                'pr_ids' => 'required|string'
+            ]);
+            
+            // Parse and validate PR IDs
+            $prIds = array_map('intval', explode(',', $request->pr_ids));
+            $prIds = array_filter($prIds); // Remove any empty values
+            
+            if (empty($prIds)) {
+                return response()->json([
+                    'message' => 'At least one purchase request must be selected.',
+                    'items' => []
+                ], 422);
+            }
+            
+            // Validate that all PR IDs exist and are approved
+            $existingPRs = PurchaseRequest::whereIn('id', $prIds)->where('status', 'approved')->count();
+            if ($existingPRs !== count($prIds)) {
+                return response()->json([
+                    'message' => 'Some selected purchase requests are invalid or not approved.',
+                    'items' => []
+                ], 422);
+            }
+
+
+
+            // Get approved purchase requests with their items
+            $purchaseRequests = PurchaseRequest::whereIn('id', $prIds)
+                ->where('status', 'approved')
+                ->with(['purchaseRequestItems.item.unit'])
+                ->get();
+
+            if ($purchaseRequests->isEmpty()) {
+                return response()->json([
+                    'message' => 'No valid approved purchase requests found.',
+                    'items' => []
+                ]);
+            }
+
+            // Collect all item IDs from selected PRs
+            $prItemIds = collect();
+            foreach ($purchaseRequests as $pr) {
+                foreach ($pr->purchaseRequestItems as $item) {
+                    $prItemIds->push($item->item_id);
+                }
+            }
+            $prItemIds = $prItemIds->unique()->values();
+
+            // Get supplier items that match the PR items
+            $supplierItems = SupplierItem::where('supplier_id', $supplier->id)
+                ->whereIn('item_id', $prItemIds)
+                ->with(['item.unit', 'item.category'])
+                ->get()
+                ->map(function ($supplierItem) use ($purchaseRequests) {
+                    // Calculate total requested quantity across all selected PRs
+                    $totalRequestedQuantity = 0;
+                    $sourcePRs = [];
+                    
+                    foreach ($purchaseRequests as $pr) {
+                        foreach ($pr->purchaseRequestItems as $prItem) {
+                            if ($prItem->item_id === $supplierItem->item_id) {
+                                $totalRequestedQuantity += $prItem->quantity_requested;
+                                $sourcePRs[] = [
+                                    'pr_id' => $pr->id,
+                                    'pr_number' => $pr->pr_number,
+                                    'quantity' => $prItem->quantity_requested
+                                ];
+                            }
+                        }
+                    }
+
+                    return [
+                        'item_id' => (int)$supplierItem->item_id,
+                        'item_name' => $supplierItem->item->name,
+                        'item_code' => $supplierItem->item->item_code,
+                        'unit_symbol' => $supplierItem->item->unit->symbol ?? '',
+                        'category' => $supplierItem->item->category->name ?? 'No Category',
+                        'supplier_item_code' => $supplierItem->supplier_item_code,
+                        'unit_price' => (float)$supplierItem->unit_price,
+                        'minimum_order_quantity' => (float)$supplierItem->minimum_order_quantity,
+                        'lead_time_days' => (int)$supplierItem->lead_time_days,
+                        'is_preferred' => (bool)$supplierItem->is_preferred,
+                        'total_requested_quantity' => (float)$totalRequestedQuantity,
+                        'source_prs' => $sourcePRs,
+                        'estimated_total' => (float)($totalRequestedQuantity * $supplierItem->unit_price)
+                    ];
+                })
+                ->sortByDesc('is_preferred')
+                ->values();
+
+            // Group items by availability status
+            $availableItems = $supplierItems->where('unit_price', '>', 0);
+            $unavailableItems = $supplierItems->filter(function($item) {
+                return $item['unit_price'] <= 0;
+            });
+
+            return response()->json([
+                'supplier' => [
+                    'id' => $supplier->id,
+                    'name' => $supplier->name,
+                    'supplier_code' => $supplier->supplier_code,
+                    'payment_terms' => $supplier->payment_terms
+                ],
+                'items' => [
+                    'available' => $availableItems->values(),
+                    'unavailable' => $unavailableItems->values()
+                ],
+                'summary' => [
+                    'total_items_requested' => (int)$prItemIds->count(),
+                    'items_available_from_supplier' => (int)$availableItems->count(),
+                    'items_not_available' => (int)$unavailableItems->count(),
+                    'total_estimated_cost' => (float)$availableItems->sum('estimated_total')
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching supplier items for PRs: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch supplier items for selected purchase requests.',
+                'error' => $e->getMessage(),
+                'items' => []
+            ], 500);
+        }
     }
 
     /**
@@ -1046,6 +1805,25 @@ class PurchasingController extends Controller
 
         return redirect()->route('purchasing.po.drafts')
             ->with('success', "Purchase Order {$purchaseOrder->po_number} submitted for approval successfully!");
+    }
+
+    /**
+     * Acknowledge supplier confirmation of purchase order
+     */
+    public function acknowledgePurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        if ($purchaseOrder->status !== 'sent') {
+            return redirect()->back()->with('error', 'Only sent purchase orders can be acknowledged.');
+        }
+
+        $purchaseOrder->update([
+            'status' => 'confirmed',
+            'acknowledged_by' => auth()->id(),
+            'acknowledged_at' => Carbon::now(),
+        ]);
+
+        return redirect()->route('purchasing.po.open')
+            ->with('success', "Purchase Order {$purchaseOrder->po_number} acknowledged successfully!");
     }
 
     /**

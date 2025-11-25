@@ -51,4 +51,9 @@ class Supplier extends Model
     {
         return $this->hasMany(\App\Models\SupplierItem::class);
     }
+
+    public function rtvTransactions()
+    {
+        return $this->hasMany(\App\Models\RtvTransaction::class);
+    }
 }

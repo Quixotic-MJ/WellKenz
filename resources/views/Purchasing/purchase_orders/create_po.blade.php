@@ -1,769 +1,790 @@
 @extends('Purchasing.layout.app')
 
+@section('title', 'Create Purchase Order')
+
 @section('content')
-<div class="space-y-6">
-    
-    {{-- 1. HEADER --}}
-    <div class="flex items-center justify-between">
+<div class="max-w-7xl mx-auto space-y-4">
+    {{-- Header --}}
+    <div class="flex items-center justify-between bg-white border-b border-gray-200 px-6 py-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Create Purchase Order</h1>
-            <p class="text-sm text-gray-500">Select approved purchase requests to create purchase orders</p>
+            <h1 class="text-xl font-semibold text-gray-900">Create Purchase Order</h1>
+            <p class="text-sm text-gray-500">Select approved requests and create purchase orders</p>
         </div>
-        <div class="flex space-x-3">
-            <a href="{{ route('purchasing.po.drafts') }}" class="flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition shadow-sm">
-                <i class="fas fa-list mr-2"></i> View Drafts
+        <div class="flex items-center space-x-2">
+            <a href="{{ route('purchasing.po.drafts') }}" 
+               class="inline-flex items-center px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors">
+                <i class="fas fa-list mr-1.5"></i>Drafts
             </a>
-            <a href="{{ route('purchasing.dashboard') }}" class="flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition shadow-sm">
-                <i class="fas fa-arrow-left mr-2"></i> Back to Dashboard
+            <a href="{{ route('purchasing.dashboard') }}" 
+               class="inline-flex items-center px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors">
+                <i class="fas fa-arrow-left mr-1.5"></i>Dashboard
             </a>
         </div>
     </div>
 
-    {{-- Success/Error Messages --}}
-    @if (session('success'))
-        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div class="flex">
-                <i class="fas fa-check-circle text-green-500 mt-0.5 mr-2"></i>
-                <div class="text-sm text-green-800">{{ session('success') }}</div>
+    {{-- Alerts --}}
+    @if(session('success'))
+        <div class="bg-green-50 border-l-4 border-green-400 p-3 mx-6">
+            <div class="flex items-center">
+                <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                <span class="text-sm text-green-700">{{ session('success') }}</span>
             </div>
         </div>
     @endif
 
-    @if (session('error'))
-        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div class="flex">
-                <i class="fas fa-exclamation-triangle text-red-500 mt-0.5 mr-2"></i>
-                <div class="text-sm text-red-800">{{ session('error') }}</div>
+    @if(session('error'))
+        <div class="bg-red-50 border-l-4 border-red-400 p-3 mx-6">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-circle text-red-400 mr-2"></i>
+                <span class="text-sm text-red-700">{{ session('error') }}</span>
             </div>
         </div>
     @endif
 
-    {{-- 2. APPROVED PURCHASE REQUESTS SECTION --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
-        <div class="px-6 py-4 border-b border-gray-200">
+    {{-- Step 1: Purchase Requests --}}
+    <div id="pr-selection-section" class="mx-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
             <div class="flex items-center justify-between">
-                <h3 class="text-lg font-bold text-gray-800">Approved Purchase Requests</h3>
+                <div>
+                    <h3 class="text-sm font-medium text-gray-900">1. Select Purchase Requests</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Choose approved requests to include</p>
+                </div>
                 <div class="flex items-center space-x-3">
-                    <span class="text-sm text-gray-500">
-                        <span id="selectedCount">0</span> selected
+                    <span class="text-xs text-gray-500">
+                        <span id="selected-pr-count" class="font-medium text-chocolate">0</span> selected
                     </span>
-                    <button type="button" onclick="openCreatePOModal()" 
+                    <button type="button" 
+                            id="proceed-supplier-btn"
                             disabled
-                            id="createPOBtn"
-                            class="inline-flex items-center justify-center px-4 py-2 bg-chocolate text-white text-sm font-medium rounded-lg hover:bg-chocolate-dark transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                        <i class="fas fa-plus mr-2"></i> Create PO from Selected
+                            onclick="proceedToSupplierSelection()"
+                            class="px-3 py-1.5 bg-chocolate text-white text-xs font-medium rounded-md hover:bg-chocolate-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-arrow-right mr-1"></i>Next
                     </button>
                 </div>
             </div>
         </div>
 
         {{-- Filters --}}
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Search</label>
-                    <div class="relative">
-                        <input type="text" id="searchFilter" placeholder="PR Number, Department..." 
-                               class="block w-full pl-10 border-gray-300 rounded-md sm:text-sm focus:ring-chocolate focus:border-chocolate">
-                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                    </div>
+        <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <div class="grid grid-cols-3 gap-3">
+                <div class="relative">
+                    <input type="text" 
+                           id="pr-search-filter" 
+                           placeholder="Search PRs..."
+                           class="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-chocolate focus:border-chocolate">
+                    <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-xs"></i>
                 </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Department</label>
-                    <select id="departmentFilter" class="block w-full border-gray-300 rounded-md sm:text-sm focus:ring-chocolate focus:border-chocolate">
-                        <option value="">All Departments</option>
-                        @foreach($departments as $dept)
-                            <option value="{{ $dept }}">{{ $dept }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-500 uppercase mb-1">Priority</label>
-                    <select id="priorityFilter" class="block w-full border-gray-300 rounded-md sm:text-sm focus:ring-chocolate focus:border-chocolate">
-                        <option value="">All Priorities</option>
-                        <option value="low">Low</option>
-                        <option value="normal">Normal</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                    </select>
-                </div>
+                <select id="pr-department-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-chocolate focus:border-chocolate">
+                    <option value="">All Departments</option>
+                    @foreach($departments ?? [] as $dept)
+                        <option value="{{ $dept }}">{{ $dept }}</option>
+                    @endforeach
+                </select>
+                <select id="pr-priority-filter" class="px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-chocolate focus:border-chocolate">
+                    <option value="">All Priorities</option>
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                </select>
             </div>
         </div>
 
-        {{-- Purchase Requests Table --}}
-        <div class="overflow-x-auto">
+        {{-- Table --}}
+        <div class="overflow-hidden">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left">
-                            <input type="checkbox" id="selectAllPRs" class="rounded border-gray-300 text-chocolate focus:ring-chocolate">
+                        <th class="w-8 px-3 py-2">
+                            <input type="checkbox" id="select-all-prs" class="text-chocolate focus:ring-chocolate">
                         </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PR Number</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requester</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated Cost</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">PR Number</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Requester</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
+                        <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cost</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="w-16 px-3 py-2 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="prTableBody" class="bg-white divide-y divide-gray-200">
-                    @forelse($approvedRequests as $request)
-                        <tr class="hover:bg-gray-50 pr-row transition-colors duration-150"
-                            data-pr="{{ strtolower($request->pr_number) }}"
+                <tbody id="pr-table-body" class="divide-y divide-gray-200">
+                    @forelse($approvedRequests ?? [] as $request)
+                        <tr class="pr-row hover:bg-gray-50"
+                            data-pr="{{ strtolower($request->pr_number ?? '') }}"
                             data-department="{{ strtolower($request->department ?? '') }}"
-                            data-priority="{{ $request->priority }}"
-                            data-date="{{ $request->request_date?->format('Y-m-d') ?? '' }}">
+                            data-priority="{{ $request->priority ?? '' }}">
                             
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-3 py-2">
                                 <input type="checkbox" 
                                        name="selected_prs[]" 
                                        value="{{ $request->id }}"
+                                       data-total-cost="{{ $request->total_estimated_cost ?? 0 }}"
                                        data-items-count="{{ $request->purchaseRequestItems->count() ?? 0 }}"
-                                       data-total-cost="{{ $request->total_estimated_cost }}"
-                                       data-date="{{ $request->request_date?->format('Y-m-d') ?? '' }}"
-                                       class="pr-checkbox rounded border-gray-300 text-chocolate focus:ring-chocolate">
+                                       class="pr-checkbox text-chocolate focus:ring-chocolate">
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    @if($request->priority === 'urgent')
-                                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
-                                            <i class="fas fa-exclamation-triangle mr-1"></i> Urgent
-                                        </span>
-                                    @endif
-                                    <div class="text-sm font-medium text-gray-900">{{ $request->pr_number }}</div>
-                                </div>
+                            <td class="px-3 py-2">
+                                <div class="text-sm font-medium text-gray-900">{{ $request->pr_number ?? 'N/A' }}</div>
+                                @if($request->priority === 'urgent')
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                        <i class="fas fa-exclamation-triangle mr-1"></i>Urgent
+                                    </span>
+                                @endif
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-3 py-2">
                                 <div class="text-sm text-gray-900">{{ $request->department ?? 'N/A' }}</div>
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap">
+                            <td class="px-3 py-2">
                                 <div class="text-sm text-gray-900">{{ $request->requestedBy->name ?? 'N/A' }}</div>
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                            <td class="px-3 py-2">
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium
                                     @if($request->priority === 'urgent') bg-red-100 text-red-800
                                     @elseif($request->priority === 'high') bg-orange-100 text-orange-800
                                     @elseif($request->priority === 'normal') bg-blue-100 text-blue-800
                                     @else bg-gray-100 text-gray-800 @endif">
-                                    <i class="fas fa-circle mr-1 text-xs"></i>
-                                    {{ ucfirst($request->priority) }}
+                                    {{ ucfirst($request->priority ?? 'normal') }}
                                 </span>
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ $request->purchaseRequestItems->count() }} items</div>
-                                <div class="text-sm text-gray-500">
-                                    {{ number_format($request->purchaseRequestItems->sum('quantity_requested'), 1) }} total qty
-                                </div>
+                            <td class="px-3 py-2">
+                                <div class="text-sm text-gray-900">{{ $request->purchaseRequestItems->count() ?? 0 }}</div>
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap text-right">
+                            <td class="px-3 py-2 text-right">
                                 <div class="text-sm font-medium text-gray-900">
-                                    ₱{{ number_format($request->total_estimated_cost, 2) }}
+                                    ₱{{ number_format($request->total_estimated_cost ?? 0, 0) }}
                                 </div>
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ $request->request_date?->format('M d, Y') ?? 'N/A' }}
-                                @if($request->request_date)
-                                    <div class="text-xs text-gray-500">
-                                        {{ $request->request_date->diffForHumans() }}
-                                    </div>
-                                @endif
+                            <td class="px-3 py-2">
+                                <div class="text-sm text-gray-900">{{ $request->request_date?->format('M d') ?? 'N/A' }}</div>
                             </td>
                             
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    <i class="fas fa-check mr-1"></i> Approved
-                                </span>
+                            <td class="px-3 py-2 text-center">
+                                <button type="button" 
+                                        onclick="viewPRDetails({{ $request->id }})"
+                                        class="text-chocolate hover:text-chocolate-dark text-xs">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-6 py-12 text-center">
-                                <div class="text-gray-500">
-                                    <i class="fas fa-inbox text-4xl mb-4 block"></i>
-                                    <p class="text-lg font-medium">No approved purchase requests found</p>
-                                    <p class="text-sm mt-1">Approved requests will appear here for PO creation</p>
-                                </div>
+                            <td colspan="9" class="px-3 py-12 text-center text-gray-500">
+                                <i class="fas fa-inbox text-2xl mb-2 block"></i>
+                                <p class="text-sm">No approved purchase requests found</p>
                             </td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+    </div>
 
-        {{-- Pagination --}}
-        @if($approvedRequests->hasPages())
-            <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center text-sm text-gray-700">
-                        <span>Showing {{ $approvedRequests->firstItem() ?? 0 }} to {{ $approvedRequests->lastItem() ?? 0 }} of {{ $approvedRequests->total() }} results</span>
+    {{-- Step 2: Supplier Selection --}}
+    <div id="supplier-section" class="hidden mx-6">
+        <form action="{{ route('purchasing.po.store') }}" method="POST" id="purchase-order-form">
+            @csrf
+            <input type="hidden" name="selected_pr_ids" id="selected-pr-ids">
+            
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-medium text-gray-900">2. Configure Purchase Order</h3>
+                            <p class="text-xs text-gray-500 mt-0.5">Select supplier and configure items</p>
+                        </div>
+                        <button type="button" 
+                                onclick="resetToPRSelection()" 
+                                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors">
+                            <i class="fas fa-arrow-left mr-1"></i>Back
+                        </button>
                     </div>
+                </div>
+
+                <div class="p-4 space-y-4">
+                    {{-- Selected PRs Summary --}}
+                    <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+                        <h4 class="text-xs font-medium text-blue-800 mb-1">Selected Requests</h4>
+                        <div id="selected-prs-summary" class="text-xs text-blue-700"></div>
+                    </div>
+
+                    {{-- Form Fields --}}
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label for="supplier_id" class="block text-xs font-medium text-gray-700 mb-1">Supplier *</label>
+                            <select name="supplier_id" 
+                                    id="supplier_id" 
+                                    required 
+                                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-chocolate focus:border-chocolate">
+                                <option value="">Select Supplier</option>
+                                @foreach($suppliers ?? [] as $supplier)
+                                    <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('supplier_id')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="expected_delivery_date" class="block text-xs font-medium text-gray-700 mb-1">Delivery Date *</label>
+                            <input type="date" 
+                                   name="expected_delivery_date" 
+                                   id="expected_delivery_date" 
+                                   required 
+                                   value="{{ old('expected_delivery_date', date('Y-m-d', strtotime('+7 days'))) }}"
+                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-chocolate focus:border-chocolate">
+                            @error('expected_delivery_date')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="payment_terms" class="block text-xs font-medium text-gray-700 mb-1">Payment Terms</label>
+                            <input type="number" 
+                                   name="payment_terms" 
+                                   id="payment_terms" 
+                                   value="{{ old('payment_terms', 30) }}" 
+                                   min="1" 
+                                   max="365"
+                                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-chocolate focus:border-chocolate">
+                            @error('payment_terms')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    {{-- Items Table --}}
                     <div>
-                        {{ $approvedRequests->links() }}
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-sm font-medium text-gray-900">Items from Selected PRs</h4>
+                            <span class="text-xs text-gray-500" id="required-items-count">0 items</span>
+                        </div>
+                        
+                        <div class="border border-gray-200 rounded-md">
+                            <table class="min-w-full">
+                                <thead class="bg-orange-50">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-700">Item</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-700">PR Source</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-700">Qty</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-700">Price</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-700">Order Qty</th>
+                                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-700">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="required-items-table" class="divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="6" class="px-3 py-8 text-center text-gray-500 text-sm">
+                                            Select a supplier to view items
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {{-- Notes --}}
+                    <div>
+                        <label for="notes" class="block text-xs font-medium text-gray-700 mb-1">Notes</label>
+                        <textarea name="notes" 
+                                  id="notes" 
+                                  rows="2"
+                                  class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-chocolate focus:border-chomotor"
+                                  placeholder="Additional notes">{{ old('notes') }}</textarea>
+                    </div>
+
+                    {{-- Save Options --}}
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-2">Save Option *</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center p-2 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
+                                <input id="save-as-draft" 
+                                       name="save_option" 
+                                       type="radio" 
+                                       value="draft" 
+                                       class="text-chocolate focus:ring-chocolate">
+                                <div class="ml-2">
+                                    <div class="text-xs font-medium text-gray-900">Save as Draft</div>
+                                    <div class="text-xs text-gray-500">Save for later editing</div>
+                                </div>
+                            </label>
+                            <label class="flex items-center p-2 border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer">
+                                <input id="create-po" 
+                                       name="save_option" 
+                                       type="radio" 
+                                       value="create" 
+                                       class="text-chocolate focus:ring-chocolate">
+                                <div class="ml-2">
+                                    <div class="text-xs font-medium text-gray-900">Create Purchase Order</div>
+                                    <div class="text-xs text-gray-500">Submit for processing</div>
+                                </div>
+                            </label>
+                        </div>
+                        @error('save_option')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                {{-- Actions --}}
+                <div class="px-4 py-3 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                    <div class="flex justify-end space-x-2">
+                        <button type="button" 
+                                onclick="resetToPRSelection()" 
+                                class="px-4 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                id="submit-btn"
+                                class="px-4 py-1.5 bg-chocolate text-white text-sm font-medium rounded-md hover:bg-chocolate-dark transition-colors">
+                            <i class="fas fa-save mr-1"></i>
+                            <span id="submit-btn-text">Save Draft</span>
+                        </button>
                     </div>
                 </div>
             </div>
-        @endif
+        </form>
     </div>
-
 </div>
 
-{{-- CREATE PO MODAL --}}
-<div id="createPOModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeCreatePOModal()"></div>
+{{-- PR Details Modal --}}
+<div id="pr-details-modal" 
+     class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 hidden">
+    <div class="relative top-20 mx-auto p-4 border w-11/12 md:w-1/2 shadow-lg rounded-lg bg-white">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-medium text-gray-900">Request Details</h3>
+            <button onclick="closePRDetailsModal()" 
+                    class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
         
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        <div id="pr-details-content">
+            <div class="text-center py-6">
+                <i class="fas fa-spinner fa-spin text-xl text-chocolate mb-2"></i>
+                <p class="text-gray-600">Loading...</p>
+            </div>
+        </div>
         
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <form action="{{ route('purchasing.po.store') }}" method="POST" id="purchaseOrderForm">
-                @csrf
-                <input type="hidden" name="selected_pr_ids" id="selectedPRIds">
-                <input type="hidden" name="save_option" id="saveOptionValue" value="draft">
-                
-                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                    <div class="sm:flex sm:items-start">
-                        <div class="w-full">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4" id="modal-title">
-                                Create Purchase Order
-                            </h3>
-                            
-                            {{-- Selected PRs Summary --}}
-                            <div id="selectedPRsSummary" class="mb-6 hidden">
-                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                    <h4 class="text-sm font-medium text-blue-800 mb-2">Selected Purchase Requests</h4>
-                                    <div id="selectedPRsList" class="text-sm text-blue-700"></div>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {{-- Supplier Selection --}}
-                                <div>
-                                    <label for="supplier_id" class="block text-sm font-medium text-gray-700 mb-2">Supplier *</label>
-                                    <select name="supplier_id" id="supplier_id" required 
-                                            class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                                        <option value="">Select Supplier</option>
-                                        @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}">{{ $supplier->name }} ({{ $supplier->supplier_code }})</option>
-                                        @endforeach
-                                    </select>
-                                    @error('supplier_id')
-                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                {{-- Expected Delivery Date --}}
-                                <div>
-                                    <label for="expected_delivery_date" class="block text-sm font-medium text-gray-700 mb-2">Expected Delivery Date *</label>
-                                    <input type="date" name="expected_delivery_date" id="expected_delivery_date" required 
-                                           value="{{ old('expected_delivery_date', date('Y-m-d', strtotime('+7 days'))) }}"
-                                           class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                                    @error('expected_delivery_date')
-                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                            </div>
-
-                            {{-- Save Options --}}
-                            <div class="mt-6">
-                                <label class="block text-sm font-medium text-gray-700 mb-3">Save Options *</label>
-                                <div class="space-y-3">
-                                    <div class="flex items-center">
-                                        <input id="save_as_draft" name="save_option" type="radio" value="draft" 
-                                               class="h-4 w-4 text-chocolate focus:ring-chocolate border-gray-300" checked>
-                                        <label for="save_as_draft" class="ml-3 block text-sm text-gray-900">
-                                            <span class="font-medium">Save as Draft</span>
-                                            <span class="text-gray-500 block">Save the purchase order in draft status for later editing</span>
-                                        </label>
-                                    </div>
-                                    <div class="flex items-center">
-                                        <input id="create_po" name="save_option" type="radio" value="create" 
-                                               class="h-4 w-4 text-chocolate focus:ring-chocolate border-gray-300">
-                                        <label for="create_po" class="ml-3 block text-sm text-gray-900">
-                                            <span class="font-medium">Create Purchase Order</span>
-                                            <span class="text-gray-500 block">Save and submit the purchase order for processing</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                @error('save_option')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Notes --}}
-                            <div class="mt-6">
-                                <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                                <textarea name="notes" id="notes" rows="3" 
-                                          class="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm"
-                                          placeholder="Additional notes or special instructions">{{ old('notes') }}</textarea>
-                            </div>
-
-                            {{-- Items from Selected PRs --}}
-                            <div class="mt-6">
-                                <h4 class="text-md font-medium text-gray-800 mb-3">Items from Selected PRs</h4>
-                                <div class="overflow-x-auto">
-                                    <table class="min-w-full divide-y divide-gray-200">
-                                        <thead class="bg-gray-50">
-                                            <tr>
-                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source PR</th>
-                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Est. Unit Price</th>
-                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="modalItemsTable" class="bg-white divide-y divide-gray-200">
-                                            {{-- Items will be populated by JavaScript --}}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {{-- Order Summary --}}
-                            <div class="mt-6 bg-gray-50 rounded-lg p-4">
-                                <div class="flex justify-between items-center">
-                                    <h4 class="text-md font-medium text-gray-800">Order Summary</h4>
-                                    <div class="text-right">
-                                        <div class="text-2xl font-black text-gray-800" id="modal-grand-total">₱ 0.00</div>
-                                        <p class="text-sm text-gray-500">Grand Total</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" id="submitBtn"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-chocolate sm:ml-3 sm:w-auto sm:text-sm">
-                        <i class="fas fa-save mr-2"></i> Save as Draft
-                    </button>
-                    <button type="button" 
-                            onclick="closeCreatePOModal()" 
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-chocolate sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                        Cancel
-                    </button>
-                </div>
-            </form>
+        <div class="flex justify-end mt-4 pt-3 border-t">
+            <button type="button" 
+                    onclick="closePRDetailsModal()"
+                    class="px-4 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50">
+                Close
+            </button>
         </div>
     </div>
 </div>
+@endsection
 
+@push('scripts')
 <script>
-// Global variables
-let selectedPRs = [];
-const approvedRequests = @json($approvedRequestsForJS ?? $approvedRequests);
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Ensure approvedRequests is an array
-    if (!Array.isArray(approvedRequests)) {
-        console.warn('approvedRequests is not an array:', approvedRequests);
+class PurchaseOrderManager {
+    constructor() {
+        this.selectedPRs = [];
+        this.init();
     }
-    
-    setupFilters();
-    setupSelection();
-    updateSelectionUI();
-    setupSaveOptionHandlers();
-});
 
-function setupFilters() {
-    const searchFilter = document.getElementById('searchFilter');
-    const departmentFilter = document.getElementById('departmentFilter');
-    const priorityFilter = document.getElementById('priorityFilter');
-    
-    if (searchFilter) searchFilter.addEventListener('input', debounce(applyFilters, 300));
-    if (departmentFilter) departmentFilter.addEventListener('change', applyFilters);
-    if (priorityFilter) priorityFilter.addEventListener('change', applyFilters);
-}
+    init() {
+        this.setupEventListeners();
+        this.updatePRSelectionUI();
+    }
 
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
+    setupEventListeners() {
+        document.getElementById('select-all-prs')?.addEventListener('change', this.handleSelectAll.bind(this));
+        document.querySelectorAll('.pr-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', this.updatePRSelectionUI.bind(this));
+        });
 
-function applyFilters() {
-    const searchTerm = (document.getElementById('searchFilter')?.value || '').toLowerCase();
-    const departmentTerm = document.getElementById('departmentFilter')?.value || '';
-    const priorityTerm = document.getElementById('priorityFilter')?.value || '';
-    
-    const rows = document.querySelectorAll('.pr-row');
-    let visibleCount = 0;
-    
-    rows.forEach(row => {
-        const prText = row.dataset.pr || '';
-        const departmentText = row.dataset.department || '';
-        const priorityText = row.dataset.priority || '';
+        document.getElementById('pr-search-filter')?.addEventListener('input', this.filterPRs.bind(this));
+        document.getElementById('pr-department-filter')?.addEventListener('change', this.filterPRs.bind(this));
+        document.getElementById('pr-priority-filter')?.addEventListener('change', this.filterPRs.bind(this));
+        document.getElementById('supplier_id')?.addEventListener('change', this.handleSupplierChange.bind(this));
+
+        this.setupSaveOptionHandlers();
+    }
+
+    handleSelectAll(e) {
+        document.querySelectorAll('.pr-checkbox:not(:disabled)').forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+        this.updatePRSelectionUI();
+    }
+
+    updatePRSelectionUI() {
+        const checkboxes = document.querySelectorAll('.pr-checkbox:checked');
+        const selectedCount = checkboxes.length;
+        const selectedCountElement = document.getElementById('selected-pr-count');
+        const proceedBtn = document.getElementById('proceed-supplier-btn');
         
-        let showRow = true;
+        if (selectedCountElement) selectedCountElement.textContent = selectedCount;
+        if (proceedBtn) proceedBtn.disabled = selectedCount === 0;
         
-        // Search filter
-        if (searchTerm && !prText.includes(searchTerm) && !departmentText.includes(searchTerm)) {
-            showRow = false;
+        const selectAll = document.getElementById('select-all-prs');
+        if (selectAll) {
+            const allCheckboxes = document.querySelectorAll('.pr-checkbox:not(:disabled)');
+            const allChecked = selectedCount === allCheckboxes.length && allCheckboxes.length > 0;
+            selectAll.checked = allChecked;
+            selectAll.indeterminate = !allChecked && selectedCount > 0;
         }
-        
-        // Department filter
-        if (departmentTerm && departmentText !== departmentTerm.toLowerCase()) {
-            showRow = false;
-        }
-        
-        // Priority filter
-        if (priorityTerm && priorityText !== priorityTerm) {
-            showRow = false;
-        }
-        
-        row.style.display = showRow ? '' : 'none';
-        if (showRow) visibleCount++;
-    });
-}
+    }
 
-function setupSelection() {
-    const selectAll = document.getElementById('selectAllPRs');
-    const checkboxes = document.querySelectorAll('.pr-checkbox');
-    
-    if (selectAll) {
-        selectAll.addEventListener('change', function() {
-            checkboxes.forEach(checkbox => {
-                if (this.checked) {
-                    checkbox.checked = true;
-                } else {
-                    checkbox.checked = false;
-                }
-            });
-            updateSelectionUI();
+    filterPRs() {
+        const searchTerm = document.getElementById('pr-search-filter')?.value.toLowerCase() || '';
+        const departmentFilter = document.getElementById('pr-department-filter')?.value.toLowerCase() || '';
+        const priorityFilter = document.getElementById('pr-priority-filter')?.value.toLowerCase() || '';
+
+        document.querySelectorAll('.pr-row').forEach(row => {
+            const prText = row.dataset.pr || '';
+            const departmentText = row.dataset.department || '';
+            const priorityText = row.dataset.priority || '';
+            
+            const matchesSearch = !searchTerm || prText.includes(searchTerm) || departmentText.includes(searchTerm);
+            const matchesDepartment = !departmentFilter || departmentText.includes(departmentFilter);
+            const matchesPriority = !priorityFilter || priorityText.includes(priorityFilter);
+            
+            row.style.display = matchesSearch && matchesDepartment && matchesPriority ? '' : 'none';
         });
     }
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectionUI);
-    });
-}
 
-function setupSaveOptionHandlers() {
-    const draftRadio = document.getElementById('save_as_draft');
-    const createRadio = document.getElementById('create_po');
-    const submitBtn = document.getElementById('submitBtn');
-    const saveOptionValue = document.getElementById('saveOptionValue');
-    
-    if (draftRadio && createRadio && submitBtn) {
-        // Add event listeners to radio buttons
-        draftRadio.addEventListener('change', updateSubmitButton);
-        createRadio.addEventListener('change', updateSubmitButton);
-        
-        // Initial update
-        updateSubmitButton();
-    }
-}
-
-function updateSubmitButton() {
-    const draftRadio = document.getElementById('save_as_draft');
-    const submitBtn = document.getElementById('submitBtn');
-    const saveOptionValue = document.getElementById('saveOptionValue');
-    
-    if (draftRadio && submitBtn && saveOptionValue) {
-        if (draftRadio.checked) {
-            // Save as Draft
-            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Save as Draft';
-            submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
-            submitBtn.classList.add('bg-chocolate', 'hover:bg-chocolate-dark');
-            saveOptionValue.value = 'draft';
-        } else {
-            // Create Purchase Order
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Create Purchase Order';
-            submitBtn.classList.remove('bg-chocolate', 'hover:bg-chocolate-dark');
-            submitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
-            saveOptionValue.value = 'create';
-        }
-    }
-}
-
-function updateSelectionUI() {
-    const checkboxes = document.querySelectorAll('.pr-checkbox:checked');
-    const selectedCount = checkboxes.length;
-    const selectAll = document.getElementById('selectAllPRs');
-    const selectedCountElement = document.getElementById('selectedCount');
-    const createPOBtn = document.getElementById('createPOBtn');
-    
-    // Update count display
-    if (selectedCountElement) {
-        selectedCountElement.textContent = selectedCount;
-    }
-    
-    // Update button state
-    if (createPOBtn) {
-        createPOBtn.disabled = selectedCount === 0;
-    }
-    
-    // Update select all checkbox
-    const allCheckboxes = document.querySelectorAll('.pr-checkbox');
-    const allChecked = selectedCount === allCheckboxes.length && allCheckboxes.length > 0;
-    const noneChecked = selectedCount === 0;
-    
-    if (selectAll) {
-        selectAll.checked = allChecked;
-        selectAll.indeterminate = !allChecked && !noneChecked;
-    }
-}
-
-function openCreatePOModal() {
-    const checkboxes = document.querySelectorAll('.pr-checkbox:checked');
-    if (checkboxes.length === 0) {
-        alert('Please select at least one purchase request.');
-        return;
-    }
-    
-    // Get selected PR data from checkbox attributes and table rows
-    selectedPRs = [];
-    checkboxes.forEach(checkbox => {
-        const prId = parseInt(checkbox.value);
-        const row = checkbox.closest('tr');
-        
-        // Extract data from table row
-        const prData = {
-            id: prId,
-            pr_number: row.querySelector('td:nth-child(2) .text-sm').textContent.trim(),
-            department: row.querySelector('td:nth-child(3) .text-sm').textContent.trim(),
-            priority: row.dataset.priority,
-            total_estimated_cost: parseFloat(checkbox.dataset.totalCost),
-            request_date: row.dataset.date,
-            // Load detailed items from approvedRequests if available
-            purchaseRequestItems: []
-        };
-        
-        // Try to find detailed data in approvedRequests
-        if (Array.isArray(approvedRequests) && approvedRequests.length > 0) {
-            const fullPRData = approvedRequests.find(pr => pr.id === prId);
-            if (fullPRData && fullPRData.purchaseRequestItems) {
-                prData.purchaseRequestItems = fullPRData.purchaseRequestItems;
-            }
+    proceedToSupplierSelection() {
+        const checkboxes = document.querySelectorAll('.pr-checkbox:checked');
+        if (checkboxes.length === 0) {
+            this.showAlert('Please select at least one purchase request.', 'warning');
+            return;
         }
         
-        selectedPRs.push(prData);
-    });
-    
-    // Show basic summary
-    showSelectedPRsSummary();
-    
-    // Populate modal with detailed items if available, otherwise use basic approach
-    if (selectedPRs.length > 0 && selectedPRs.some(pr => pr.purchaseRequestItems.length > 0)) {
-        populateModalItemsTableWithDetailedData();
-    } else {
-        populateModalItemsTableFromBasicData();
-    }
-    
-    // Show modal
-    document.getElementById('createPOModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeCreatePOModal() {
-    document.getElementById('createPOModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
-    
-    // Reset form
-    document.getElementById('purchaseOrderForm').reset();
-    selectedPRs = [];
-    
-    // Reset radio button to draft (default)
-    const draftRadio = document.getElementById('save_as_draft');
-    if (draftRadio) {
-        draftRadio.checked = true;
-        updateSubmitButton();
-    }
-    
-    // Hide summary
-    document.getElementById('selectedPRsSummary').classList.add('hidden');
-}
-
-function showSelectedPRsSummary() {
-    const summaryDiv = document.getElementById('selectedPRsSummary');
-    const listDiv = document.getElementById('selectedPRsList');
-    
-    if (selectedPRs.length === 0) return;
-    
-    let html = `<div class="space-y-1">`;
-    let totalCost = 0;
-    let totalItems = 0;
-    
-    selectedPRs.forEach(pr => {
-        const itemsCount = parseInt(document.querySelector(`input[value="${pr.id}"]`).dataset.itemsCount) || 0;
-        html += `<div class="flex justify-between">
-                    <span>${pr.pr_number} (${pr.department || 'N/A'})</span>
-                    <span>₱${pr.total_estimated_cost.toLocaleString()}</span>
-                </div>`;
-        totalCost += pr.total_estimated_cost;
-        totalItems += itemsCount;
-    });
-    
-    html += `<div class="border-t pt-2 mt-2 font-medium">
-                <div class="flex justify-between">
-                    <span>Total (${selectedPRs.length} PRs, ${totalItems} items)</span>
-                    <span>₱${totalCost.toLocaleString()}</span>
-                </div>
-             </div>`;
-    html += `</div>`;
-    
-    listDiv.innerHTML = html;
-    summaryDiv.classList.remove('hidden');
-}
-
-function populateModalItemsTable() {
-    const tbody = document.getElementById('modalItemsTable');
-    let html = '';
-    let grandTotal = 0;
-    
-    // Since we don't have detailed item data, show a message
-    html = `
-        <tr>
-            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                <i class="fas fa-info-circle text-2xl mb-2 block"></i>
-                <p class="text-lg font-medium">Items will be loaded from selected PRs</p>
-                <p class="text-sm mt-1">Please confirm the purchase order details. Items from the selected purchase requests will be included automatically.</p>
-            </td>
-        </tr>
-    `;
-    
-    tbody.innerHTML = html;
-    
-    // Set selected PR IDs
-    document.getElementById('selectedPRIds').value = selectedPRs.map(pr => pr.id).join(',');
-    
-    // Calculate total based on PR totals
-    selectedPRs.forEach(pr => {
-        grandTotal += pr.total_estimated_cost;
-    });
-    
-    document.getElementById('modal-grand-total').textContent = `₱${grandTotal.toFixed(2)}`;
-}
-
-function populateModalItemsTableFromBasicData() {
-    // This is a fallback function - using the main populateModalItemsTable for now
-    populateModalItemsTable();
-}
-
-function populateModalItemsTableWithDetailedData() {
-    const tbody = document.getElementById('modalItemsTable');
-    let html = '';
-    let grandTotal = 0;
-    
-    selectedPRs.forEach(pr => {
-        if (pr.purchaseRequestItems && pr.purchaseRequestItems.length > 0) {
-            pr.purchaseRequestItems.forEach(item => {
-                const itemTotal = item.total_estimated_cost || (item.quantity_requested * item.unit_price_estimate);
-                grandTotal += itemTotal;
-                
-                html += `
-                    <tr>
-                        <td class="px-4 py-3">
-                            <div class="text-sm font-medium text-gray-900">${item.item?.name || 'Unknown Item'}</div>
-                            <div class="text-sm text-gray-500">${item.item?.item_code || ''}</div>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-900">${pr.pr_number}</td>
-                        <td class="px-4 py-3">
-                            <input type="number" name="items[${item.id}][quantity_ordered]" 
-                                   value="${item.quantity_requested}" 
-                                   min="0.001" step="0.001"
-                                   class="block w-20 px-2 py-1 border border-gray-300 rounded text-sm"
-                                   onchange="calculateModalTotal()">
-                            <div class="text-xs text-gray-500 mt-1">${item.quantity_requested} requested</div>
-                        </td>
-                        <td class="px-4 py-3">
-                            <input type="number" name="items[${item.id}][unit_price]" 
-                                   value="${item.unit_price_estimate || 0}" 
-                                   min="0.01" step="0.01"
-                                   class="block w-24 px-2 py-1 border border-gray-300 rounded text-sm"
-                                   onchange="calculateModalTotal()">
-                        </td>
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900 item-modal-total">
-                            ₱${itemTotal.toFixed(2)}
-                        </td>
-                    </tr>
-                    <input type="hidden" name="items[${item.id}][item_id]" value="${item.item_id}">
-                    <input type="hidden" name="items[${item.id}][source_pr_id]" value="${pr.id}">
-                `;
+        this.selectedPRs = [];
+        checkboxes.forEach(checkbox => {
+            const prId = parseInt(checkbox.value);
+            const row = checkbox.closest('tr');
+            
+            this.selectedPRs.push({
+                id: prId,
+                pr_number: row.querySelector('td:nth-child(2) .text-sm').textContent.trim(),
+                department: row.querySelector('td:nth-child(3) .text-sm').textContent.trim(),
+                total_estimated_cost: parseFloat(checkbox.dataset.totalCost) || 0,
+                items_count: parseInt(checkbox.dataset.itemsCount) || 0
             });
+        });
+        
+        this.showSupplierSection();
+    }
+
+    showSupplierSection() {
+        document.getElementById('pr-selection-section').classList.add('hidden');
+        document.getElementById('supplier-section').classList.remove('hidden');
+        this.showSelectedPRsSummary();
+        document.getElementById('selected-pr-ids').value = this.selectedPRs.map(pr => pr.id).join(',');
+        document.getElementById('supplier-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    showSelectedPRsSummary() {
+        const summaryDiv = document.getElementById('selected-prs-summary');
+        if (this.selectedPRs.length === 0) return;
+        
+        let html = '';
+        let totalCost = 0;
+        
+        this.selectedPRs.forEach(pr => {
+            html += `<div>${pr.pr_number} (${pr.department || 'N/A'}) - ₱${pr.total_estimated_cost.toLocaleString()}</div>`;
+            totalCost += pr.total_estimated_cost;
+        });
+        
+        html += `<div class="font-medium border-t pt-1 mt-1">Total: ₱${totalCost.toLocaleString()}</div>`;
+        summaryDiv.innerHTML = html;
+    }
+
+    handleSupplierChange(e) {
+        const supplierId = e.target.value;
+        const table = document.getElementById('required-items-table');
+        const counter = document.getElementById('required-items-count');
+        
+        if (supplierId) {
+            this.loadSupplierItems(supplierId);
+        } else {
+            table.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-gray-500 text-sm">Select a supplier to view items</td></tr>';
+            counter.textContent = '0 items';
         }
-    });
-    
-    if (html === '') {
-        html = `
+    }
+
+    loadSupplierItems(supplierId) {
+        const table = document.getElementById('required-items-table');
+        
+        table.innerHTML = `
             <tr>
-                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                    <i class="fas fa-info-circle text-2xl mb-2 block"></i>
-                    <p class="text-lg font-medium">Items will be loaded from selected PRs</p>
-                    <p class="text-sm mt-1">Please confirm the purchase order details. Items from the selected purchase requests will be included automatically.</p>
+                <td colspan="6" class="px-3 py-8 text-center">
+                    <i class="fas fa-spinner fa-spin text-chocolate mb-2"></i>
+                    <p class="text-sm text-gray-600">Loading items...</p>
                 </td>
             </tr>
         `;
-    }
-    
-    tbody.innerHTML = html;
-    
-    // Set selected PR IDs
-    document.getElementById('selectedPRIds').value = selectedPRs.map(pr => pr.id).join(',');
-    
-    document.getElementById('modal-grand-total').textContent = `₱${grandTotal.toFixed(2)}`;
-}
-
-function calculateModalTotal() {
-    let grandTotal = 0;
-    
-    // Calculate based on input values
-    const rows = document.querySelectorAll('#modalItemsTable tr');
-    rows.forEach(row => {
-        const quantityInput = row.querySelector('input[name*="[quantity_ordered]"]');
-        const priceInput = row.querySelector('input[name*="[unit_price]"]');
-        const totalSpan = row.querySelector('.item-modal-total');
         
-        if (quantityInput && priceInput && totalSpan) {
-            const quantity = parseFloat(quantityInput.value) || 0;
-            const price = parseFloat(priceInput.value) || 0;
-            const total = quantity * price;
-            
-            totalSpan.textContent = `₱${total.toFixed(2)}`;
-            grandTotal += total;
+        const selectedPRIds = this.selectedPRs.map(pr => pr.id);
+        
+        if (selectedPRIds.length === 0) {
+            table.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-gray-500 text-sm">No requests selected</td></tr>';
+            return;
         }
-    });
-    
-    document.getElementById('modal-grand-total').textContent = `₱${grandTotal.toFixed(2)}`;
+        
+        fetch(`/purchasing/api/suppliers/${supplierId}/items-for-prs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ pr_ids: selectedPRIds.join(',') })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            this.renderSupplierItems(data.items || { available: [], unavailable: [] });
+        })
+        .catch(error => {
+            console.error('Error loading items:', error);
+            table.innerHTML = `<tr><td colspan="6" class="px-3 py-8 text-center text-red-500 text-sm">Error: ${error.message}</td></tr>`;
+        });
+    }
+
+    renderSupplierItems(itemsData) {
+        const availableItems = itemsData.available || [];
+        const table = document.getElementById('required-items-table');
+        const counter = document.getElementById('required-items-count');
+        
+        if (availableItems.length === 0) {
+            table.innerHTML = '<tr><td colspan="6" class="px-3 py-8 text-center text-gray-500 text-sm">No items available from this supplier</td></tr>';
+            counter.textContent = '0 items';
+            return;
+        }
+        
+        let html = '';
+        let itemIndex = 0;
+        
+        availableItems.forEach(item => {
+            const total = (parseFloat(item.total_requested_quantity) || 0) * (parseFloat(item.unit_price) || 0);
+            html += `
+                <tr>
+                    <td class="px-3 py-2">
+                        <div class="text-sm font-medium text-gray-900">${item.item_name}</div>
+                        <div class="text-xs text-gray-500">${item.item_code}</div>
+                    </td>
+                    <td class="px-3 py-2 text-sm text-gray-900">${item.source_prs.map(pr => pr.pr_number).join(', ')}</td>
+                    <td class="px-3 py-2 text-sm text-gray-900">${parseFloat(item.total_requested_quantity).toFixed(2)}</td>
+                    <td class="px-3 py-2 text-sm text-gray-900">₱${parseFloat(item.unit_price).toFixed(2)}</td>
+                    <td class="px-3 py-2">
+                        <input type="number" 
+                               name="items[${itemIndex}][quantity_ordered]" 
+                               value="${parseFloat(item.total_requested_quantity)}" 
+                               min="0.001" 
+                               step="0.001"
+                               class="w-20 px-2 py-1 text-xs border border-gray-300 rounded"
+                               onchange="purchaseOrderManager.calculateItemTotal(this)">
+                    </td>
+                    <td class="px-3 py-2 text-sm font-medium text-gray-900 item-total">₱${total.toFixed(2)}</td>
+                </tr>
+                <input type="hidden" name="items[${itemIndex}][item_id]" value="${item.item_id}">
+                <input type="hidden" name="items[${itemIndex}][unit_price]" value="${item.unit_price}">
+                <input type="hidden" name="items[${itemIndex}][source_pr_id]" value="${this.selectedPRs[0].id}">
+            `;
+            itemIndex++;
+        });
+        
+        table.innerHTML = html;
+        counter.textContent = `${availableItems.length} items`;
+    }
+
+    calculateItemTotal(input) {
+        const quantity = parseFloat(input.value) || 0;
+        const row = input.closest('tr');
+        const unitPriceInput = row.querySelector('input[name$="[unit_price]"]');
+        const unitPrice = parseFloat(unitPriceInput.value) || 0;
+        const total = quantity * unitPrice;
+        const totalCell = row.querySelector('.item-total');
+        totalCell.textContent = `₱${total.toFixed(2)}`;
+    }
+
+    setupSaveOptionHandlers() {
+        const draftRadio = document.getElementById('save-as-draft');
+        const createRadio = document.getElementById('create-po');
+        const submitBtn = document.getElementById('submit-btn-text');
+        
+        if (draftRadio && createRadio) {
+            draftRadio.addEventListener('change', this.updateSubmitButton.bind(this));
+            createRadio.addEventListener('change', this.updateSubmitButton.bind(this));
+        }
+    }
+
+    updateSubmitButton() {
+        const draftRadio = document.getElementById('save-as-draft');
+        const submitBtnText = document.getElementById('submit-btn-text');
+        
+        if (draftRadio && submitBtnText) {
+            submitBtnText.textContent = draftRadio.checked ? 'Save Draft' : 'Create PO';
+        }
+    }
+
+    resetToPRSelection() {
+        document.getElementById('pr-selection-section').classList.remove('hidden');
+        document.getElementById('supplier-section').classList.add('hidden');
+        
+        this.selectedPRs = [];
+        document.querySelectorAll('.pr-checkbox').forEach(checkbox => checkbox.checked = false);
+        this.updatePRSelectionUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    showAlert(message, type = 'info') {
+        const alertClass = type === 'warning' ? 'bg-yellow-50 border-yellow-400 text-yellow-700' : 
+                          type === 'error' ? 'bg-red-50 border-red-400 text-red-700' : 
+                          'bg-blue-50 border-blue-400 text-blue-700';
+        const iconClass = type === 'warning' ? 'fas fa-exclamation-triangle' : 
+                         type === 'error' ? 'fas fa-exclamation-circle' : 
+                         'fas fa-info-circle';
+        
+        const alertHtml = `
+            <div class="fixed top-4 right-4 ${alertClass} border p-3 rounded-md shadow-lg z-50">
+                <div class="flex items-center">
+                    <i class="${iconClass} mr-2"></i>
+                    <span class="text-sm">${message}</span>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('afterbegin', alertHtml);
+        setTimeout(() => {
+            const alert = document.querySelector('.fixed.top-4.right-4');
+            if (alert) alert.remove();
+        }, 3000);
+    }
 }
 
-// Form validation
-document.getElementById('purchaseOrderForm').addEventListener('submit', function(e) {
-    if (selectedPRs.length === 0) {
-        e.preventDefault();
-        alert('Please select at least one purchase request.');
-        return;
+class PRDetailsModal {
+    constructor() {
+        this.modal = document.getElementById('pr-details-modal');
+        this.content = document.getElementById('pr-details-content');
+        this.setupEventListeners();
     }
+
+    setupEventListeners() {
+        this.modal?.addEventListener('click', (e) => {
+            if (e.target === this.modal) this.close();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !this.modal.classList.contains('hidden')) {
+                this.close();
+            }
+        });
+    }
+
+    open(prId) {
+        this.modal.classList.remove('hidden');
+        this.content.innerHTML = `
+            <div class="text-center py-6">
+                <i class="fas fa-spinner fa-spin text-xl text-chocolate mb-2"></i>
+                <p class="text-gray-600">Loading...</p>
+            </div>
+        `;
+        
+        fetch(`/purchasing/api/purchase-requests/${prId}`)
+            .then(response => response.json())
+            .then(data => this.displayPRDetails(data.purchaseRequest))
+            .catch(error => {
+                this.content.innerHTML = `
+                    <div class="text-center py-6 text-red-600">
+                        <i class="fas fa-exclamation-triangle text-xl mb-2"></i>
+                        <p>Error loading details: ${error.message}</p>
+                    </div>
+                `;
+            });
+    }
+
+    close() {
+        this.modal.classList.add('hidden');
+    }
+
+    displayPRDetails(prData) {
+        const items = prData.purchase_request_items || [];
+        const itemsHtml = items.length > 0 ? items.map(item => `
+            <tr>
+                <td class="px-3 py-2">
+                    <div class="text-sm font-medium">${item.item?.name || 'Unknown'}</div>
+                    <div class="text-xs text-gray-500">${item.item?.item_code || 'N/A'}</div>
+                </td>
+                <td class="px-3 py-2 text-sm">${parseFloat(item.quantity_requested) || 0}</td>
+                <td class="px-3 py-2 text-sm">₱${(parseFloat(item.unit_price_estimate) || 0).toFixed(2)}</td>
+                <td class="px-3 py-2 text-sm font-medium">₱${((parseFloat(item.quantity_requested) || 0) * (parseFloat(item.unit_price_estimate) || 0)).toFixed(2)}</td>
+            </tr>
+        `).join('') : '<tr><td colspan="4" class="px-3 py-4 text-center text-gray-500">No items</td></tr>';
+
+        this.content.innerHTML = `
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <label class="text-xs font-medium text-gray-500">PR Number</label>
+                        <p class="font-medium">${prData.pr_number || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-500">Department</label>
+                        <p class="font-medium">${prData.department || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-500">Requester</label>
+                        <p class="font-medium">${prData.requested_by?.name || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-500">Total Cost</label>
+                        <p class="font-medium">₱${(parseFloat(prData.total_estimated_cost) || 0).toLocaleString()}</p>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="text-xs font-medium text-gray-500 block mb-2">Items</label>
+                    <div class="border rounded-md">
+                        <table class="min-w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs">Item</th>
+                                    <th class="px-3 py-2 text-left text-xs">Qty</th>
+                                    <th class="px-3 py-2 text-left text-xs">Price</th>
+                                    <th class="px-3 py-2 text-left text-xs">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="text-xs font-medium text-gray-500 block mb-1">Notes</label>
+                    <p class="text-sm text-gray-700">${prData.notes || 'No notes provided'}</p>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Initialize
+let purchaseOrderManager, prDetailsModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    purchaseOrderManager = new PurchaseOrderManager();
+    prDetailsModal = new PRDetailsModal();
 });
 
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeCreatePOModal();
-    }
-});
-
-// Close modal when clicking outside
-document.getElementById('createPOModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeCreatePOModal();
-    }
-});
+// Global functions
+function viewPRDetails(prId) { prDetailsModal.open(prId); }
+function closePRDetailsModal() { prDetailsModal.close(); }
+function proceedToSupplierSelection() { purchaseOrderManager.proceedToSupplierSelection(); }
+function resetToPRSelection() { purchaseOrderManager.resetToPRSelection(); }
 </script>
-@endsection
+@endpush
