@@ -331,6 +331,11 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::get('/purchase-requests/categories', [InventoryController::class, 'getCategories'])->name('purchase-requests.categories');
     Route::get('/purchase-requests/departments', [InventoryController::class, 'getDepartments'])->name('purchase-requests.departments');
 
+    Route::get('/outbound/direct', [InventoryController::class, 'createIssuance'])->name('outbound.direct');
+    Route::post('/outbound/direct', [InventoryController::class, 'storeIssuance'])->name('outbound.direct.store');
+    Route::post('/outbound/direct/verify-pin', [InventoryController::class, 'verifySupervisorPin'])->name('outbound.verify-supervisor-pin');
+
+
     // Stock Mgmt
     Route::get('/stock/count', function () { 
         return view('Inventory.stock_management.physical_count'); 
