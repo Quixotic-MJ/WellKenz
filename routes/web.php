@@ -232,6 +232,7 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     
     // PO Actions - these must come after the generic route
     Route::patch('/po/{purchaseOrder}/submit', [PurchasingController::class, 'submitPurchaseOrder'])->name('po.submit');
+    Route::patch('/po/{purchaseOrder}/acknowledge', [PurchasingController::class, 'acknowledgePurchaseOrder'])->name('po.acknowledge');
     Route::get('/po/{purchaseOrder}/edit', [PurchasingController::class, 'editPurchaseOrder'])->name('po.edit');
     Route::delete('/po/{purchaseOrder}', [PurchasingController::class, 'destroyPurchaseOrder'])->name('po.destroy');
 
@@ -256,6 +257,16 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
 
     // Notifications
     Route::get('/notifications', [PurchasingController::class, 'notifications'])->name('notifications');
+    
+    // Notification management routes
+    Route::get('/notifications/stats', [PurchasingController::class, 'getNotificationStats'])->name('notifications.stats');
+    Route::post('/notifications/mark-all-read', [PurchasingController::class, 'markAllNotificationsAsRead'])->name('notifications.mark_all_read');
+    Route::post('/notifications/bulk-operations', [PurchasingController::class, 'bulkNotificationOperations'])->name('notifications.bulk_operations');
+    
+    // Routes with model binding
+    Route::post('/notifications/{notification}/mark-read', [PurchasingController::class, 'markNotificationAsRead'])->name('notifications.mark_read');
+    Route::post('/notifications/{notification}/mark-unread', [PurchasingController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread');
+    Route::delete('/notifications/{notification}', [PurchasingController::class, 'deleteNotification'])->name('notifications.destroy');
 
     // API Routes for AJAX functionality
     Route::get('/api/suppliers/search', [PurchasingController::class, 'searchSuppliers'])->name('api.suppliers.search');

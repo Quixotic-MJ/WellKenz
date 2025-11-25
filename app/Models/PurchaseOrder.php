@@ -26,12 +26,17 @@ class PurchaseOrder extends Model
         'notes',
         'created_by',
         'approved_by',
+        'approved_at',
+        'acknowledged_by',
+        'acknowledged_at',
     ];
 
     protected $casts = [
         'order_date' => 'date',
         'expected_delivery_date' => 'date',
         'actual_delivery_date' => 'date',
+        'approved_at' => 'datetime',
+        'acknowledged_at' => 'datetime',
         'total_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'discount_amount' => 'decimal:2',
@@ -52,6 +57,11 @@ class PurchaseOrder extends Model
     public function approvedBy()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function acknowledgedBy()
+    {
+        return $this->belongsTo(User::class, 'acknowledged_by');
     }
 
     public function purchaseOrderItems()
@@ -77,6 +87,11 @@ class PurchaseOrder extends Model
     public function sourcePurchaseRequests()
     {
         return $this->belongsToMany(PurchaseRequest::class, 'purchase_request_purchase_order_link', 'purchase_order_id', 'purchase_request_id');
+    }
+
+    public function rtvTransactions()
+    {
+        return $this->hasMany(\App\Models\RtvTransaction::class, 'purchase_order_id');
     }
 
     public function getAverageDeliveryTimeInDays()

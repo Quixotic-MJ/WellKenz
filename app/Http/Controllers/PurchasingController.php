@@ -10,6 +10,8 @@ use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestPurchaseOrderLink;
 use App\Models\SupplierItem;
+use App\Models\RtvTransaction;
+use App\Models\RtvItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -422,12 +424,37 @@ class PurchasingController extends Controller
     /**
      * Show open purchase orders
      */
-    public function openOrders()
+    public function openOrders(Request $request)
     {
-        $openOrders = PurchaseOrder::whereIn('status', ['sent', 'confirmed', 'partial'])
-            ->with(['supplier', 'purchaseOrderItems'])
-            ->orderBy('expected_delivery_date', 'asc')
-            ->paginate(15);
+        $query = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
+            ->whereIn('status', ['sent', 'confirmed', 'partial']);
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('po_number', 'ilike', "%{$search}%")
+                  ->orWhereHas('supplier', function($sq) use ($search) {
+                      $sq->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('supplier_code', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        // Apply supplier filter
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Apply status filter
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Apply sorting
+        $query->orderBy('expected_delivery_date', 'asc');
+
+        $openOrders = $query->paginate($request->get('per_page', 15));
 
         return view('Purchasing.purchase_orders.open_orders', compact('openOrders'));
     }
@@ -461,7 +488,32 @@ class PurchasingController extends Controller
             });
         }
 
-        // Apply date filters
+        // Apply supplier filter
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Apply date filters using the date_filter field from the form
+        if ($request->filled('date_filter')) {
+            $now = Carbon::now();
+            switch ($request->date_filter) {
+                case 'today':
+                    $query->whereDate('actual_delivery_date', $now->toDateString());
+                    break;
+                case 'week':
+                    $query->whereBetween('actual_delivery_date', [$now->startOfWeek(), $now->endOfWeek()]);
+                    break;
+                case 'month':
+                    $query->whereMonth('actual_delivery_date', $now->month)
+                          ->whereYear('actual_delivery_date', $now->year);
+                    break;
+                case 'year':
+                    $query->whereYear('actual_delivery_date', $now->year);
+                    break;
+            }
+        }
+
+        // Legacy date range filters (fallback)
         if ($request->filled('date_from')) {
             $query->whereDate('actual_delivery_date', '>=', $request->date_from);
         }
@@ -475,7 +527,7 @@ class PurchasingController extends Controller
             return $this->exportCompletedHistory($query->get());
         }
 
-        $completedOrders = $query->paginate(15);
+        $completedOrders = $query->paginate($request->get('per_page', 15));
 
         return view('Purchasing.purchase_orders.completed_history', compact('completedOrders'));
     }
@@ -1029,46 +1081,285 @@ class PurchasingController extends Controller
     }
 
     /**
-     * Show supplier performance report
+     * Show supplier performance report - Redirected to purchase history
+     * This functionality has been removed, redirecting to purchase history instead
      */
     public function supplierPerformance()
     {
-        $supplierPerformance = Supplier::withCount(['purchaseOrders' => function($query) {
-                $query->where('status', 'completed');
-            }])
-            ->with(['purchaseOrders' => function($query) {
-                $query->selectRaw('supplier_id, AVG(grand_total) as avg_order_value, COUNT(*) as total_orders')
-                    ->where('status', 'completed')
-                    ->groupBy('supplier_id');
-            }])
-            ->where('is_active', true)
-            ->orderBy('purchase_orders_count', 'desc')
-            ->get();
-
-        return view('Purchasing.reports.supplier_performance', compact('supplierPerformance'));
+        return redirect()->route('purchasing.reports.history')
+            ->with('info', 'Supplier performance report functionality has been integrated into the purchase history view.');
     }
 
     /**
      * Show RTV (Return to Vendor) report
      */
-    public function rtv()
+    public function rtv(Request $request)
     {
-        // This would typically involve stock movements with return type
-        // For now, showing a placeholder
-        $rtvRecords = collect([]); // Placeholder
+        // Build the query for RTV transactions with relationships
+        $query = RtvTransaction::with([
+            'supplier',
+            'purchaseOrder',
+            'rtvItems.item.unit',
+            'createdBy'
+        ])->orderBy('return_date', 'desc');
 
-        return view('Purchasing.reports.RTV', compact('rtvRecords'));
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('rtv_number', 'ilike', "%{$search}%")
+                  ->orWhereHas('supplier', function($sq) use ($search) {
+                      $sq->where('name', 'ilike', "%{$search}%")
+                        ->orWhere('supplier_code', 'ilike', "%{$search}%");
+                  })
+                  ->orWhereHas('purchaseOrder', function($poq) use ($search) {
+                      $poq->where('po_number', 'ilike', "%{$search}%");
+                  })
+                  ->orWhereHas('rtvItems', function($rtvi) use ($search) {
+                      $rtvi->whereHas('item', function($itemq) use ($search) {
+                          $itemq->where('name', 'ilike', "%{$search}%")
+                                ->orWhere('item_code', 'ilike', "%{$search}%");
+                      })->orWhere('reason', 'ilike', "%{$search}%");
+                  });
+            });
+        }
+
+        // Apply supplier filter
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->supplier_id);
+        }
+
+        // Apply status filter
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // Apply date filters
+        if ($request->filled('date_from')) {
+            $query->whereDate('return_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('return_date', '<=', $request->date_to);
+        }
+
+        // Paginate results
+        $rtvRecords = $query->paginate($request->get('per_page', 15));
+
+        // Get summary statistics
+        $summary = $this->getRtvSummaryStats();
+
+        // Get suppliers for filter dropdown
+        $suppliers = Supplier::where('is_active', true)
+            ->whereHas('rtvTransactions')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('Purchasing.reports.RTV', compact('rtvRecords', 'summary', 'suppliers'));
+    }
+
+    /**
+     * Get RTV summary statistics
+     */
+    private function getRtvSummaryStats(): array
+    {
+        $currentYear = date('Y');
+        
+        // Total returned value this year
+        $totalReturnedYtd = RtvTransaction::whereYear('return_date', $currentYear)
+            ->sum('total_value') ?: 0;
+
+        // Pending credits (status = 'pending')
+        $pendingCredits = RtvTransaction::where('status', 'pending')
+            ->sum('total_value') ?: 0;
+
+        // Total RTV transactions this year
+        $totalTransactionsYtd = RtvTransaction::whereYear('return_date', $currentYear)->count();
+
+        // Average return value
+        $averageReturnValue = RtvTransaction::whereYear('return_date', $currentYear)
+            ->avg('total_value') ?: 0;
+
+        return [
+            'total_returned_ytd' => $totalReturnedYtd,
+            'pending_credits' => $pendingCredits,
+            'total_transactions_ytd' => $totalTransactionsYtd,
+            'average_return_value' => $averageReturnValue,
+        ];
     }
 
     /**
      * Show notifications page
      */
-    public function notifications()
+    public function notifications(Request $request)
     {
-        $notifications = \App\Models\Notification::forCurrentUser()
-            ->paginate(20);
+        // Get filter from request (default to 'all')
+        $filter = $request->get('filter', 'all');
+        
+        // Build the notifications query
+        $query = \App\Models\Notification::forCurrentUser($filter);
+        
+        // Paginate results
+        $notifications = $query->paginate(20);
+        
+        // Get notification statistics for the current user
+        $stats = [
+            'total' => \App\Models\Notification::forCurrentUser()->count(),
+            'unread' => \App\Models\Notification::forCurrentUser('unread')->count(),
+            'high_priority' => \App\Models\Notification::forCurrentUser('high')->count(),
+            'urgent' => \App\Models\Notification::forCurrentUser('urgent')->count(),
+        ];
 
-        return view('Purchasing.notification', compact('notifications'));
+        return view('Purchasing.notification', compact('notifications', 'stats', 'filter'));
+    }
+
+    /**
+     * Get notification statistics for AJAX updates
+     */
+    public function getNotificationStats()
+    {
+        $stats = [
+            'total' => \App\Models\Notification::forCurrentUser()->count(),
+            'unread' => \App\Models\Notification::forCurrentUser('unread')->count(),
+            'high_priority' => \App\Models\Notification::forCurrentUser('high')->count(),
+            'urgent' => \App\Models\Notification::forCurrentUser('urgent')->count(),
+        ];
+
+        return response()->json($stats);
+    }
+
+    /**
+     * Mark specific notification as read
+     */
+    public function markNotificationAsRead(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->markAsRead();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as read'
+        ]);
+    }
+
+    /**
+     * Mark specific notification as unread
+     */
+    public function markNotificationAsUnread(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->markAsUnread();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as unread'
+        ]);
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllNotificationsAsRead()
+    {
+        try {
+            \Log::info('Mark all read called for user: ' . auth()->id());
+            
+            $query = \App\Models\Notification::where('user_id', auth()->id())
+                ->where('is_read', false);
+            
+            $count = $query->count();
+            \Log::info("Found {$count} unread notifications to mark as read");
+            
+            $query->update(['is_read' => true]);
+            
+            \Log::info("Marked {$count} notifications as read");
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read',
+                'updated_count' => $count
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in markAllNotificationsAsRead: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete specific notification
+     */
+    public function deleteNotification(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification deleted successfully'
+        ]);
+    }
+
+    /**
+     * Bulk operations on notifications
+     */
+    public function bulkNotificationOperations(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:mark_read,mark_unread,delete',
+            'notification_ids' => 'required|array',
+            'notification_ids.*' => 'exists:notifications,id'
+        ]);
+
+        $notificationIds = $request->notification_ids;
+        $action = $request->action;
+
+        // Ensure all notifications belong to the current user
+        $notifications = \App\Models\Notification::whereIn('id', $notificationIds)
+            ->where('user_id', auth()->id())
+            ->get();
+
+        if ($notifications->count() !== count($notificationIds)) {
+            return response()->json(['success' => false, 'message' => 'Some notifications not found or unauthorized'], 403);
+        }
+
+        switch ($action) {
+            case 'mark_read':
+                \App\Models\Notification::markMultipleAsRead($notificationIds);
+                $message = 'Notifications marked as read';
+                break;
+            case 'mark_unread':
+                foreach ($notifications as $notification) {
+                    $notification->markAsUnread();
+                }
+                $message = 'Notifications marked as unread';
+                break;
+            case 'delete':
+                \App\Models\Notification::whereIn('id', $notificationIds)
+                    ->where('user_id', auth()->id())
+                    ->delete();
+                $message = 'Notifications deleted successfully';
+                break;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
     }
 
     /**
@@ -1514,6 +1805,25 @@ class PurchasingController extends Controller
 
         return redirect()->route('purchasing.po.drafts')
             ->with('success', "Purchase Order {$purchaseOrder->po_number} submitted for approval successfully!");
+    }
+
+    /**
+     * Acknowledge supplier confirmation of purchase order
+     */
+    public function acknowledgePurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        if ($purchaseOrder->status !== 'sent') {
+            return redirect()->back()->with('error', 'Only sent purchase orders can be acknowledged.');
+        }
+
+        $purchaseOrder->update([
+            'status' => 'confirmed',
+            'acknowledged_by' => auth()->id(),
+            'acknowledged_at' => Carbon::now(),
+        ]);
+
+        return redirect()->route('purchasing.po.open')
+            ->with('success', "Purchase Order {$purchaseOrder->po_number} acknowledged successfully!");
     }
 
     /**
