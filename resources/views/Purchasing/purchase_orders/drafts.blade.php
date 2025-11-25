@@ -171,7 +171,8 @@
                                        value="{{ $order->id }}" 
                                        class="order-checkbox rounded border-gray-300 text-chocolate focus:ring-chocolate"
                                        data-can-submit="{{ $order->action_capabilities['can_submit'] ? 'true' : 'false' }}"
-                                       data-can-delete="{{ $order->action_capabilities['can_delete'] ? 'true' : 'false' }}">
+                                       data-can-delete="{{ $order->action_capabilities['can_delete'] ? 'true' : 'false' }}"
+                                       data-order-status="{{ $order->status }}">
                             </td>
                             
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -302,10 +303,10 @@
                             
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <div class="flex justify-end space-x-1">
-                                    @if($order->action_capabilities['can_edit'])
+                                    @if($order->status === 'draft')
                                         <button onclick="editOrder({{ $order->id }})" 
                                                 class="p-1 text-blue-600 hover:text-blue-900 transition-colors duration-150" 
-                                                title="Edit">
+                                                title="Edit Draft" data-order-status="draft">
                                             <i class="fas fa-edit text-sm"></i>
                                         </button>
                                     @endif
@@ -413,7 +414,7 @@
                         </button>
                         <button onclick="bulkEdit()" 
                                 class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed" 
-                                disabled id="bulkEditBtn">
+                                disabled id="bulkEditBtn" title="Bulk Edit (Draft Orders Only)">
                             <i class="fas fa-edit mr-2"></i> Edit Selected
                         </button>
                     @endif
@@ -671,6 +672,17 @@ function updateSelectionUI() {
     // Update button states
     const hasSelectableItems = selectedCount > 0;
     
+    // Check if all selected orders are drafts for bulk edit
+    let allDrafts = true;
+    if (hasSelectableItems) {
+        selectedCheckboxes.forEach(checkbox => {
+            const orderStatus = checkbox.dataset.orderStatus;
+            if (orderStatus !== 'draft') {
+                allDrafts = false;
+            }
+        });
+    }
+    
     if (bulkSubmitBtn) {
         bulkSubmitBtn.disabled = !hasSelectableItems || canSubmitCount === 0;
     }
@@ -678,13 +690,23 @@ function updateSelectionUI() {
         bulkDeleteBtn.disabled = !hasSelectableItems || canDeleteCount === 0;
     }
     if (bulkEditBtn) {
-        bulkEditBtn.disabled = !hasSelectableItems;
+        bulkEditBtn.disabled = !hasSelectableItems || !allDrafts;
+        bulkEditBtn.title = hasSelectableItems && !allDrafts ? 
+            'Bulk Edit: Only draft orders can be edited' : 
+            'Bulk Edit (Draft Orders Only)';
     }
 }
 
 // Enhanced action functions
 function editOrder(orderId) {
-    if (confirm('Are you sure you want to edit this purchase order?')) {
+    // Find the order row to check status
+    const checkbox = document.querySelector(`input[value="${orderId}"]`);
+    if (checkbox && checkbox.dataset.orderStatus !== 'draft') {
+        showNotification('Only draft orders can be edited.', 'error');
+        return;
+    }
+    
+    if (confirm('Are you sure you want to edit this draft purchase order?')) {
         window.location.href = `{{ route('purchasing.po.edit', '__ID__') }}`.replace('__ID__', orderId);
     }
 }
@@ -776,10 +798,27 @@ function bulkEdit() {
         return;
     }
     
+    // Validate that all selected orders are drafts
+    const selectedCheckboxes = document.querySelectorAll('.order-checkbox:checked');
+    const nonDraftOrders = [];
+    
+    selectedCheckboxes.forEach(checkbox => {
+        if (checkbox.dataset.orderStatus !== 'draft') {
+            const row = checkbox.closest('tr');
+            const poNumber = row.querySelector('.text-sm.font-medium').textContent;
+            nonDraftOrders.push(poNumber);
+        }
+    });
+    
+    if (nonDraftOrders.length > 0) {
+        showNotification(`Cannot edit: ${nonDraftOrders.join(', ')}. Only draft orders can be edited.`, 'error');
+        return;
+    }
+    
     if (selectedIds.length === 1) {
         editOrder(selectedIds[0]);
     } else {
-        showNotification('Bulk edit feature coming soon. Please select only one order for editing.', 'info');
+        showNotification('Bulk edit feature coming soon. Please select only one draft order for editing.', 'info');
     }
 }
 
