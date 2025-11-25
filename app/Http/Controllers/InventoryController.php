@@ -1391,4 +1391,174 @@ class InventoryController extends Controller
         }
     }
 
+    public function createIssuance()
+    {
+        // Get staff (employees + supervisors + inventory)
+        $staffMembers = User::where('is_active', true)
+            ->whereIn('role', ['employee', 'supervisor', 'inventory'])
+            ->with('profile')
+            ->orderBy('name')
+            ->get();
+
+        // Get issuable items
+        $items = Item::where('is_active', true)
+            ->whereIn('item_type', ['raw_material', 'supply'])
+            ->with(['currentStockRecord', 'unit'])
+            ->orderBy('name')
+            ->get();
+
+        return view('Inventory.outbound.direct_issuance', compact('staffMembers', 'items'));
+    }
+
+    public function storeIssuance(Request $request)
+    {
+        $validated = $request->validate([
+            'issued_to'    => 'required',
+            'department'   => 'required|string|max:100',
+            'item_id'      => 'required|exists:items,id',
+            'quantity'     => 'required|numeric|min:0.001',
+            'reason'       => 'required|string',
+            'remarks'      => 'required|string',
+            'supervisor_pin' => 'required|digits:4'
+        ]);
+
+        // Validate Supervisor PIN
+        $supervisor = User::where('role', 'supervisor')
+            ->where('is_active', true)
+            ->whereHas('profile', function ($q) use ($request) {
+                $q->where('employee_id', $request->supervisor_pin);
+            })
+            ->first();
+
+        if (!$supervisor) {
+            return back()
+                ->withErrors(['supervisor_pin' => 'Invalid supervisor PIN or unauthorized access.'])
+                ->withInput();
+        }
+
+        // Load item with stock
+        $item = Item::with(['currentStockRecord', 'unit'])->findOrFail($request->item_id);
+
+        if (!$item->currentStockRecord) {
+            return back()
+                ->withErrors(['item_id' => 'No stock record found for this item.'])
+                ->withInput();
+        }
+
+        $available = $item->currentStockRecord->current_quantity ?? 0;
+
+        if ($available < $request->quantity) {
+            return back()
+                ->withErrors([
+                    'quantity' => "Insufficient stock. Available: {$available} {$item->unit->symbol}"
+                ])
+                ->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Lock the current stock row to prevent race conditions
+            $currentStock = CurrentStock::where('item_id', $request->item_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$currentStock) {
+                throw new \Exception("Stock record not found for item ID: {$request->item_id}");
+            }
+
+            if ($currentStock->current_quantity < $request->quantity) {
+                throw new \Exception("Insufficient stock. Available: {$currentStock->current_quantity}, Requested: {$request->quantity}");
+            }
+
+            $quantity   = $request->quantity;
+            $unitCost   = $currentStock->average_cost ?? $item->cost_price ?? 0;
+            $totalCost  = $unitCost * $quantity;
+
+            // Create stock movement
+            // Using 'sale' as movement_type for direct issuance (stock going out)
+            // Allowed values: purchase, sale, adjustment, transfer, production, waste, return
+            $stockMovement = StockMovement::create([
+                'item_id'        => $item->id,
+                'movement_type'  => 'sale', // Direct issuance = sale/outbound movement
+                'reference_number' => 'DIRECT-' . now()->format('Ymd-His'),
+                'quantity'       => -abs($quantity),
+                'unit_cost'      => $unitCost,
+                'total_cost'     => $totalCost,
+                'notes'          => "Direct Issuance - To: {$request->issued_to}, Dept: {$request->department}, Reason: {$request->reason}, Remarks: {$request->remarks}",
+                'user_id'        => $supervisor->id,
+            ]);
+
+            // Deduct stock
+            $currentStock->current_quantity -= $quantity;
+            $currentStock->save();
+
+            // Audit log
+            DB::table('audit_logs')->insert([
+                'table_name' => 'stock_movements',
+                'record_id' => $stockMovement->id,
+                'action' => 'CREATE',
+                'user_id' => $supervisor->id,
+                'old_values' => json_encode([]),
+                'new_values' => json_encode($stockMovement->toArray()),
+                'created_at' => now(),
+            ]);
+
+            // Notify inventory user
+            $inventoryUser = User::where('role', 'inventory')->where('is_active', 1)->first();
+            if ($inventoryUser) {
+                DB::table('notifications')->insert([
+                    'user_id' => $inventoryUser->id,
+                    'title' => 'Direct Stock Issuance',
+                    'message' => "Issued {$quantity} {$item->unit->symbol} of {$item->name} to {$request->department}",
+                    'type' => 'inventory',
+                    'priority' => 'normal',
+                    'action_url' => '/inventory/stock-movements',
+                    'created_at' => now(),
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('inventory.outbound.direct')
+                ->with('success', "Direct issuance completed. {$request->quantity} {$item->unit->symbol} of {$item->name} issued.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error('Direct issuance error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'item_id' => $request->item_id,
+                'quantity' => $request->quantity,
+                'user' => $supervisor->id ?? null
+            ]);
+            
+            return back()
+                ->withErrors(['error' => 'Failed to process issuance: ' . $e->getMessage()])
+                ->withInput();
+        }
+    }
+
+    public function verifySupervisorPin(Request $request)
+    {
+        $request->validate([
+            'pin' => 'required|digits:4'
+        ]);
+
+        $supervisor = User::where('role', 'supervisor')
+            ->where('is_active', true)
+            ->whereHas('profile', function ($q) use ($request) {
+                $q->where('employee_id', $request->pin);
+            })
+            ->first();
+
+        return response()->json([
+            'success' => (bool) $supervisor,
+            'message' => $supervisor ? 'PIN verified' : 'Invalid supervisor PIN',
+            'supervisor_name' => $supervisor->name ?? null
+        ]);
+    }
+
 }
