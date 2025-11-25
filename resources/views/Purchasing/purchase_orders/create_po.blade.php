@@ -227,6 +227,7 @@
             <form action="{{ route('purchasing.po.store') }}" method="POST" id="purchaseOrderForm">
                 @csrf
                 <input type="hidden" name="selected_pr_ids" id="selectedPRIds">
+                <input type="hidden" name="save_option" id="saveOptionValue" value="draft">
                 
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <div class="sm:flex sm:items-start">
@@ -269,6 +270,32 @@
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
+                            </div>
+
+                            {{-- Save Options --}}
+                            <div class="mt-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Save Options *</label>
+                                <div class="space-y-3">
+                                    <div class="flex items-center">
+                                        <input id="save_as_draft" name="save_option" type="radio" value="draft" 
+                                               class="h-4 w-4 text-chocolate focus:ring-chocolate border-gray-300" checked>
+                                        <label for="save_as_draft" class="ml-3 block text-sm text-gray-900">
+                                            <span class="font-medium">Save as Draft</span>
+                                            <span class="text-gray-500 block">Save the purchase order in draft status for later editing</span>
+                                        </label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input id="create_po" name="save_option" type="radio" value="create" 
+                                               class="h-4 w-4 text-chocolate focus:ring-chocolate border-gray-300">
+                                        <label for="create_po" class="ml-3 block text-sm text-gray-900">
+                                            <span class="font-medium">Create Purchase Order</span>
+                                            <span class="text-gray-500 block">Save and submit the purchase order for processing</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                @error('save_option')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             {{-- Notes --}}
@@ -315,9 +342,9 @@
                 </div>
                 
                 <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                    <button type="submit" 
+                    <button type="submit" id="submitBtn"
                             class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-chocolate sm:ml-3 sm:w-auto sm:text-sm">
-                        <i class="fas fa-save mr-2"></i> Create Purchase Order
+                        <i class="fas fa-save mr-2"></i> Save as Draft
                     </button>
                     <button type="button" 
                             onclick="closeCreatePOModal()" 
@@ -345,6 +372,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupFilters();
     setupSelection();
     updateSelectionUI();
+    setupSaveOptionHandlers();
 });
 
 function setupFilters() {
@@ -424,6 +452,44 @@ function setupSelection() {
     checkboxes.forEach(checkbox => {
         checkbox.addEventListener('change', updateSelectionUI);
     });
+}
+
+function setupSaveOptionHandlers() {
+    const draftRadio = document.getElementById('save_as_draft');
+    const createRadio = document.getElementById('create_po');
+    const submitBtn = document.getElementById('submitBtn');
+    const saveOptionValue = document.getElementById('saveOptionValue');
+    
+    if (draftRadio && createRadio && submitBtn) {
+        // Add event listeners to radio buttons
+        draftRadio.addEventListener('change', updateSubmitButton);
+        createRadio.addEventListener('change', updateSubmitButton);
+        
+        // Initial update
+        updateSubmitButton();
+    }
+}
+
+function updateSubmitButton() {
+    const draftRadio = document.getElementById('save_as_draft');
+    const submitBtn = document.getElementById('submitBtn');
+    const saveOptionValue = document.getElementById('saveOptionValue');
+    
+    if (draftRadio && submitBtn && saveOptionValue) {
+        if (draftRadio.checked) {
+            // Save as Draft
+            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i> Save as Draft';
+            submitBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            submitBtn.classList.add('bg-chocolate', 'hover:bg-chocolate-dark');
+            saveOptionValue.value = 'draft';
+        } else {
+            // Create Purchase Order
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i> Create Purchase Order';
+            submitBtn.classList.remove('bg-chocolate', 'hover:bg-chocolate-dark');
+            submitBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            saveOptionValue.value = 'create';
+        }
+    }
 }
 
 function updateSelectionUI() {
@@ -512,6 +578,13 @@ function closeCreatePOModal() {
     // Reset form
     document.getElementById('purchaseOrderForm').reset();
     selectedPRs = [];
+    
+    // Reset radio button to draft (default)
+    const draftRadio = document.getElementById('save_as_draft');
+    if (draftRadio) {
+        draftRadio.checked = true;
+        updateSubmitButton();
+    }
     
     // Hide summary
     document.getElementById('selectedPRsSummary').classList.add('hidden');

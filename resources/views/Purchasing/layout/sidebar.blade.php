@@ -36,7 +36,7 @@
 
                 <!-- 2. PURCHASE ORDERS -->
                 <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Purchase Orders</div>
+                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Drafts</div>
                 </li>
 
                 <!-- Create PO -->
@@ -63,22 +63,9 @@
                 <li>
                     <a href="{{ Route::has('purchasing.po.open') ? route('purchasing.po.open') : '#' }}"
                         id="menu-purchasing-po-open"
-                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.open') ? 'active-menu' : '' }}">
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-clock w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Open Orders</span>
-                        </div>
-                        <span class="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">7</span>
-                    </a>
-                </li>
-
-                <!-- Partial Orders -->
-                <li>
-                    <a href="{{ Route::has('purchasing.po.partial') ? route('purchasing.po.partial') : '#' }}"
-                        id="menu-purchasing-po-partial"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.partial') ? 'active-menu' : '' }}">
-                        <i class="fas fa-truck-loading w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Partial Orders</span>
+                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('purchasing.po.open') ? 'active-menu' : '' }}">
+                        <i class="fas fa-paper-plane w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Open Orders</span>
                     </a>
                 </li>
 

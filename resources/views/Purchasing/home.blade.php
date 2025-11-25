@@ -3,28 +3,6 @@
 @section('content')
 {{-- THEME CONFIGURATION --}}
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: {
-                    'primary': '#2c1810', // Deep professional brown (Chocolate)
-                    'primary-light': '#4a3b32',
-                    'accent': '#c48d3f', // Muted Gold/Caramel
-                    'surface': '#ffffff',
-                    'background': '#f3f4f6', // Standard ERP Gray
-                    'text-main': '#111827', // Gray 900
-                    'text-secondary': '#4b5563', // Gray 600
-                    'border-color': '#e5e7eb', // Gray 200
-                },
-                fontFamily: {
-                    'sans': ['"Inter"', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
-                    'mono': ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-                }
-            }
-        }
-    }
-</script>
 {{-- Using Inter font for maximum legibility in data-heavy apps --}}
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 

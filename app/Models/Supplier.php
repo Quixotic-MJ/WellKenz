@@ -46,4 +46,9 @@ class Supplier extends Model
     {
         return $this->hasMany(Batch::class);
     }
+
+    public function supplierItems()
+    {
+        return $this->hasMany(\App\Models\SupplierItem::class);
+    }
 }
