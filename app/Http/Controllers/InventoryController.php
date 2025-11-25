@@ -1561,4 +1561,235 @@ class InventoryController extends Controller
         ]);
     }
 
+    /**
+     * Show notifications page
+     */
+    public function notifications(Request $request)
+    {
+        // Get filter from request (default to 'all')
+        $filter = $request->get('filter', 'all');
+        
+        // Build the notifications query
+        $query = \App\Models\Notification::forCurrentUser($filter);
+        
+        // Paginate results
+        $notifications = $query->paginate(20);
+        
+        // Get notification statistics for the current user
+        $stats = [
+            'total' => \App\Models\Notification::forCurrentUser()->count(),
+            'unread' => \App\Models\Notification::forCurrentUser('unread')->count(),
+            'high_priority' => \App\Models\Notification::forCurrentUser('high')->count(),
+            'urgent' => \App\Models\Notification::forCurrentUser('urgent')->count(),
+        ];
+
+        return view('Inventory.notification', compact('notifications', 'stats', 'filter'));
+    }
+
+    /**
+     * Get notification statistics for AJAX updates
+     */
+    public function getNotificationStats()
+    {
+        $stats = [
+            'total' => \App\Models\Notification::forCurrentUser()->count(),
+            'unread' => \App\Models\Notification::forCurrentUser('unread')->count(),
+            'high_priority' => \App\Models\Notification::forCurrentUser('high')->count(),
+            'urgent' => \App\Models\Notification::forCurrentUser('urgent')->count(),
+        ];
+
+        return response()->json($stats);
+    }
+
+    /**
+     * Mark specific notification as read
+     */
+    public function markNotificationAsRead(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->markAsRead();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as read'
+        ]);
+    }
+
+    /**
+     * Mark specific notification as unread
+     */
+    public function markNotificationAsUnread(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->markAsUnread();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification marked as unread'
+        ]);
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllNotificationsAsRead()
+    {
+        try {
+            \Log::info('Mark all read called for user: ' . auth()->id());
+            
+            $query = \App\Models\Notification::where('user_id', auth()->id())
+                ->where('is_read', false);
+            
+            $count = $query->count();
+            \Log::info("Found {$count} unread notifications to mark as read");
+            
+            $query->update(['is_read' => true]);
+            
+            \Log::info("Marked {$count} notifications as read");
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'All notifications marked as read',
+                'updated_count' => $count
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in markAllNotificationsAsRead: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete specific notification
+     */
+    public function deleteNotification(\App\Models\Notification $notification)
+    {
+        // Ensure the notification belongs to the current user
+        if ($notification->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $notification->delete();
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification deleted successfully'
+        ]);
+    }
+
+    /**
+     * Bulk operations on notifications
+     */
+    public function bulkNotificationOperations(Request $request)
+    {
+        $request->validate([
+            'action' => 'required|in:mark_read,mark_unread,delete',
+            'notification_ids' => 'required|array',
+            'notification_ids.*' => 'exists:notifications,id'
+        ]);
+
+        $notificationIds = $request->notification_ids;
+        $action = $request->action;
+
+        // Ensure all notifications belong to the current user
+        $notifications = \App\Models\Notification::whereIn('id', $notificationIds)
+            ->where('user_id', auth()->id())
+            ->get();
+
+        if ($notifications->count() !== count($notificationIds)) {
+            return response()->json(['success' => false, 'message' => 'Some notifications not found or unauthorized'], 403);
+        }
+
+        switch ($action) {
+            case 'mark_read':
+                \App\Models\Notification::markMultipleAsRead($notificationIds);
+                $message = 'Notifications marked as read';
+                break;
+            case 'mark_unread':
+                foreach ($notifications as $notification) {
+                    $notification->markAsUnread();
+                }
+                $message = 'Notifications marked as unread';
+                break;
+            case 'delete':
+                \App\Models\Notification::whereIn('id', $notificationIds)
+                    ->where('user_id', auth()->id())
+                    ->delete();
+                $message = 'Notifications deleted successfully';
+                break;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message
+        ]);
+    }
+
+    /**
+     * Get border color class (alias for getPriorityColorClass for blade compatibility)
+     */
+    public function getBorderColorClass(): string
+    {
+        return $this->getPriorityColorClass();
+    }
+
+    /**
+     * Get icon type for blade template compatibility
+     */
+    public function getIconType(): string
+    {
+        $iconClass = $this->getIconClass();
+        $parts = explode(' ', $iconClass);
+        // Return the icon classes without the background color
+        return $parts[0] . ' ' . $parts[1] . ' ' . $parts[2];
+    }
+
+    /**
+     * Get action button color class
+     */
+    public function getActionButtonClass(): string
+    {
+        return match($this->priority) {
+            'urgent' => 'bg-red-600 hover:bg-red-700',
+            'high' => 'bg-amber-600 hover:bg-amber-700',
+            'normal' => 'bg-blue-600 hover:bg-blue-700',
+            'low' => 'bg-gray-600 hover:bg-gray-700',
+            default => 'bg-chocolate hover:bg-chocolate-dark'
+        };
+    }
+
+    /**
+     * Get unread dot color
+     */
+    public function getUnreadDotColor(): string
+    {
+        return match($this->priority) {
+            'urgent' => 'bg-red-500',
+            'high' => 'bg-amber-500',
+            'normal' => 'bg-blue-500',
+            'low' => 'bg-gray-400',
+            default => 'bg-chocolate'
+        };
+    }
+
+    /**
+     * Get the icon background color class only
+     */
+    public function getIconBackgroundClass(): string
+    {
+        $iconClass = $this->getIconClass();
+        $parts = explode(' ', $iconClass);
+        return $parts[3] ?? 'bg-gray-100';
+    }
+
 }
