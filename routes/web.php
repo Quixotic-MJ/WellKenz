@@ -303,14 +303,10 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         return view('Inventory.inbound.RTV'); 
     })->name('inbound.rtv');
 
-    // Outbound
-    Route::get('/outbound/fulfill', function () { 
-        return view('Inventory.outbound.fullfill_request'); 
-    })->name('outbound.fulfill');
-
-    Route::get('/outbound/direct', function () { 
-        return view('Inventory.outbound.direct_issuance'); 
-    })->name('outbound.direct');
+    //// Outbound Routes
+    Route::get('/outbound/fulfill', [InventoryController::class, 'fulfillRequests'])->name('outbound.fulfill');
+    Route::post('/outbound/track-picking', [InventoryController::class, 'trackPicking'])->name('outbound.track-picking');
+    Route::post('/outbound/confirm-issuance', [InventoryController::class, 'confirmIssuance'])->name('outbound.confirm-issuance');
 
     // Purchase Requests - Main interface (catalog + history)
     Route::get('/outbound/purchase-requests', [InventoryController::class, 'index'])->name('purchase-requests.index');
