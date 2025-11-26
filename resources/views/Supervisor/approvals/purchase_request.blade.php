@@ -3,65 +3,82 @@
 @section('content')
 <div class="space-y-6">
 
-    {{-- 1. HEADER & SUMMARY --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Purchase Request Approvals</h1>
-            <p class="text-sm text-gray-500 mt-1">Review and approve procurement plans from the Purchasing Officer.</p>
-        </div>
-        <div class="flex items-center gap-3">
-            <div class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold">
-                {{ $statistics['pending_count'] ?? 0 }} Pending
+    {{-- 1. Welcome card --}}
+    <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm relative overflow-hidden">
+        <!-- Decorative background pattern -->
+        <div class="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full mix-blend-multiply filter blur-3xl opacity-30 -mr-16 -mt-16"></div>
+        
+        <div class="flex items-center justify-between relative z-10">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Purchase Request Approvals</h1>
+                <p class="text-sm text-gray-500 mt-1">Review and approve procurement plans from the Purchasing Officer.</p>
             </div>
-            <div class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-bold">
-                ₱ {{ number_format($statistics['total_value'] ?? 0, 2) }} Total Value
+            <div class="text-right">
+                <p class="text-sm text-gray-900 font-medium">{{ now()->format('M d, Y') }}</p>
+                <p class="text-xs text-gray-500 mt-1">{{ now()->format('l') }}</p>
             </div>
-            @if(($statistics['overdue_count'] ?? 0) > 0)
-                <div class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
-                    {{ $statistics['overdue_count'] }} Overdue
-                </div>
-            @endif
         </div>
     </div>
 
-    {{-- 2. FILTERS & SEARCH --}}
-    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <!-- Search -->
-        <div class="relative w-full md:w-96">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-search text-gray-400"></i>
+    
+
+    {{-- 3. FILTERS & SEARCH --}}
+    <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Filter Purchase Requests</h3>
+            <button onclick="clearFilters()" class="text-xs text-blue-600 hover:underline">Clear All Filters →</button>
+        </div>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div class="lg:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="searchInput" class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search PR number, requester, department..." value="{{ request('search') }}">
+                </div>
             </div>
-            <input type="text" id="searchInput" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="Search PR number, requester, department..." value="{{ request('search') }}">
+
+            <!-- Status Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <select id="statusFilter" class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="pending" {{ (!request('status') || request('status') == 'pending') ? 'selected' : '' }}>Pending</option>
+                    <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Approved</option>
+                    <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Rejected</option>
+                </select>
+            </div>
+
+            <!-- Priority Filter -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                <select id="priorityFilter" class="block w-full py-2.5 px-3 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Priorities</option>
+                    <option value="urgent" {{ request('priority') == 'urgent' ? 'selected' : '' }}>Urgent</option>
+                    <option value="high" {{ request('priority') == 'high' ? 'selected' : '' }}>High</option>
+                    <option value="normal" {{ request('priority') == 'normal' ? 'selected' : '' }}>Normal</option>
+                    <option value="low" {{ request('priority') == 'low' ? 'selected' : '' }}>Low</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Filters -->
-        <div class="flex items-center gap-3 w-full md:w-auto">
-            <select id="statusFilter" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                <option value="pending" {{ (!request('status') || request('status') == 'pending') ? 'selected' : '' }}>Status: Pending</option>
-                <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Status: Approved</option>
-                <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Status: Rejected</option>
-            </select>
-
-            <select id="priorityFilter" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                <option value="">All Priorities</option>
-                <option value="urgent" {{ request('priority') == 'urgent' ? 'selected' : '' }}>Urgent</option>
-                <option value="high" {{ request('priority') == 'high' ? 'selected' : '' }}>High</option>
-                <option value="normal" {{ request('priority') == 'normal' ? 'selected' : '' }}>Normal</option>
-                <option value="low" {{ request('priority') == 'low' ? 'selected' : '' }}>Low</option>
-            </select>
-
-            <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" id="highValueFilter" {{ request('high_value') ? 'checked' : '' }} class="rounded border-gray-300 text-chocolate focus:ring-chocolate">
-                <span class="text-gray-700">High Value</span>
-            </label>
-
-            <button onclick="refreshData()" class="px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors text-sm font-medium">
-                <i class="fas fa-sync-alt mr-1"></i> Refresh
+        <div class="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+            <div class="flex items-center gap-4">
+                <label class="flex items-center gap-2">
+                    <input type="checkbox" id="highValueFilter" {{ request('high_value') ? 'checked' : '' }} class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                    <span class="text-sm text-gray-700 font-medium">High Value (≥ ₱10,000)</span>
+                </label>
+            </div>
+            
+            <button onclick="refreshData()" class="px-4 py-2 bg-gray-900 text-white hover:bg-gray-800 transition rounded-lg shadow-sm font-medium text-sm flex items-center gap-2">
+                <i class="fas fa-sync-alt"></i> Refresh
             </button>
         </div>
     </div>
 
-    {{-- 3. PURCHASE REQUESTS LIST --}}
+    {{-- 4. PURCHASE REQUESTS LIST --}}
     <div class="space-y-6" id="purchaseRequestsContainer">
         @if(isset($purchaseRequests) && $purchaseRequests->count() > 0)
             @foreach($purchaseRequests as $pr)
@@ -73,167 +90,149 @@
                 @endphp
 
                 {{-- PR CARD --}}
-                <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow {{ $isHighValue ? 'border-l-4 border-l-red-500 relative' : '' }}">
+                <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow relative {{ $isHighValue ? 'border-l-4 border-l-red-500' : '' }}">
                     
-                    @if($isHighValue)
-                        <!-- High Value Badge -->
-                        <div class="absolute top-0 right-0 bg-red-100 text-red-600 text-[10px] font-bold px-3 py-1 rounded-bl-lg border-b border-l border-red-200 z-10">
-                            <i class="fas fa-money-bill-wave mr-1"></i> HIGH VALUE
-                        </div>
-                    @endif
+                    {{-- Status Badges --}}
+                    <div class="absolute top-4 right-4 flex gap-2">
+                        @if($isHighValue)
+                            <span class="px-2.5 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-full">HIGH VALUE</span>
+                        @endif
+                        @if($isUrgent)
+                            <span class="px-2.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-full">URGENT</span>
+                        @endif
+                        @if($isOverdue)
+                            <span class="px-2.5 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">OVERDUE</span>
+                        @endif
+                    </div>
 
-                    @if($isUrgent)
-                        <!-- Urgent Badge -->
-                        <div class="absolute top-0 {{ $isHighValue ? 'left-0' : 'right-0' }} bg-orange-100 text-orange-600 text-[10px] font-bold px-3 py-1 rounded-bl-lg border-b border-r border-orange-200 z-10">
-                            <i class="fas fa-exclamation-triangle mr-1"></i> URGENT
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        <!-- Left: Header Info -->
+                        <div class="lg:col-span-3 space-y-4">
+                            <div class="flex items-center gap-3">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm border border-blue-200">
+                                    PR
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-bold text-gray-900">{{ $pr->pr_number }}</h3>
+                                    <p class="text-xs text-gray-500">{{ $requesterName }}</p>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-xs text-gray-500">Department</span>
+                                    <span class="text-xs font-medium text-gray-900">{{ $pr->department ?? 'General' }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-xs text-gray-500">Priority</span>
+                                    <span class="px-2 py-0.5 text-xs font-bold rounded-full 
+                                        @if($pr->priority === 'urgent') bg-red-100 text-red-700
+                                        @elseif($pr->priority === 'high') bg-orange-100 text-orange-700  
+                                        @elseif($pr->priority === 'low') bg-gray-100 text-gray-700
+                                        @else bg-blue-100 text-blue-700 @endif">
+                                        {{ ucfirst($pr->priority) }}
+                                    </span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-xs text-gray-500">Request Date</span>
+                                    <span class="text-xs font-medium text-gray-900">{{ $pr->request_date->format('M d, Y') }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-xs text-gray-500">Time Created</span>
+                                    <span class="text-xs font-medium text-gray-900">{{ $pr->created_at->diffForHumans() }}</span>
+                                </div>
+                            </div>
                         </div>
-                    @endif
 
-                    @if($isOverdue)
-                        <!-- Overdue Badge -->
-                        <div class="absolute top-0 {{ $isHighValue || $isUrgent ? 'left-0' : 'right-0' }} bg-purple-100 text-purple-600 text-[10px] font-bold px-3 py-1 rounded-bl-lg border-b border-r border-purple-200 z-10">
-                            <i class="fas fa-clock mr-1"></i> OVERDUE
-                        </div>
-                    @endif
-
-                    <div class="p-6">
-                        <div class="flex flex-col lg:flex-row gap-6">
-                            <!-- Left: Header Info -->
-                            <div class="lg:w-1/4 space-y-4 border-r border-gray-100 pr-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="h-10 w-10 rounded-full {{ $isHighValue ? 'bg-red-100 text-red-600 border-red-200' : ($isUrgent ? 'bg-orange-100 text-orange-600 border-orange-200' : 'bg-blue-100 text-blue-600 border-blue-200') }} flex items-center justify-center font-bold border">
-                                        PR
-                                    </div>
-                                    <div>
-                                        <h3 class="text-lg font-bold text-gray-900">{{ $pr->pr_number }}</h3>
-                                        <p class="text-xs text-gray-500">{{ $requesterName }}</p>
-                                    </div>
+                        <!-- Middle: Items Summary -->
+                        <div class="lg:col-span-6">
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-100">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="text-sm font-bold text-gray-900">Items Requested ({{ $pr->purchaseRequestItems->count() }} items)</h4>
+                                    <span class="text-sm font-bold text-gray-900">₱ {{ number_format($pr->total_estimated_cost, 2) }}</span>
                                 </div>
                                 
                                 <div class="space-y-2">
-                                    <div class="text-sm text-gray-600">
-                                        <span class="block text-[10px] uppercase text-gray-400 font-bold">Department</span>
-                                        <span class="font-medium"><i class="fas fa-building text-gray-400 mr-1"></i> {{ $pr->department ?? 'General' }}</span>
-                                    </div>
-                                    <div class="text-sm text-gray-600">
-                                        <span class="block text-[10px] uppercase text-gray-400 font-bold">Priority</span>
-                                        <span class="font-medium 
-                                            @if($pr->priority === 'urgent') text-red-600
-                                            @elseif($pr->priority === 'high') text-orange-600  
-                                            @elseif($pr->priority === 'low') text-gray-600
-                                            @else text-blue-600 @endif">
-                                            <i class="fas fa-flag text-gray-400 mr-1"></i> {{ ucfirst($pr->priority) }}
-                                        </span>
-                                    </div>
-                                    <div class="text-sm text-gray-600">
-                                        <span class="block text-[10px] uppercase text-gray-400 font-bold">Request Date</span>
-                                        <span class="font-medium">{{ $pr->request_date->format('M d, Y') }}</span>
-                                    </div>
-                                    <div class="text-sm text-gray-600">
-                                        <span class="block text-[10px] uppercase text-gray-400 font-bold">Time Created</span>
-                                        <span class="font-medium">{{ $pr->created_at->diffForHumans() }}</span>
-                                    </div>
+                                    @foreach($pr->purchaseRequestItems->take(3) as $item)
+                                        <div class="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
+                                            <div class="flex-1">
+                                                <p class="text-sm font-medium text-gray-900 truncate">{{ $item->item->name ?? 'Unknown Item' }}</p>
+                                                <p class="text-xs text-gray-500">{{ number_format($item->quantity_requested, 1) }} {{ $item->item->unit->symbol ?? '' }} × ₱ {{ number_format($item->unit_price_estimate, 2) }}</p>
+                                            </div>
+                                            <div class="text-right">
+                                                <p class="text-sm font-bold text-gray-900">₱ {{ number_format($item->total_estimated_cost, 2) }}</p>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                    @if($pr->purchaseRequestItems->count() > 3)
+                                        <div class="text-center py-2">
+                                            <button onclick="showAllItems({{ $pr->id }})" class="text-xs text-blue-600 hover:underline font-medium">
+                                                Show {{ $pr->purchaseRequestItems->count() - 3 }} more items
+                                            </button>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
+                            
+                            @if($pr->notes)
+                                <div class="mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-100">
+                                    <p class="text-xs text-yellow-700"><strong>Notes:</strong> {{ $pr->notes }}</p>
+                                </div>
+                            @endif
+                        </div>
 
-                            <!-- Middle: Items Table -->
-                            <div class="lg:w-2/4">
-                                <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Items Requested ({{ $pr->purchaseRequestItems->count() }} items)</h4>
-                                <div class="overflow-hidden border border-gray-100 rounded-lg">
-                                    <table class="min-w-full divide-y divide-gray-100">
-                                        <thead class="bg-gray-50">
-                                            <tr>
-                                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
-                                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Qty</th>
-                                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
-                                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y divide-gray-100">
-                                            @foreach($pr->purchaseRequestItems->take(3) as $item)
-                                                <tr>
-                                                    <td class="px-3 py-2 text-sm font-medium text-gray-900">
-                                                        <div class="max-w-[200px] truncate" title="{{ $item->item->name ?? 'Unknown Item' }}">
-                                                            {{ $item->item->name ?? 'Unknown Item' }}
-                                                        </div>
-                                                        <div class="text-xs text-gray-400 font-mono">{{ $item->item->item_code ?? '' }}</div>
-                                                    </td>
-                                                    <td class="px-3 py-2 text-right text-sm text-gray-600">
-                                                        {{ number_format($item->quantity_requested, 1) }}
-                                                        <span class="text-xs text-gray-400">{{ $item->item->unit->symbol ?? '' }}</span>
-                                                    </td>
-                                                    <td class="px-3 py-2 text-right text-sm text-gray-500">₱ {{ number_format($item->unit_price_estimate, 2) }}</td>
-                                                    <td class="px-3 py-2 text-right text-sm font-medium text-gray-900">₱ {{ number_format($item->total_estimated_cost, 2) }}</td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                        @if($pr->purchaseRequestItems->count() > 3)
-                                            <tfoot class="border-t border-gray-200">
-                                                <tr>
-                                                    <td colspan="4" class="px-3 py-2 text-center text-xs text-gray-500">
-                                                        <button onclick="showAllItems({{ $pr->id }})" class="text-chocolate hover:underline">
-                                                            <i class="fas fa-eye mr-1"></i> Show {{ $pr->purchaseRequestItems->count() - 3 }} more items
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            </tfoot>
-                                        @endif
-                                        <tfoot class="border-t border-gray-200 bg-gray-50/50">
-                                            <tr>
-                                                <td colspan="3" class="px-3 py-3 text-right text-sm font-bold text-gray-700">Total Estimate:</td>
-                                                <td class="px-3 py-3 text-right text-base font-bold text-chocolate">₱ {{ number_format($pr->total_estimated_cost, 2) }}</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                                @if($pr->notes)
-                                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                        <p class="text-xs text-blue-700"><i class="fas fa-sticky-note mr-1"></i> <strong>Notes:</strong> {{ $pr->notes }}</p>
-                                    </div>
-                                @endif
+                        <!-- Right: Actions -->
+                        <div class="lg:col-span-3 flex flex-col justify-center space-y-3">
+                            <div class="text-center mb-4">
+                                <p class="text-xs text-gray-500 uppercase font-bold">Action Required</p>
                             </div>
-
-                            <!-- Right: Actions -->
-                            <div class="lg:w-1/4 flex flex-col justify-center space-y-3 border-l border-gray-100 pl-4">
-                                <div class="text-center mb-2">
-                                    <p class="text-xs text-gray-400 uppercase">Action Required</p>
+                            
+                            @if($pr->status === 'pending')
+                                <button onclick="approvePR({{ $pr->id }}, '{{ $pr->pr_number }}')" class="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm font-medium text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-check-circle"></i> Approve Request
+                                </button>
+                                <button onclick="viewPRDetails({{ $pr->id }})" class="w-full py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-eye"></i> View Details
+                                </button>
+                                <button onclick="rejectPR({{ $pr->id }}, '{{ $pr->pr_number }}')" class="w-full py-2.5 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition shadow-sm font-medium text-sm flex items-center justify-center gap-2">
+                                    <i class="fas fa-times-circle"></i> Reject
+                                </button>
+                            @else
+                                <div class="text-center">
+                                    @php
+                                        $statusClass = match($pr->status) {
+                                            'approved' => 'bg-green-100 text-green-700',
+                                            'rejected' => 'bg-red-100 text-red-700',
+                                            'converted' => 'bg-blue-100 text-blue-700',
+                                            default => 'bg-gray-100 text-gray-700'
+                                        };
+                                        $statusIcon = match($pr->status) {
+                                            'approved' => 'fa-check-circle',
+                                            'rejected' => 'fa-times-circle',
+                                            'converted' => 'fa-share',
+                                            default => 'fa-circle'
+                                        };
+                                    @endphp
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold {{ $statusClass }}">
+                                        <i class="fas {{ $statusIcon }} text-[10px]"></i> {{ ucfirst($pr->status) }}
+                                    </span>
+                                    @if($pr->status === 'rejected')
+                                        <div class="mt-2">
+                                            @if($pr->reject_reason)
+                                                <div class="bg-red-50 border border-red-200 rounded-lg p-2 mt-1">
+                                                    <p class="text-xs text-red-700"><strong>Reject Reason:</strong> {{ $pr->reject_reason }}</p>
+                                                </div>
+                                            @endif
+                                            @if($pr->rejected_at)
+                                                <p class="text-xs text-gray-500 mt-1">{{ $pr->rejected_at->format('M d, Y H:i') }}</p>
+                                            @endif
+                                        </div>
+                                    @elseif($pr->approved_at)
+                                        <p class="text-xs text-gray-500 mt-2">{{ $pr->approved_at->format('M d, Y H:i') }}</p>
+                                    @endif
+                                    <button onclick="viewPRDetails({{ $pr->id }})" class="mt-2 text-xs text-blue-600 hover:underline">View Details</button>
                                 </div>
-                                
-                                @if($pr->status === 'pending')
-                                    <button onclick="approvePR({{ $pr->id }}, '{{ $pr->pr_number }}')" class="w-full py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow-sm font-medium text-sm flex items-center justify-center">
-                                        <i class="fas fa-check-circle mr-2"></i> Approve Request
-                                    </button>
-                                    <button onclick="viewPRDetails({{ $pr->id }})" class="w-full py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm font-medium text-sm flex items-center justify-center">
-                                        <i class="fas fa-eye mr-2"></i> View Details
-                                    </button>
-                                    <button onclick="rejectPR({{ $pr->id }}, '{{ $pr->pr_number }}')" class="w-full py-2.5 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition shadow-sm font-medium text-sm flex items-center justify-center">
-                                        <i class="fas fa-times-circle mr-2"></i> Reject
-                                    </button>
-                                @else
-                                    <div class="text-center">
-                                        @php
-                                            $statusClass = match($pr->status) {
-                                                'approved' => 'bg-green-100 text-green-700 border-green-200',
-                                                'rejected' => 'bg-red-100 text-red-700 border-red-200',
-                                                'converted' => 'bg-blue-100 text-blue-700 border-blue-200',
-                                                default => 'bg-gray-100 text-gray-700 border-gray-200'
-                                            };
-                                            $statusIcon = match($pr->status) {
-                                                'approved' => 'fa-check-circle',
-                                                'rejected' => 'fa-times-circle',
-                                                'converted' => 'fa-share',
-                                                default => 'fa-circle'
-                                            };
-                                        @endphp
-                                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border {{ $statusClass }}">
-                                            <i class="fas {{ $statusIcon }} text-[10px]"></i> {{ ucfirst($pr->status) }}
-                                        </span>
-                                        @if($pr->approved_at)
-                                            <p class="text-xs text-gray-500 mt-1">{{ $pr->approved_at->format('M d, Y H:i') }}</p>
-                                        @endif
-                                    </div>
-                                @endif
-                            </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -245,7 +244,7 @@
                 </div>
                 <h3 class="text-lg font-bold text-gray-900 mb-2">No Purchase Requests Found</h3>
                 <p class="text-gray-500">There are no purchase requests matching your current filters.</p>
-                <button onclick="clearFilters()" class="mt-4 text-chocolate font-medium hover:underline">Clear all filters</button>
+                <button onclick="clearFilters()" class="mt-4 text-blue-600 font-medium hover:underline">Clear all filters</button>
             </div>
         @endif
     </div>
@@ -260,52 +259,102 @@
 </div>
 
 {{-- DETAILS MODAL --}}
-<div id="detailsModalBackdrop" class="hidden fixed inset-0 z-[70]">
-    <div class="absolute inset-0 bg-gray-900/40" onclick="closeDetailsModal()"></div>
+<div id="detailsModalBackdrop" class="hidden fixed inset-0 z-50 bg-gray-900/50 backdrop-blur-sm">
     <div class="flex items-center justify-center min-h-screen p-4">
-        <div id="detailsModalPanel" class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10">
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+        <div id="detailsModalPanel" class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden relative z-10 border border-gray-100">
+            <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
                 <h3 class="text-lg font-bold text-gray-800">Purchase Request Details</h3>
-                <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="fas fa-times text-lg"></i></button>
+                <button onclick="closeDetailsModal()" class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-full">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <div id="detailsContent" class="p-0 overflow-y-auto max-h-[70vh]"></div>
+            <div id="detailsContent" class="p-6 overflow-y-auto max-h-[70vh]"></div>
         </div>
     </div>
 </div>
 
 {{-- CONFIRMATION MODAL --}}
-<div id="confirmModal" class="fixed inset-0 z-[80] hidden">
-    <div class="absolute inset-0 bg-gray-900/50"></div>
+<div id="confirmModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
     <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center transform transition-all scale-100 border border-white/20 relative z-10">
-            <div id="confirmIconContainer" class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-5 text-chocolate shadow-inner">
-                <i id="confirmIcon" class="fas fa-question text-2xl"></i>
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 text-center transform transition-all border border-gray-100 relative z-10">
+            <div id="confirmIconContainer" class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i id="confirmIcon" class="fas fa-question text-2xl text-blue-600"></i>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2" id="confirmTitle">Confirm</h3>
-            <p class="text-gray-500 mb-8 leading-relaxed" id="confirmMessage">Are you sure you want to proceed?</p>
-            <div class="grid grid-cols-2 gap-4">
-                <button onclick="closeConfirmModal()" class="px-4 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-bold text-sm transition-colors">Cancel</button>
-                <button id="confirmBtn" class="px-4 py-3 bg-gray-900 text-white rounded-xl hover:bg-chocolate hover:shadow-lg font-bold text-sm transition-all shadow-md">Yes, Confirm</button>
+            <h3 class="text-xl font-bold text-gray-900 mb-3" id="confirmTitle">Confirm Action</h3>
+            <p class="text-gray-600 mb-8 leading-relaxed" id="confirmMessage">Are you sure you want to proceed with this action?</p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmModal()" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+                    Cancel
+                </button>
+                <button id="confirmBtn" class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-medium transition-colors shadow-sm">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- REJECT REASON MODAL --}}
+<div id="rejectReasonModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm"></div>
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-gray-100 relative z-10">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-times-circle text-red-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Reject Purchase Request</h3>
+                <p class="text-gray-600" id="rejectReasonTitle">Please provide a reason for rejection</p>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Reject Reason <span class="text-red-500">*</span></label>
+                <select id="rejectReasonSelect" class="block w-full py-3 px-3 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    <option value="">Select a reason...</option>
+                    <option value="Insufficient Budget">Insufficient Budget</option>
+                    <option value="Duplicate Request">Duplicate Request</option>
+                    <option value="Items Not Available">Items Not Available</option>
+                    <option value="Incorrect Specifications">Incorrect Specifications</option>
+                    <option value="Policy Violation">Policy Violation</option>
+                    <option value="Quality Concerns">Quality Concerns</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Additional Comments</label>
+                <textarea id="rejectComments" rows="3" class="block w-full py-3 px-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500" placeholder="Optional additional details..."></textarea>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="closeRejectReasonModal()" class="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition-colors">
+                    Cancel
+                </button>
+                <button id="confirmRejectBtn" class="flex-1 px-4 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 font-medium transition-colors">
+                    Reject Request
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 {{-- TOAST NOTIFICATION --}}
-<div id="toast" class="fixed top-5 right-5 z-[90] hidden transform transition-all duration-300 translate-y-[-20px] opacity-0">
-    <div class="bg-white/90 backdrop-blur-md border border-gray-100 rounded-2xl shadow-2xl p-4 flex items-center gap-4 min-w-[320px]">
+<div id="toast" class="fixed top-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-[-20px] opacity-0">
+    <div class="bg-white/95 backdrop-blur-md border border-gray-100 rounded-xl shadow-2xl p-4 flex items-center gap-4 min-w-[320px]">
         <div id="toastIconContainer" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0">
             <i id="toastIcon" class="fas fa-check"></i>
         </div>
         <div>
-            <h4 class="text-sm font-bold text-gray-900" id="toastTitle">Notification</h4>
-            <p class="text-xs text-gray-500 mt-0.5" id="toastMessage">Message details...</p>
+            <h4 class="text-sm font-bold text-gray-900" id="toastTitle">Success</h4>
+            <p class="text-xs text-gray-600 mt-0.5" id="toastMessage">Action completed successfully.</p>
         </div>
     </div>
 </div>
 
 <script>
 let confirmCallback = null;
+let rejectContext = null;
 
 // Initialize page functionality
 document.addEventListener('DOMContentLoaded', function() {
@@ -366,6 +415,27 @@ function clearFilters() {
     window.location.href = window.location.pathname;
 }
 
+function closeRejectReasonModal() {
+    document.getElementById('rejectReasonModal').classList.add('hidden');
+    rejectContext = null;
+}
+
+function confirmReject() {
+    if (!rejectContext) return;
+    
+    const reason = document.getElementById('rejectReasonSelect').value;
+    const comments = document.getElementById('rejectComments').value.trim();
+    
+    if (!reason) {
+        showToast('Validation Required', 'Please select a reject reason', 'error');
+        return;
+    }
+    
+    const fullReason = comments ? `${reason} - ${comments}` : reason;
+    performApproval(rejectContext.id, 'reject', fullReason);
+    closeRejectReasonModal();
+}
+
 function approvePR(prId, prNumber) {
     openConfirmModal(
         'Approve Purchase Request',
@@ -375,14 +445,14 @@ function approvePR(prId, prNumber) {
 }
 
 function rejectPR(prId, prNumber) {
-    openConfirmModal(
-        'Reject Purchase Request',
-        `Are you sure you want to reject purchase request ${prNumber}?`,
-        () => performApproval(prId, 'reject')
-    );
+    rejectContext = { id: prId, number: prNumber };
+    document.getElementById('rejectReasonTitle').textContent = `Reject Purchase Request ${prNumber}`;
+    document.getElementById('rejectReasonSelect').value = '';
+    document.getElementById('rejectComments').value = '';
+    document.getElementById('rejectReasonModal').classList.remove('hidden');
 }
 
-function performApproval(prId, action) {
+function performApproval(prId, action, rejectReason = null) {
     const buttonText = action === 'approve' ? 'Approving...' : 'Rejecting...';
     showLoadingState(buttonText);
     
@@ -390,13 +460,19 @@ function performApproval(prId, action) {
         ? `/supervisor/purchase-requests/${prId}/approve`
         : `/supervisor/purchase-requests/${prId}/reject`;
     
+    const body = {};
+    if (action === 'reject' && rejectReason) {
+        body.reject_reason = rejectReason;
+    }
+    
     fetch(url, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json'
-        }
+        },
+        body: Object.keys(body).length > 0 ? JSON.stringify(body) : undefined
     })
     .then(response => response.json())
     .then(data => {
@@ -570,11 +646,11 @@ function closeDetailsModal() {
 }
 
 // Confirmation modal functions
-function openConfirmModal(title, message, callback, icon = 'question', iconClass = 'bg-orange-50 text-chocolate') {
+function openConfirmModal(title, message, callback, icon = 'question', iconClass = 'bg-blue-50 text-blue-600') {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMessage').textContent = message;
     document.getElementById('confirmIcon').className = `fas fa-${icon} text-2xl`;
-    document.getElementById('confirmIconContainer').className = `w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner ${iconClass}`;
+    document.getElementById('confirmIconContainer').className = `w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${iconClass}`;
     confirmCallback = callback;
     
     const modal = document.getElementById('confirmModal');
@@ -606,6 +682,8 @@ document.getElementById('confirmBtn').onclick = function() {
     closeConfirmModal();
 };
 
+document.getElementById('confirmRejectBtn').onclick = confirmReject;
+
 // Toast notification functions
 function showToast(title, message, type = 'success') {
     const toast = document.getElementById('toast');
@@ -616,11 +694,11 @@ function showToast(title, message, type = 'success') {
     document.getElementById('toastMessage').textContent = message;
 
     if(type === 'error') {
-        container.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-100 text-red-500';
-        icon.className = 'fas fa-times';
+        container.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-red-100';
+        icon.className = 'fas fa-times text-red-600';
     } else {
-        container.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100 text-green-500';
-        icon.className = 'fas fa-check';
+        container.className = 'w-10 h-10 rounded-full flex items-center justify-center shrink-0 bg-green-100';
+        icon.className = 'fas fa-check text-green-600';
     }
 
     toast.classList.remove('hidden');

@@ -95,7 +95,7 @@ Inventory/Low Stock → Purchasing Module → Supervisor → Supplier → Invent
 
 1. **Stock Level Monitoring**
    - Inventory staff monitors stock levels
-   - Low stock triggers create "Purchase Request" or automated generation
+   - Low stock triggers, create "Purchase Request"
 
 2. **Purchase Order Creation**
    - Purchasing officer accesses Purchasing Module
@@ -120,36 +120,9 @@ Inventory/Low Stock → Purchasing Module → Supervisor → Supplier → Invent
 
 ---
 
-### Flow 3: **Production Process**
 
-```
-Employee Portal → Recipe Access → Production Log → Inventory Deduction
-```
 
-**Step-by-Step Process:**
-
-1. **Production Planning**
-   - Employee accesses Employee Portal
-   - Views assigned production orders
-   - Checks recipe requirements and ingredient availability
-
-2. **Material Preparation**
-   - Employee may need to request additional materials (follows Requisition Flow)
-   - Production begins when materials are available
-
-3. **Production Execution**
-   - Employee follows standardized recipes
-   - Logs production output using "Log Output" function
-   - Records actual quantities produced vs. planned
-
-4. **Inventory Update**
-   - System automatically deducts consumed materials
-   - Updates production consumption records
-   - Updates current stock levels
-
----
-
-### Flow 4: **Return to Vendor (RTV) Process**
+### Flow 3: **Return to Vendor (RTV) Process**
 
 ```
 Inventory → RTV Processing → Purchasing → Supplier → Follow-up

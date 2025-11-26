@@ -21,10 +21,12 @@
         <div class="flex overflow-x-auto bg-gray-50 px-6">
             @php
                 $tabs = [
-                    'all' => ['label' => 'All', 'count' => $stats['total']],
-                    'unread' => ['label' => 'Unread', 'count' => $stats['unread']],
-                    'high' => ['label' => 'High Priority', 'count' => $stats['high_priority']],
-                    'urgent' => ['label' => 'Urgent', 'count' => $stats['urgent']],
+                    'all' => ['label' => 'All', 'count' => $stats['total'], 'icon' => 'fas fa-list'],
+                    'approvals' => ['label' => 'Approvals', 'count' => $stats['approvals'] ?? 0, 'icon' => 'fas fa-clipboard-check'],
+                    'fulfillments' => ['label' => 'Fulfillment', 'count' => $stats['fulfillments'] ?? 0, 'icon' => 'fas fa-box'],
+                    'unread' => ['label' => 'Unread', 'count' => $stats['unread'], 'icon' => 'fas fa-envelope'],
+                    'high' => ['label' => 'High Priority', 'count' => $stats['high_priority'], 'icon' => 'fas fa-exclamation-triangle'],
+                    'urgent' => ['label' => 'Urgent', 'count' => $stats['urgent'], 'icon' => 'fas fa-fire'],
                 ];
             @endphp
 
@@ -32,6 +34,7 @@
                 <a href="{{ request()->fullUrlWithQuery(['filter' => $key]) }}" 
                    class="flex items-center py-4 px-4 border-b-2 text-sm font-medium whitespace-nowrap transition-colors
                    {{ $filter === $key ? 'border-chocolate text-chocolate' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+                    <i class="{{ $tab['icon'] }} mr-2 text-xs"></i>
                     {{ $tab['label'] }}
                     <span class="ml-2 py-0.5 px-2 rounded-full text-xs {{ $filter === $key ? 'bg-chocolate/10 text-chocolate' : 'bg-gray-200 text-gray-600' }}">
                         {{ $tab['count'] }}
@@ -108,18 +111,21 @@
                             {{-- Hover Actions --}}
                             <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 @if($notification->action_url)
-                                    <a href="{{ $notification->action_url }}" class="text-xs font-medium text-chocolate hover:text-chocolate-dark underline decoration-chocolate/30">
-                                        View Details
+                                    <a href="{{ $notification->action_url }}" class="inline-flex items-center text-xs font-medium text-chocolate hover:text-chocolate-dark underline decoration-chocolate/30">
+                                        <i class="fas fa-external-link-alt mr-1"></i>
+                                        {{ $notification->getActionButtonText() }}
                                     </a>
                                     <span class="text-gray-300">|</span>
                                 @endif
                                 
                                 <button class="mark-read-unread text-xs font-medium text-gray-500 hover:text-chocolate transition-colors" title="{{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}">
+                                    <i class="fas fa-envelope{{ $notification->is_read ? '-open' : '' }} mr-1"></i>
                                     {{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}
                                 </button>
                                 <span class="text-gray-300">|</span>
                                 <button class="delete-notification text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                                    <i class="fas fa-trash"></i>
+                                    <i class="fas fa-trash mr-1"></i>
+                                    Delete
                                 </button>
                             </div>
                         </div>

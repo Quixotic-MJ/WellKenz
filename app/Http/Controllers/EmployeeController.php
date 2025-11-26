@@ -12,7 +12,6 @@ use App\Models\Category;
 use App\Models\Unit;
 use App\Models\Recipe;
 use App\Models\RecipeIngredient;
-use App\Models\ProductionOrder;
 use App\Models\Batch;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
@@ -42,9 +41,6 @@ class EmployeeController extends Controller
         
         // Get recipe of the day
         $recipeOfTheDay = $this->getRecipeOfTheDay();
-        
-        // Get recent production activities
-        $recentProductions = $this->getRecentProductions();
 
         return view('Employee.home', compact(
             'user',
@@ -52,8 +48,7 @@ class EmployeeController extends Controller
             'activeRequisitions',
             'incomingDeliveries', 
             'notifications',
-            'recipeOfTheDay',
-            'recentProductions'
+            'recipeOfTheDay'
         ));
     }
 
@@ -109,17 +104,7 @@ class EmployeeController extends Controller
             ->first();
     }
 
-    /**
-     * Get recent production activities.
-     */
-    public function getRecentProductions()
-    {
-        return ProductionOrder::where('created_by', Auth::id())
-            ->with('recipe.finishedItem')
-            ->orderBy('created_at', 'desc')
-            ->limit(3)
-            ->get();
-    }
+
 
     /**
      * Create a new requisition.
@@ -366,29 +351,8 @@ class EmployeeController extends Controller
                 ];
             });
 
-        // Get today's production orders for current user
-        $todayProductions = ProductionOrder::where('created_by', Auth::id())
-            ->whereDate('created_at', Carbon::today())
-            ->with(['recipe.finishedItem', 'recipe.finishedItem.unit'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // Calculate shift total (sum of all good output today)
-        $shiftTotal = $todayProductions->sum(function ($production) {
-            return $production->actual_quantity ?? 0;
-        });
-
-        // Get recent productions for pagination (last 50)
-        $productions = ProductionOrder::where('created_by', Auth::id())
-            ->with('recipe.finishedItem')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-
         return view('Employee.production.log', compact(
-            'finishedGoods', 
-            'todayProductions', 
-            'shiftTotal',
-            'productions'
+            'finishedGoods'
         ));
     }
 
@@ -417,27 +381,8 @@ class EmployeeController extends Controller
             $finishedItem = $item;
             $unit = $recipe ? $recipe->yieldUnit : $item->unit;
 
-            // Generate production number
-            $productionNumber = 'PROD-' . date('Ymd') . '-' . str_pad(ProductionOrder::count() + 1, 4, '0', STR_PAD_LEFT);
-
-            // Create production order (only if recipe exists, otherwise manual production)
-            $productionOrder = null;
-            if ($recipe) {
-                $productionOrder = ProductionOrder::create([
-                    'production_number' => $productionNumber,
-                    'recipe_id' => $recipe->id,
-                    'planned_quantity' => $validated['good_output'],
-                    'actual_quantity' => $validated['good_output'],
-                    'unit_id' => $unit->id,
-                    'planned_start_date' => Carbon::now()->toDateString(),
-                    'planned_end_date' => Carbon::now()->toDateString(),
-                    'actual_start_date' => Carbon::now(),
-                    'actual_end_date' => Carbon::now(),
-                    'status' => 'completed',
-                    'notes' => $validated['notes'] . ' (Recipe-based production)',
-                    'created_by' => Auth::id()
-                ]);
-            }
+            // Generate manual production number
+            $productionNumber = 'MAN-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
             // Create batch record for the finished product
             $batch = Batch::create([
@@ -465,23 +410,21 @@ class EmployeeController extends Controller
             ]);
 
             // Create notification for supervisor
-            $productionType = $recipe ? 'Recipe-based production' : 'Manual production';
-            $productionDetails = $productionOrder ? " (Order: {$productionNumber})" : " (Manual Entry)";
+            $productionType = 'Manual production';
             
             $supervisors = User::where('role', 'supervisor')->get();
             foreach ($supervisors as $supervisor) {
                 Notification::create([
                     'user_id' => $supervisor->id,
                     'title' => 'New Production Entry',
-                    'message' => Auth::user()->name . " has logged {$productionType} of {$validated['good_output']} {$unit->symbol} {$finishedItem->name}{$productionDetails}.",
+                    'message' => Auth::user()->name . " has logged {$productionType} of {$validated['good_output']} {$unit->symbol} {$finishedItem->name}.",
                     'type' => 'production',
                     'priority' => 'normal',
                     'created_at' => Carbon::now()
                 ]);
             }
 
-            $successMessage = "Production entry logged successfully. Batch: {$validated['batch_number']}" . 
-                            ($recipe ? " (Recipe-based)" : " (Manual - No recipe)");
+            $successMessage = "Production entry logged successfully. Batch: {$validated['batch_number']} (Manual production)";
 
             return redirect()->route('employee.production.log')
                 ->with('success', $successMessage);
@@ -767,14 +710,7 @@ class EmployeeController extends Controller
                 ], 404);
             }
 
-            // Check if there are production orders using this recipe
-            $productionOrderCount = ProductionOrder::where('recipe_id', $recipe->id)->count();
-            if ($productionOrderCount > 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "Cannot delete recipe. {$productionOrderCount} production order(s) are using this recipe."
-                ], 422);
-            }
+
 
             $recipeName = $recipe->name;
             $recipeCode = $recipe->recipe_code;
@@ -819,32 +755,55 @@ class EmployeeController extends Controller
             abort(403, 'Unauthorized action.');
         }
 
-        // Check if requisition is approved and not yet fulfilled
-        if ($requisition->status !== 'approved') {
-            return back()->with('error', 'Requisition must be approved before confirming receipt.');
+        // Check if requisition is fulfilled and ready for pickup confirmation
+        if ($requisition->status !== 'fulfilled') {
+            return back()->with('error', 'Requisition must be fulfilled by inventory before confirming receipt.');
         }
 
-        // Update requisition status
+        // Update requisition status to completed (final confirmation)
         $requisition->update([
-            'status' => 'fulfilled',
-            'fulfilled_by' => Auth::id(),
-            'fulfilled_at' => Carbon::now()
+            'status' => 'completed',
+            'confirmed_by' => Auth::id(),
+            'confirmed_at' => Carbon::now()
         ]);
 
         // Get the current user name for the notification message
         $currentUser = Auth::user();
         
-        // Create notification for supervisor only if there's an approved_by user
+        // Create notification for supervisor about receipt confirmation
         if ($requisition->approved_by) {
             Notification::create([
                 'user_id' => $requisition->approved_by,
-                'title' => 'Requisition Fulfilled',
-                'message' => "Requisition {$requisition->requisition_number} has been fulfilled by {$currentUser->name}.",
-                'type' => 'inventory',
+                'title' => 'Requisition Completed',
+                'message' => "Requisition {$requisition->requisition_number} has been received and confirmed by {$currentUser->name}.",
+                'type' => 'requisition_update',
                 'priority' => 'normal',
+                'action_url' => route('supervisor.requisitions.details', $requisition->id),
+                'metadata' => [
+                    'requisition_number' => $requisition->requisition_number,
+                    'requisition_status' => 'completed',
+                    'confirmed_by' => $currentUser->name,
+                    'confirmed_at' => Carbon::now()->toDateTimeString(),
+                ],
                 'created_at' => Carbon::now()
             ]);
         }
+
+        // Create confirmation notification for the employee
+        Notification::create([
+            'user_id' => Auth::id(),
+            'title' => 'Requisition Completed',
+            'message' => "Your requisition {$requisition->requisition_number} has been successfully completed. Thank you for confirming receipt!",
+            'type' => 'requisition_update',
+            'priority' => 'normal',
+            'action_url' => route('employee.requisitions.history'),
+            'metadata' => [
+                'requisition_number' => $requisition->requisition_number,
+                'requisition_status' => 'completed',
+                'completed_at' => Carbon::now()->toDateTimeString(),
+            ],
+            'created_at' => Carbon::now()
+        ]);
 
         return back()->with('success', 'Receipt confirmed successfully.');
     }
@@ -862,16 +821,55 @@ class EmployeeController extends Controller
         $highPriorityNotifications = Notification::forCurrentUser('high')->count();
         $urgentNotifications = Notification::forCurrentUser('urgent')->count();
 
+        // Calculate approval and fulfillment notifications
+        $allUserNotifications = Notification::forCurrentUser()->get();
+        $approvalNotifications = $allUserNotifications->filter(function($notification) {
+            return $notification->isApproval();
+        })->count();
+        
+        $fulfillmentNotifications = $allUserNotifications->filter(function($notification) {
+            return $notification->isFulfillment();
+        })->count();
+
         // Apply the filter and get notifications
-        $notifications = Notification::forCurrentUser($filter)
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+        $query = Notification::forCurrentUser();
+        
+        // Apply specific filters
+        switch($filter) {
+            case 'approvals':
+                $query = $query->where(function($q) {
+                    $q->where('type', Notification::TYPE_APPROVAL_REQUEST)
+                      ->orWhere('type', Notification::TYPE_REQUISITION_UPDATE)
+                      ->orWhere('type', Notification::TYPE_PURCHASING);
+                });
+                break;
+            case 'fulfillments':
+                $query = $query->where(function($q) {
+                    $q->where('type', Notification::TYPE_INVENTORY)
+                      ->orWhere(function($subq) {
+                          $subq->where('type', Notification::TYPE_REQUISITION_UPDATE)
+                               ->whereJsonContains('metadata->requisition_status', 'fulfilled')
+                               ->orWhereJsonContains('metadata->requisition_status', 'completed');
+                      });
+                });
+                break;
+            default:
+                // For 'all', 'unread', 'high', 'urgent' filters, use existing logic
+                if (in_array($filter, ['unread', 'high', 'urgent'])) {
+                    $query = Notification::forCurrentUser($filter);
+                }
+                break;
+        }
+
+        $notifications = $query->orderBy('created_at', 'desc')->paginate(20);
 
         $stats = [
             'total' => $totalNotifications,
             'unread' => $unreadNotifications,
             'high_priority' => $highPriorityNotifications,
-            'urgent' => $urgentNotifications
+            'urgent' => $urgentNotifications,
+            'approvals' => $approvalNotifications,
+            'fulfillments' => $fulfillmentNotifications
         ];
 
         return view('Employee.notification', compact('notifications', 'stats', 'filter'));
@@ -1026,23 +1024,5 @@ class EmployeeController extends Controller
         ]);
     }
 
-    /**
-     * Check if reject quantity is supported (AJAX).
-     */
-    public function checkRejectQuantitySupport()
-    {
-        try {
-            // Check if the reject_quantity column exists in production_orders table
-            $hasRejectColumn = \Schema::hasColumn('production_orders', 'reject_quantity');
-            
-            return response()->json([
-                'supports_reject_quantity' => $hasRejectColumn
-            ]);
-        } catch (\Exception $e) {
-            // If there's an error, default to false (no support)
-            return response()->json([
-                'supports_reject_quantity' => false
-            ]);
-        }
-    }
+
 }

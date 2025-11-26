@@ -11,9 +11,9 @@ use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\StockMovement;
-use App\Models\ProductionOrder;
 use App\Models\User;
 use App\Models\AuditLog;
+use App\Models\Notification;
 use App\Models\Category;
 use App\Models\Batch;
 use Illuminate\Http\Request;
@@ -30,13 +30,11 @@ class SupervisorController extends Controller
     public function home()
     {
         $criticalStockItems = $this->getCriticalStockItems();
-        $usageVsSalesData = $this->getUsageVsSalesData();
         $pendingApprovals = $this->getPendingApprovals();
         $recentRequisitions = $this->getRecentRequisitions();
         
         return view('Supervisor.Home', compact(
             'criticalStockItems',
-            'usageVsSalesData', 
             'pendingApprovals',
             'recentRequisitions'
         ));
@@ -47,64 +45,74 @@ class SupervisorController extends Controller
      */
     private function getCriticalStockItems()
     {
-        return Item::with(['currentStockRecord', 'unit'])
-            ->where('is_active', true)
-            ->get()
-            ->filter(function($item) {
+        try {
+            // Log start of method for debugging
+            \Log::info('getCriticalStockItems: Starting method execution');
+            
+            // Get all items with their current stock and unit relationships
+            $items = Item::with(['currentStockRecord', 'unit'])
+                ->where('is_active', true)
+                ->get();
+                
+            \Log::info('getCriticalStockItems: Found ' . $items->count() . ' active items');
+            
+            // Filter items that are at or below reorder point
+            $criticalItems = $items->filter(function($item) {
                 $currentStock = $item->currentStockRecord;
+                $reorderPoint = $item->reorder_point ?? 0;
+                
+                // Log for debugging each item
+                if ($currentStock) {
+                    \Log::debug("Item: {$item->name}, Current: {$currentStock->current_quantity}, Reorder Point: {$reorderPoint}");
+                } else {
+                    \Log::debug("Item: {$item->name}, No current stock record found");
+                }
+                
+                // Check if item has current stock and is below reorder point
                 if (!$currentStock) return false;
                 
-                return $currentStock->current_quantity <= $item->reorder_point;
-            })
-            ->sortBy(function($item) {
+                $isCritical = $currentStock->current_quantity <= $reorderPoint;
+                if ($isCritical) {
+                    \Log::info("CRITICAL STOCK: {$item->name} - Current: {$currentStock->current_quantity}, Reorder: {$reorderPoint}");
+                }
+                
+                return $isCritical;
+            });
+            
+            \Log::info('getCriticalStockItems: Found ' . $criticalItems->count() . ' critical items');
+            
+            // Sort by how critical they are (lowest ratio first)
+            $sortedCriticalItems = $criticalItems->sortBy(function($item) {
                 $currentStock = $item->currentStockRecord;
-                return $currentStock ? ($currentStock->current_quantity / max($item->reorder_point, 0.001)) : 1;
-            })
-            ->take(10)
-            ->values()
-            ->map(function($item) {
+                $reorderPoint = $item->reorder_point ?? 0.001;
+                return $currentStock ? ($currentStock->current_quantity / $reorderPoint) : 1;
+            });
+            
+            // Take only the top 10 most critical items
+            $topCriticalItems = $sortedCriticalItems->take(10)->values();
+            
+            \Log::info('getCriticalStockItems: Returning ' . $topCriticalItems->count() . ' items');
+            
+            // Map to the format expected by the view
+            return $topCriticalItems->map(function($item) {
                 $currentStock = $item->currentStockRecord;
                 return [
                     'name' => $item->name,
                     'quantity' => $currentStock ? number_format($currentStock->current_quantity, 1) : '0.0',
                     'unit' => $item->unit->symbol ?? '',
-                    'reorder_point' => $item->reorder_point,
+                    'reorder_point' => $item->reorder_point ?? 0,
                     'is_critical' => $currentStock ? ($currentStock->current_quantity <= ($item->reorder_point * 0.5)) : false
                 ];
             });
+            
+        } catch (\Exception $e) {
+            \Log::error('getCriticalStockItems: Error occurred - ' . $e->getMessage());
+            // Return empty collection on error
+            return collect([]);
+        }
     }
 
-    /**
-     * Get usage vs sales data for the last 3 days
-     */
-    private function getUsageVsSalesData()
-    {
-        $days = [];
-        for ($i = 2; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
-            
-            // Usage = Stock movements out (consumption/production)
-            $usage = StockMovement::whereDate('created_at', $date)
-                ->whereIn('movement_type', ['production', 'consumption', 'transfer', 'adjustment'])
-                ->sum('quantity');
-                
-            // Sales = Stock movements in (sales or finished goods movement)
-            $sales = StockMovement::whereDate('created_at', $date)
-                ->where('movement_type', 'sale')
-                ->sum('quantity');
-                
-            $days[] = [
-                'date' => $date->format('Y-m-d'),
-                'day' => $date->format('D'),
-                'usage' => $usage > 0 ? min(100, ($usage / 100) * 100) : 0, // Normalize to percentage for display
-                'sales' => $sales > 0 ? min(100, ($sales / 100) * 100) : 0, // Normalize to percentage for display
-                'usage_raw' => $usage,
-                'sales_raw' => $sales
-            ];
-        }
-        
-        return $days;
-    }
+
 
     /**
      * Get pending approvals summary
@@ -127,30 +135,54 @@ class SupervisorController extends Controller
      */
     private function getRecentRequisitions()
     {
-        return Requisition::with(['requestedBy', 'requisitionItems'])
-            ->where('status', 'pending')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get()
-            ->map(function($requisition) {
+        try {
+            \Log::info('getRecentRequisitions: Starting method execution');
+            
+            $requisitions = Requisition::with(['requestedBy', 'requisitionItems.item.unit'])
+                ->where('status', 'pending')
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get();
+                
+            \Log::info('getRecentRequisitions: Found ' . $requisitions->count() . ' pending requisitions');
+            
+            $formattedRequisitions = $requisitions->map(function($requisition) {
                 $totalItems = $requisition->requisitionItems->count();
                 $mainItem = $requisition->requisitionItems->first();
                 
+                \Log::debug("Processing requisition: {$requisition->id} - {$requisition->requisition_number}");
+                
+                $formattedItem = null;
+                if ($mainItem && $mainItem->item) {
+                    $formattedItem = [
+                        'name' => $mainItem->item->name ?? 'Unknown Item',
+                        'quantity' => number_format($mainItem->quantity_requested, 1) . ' ' . ($mainItem->item->unit->symbol ?? ''),
+                    ];
+                    \Log::debug("Main item: {$formattedItem['name']}");
+                }
+                
                 return [
-                    'id' => $requisition->id,
+                    'id' => $requisition->id, // Ensure this is an integer, not array
                     'requisition_number' => $requisition->requisition_number,
                     'requester_name' => $requisition->requestedBy->name ?? 'Unknown',
                     'department' => $requisition->department,
                     'time_ago' => $this->formatTimeAgo($requisition->created_at),
-                    'main_item' => $mainItem ? [
-                        'name' => $mainItem->item->name ?? 'Unknown Item',
-                        'quantity' => number_format($mainItem->quantity_requested, 1) . ' ' . ($mainItem->item->unit->symbol ?? ''),
-                    ] : null,
+                    'main_item' => $formattedItem,
                     'purpose' => $requisition->purpose,
                     'notes' => $requisition->notes,
                     'total_items' => $totalItems
                 ];
             });
+            
+            \Log::info('getRecentRequisitions: Returning ' . $formattedRequisitions->count() . ' formatted requisitions');
+            
+            return $formattedRequisitions;
+            
+        } catch (\Exception $e) {
+            \Log::error('getRecentRequisitions: Error occurred - ' . $e->getMessage());
+            // Return empty collection on error
+            return collect([]);
+        }
     }
 
     /**
@@ -203,28 +235,7 @@ class SupervisorController extends Controller
         ]);
     }
 
-    /**
-     * Get production metrics
-     */
-    public function getProductionMetrics()
-    {
-        $today = Carbon::today();
-        $thisWeek = Carbon::now()->startOfWeek();
-        
-        $todayProductions = ProductionOrder::whereDate('planned_start_date', $today)->count();
-        $thisWeekProductions = ProductionOrder::whereBetween('planned_start_date', [$thisWeek, Carbon::now()])->count();
-        $completedThisWeek = ProductionOrder::whereBetween('planned_start_date', [$thisWeek, Carbon::now()])
-            ->where('status', 'completed')->count();
-            
-        $efficiency = $thisWeekProductions > 0 ? ($completedThisWeek / $thisWeekProductions) * 100 : 0;
 
-        return response()->json([
-            'today_productions' => $todayProductions,
-            'this_week_productions' => $thisWeekProductions,
-            'completed_this_week' => $completedThisWeek,
-            'efficiency_percentage' => round($efficiency, 1)
-        ]);
-    }
 
     /**
      * Approve a purchase request
@@ -273,6 +284,59 @@ class SupervisorController extends Controller
                 ]);
             } catch (\Exception $e) {
                 \Log::warning('Failed to create audit log for purchase request approval: ' . $e->getMessage());
+            }
+
+            // Notify the requesting user about approval
+            try {
+                Notification::create([
+                    'user_id' => $purchaseRequest->requested_by,
+                    'title' => 'Purchase Request Approved',
+                    'message' => "Your purchase request {$purchaseRequest->pr_number} has been approved by " . (Auth::user()->name ?? 'Supervisor') . ".",
+                    'type' => 'purchasing',
+                    'priority' => in_array($purchaseRequest->priority, ['high', 'urgent']) ? 'high' : 'normal',
+                    'action_url' => route('employee.requisitions.history'),
+                    'metadata' => [
+                        'purchase_request_number' => $purchaseRequest->pr_number,
+                        'request_status' => 'approved',
+                        'approved_by' => Auth::user()->name ?? 'Supervisor',
+                        'approved_at' => Carbon::now()->toDateTimeString(),
+                        'department' => $purchaseRequest->department,
+                        'total_estimated_cost' => $purchaseRequest->total_estimated_cost,
+                        'priority' => $purchaseRequest->priority,
+                        'items_count' => $purchaseRequest->purchaseRequestItems->count()
+                    ],
+                    'created_at' => Carbon::now(),
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to notify employee of purchase request approval: ' . $e->getMessage());
+            }
+
+            // Notify purchasing team about approved request ready for conversion
+            try {
+                $purchasingUsers = User::where('role', 'purchasing')->get();
+                foreach ($purchasingUsers as $purchasingUser) {
+                    Notification::create([
+                        'user_id' => $purchasingUser->id,
+                        'title' => 'Purchase Request Ready for PO Creation',
+                        'message' => "Purchase request {$purchaseRequest->pr_number} from {$purchaseRequest->department} department has been approved and is ready for conversion to Purchase Order.",
+                        'type' => 'purchasing',
+                        'priority' => $purchaseRequest->priority === 'urgent' ? 'urgent' : 'high',
+                        'action_url' => route('purchasing.po.create'),
+                        'metadata' => [
+                            'purchase_request_number' => $purchaseRequest->pr_number,
+                            'department' => $purchaseRequest->department,
+                            'requested_by' => $purchaseRequest->requestedBy->name ?? 'Unknown',
+                            'total_estimated_cost' => $purchaseRequest->total_estimated_cost,
+                            'priority' => $purchaseRequest->priority,
+                            'items_count' => $purchaseRequest->purchaseRequestItems->count(),
+                            'approved_by' => Auth::user()->name ?? 'Supervisor',
+                            'approved_at' => Carbon::now()->toDateTimeString()
+                        ],
+                        'created_at' => Carbon::now(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed to notify purchasing team of approved request: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -336,6 +400,31 @@ class SupervisorController extends Controller
                 ]);
             } catch (\Exception $e) {
                 \Log::warning('Failed to create audit log for purchase request rejection: ' . $e->getMessage());
+            }
+
+            // Notify the requesting user about rejection
+            try {
+                Notification::create([
+                    'user_id' => $purchaseRequest->requested_by,
+                    'title' => 'Purchase Request Rejected',
+                    'message' => "Your purchase request {$purchaseRequest->pr_number} has been rejected by " . (Auth::user()->name ?? 'Supervisor') . ".",
+                    'type' => 'purchasing',
+                    'priority' => 'normal',
+                    'action_url' => route('employee.requisitions.history'),
+                    'metadata' => [
+                        'purchase_request_number' => $purchaseRequest->pr_number,
+                        'request_status' => 'rejected',
+                        'rejected_by' => Auth::user()->name ?? 'Supervisor',
+                        'rejected_at' => Carbon::now()->toDateTimeString(),
+                        'department' => $purchaseRequest->department,
+                        'total_estimated_cost' => $purchaseRequest->total_estimated_cost,
+                        'priority' => $purchaseRequest->priority,
+                        'rejection_reason' => $purchaseRequest->notes ?? 'No specific reason provided'
+                    ],
+                    'created_at' => Carbon::now(),
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to notify employee of purchase request rejection: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -550,6 +639,61 @@ class SupervisorController extends Controller
             } catch (\Exception $e) {
                 // Audit log creation failed, but don't fail the main operation
                 \Log::warning('Failed to create audit log for requisition approval: ' . $e->getMessage());
+            }
+
+            // Notify the requesting employee that the requisition was approved
+            try {
+                Notification::create([
+                    'user_id' => $requisition->requested_by,
+                    'title' => 'Requisition Approved',
+                    'message' => "Requisition {$requisition->requisition_number} has been approved by " . (Auth::user()->name ?? 'Supervisor') . '. Items are now ready for fulfillment.',
+                    'type' => 'requisition_update',
+                    'priority' => in_array($requisition->priority, ['high', 'urgent']) ? 'high' : 'normal',
+                    'action_url' => route('employee.requisitions.details', $requisition),
+                    'metadata' => [
+                        'requisition_number' => $requisition->requisition_number,
+                        'requisition_status' => 'approved',
+                        'approved_by' => Auth::user()->name ?? 'Supervisor',
+                        'approved_at' => Carbon::now()->toDateTimeString(),
+                        'department' => $requisition->department,
+                        'purpose' => $requisition->purpose ?? 'No purpose specified',
+                        'total_estimated_value' => $requisition->total_estimated_value,
+                        'items_count' => $requisition->requisitionItems->count(),
+                        'priority' => $requisition->priority ?? 'normal'
+                    ],
+                    'created_at' => Carbon::now(),
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to notify employee of requisition approval: ' . $e->getMessage());
+            }
+
+            // Notify inventory team about approved requisition ready for fulfillment
+            try {
+                $inventoryUsers = User::where('role', 'inventory')->get();
+                foreach ($inventoryUsers as $inventoryUser) {
+                    Notification::create([
+                        'user_id' => $inventoryUser->id,
+                        'title' => 'Requisition Ready for Fulfillment',
+                        'message' => "Requisition {$requisition->requisition_number} from {$requisition->department} department has been approved and is ready for fulfillment.",
+                        'type' => 'inventory',
+                        'priority' => $requisition->priority === 'urgent' ? 'urgent' : 'normal',
+                        'action_url' => route('inventory.outbound.fulfill'),
+                        'metadata' => [
+                            'requisition_number' => $requisition->requisition_number,
+                            'department' => $requisition->department,
+                            'requested_by' => $requisition->requestedBy->name ?? 'Unknown',
+                            'purpose' => $requisition->purpose ?? 'No purpose specified',
+                            'total_estimated_value' => $requisition->total_estimated_value,
+                            'items_count' => $requisition->requisitionItems->count(),
+                            'priority' => $requisition->priority ?? 'normal',
+                            'approved_by' => Auth::user()->name ?? 'Supervisor',
+                            'approved_at' => Carbon::now()->toDateTimeString()
+                        ],
+                        'created_at' => Carbon::now(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed to notify inventory team of approved requisition: ' . $e->getMessage());
             }
 
             return response()->json([
@@ -941,6 +1085,31 @@ class SupervisorController extends Controller
             } catch (\Exception $e) {
                 // Audit log creation failed, but don't fail the main operation
                 \Log::warning('Failed to create audit log for requisition rejection: ' . $e->getMessage());
+            }
+
+            // Notify the requesting employee that the requisition was rejected
+            try {
+                Notification::create([
+                    'user_id' => $requisition->requested_by,
+                    'title' => 'Requisition Rejected',
+                    'message' => "Requisition {$requisition->requisition_number} has been rejected by " . (Auth::user()->name ?? 'Supervisor') . ".",
+                    'type' => 'requisition_update',
+                    'priority' => 'normal',
+                    'action_url' => route('employee.requisitions.details', $requisition),
+                    'metadata' => [
+                        'requisition_number' => $requisition->requisition_number,
+                        'requisition_status' => 'rejected',
+                        'rejected_by' => Auth::user()->name ?? 'Supervisor',
+                        'rejected_at' => Carbon::now()->toDateTimeString(),
+                        'department' => $requisition->department,
+                        'total_estimated_value' => $requisition->total_estimated_value,
+                        'rejection_reason' => $requisition->notes ?? 'No specific reason provided',
+                        'items_count' => $requisition->requisitionItems->count()
+                    ],
+                    'created_at' => Carbon::now(),
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to notify employee of requisition rejection: ' . $e->getMessage());
             }
 
             return response()->json([

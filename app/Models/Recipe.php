@@ -67,13 +67,7 @@ class Recipe extends Model
         return $this->hasMany(RecipeIngredient::class);
     }
 
-    /**
-     * Get all production orders for this recipe.
-     */
-    public function productionOrders()
-    {
-        return $this->hasMany(ProductionOrder::class);
-    }
+
 
     /**
      * Check if recipe is active.

@@ -25,31 +25,35 @@
                 <div>
                     <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Critical Stock</h3>
                     <p class="text-[10px] text-red-500 font-bold flex items-center mt-0.5">
-                        <i class="fas fa-hourglass-half mr-1"></i> Less than 24h supply
+                        <i class="fas fa-hourglass-half mr-1"></i> Less than reorder point
                     </p>
                 </div>
                 <span class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded-full">{{ $criticalStockItems->count() }} Items</span>
             </div>
             <div class="flex-1 overflow-y-auto pr-1">
-                <ul class="space-y-2">
-                    @forelse($criticalStockItems as $item)
-                        <li class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
-                            <div class="flex items-center">
-                                <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
-                                <span class="text-xs font-bold text-gray-700">{{ $item['name'] }}</span>
+                @if(isset($criticalStockItems) && $criticalStockItems->count() > 0)
+                    <ul class="space-y-2">
+                        @foreach($criticalStockItems as $item)
+                            <li class="flex justify-between items-center p-2 bg-red-50 rounded border border-red-100">
+                                <div class="flex items-center">
+                                    <div class="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+                                    <span class="text-xs font-bold text-gray-700">{{ $item['name'] }}</span>
+                                </div>
+                                <span class="text-xs font-bold text-red-600">{{ $item['quantity'] }} {{ $item['unit'] }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                @else
+                    <div class="flex justify-center items-center h-full">
+                        <div class="text-center">
+                            <div class="text-green-500 mb-2">
+                                <i class="fas fa-check-circle text-2xl"></i>
                             </div>
-                            <span class="text-xs font-bold text-red-600">{{ $item['quantity'] }} {{ $item['unit'] }}</span>
-                        </li>
-                    @empty
-                        <li class="flex justify-between items-center p-2 bg-green-50 rounded border border-green-100">
-                            <div class="flex items-center">
-                                <div class="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
-                                <span class="text-xs font-bold text-gray-700">No critical stock items</span>
-                            </div>
-                            <span class="text-xs font-bold text-green-600">All Good!</span>
-                        </li>
-                    @endforelse
-                </ul>
+                            <p class="text-xs font-bold text-gray-700">No critical stock items</p>
+                            <p class="text-xs text-green-600 font-medium">Stock levels are healthy!</p>
+                        </div>
+                    </div>
+                @endif
             </div>
             <div class="mt-3 pt-2 border-t border-gray-100 text-center">
                 <a href="#" class="text-xs font-bold text-red-600 hover:text-red-800 uppercase tracking-wide">
@@ -58,36 +62,7 @@
             </div>
         </div>
 
-        {{-- WIDGET 2: USAGE VS SALES (Visual Graph) --}}
-        <div class="bg-white border-t-4 border-blue-500 rounded-lg shadow-sm p-5 flex flex-col h-full">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Usage vs. Sales</h3>
-                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Last 3 Days</span>
-            </div>
-            <p class="text-[10px] text-gray-500 mb-4">Comparing Inventory Usage (Orange) vs Product Sales (Blue).</p>
-            
-            <!-- CSS Bar Chart -->
-            <div class="flex-1 flex items-end justify-around w-full space-x-2 pb-2 border-b border-gray-200">
-                @foreach($usageVsSalesData as $index => $data)
-                    <div class="flex flex-col items-center space-y-1 w-1/4 group relative">
-                        <div class="w-full flex items-end justify-center space-x-1 h-28">
-                            <div class="bg-blue-500 w-3 h-[{{ $data['sales'] }}%] rounded-t shadow-sm transition-all hover:bg-blue-600 relative group-hover:opacity-90" 
-                                 title="Sales: {{ number_format($data['sales_raw'], 1) }}"></div>
-                            <div class="bg-orange-400 w-3 h-[{{ $data['usage'] }}%] rounded-t shadow-sm transition-all hover:bg-orange-500 relative group-hover:opacity-90" 
-                                 title="Usage: {{ number_format($data['usage_raw'], 1) }}"></div>
-                        </div>
-                        <span class="text-[10px] {{ $index === count($usageVsSalesData) - 1 ? 'text-gray-800 font-bold' : 'text-gray-500 font-medium' }}">
-                            {{ $data['day'] }}
-                        </span>
-                    </div>
-                @endforeach
-            </div>
 
-            <div class="mt-3 flex justify-center gap-4 text-[10px] uppercase tracking-wide font-semibold">
-                <div class="flex items-center"><div class="w-2 h-2 bg-blue-500 rounded mr-1.5"></div> Sales</div>
-                <div class="flex items-center"><div class="w-2 h-2 bg-orange-400 rounded mr-1.5"></div> Usage</div>
-            </div>
-        </div>
 
         {{-- WIDGET 3: PENDING APPROVALS (Big Number) --}}
         <div class="bg-white border-t-4 border-amber-500 rounded-lg shadow-sm p-5 flex flex-col justify-between h-full">

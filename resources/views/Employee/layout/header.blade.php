@@ -49,9 +49,14 @@
                         <h3 class="font-bold text-gray-800 text-sm" id="notifHeader">
                             Notifications
                         </h3>
-                        <button onclick="markAllAsRead()" class="text-xs text-chocolate hover:text-chocolate-dark font-semibold hover:underline decoration-chocolate/30 underline-offset-2">
-                            Mark all read
-                        </button>
+                        <div class="flex items-center gap-2">
+                            <button onclick="loadHeaderNotifications()" class="text-xs text-gray-500 hover:text-gray-800" title="Refresh">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                            <button onclick="markAllAsRead()" class="text-xs text-chocolate hover:text-chocolate-dark font-semibold hover:underline decoration-chocolate/30 underline-offset-2">
+                                Mark all read
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- Loading State -->
@@ -83,6 +88,11 @@
                     <!-- Notifications List -->
                     <div class="max-h-[24rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent" id="notificationsList">
                         <!-- Notifications will be loaded here dynamically -->
+                    </div>
+                    
+                    <!-- Notification Summary -->
+                    <div class="px-4 py-2 border-t border-gray-100 bg-gray-50" id="notificationSummary">
+                        <!-- Summary will be loaded here dynamically -->
                     </div>
                     
                     <!-- View All Link -->
@@ -160,6 +170,7 @@
         const listEl = getEl('notificationsList');
         const countEl = getEl('notificationCount');
         const headerEl = getEl('notifHeader');
+        const summaryEl = getEl('notificationSummary');
 
         try {
             // Show loading state
@@ -167,6 +178,7 @@
             errorEl.classList.add('hidden');
             emptyEl.classList.add('hidden');
             listEl.innerHTML = '';
+            if (summaryEl) summaryEl.innerHTML = '';
 
             const response = await fetch('{{ route("employee.notifications.header") }}', {
                 headers: {
@@ -199,7 +211,7 @@
                 if (notifications.length === 0) {
                     emptyEl.classList.remove('hidden');
                 } else {
-                    // Render notifications
+                    // Render notifications with enhanced categorization
                     listEl.innerHTML = notifications.map(notification => {
                         const iconParts = notification.icon_class.split(' ');
                         const bgColor = iconParts[1] || 'bg-gray-100';
@@ -212,6 +224,23 @@
                         const titleClass = isRead ? 'text-gray-700 font-semibold' : 'text-gray-900 font-bold';
                         const unreadDot = !isRead ? `<div class="w-2 h-2 bg-chocolate rounded-full flex-shrink-0 mt-1.5" title="Unread"></div>` : '';
 
+                        // Enhanced categorization for header notifications
+                        let categoryLabel = '';
+                        let categoryColor = '';
+                        if (notification.type === 'approval_req' || notification.type === 'purchasing') {
+                            categoryLabel = 'Approval';
+                            categoryColor = 'text-green-600 bg-green-50';
+                        } else if (notification.type === 'inventory' || (notification.type === 'requisition_update' && notification.metadata?.requisition_status === 'fulfilled')) {
+                            categoryLabel = 'Fulfillment';
+                            categoryColor = 'text-blue-600 bg-blue-50';
+                        } else if (notification.type === 'stock_alert') {
+                            categoryLabel = 'Alert';
+                            categoryColor = 'text-red-600 bg-red-50';
+                        } else {
+                            categoryLabel = 'Update';
+                            categoryColor = 'text-gray-600 bg-gray-50';
+                        }
+
                         return `
                             <div class="p-3 border-b border-gray-50 cursor-pointer transition-colors group ${containerClass}"
                                  data-notification-id="${notification.id}"
@@ -223,17 +252,37 @@
                                         </div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <div class="flex justify-between items-start">
-                                            <p class="text-sm ${titleClass} truncate pr-2">${notification.title}</p>
-                                            <span class="text-[10px] text-gray-400 whitespace-nowrap pt-0.5">${notification.time_ago}</span>
+                                        <div class="flex justify-between items-start mb-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${categoryColor}">${categoryLabel}</span>
+                                                <span class="text-[10px] text-gray-400">•</span>
+                                                <span class="text-[10px] text-gray-400">${notification.priority}</span>
+                                            </div>
+                                            <span class="text-[10px] text-gray-400 whitespace-nowrap">${notification.time_ago}</span>
                                         </div>
-                                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">${notification.message}</p>
+                                        <p class="text-sm ${titleClass} leading-tight">${notification.title}</p>
+                                        <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">${notification.message}</p>
+                                        ${notification.action_url ? `<p class="text-[10px] text-chocolate mt-1 font-medium">Click to view →</p>` : ''}
                                     </div>
                                     ${unreadDot}
                                 </div>
                             </div>
                         `;
                     }).join('');
+
+                    // Add notification summary if element exists
+                    if (summaryEl && notifications.length > 0) {
+                        const approvals = notifications.filter(n => n.type === 'approval_req' || n.type === 'purchasing').length;
+                        const fulfillments = notifications.filter(n => n.type === 'inventory' || (n.type === 'requisition_update' && n.metadata?.requisition_status === 'fulfilled')).length;
+                        const unread = notifications.filter(n => !n.read_at).length;
+                        
+                        summaryEl.innerHTML = `
+                            <div class="flex justify-between items-center text-xs text-gray-500">
+                                <span>${unread} unread • ${approvals} approvals • ${fulfillments} fulfilled</span>
+                                <a href="{{ route('employee.notifications') }}" class="text-chocolate hover:text-chocolate-dark font-medium">View All</a>
+                            </div>
+                        `;
+                    }
                 }
 
             } else {

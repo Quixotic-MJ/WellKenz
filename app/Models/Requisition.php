@@ -21,6 +21,9 @@ class Requisition extends Model
         'total_estimated_value',
         'approved_by',
         'approved_at',
+        'rejected_by',
+        'rejected_at',
+        'reject_reason',
         'fulfilled_by',
         'fulfilled_at',
         'notes',
@@ -29,6 +32,7 @@ class Requisition extends Model
     protected $casts = [
         'request_date' => 'date',
         'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
         'fulfilled_at' => 'datetime',
         'total_estimated_value' => 'decimal:2',
         'status' => 'string',
@@ -47,6 +51,11 @@ class Requisition extends Model
     public function fulfilledBy()
     {
         return $this->belongsTo(User::class, 'fulfilled_by');
+    }
+
+    public function rejectedBy()
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     public function requisitionItems()

@@ -203,7 +203,7 @@ CREATE INDEX idx_supplier_items_item ON supplier_items(item_id);
 CREATE TABLE stock_movements (
     id SERIAL PRIMARY KEY,
     item_id INTEGER NOT NULL REFERENCES items(id),
-    movement_type VARCHAR(30) NOT NULL CHECK (movement_type IN ('purchase', 'sale', 'adjustment', 'transfer', 'production', 'waste', 'return')),
+    movement_type VARCHAR(30) NOT NULL CHECK (movement_type IN ('purchase', 'sale', 'adjustment', 'transfer', 'waste', 'return')),
     reference_number VARCHAR(100),
     quantity DECIMAL(10,3) NOT NULL,
     unit_cost DECIMAL(10,2) DEFAULT 0.00,
@@ -272,6 +272,9 @@ CREATE TABLE purchase_requests (
     total_estimated_cost DECIMAL(12,2) DEFAULT 0.00,
     approved_by INTEGER REFERENCES users(id),
     approved_at TIMESTAMP NULL,
+    rejected_by INTEGER REFERENCES users(id),
+    rejected_at TIMESTAMP NULL,
+    reject_reason TEXT,
     notes TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -317,6 +320,8 @@ CREATE TABLE purchase_orders (
     notes TEXT,
     created_by INTEGER NOT NULL REFERENCES users(id),
     approved_by INTEGER REFERENCES users(id),
+    acknowledged_by INTEGER REFERENCES users(id),
+    acknowledged_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -403,52 +408,6 @@ CREATE TABLE recipe_ingredients (
 CREATE INDEX idx_recipe_ingredients_recipe ON recipe_ingredients(recipe_id);
 CREATE INDEX idx_recipe_ingredients_item ON recipe_ingredients(item_id);
 
--- ============================================================================
--- PRODUCTION ORDERS TABLE
--- ============================================================================
-CREATE TABLE production_orders (
-    id SERIAL PRIMARY KEY,
-    production_number VARCHAR(50) NOT NULL UNIQUE,
-    recipe_id INTEGER NOT NULL REFERENCES recipes(id),
-    planned_quantity DECIMAL(10,3) NOT NULL,
-    actual_quantity DECIMAL(10,3) DEFAULT 0.000,
-    unit_id INTEGER NOT NULL REFERENCES units(id),
-    planned_start_date DATE NOT NULL,
-    planned_end_date DATE NOT NULL,
-    actual_start_date DATE,
-    actual_end_date DATE,
-    status VARCHAR(20) NOT NULL DEFAULT 'planned' CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
-    total_material_cost DECIMAL(12,2) DEFAULT 0.00,
-    total_labor_cost DECIMAL(12,2) DEFAULT 0.00,
-    overhead_cost DECIMAL(12,2) DEFAULT 0.00,
-    notes TEXT,
-    created_by INTEGER NOT NULL REFERENCES users(id),
-    supervisor_id INTEGER REFERENCES users(id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_production_orders_number ON production_orders(production_number);
-CREATE INDEX idx_production_orders_recipe ON production_orders(recipe_id);
-CREATE INDEX idx_production_orders_status ON production_orders(status);
-
--- ============================================================================
--- PRODUCTION CONSUMPTION TABLE (Material Usage Tracking)
--- ============================================================================
-CREATE TABLE production_consumption (
-    id SERIAL PRIMARY KEY,
-    production_order_id INTEGER NOT NULL REFERENCES production_orders(id) ON DELETE CASCADE,
-    item_id INTEGER NOT NULL REFERENCES items(id),
-    quantity_consumed DECIMAL(10,3) NOT NULL,
-    batch_number VARCHAR(100),
-    consumption_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    notes TEXT,
-    created_by INTEGER NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_production_consumption_order ON production_consumption(production_order_id);
-CREATE INDEX idx_production_consumption_item ON production_consumption(item_id);
 
 -- ============================================================================
 -- REQUISITIONS TABLE (Internal Material Requests)
@@ -464,6 +423,9 @@ CREATE TABLE requisitions (
     total_estimated_value DECIMAL(12,2) DEFAULT 0.00,
     approved_by INTEGER REFERENCES users(id),
     approved_at TIMESTAMP NULL,
+    rejected_by INTEGER REFERENCES users(id),
+    rejected_at TIMESTAMP NULL,
+    reject_reason TEXT,
     fulfilled_by INTEGER REFERENCES users(id),
     fulfilled_at TIMESTAMP NULL,
     notes TEXT,
@@ -605,7 +567,7 @@ BEGIN
     -- Only update updated_at if the table has that column
     IF TG_TABLE_NAME IN ('users', 'user_profiles', 'categories', 'units', 'items', 'suppliers', 
                         'supplier_items', 'batches', 'purchase_requests', 'purchase_orders', 
-                        'recipes', 'production_orders', 'requisitions', 'system_settings') THEN
+                        'recipes', 'requisitions', 'system_settings') THEN
         NEW.updated_at = CURRENT_TIMESTAMP;
     END IF;
     RETURN NEW;
@@ -694,7 +656,6 @@ CREATE TRIGGER update_batches_updated_at BEFORE UPDATE ON batches FOR EACH ROW E
 CREATE TRIGGER update_purchase_requests_updated_at BEFORE UPDATE ON purchase_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_purchase_orders_updated_at BEFORE UPDATE ON purchase_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_recipes_updated_at BEFORE UPDATE ON recipes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_production_orders_updated_at BEFORE UPDATE ON production_orders FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_requisitions_updated_at BEFORE UPDATE ON requisitions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -1274,31 +1235,6 @@ INSERT INTO recipe_ingredients (recipe_id, item_id, quantity_required, unit_id) 
 (9, 12, 0.100, 1),
 (9, 57, 2.000, 10);
 
--- Insert sample production orders
-INSERT INTO production_orders (production_number, recipe_id, planned_quantity, unit_id, planned_start_date, planned_end_date, status, created_by) VALUES
-('PROD-001', 1, 10.000, 1, '2024-01-20', '2024-01-20', 'completed', 4),
-('PROD-002', 2, 5.000, 1, '2024-01-21', '2024-01-21', 'in_progress', 4),
-('PROD-003', 3, 3.000, 1, '2024-01-22', '2024-01-22', 'planned', 4),
-('PROD-004', 5, 4.000, 10, '2024-01-23', '2024-01-23', 'completed', 4),
-('PROD-005', 6, 3.000, 1, '2024-01-23', '2024-01-23', 'completed', 4),
-('PROD-006', 7, 2.000, 1, '2024-01-24', '2024-01-24', 'in_progress', 4),
-('PROD-007', 8, 5.000, 1, '2024-01-24', '2024-01-24', 'planned', 4),
-('PROD-008', 9, 3.000, 1, '2024-01-25', '2024-01-25', 'planned', 4),
-('PROD-009', 4, 8.000, 1, '2024-01-25', '2024-01-25', 'planned', 4),
-('PROD-010', 10, 2.000, 1, '2024-01-26', '2024-01-26', 'planned', 4),
-('PROD-011', 11, 4.000, 1, '2024-01-26', '2024-01-26', 'planned', 4),
-('PROD-012', 12, 3.000, 1, '2024-01-27', '2024-01-27', 'planned', 4),
-('PROD-013', 13, 6.000, 1, '2024-01-27', '2024-01-27', 'planned', 4);
-
--- Insert production consumption records
-INSERT INTO production_consumption (production_order_id, item_id, quantity_consumed, batch_number, consumption_date, created_by) VALUES
-(4, 1, 1.400, 'BATCH-FLR-2024-001', '2024-01-23', 5),
-(4, 19, 1.200, 'BATCH-SWT-2024-001', '2024-01-23', 5),
-(4, 51, 0.400, 'BATCH-CHC-2024-001', '2024-01-23', 5),
-(4, 57, 12.000, 'BATCH-EGG-2024-001', '2024-01-23', 5),
-(5, 2, 1.500, 'BATCH-FLR-2024-003', '2024-01-23', 5),
-(5, 12, 0.900, 'BATCH-DRY-2024-003', '2024-01-23', 5),
-(5, 63, 0.450, 'BATCH-NUT-2024-001', '2024-01-23', 5);
 
 -- Insert sample purchase requests
 INSERT INTO purchase_requests (pr_number, request_date, requested_by, department, priority, status, total_estimated_cost, approved_by, approved_at) VALUES
@@ -1463,15 +1399,12 @@ INSERT INTO rtv_items (rtv_id, item_id, quantity_returned, unit_cost, reason) VA
 INSERT INTO notifications (user_id, title, message, type, priority, is_read, created_at) VALUES
 (2, 'Low Stock Alert', 'All-Purpose Flour is below minimum stock level', 'inventory', 'high', false, '2024-01-19 08:00:00'),
 (3, 'Purchase Order Approved', 'PO-001 has been approved and sent to supplier', 'purchasing', 'normal', false, '2024-01-18 15:30:00'),
-(4, 'Production Complete', 'Production order PROD-001 has been completed', 'production', 'normal', false, '2024-01-20 16:00:00'),
 (2, 'Stock Level Critical', 'Cocoa Powder stock is very low (8.5kg remaining)', 'inventory', 'urgent', false, '2024-01-23 08:00:00'),
 (3, 'PO Delivery Today', 'Purchase Order PO-003 expected delivery today', 'purchasing', 'high', false, '2024-01-23 08:15:00'),
-(4, 'Production Delay', 'Production order PROD-006 running behind schedule', 'production', 'high', false, '2024-01-23 09:30:00'),
 (5, 'Requisition Approved', 'Your requisition REQ-003 has been approved', 'requisition', 'normal', true, '2024-01-20 14:35:00'),
 (7, 'New Recipe Added', 'New recipe Chocolate Cake has been added to system', 'recipe', 'normal', true, '2024-01-22 16:20:00'),
 (2, 'Batch Expiring Soon', 'Batch BATCH-EGG-001 expires on 2024-02-07', 'inventory', 'high', false, '2024-01-23 10:45:00'),
 (3, 'Supplier Rating Updated', 'Supplier Choco Masters Inc rating updated to 5', 'supplier', 'low', true, '2024-01-22 11:30:00'),
-(4, 'Production Complete', 'Production order PROD-004 completed successfully', 'production', 'normal', true, '2024-01-23 16:00:00'),
 (5, 'Material Shortage', 'Insufficient walnuts for scheduled production', 'production', 'high', false, '2024-01-23 07:30:00'),
 (7, 'Quality Alert', 'Quality issue reported in finished chocolate cakes', 'quality', 'urgent', false, '2024-01-23 14:20:00'),
 (2, 'Monthly Inventory', 'Monthly inventory count scheduled for next week', 'inventory', 'normal', true, '2024-01-22 15:10:00'),
@@ -1484,8 +1417,6 @@ INSERT INTO audit_logs (table_name, record_id, action, user_id, created_at) VALU
 ('stock_movements', 1, 'CREATE', 3, '2024-01-16 10:15:00'),
 ('purchase_orders', 3, 'CREATE', 3, '2024-01-20 11:30:00'),
 ('purchase_orders', 4, 'CREATE', 3, '2024-01-20 14:20:00'),
-('production_orders', 4, 'CREATE', 4, '2024-01-22 16:45:00'),
-('production_orders', 5, 'CREATE', 4, '2024-01-22 17:30:00'),
 ('requisitions', 3, 'UPDATE', 4, '2024-01-20 14:32:00'),
 ('requisitions', 4, 'UPDATE', 4, '2024-01-20 15:18:00'),
 ('items', 51, 'UPDATE', 2, '2024-01-21 09:15:00'),
@@ -1522,8 +1453,6 @@ BEGIN
     RAISE NOTICE '- 50+ current stock records';
     RAISE NOTICE '- 15 stock movement transactions';
     RAISE NOTICE '- 14 production recipes with ingredients';
-    RAISE NOTICE '- 13 production orders';
-    RAISE NOTICE '- 7 production consumption records';
     RAISE NOTICE '- 12 purchase requests with items';
     RAISE NOTICE '- 12 purchase orders with items';
     RAISE NOTICE '- 10 PR-PO links';
@@ -1541,3 +1470,4 @@ BEGIN
 END $$;
 
 SELECT 'Database setup complete. WellKenz Bakery ERP is ready for use!' AS completion_message;
+

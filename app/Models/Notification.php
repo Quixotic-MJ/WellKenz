@@ -8,6 +8,55 @@ use Carbon\Carbon;
 
 class Notification extends Model
 {
+    // Notification type constants
+    const TYPE_APPROVAL_REQUEST = 'approval_req';
+    const TYPE_PURCHASING = 'purchasing';
+    const TYPE_INVENTORY = 'inventory';
+    const TYPE_REQUISITION_UPDATE = 'requisition_update';
+    const TYPE_STOCK_ALERT = 'stock_alert';
+    const TYPE_SYSTEM_INFO = 'system_info';
+    const TYPE_DELIVERY_UPDATE = 'delivery_update';
+    const TYPE_PRODUCTION = 'production';
+    const TYPE_QUALITY = 'quality';
+    const TYPE_RTV_STATUS_CHANGE = 'rtv_status_change';
+
+    // Priority constants
+    const PRIORITY_LOW = 'low';
+    const PRIORITY_NORMAL = 'normal';
+    const PRIORITY_HIGH = 'high';
+    const PRIORITY_URGENT = 'urgent';
+
+    /**
+     * Get all notification types with labels
+     */
+    public static function getTypes(): array
+    {
+        return [
+            self::TYPE_APPROVAL_REQUEST => 'Approval Request',
+            self::TYPE_PURCHASING => 'Purchasing',
+            self::TYPE_INVENTORY => 'Inventory',
+            self::TYPE_REQUISITION_UPDATE => 'Requisition Update',
+            self::TYPE_STOCK_ALERT => 'Stock Alert',
+            self::TYPE_SYSTEM_INFO => 'System Information',
+            self::TYPE_DELIVERY_UPDATE => 'Delivery Update',
+            self::TYPE_PRODUCTION => 'Production',
+            self::TYPE_QUALITY => 'Quality',
+            self::TYPE_RTV_STATUS_CHANGE => 'RTV Status Change',
+        ];
+    }
+
+    /**
+     * Get all priorities with labels
+     */
+    public static function getPriorities(): array
+    {
+        return [
+            self::PRIORITY_LOW => 'Low',
+            self::PRIORITY_NORMAL => 'Normal',
+            self::PRIORITY_HIGH => 'High',
+            self::PRIORITY_URGENT => 'Urgent',
+        ];
+    }
     protected $table = 'notifications';
 
     // Disable automatic timestamp management since the table doesn't have updated_at column
@@ -195,6 +244,74 @@ class Notification extends Model
     public function scopeUnread($query)
     {
         return $query->where('is_read', false);
+    }
+
+    /**
+     * Scope to filter by type.
+     */
+    public function scopeByType($query, string $type)
+    {
+        return $query->where('type', $type);
+    }
+
+    /**
+     * Get notification type label.
+     */
+    public function getTypeLabel(): string
+    {
+        $types = self::getTypes();
+        return $types[$this->type] ?? ucfirst(str_replace('_', ' ', $this->type));
+    }
+
+    /**
+     * Get priority label.
+     */
+    public function getPriorityLabel(): string
+    {
+        $priorities = self::getPriorities();
+        return $priorities[$this->priority] ?? ucfirst($this->priority);
+    }
+
+    /**
+     * Check if notification is related to approvals.
+     */
+    public function isApproval(): bool
+    {
+        return in_array($this->type, [
+            self::TYPE_APPROVAL_REQUEST,
+            self::TYPE_REQUISITION_UPDATE,
+            self::TYPE_PURCHASING
+        ]);
+    }
+
+    /**
+     * Check if notification is related to fulfillment/completion.
+     */
+    public function isFulfillment(): bool
+    {
+        return $this->type === self::TYPE_INVENTORY || 
+               ($this->type === self::TYPE_REQUISITION_UPDATE && 
+                isset($this->metadata['requisition_status']) && 
+                in_array($this->metadata['requisition_status'], ['fulfilled', 'completed']));
+    }
+
+    /**
+     * Get action button text based on notification type.
+     */
+    public function getActionButtonText(): string
+    {
+        return match($this->type) {
+            self::TYPE_APPROVAL_REQUEST => 'View Request',
+            self::TYPE_REQUISITION_UPDATE => 'View Requisition',
+            self::TYPE_PURCHASING => 'View Purchase Order',
+            self::TYPE_INVENTORY => 'View Details',
+            self::TYPE_STOCK_ALERT => 'Check Stock',
+            self::TYPE_DELIVERY_UPDATE => 'Track Delivery',
+            self::TYPE_PRODUCTION => 'View Production',
+            self::TYPE_QUALITY => 'View Quality Report',
+            self::TYPE_SYSTEM_INFO => 'Learn More',
+            default => 'View Details'
+        };
     }
 
     /**

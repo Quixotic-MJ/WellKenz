@@ -799,6 +799,27 @@ class InventoryController extends Controller
                 'fulfilled_at' => now()
             ]);
 
+            // Notify requesting employee
+            try {
+                Notification::create([
+                    'user_id' => $requisition->requested_by,
+                    'title' => 'Requisition Fulfilled',
+                    'message' => "Requisition {$requisition->requisition_number} has been fulfilled and is ready for pickup.",
+                    'type' => 'requisition_update',
+                    'priority' => 'normal',
+                    'action_url' => route('employee.requisitions.details', $requisition->id),
+                    'metadata' => [
+                        'requisition_number' => $requisition->requisition_number,
+                        'requisition_status' => 'fulfilled',
+                        'status_changed_by' => Auth::user()->name ?? 'Inventory',
+                        'status_changed_at' => now()->toDateTimeString(),
+                    ],
+                    'created_at' => now(),
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to notify employee about fulfillment: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Picking started for requisition ' . $requisition->requisition_number . ' with ' . $requisition->requisitionItems->count() . ' items'
@@ -1771,103 +1792,74 @@ class InventoryController extends Controller
         try {
             \Log::info('Confirm issuance request received:', $request->all());
             
-            // Use more flexible validation
-            $request->validate([
+            // Use more flexible validation - updated to handle multi_batch_selections
+            $validatedData = $request->validate([
                 'requisition_id' => 'required|exists:requisitions,id',
-                'batch_selections' => 'sometimes|array'
+                'multi_batch_selections' => 'sometimes|array',
+                'processed_items' => 'sometimes|array', 
+                'shortages' => 'sometimes|array',
+                'partial_fulfillment' => 'sometimes|boolean',
+                'auto_generate_pr' => 'sometimes|boolean'
             ]);
 
+            \Log::info('Validation passed, starting transaction');
             DB::beginTransaction();
 
             $requisition = Requisition::with('requisitionItems.item')->findOrFail($request->requisition_id);
             $user = Auth::user();
 
-            // Handle batch selections - provide empty array if not present
-            $batchSelections = $request->batch_selections ?? [];
+            // Handle multi-batch selections from frontend
+            $multiBatchSelections = $request->multi_batch_selections ?? [];
+            $processedItems = $request->processed_items ?? [];
+            $shortages = $request->shortages ?? [];
+            $partialFulfillment = $request->partial_fulfillment ?? false;
+            $autoGeneratePR = $request->auto_generate_pr ?? false;
             
-            \Log::info('Processing requisition with batch selections:', [
+            \Log::info('Processing requisition with multi-batch selections:', [
                 'requisition_id' => $requisition->id,
                 'requisition_number' => $requisition->requisition_number,
-                'batch_selections_count' => count($batchSelections),
-                'batch_selections' => $batchSelections
+                'multi_batch_selections_count' => count($multiBatchSelections),
+                'processed_items_count' => count($processedItems),
+                'partial_fulfillment' => $partialFulfillment,
+                'auto_generate_pr' => $autoGeneratePR,
+                'multi_batch_selections' => $multiBatchSelections
             ]);
 
             foreach ($requisition->requisitionItems as $requisitionItem) {
-                $batchId = $batchSelections[$requisitionItem->id] ?? null;
                 $item = $requisitionItem->item;
                 
                 \Log::info('Processing requisition item:', [
                     'requisition_item_id' => $requisitionItem->id,
                     'item_name' => $item->name,
-                    'quantity_requested' => $requisitionItem->quantity_requested,
-                    'batch_id' => $batchId
+                    'quantity_requested' => $requisitionItem->quantity_requested
                 ]);
 
-                $batch = null;
-
-                // If batch ID provided, use that batch
-                if ($batchId) {
-                    $batch = Batch::find($batchId);
-                    if (!$batch) {
-                        throw new \Exception("Selected batch not found for {$item->name}");
-                    }
-                } else {
-                    // Auto-select the best available batch (FEFO - First Expired First Out)
+                // Check if we have multi-batch selections for this item
+                $batchSelections = $multiBatchSelections[$requisitionItem->id] ?? [];
+                
+                if (empty($batchSelections)) {
+                    // No batch selections provided, try auto-selection (legacy fallback)
+                    \Log::info('No multi-batch selections, trying auto-selection for item:', ['item_name' => $item->name]);
+                    
                     $batch = Batch::where('item_id', $item->id)
                         ->whereIn('status', ['active', 'quarantine'])
-                        ->where('quantity', '>=', $requisitionItem->quantity_requested)
+                        ->where('quantity', '>', 0)
                         ->orderBy('expiry_date', 'asc')
                         ->first();
 
-                    // If no single batch has enough quantity, try to find multiple batches
                     if (!$batch) {
-                        \Log::info('No single batch found with sufficient quantity, checking multiple batches for:', [
-                            'item_id' => $item->id,
-                            'quantity_requested' => $requisitionItem->quantity_requested
+                        \Log::warning('No available batches found for item:', $item->name);
+                        // Mark as fully backordered
+                        $requisitionItem->update([
+                            'quantity_issued' => 0
                         ]);
-                        
-                        // Check if we have enough total quantity across all batches
-                        $totalAvailable = Batch::where('item_id', $item->id)
-                            ->whereIn('status', ['active', 'quarantine'])
-                            ->where('quantity', '>', 0)
-                            ->sum('quantity');
-
-                        if ($totalAvailable < $requisitionItem->quantity_requested) {
-                            throw new \Exception("Insufficient stock for {$item->name}. Requested: {$requisitionItem->quantity_requested}, Available: {$totalAvailable}");
-                        }
-
-                        // If we have enough total but no single batch, use the batch with the closest expiry
-                        $batch = Batch::where('item_id', $item->id)
-                            ->whereIn('status', ['active', 'quarantine'])
-                            ->where('quantity', '>', 0)
-                            ->orderBy('expiry_date', 'asc')
-                            ->first();
-
-                        if (!$batch) {
-                            throw new \Exception("No available batches found for {$item->name}");
-                        }
-
-                        \Log::info('Using batch with partial quantity:', [
-                            'batch_id' => $batch->id,
-                            'batch_number' => $batch->batch_number,
-                            'batch_quantity' => $batch->quantity,
-                            'quantity_requested' => $requisitionItem->quantity_requested
-                        ]);
+                        continue;
                     }
-                }
 
-                // Check if batch has sufficient quantity
-                if ($batch->quantity < $requisitionItem->quantity_requested) {
-                    \Log::warning('Batch has insufficient quantity, using partial fulfillment:', [
-                        'batch_id' => $batch->id,
-                        'batch_quantity' => $batch->quantity,
-                        'quantity_requested' => $requisitionItem->quantity_requested
-                    ]);
-
-                    // Use whatever quantity is available in this batch
+                    // Allow partial fulfillment - issue what we have available
                     $quantityToIssue = min($batch->quantity, $requisitionItem->quantity_requested);
                     
-                    // Update batch quantity (will set to 0 if we use all)
+                    // Update batch quantity
                     $batch->decrement('quantity', $quantityToIssue);
 
                     // Update requisition item issued quantity
@@ -1886,45 +1878,70 @@ class InventoryController extends Controller
                         'batch_number' => $batch->batch_number,
                         'expiry_date' => $batch->expiry_date,
                         'location' => 'Kitchen/Production',
-                        'notes' => "Partial issuance for requisition {$requisition->requisition_number}. Issued: {$quantityToIssue}, Requested: {$requisitionItem->quantity_requested}",
+                        'notes' => "Auto-issuance for requisition {$requisition->requisition_number}. Issued: {$quantityToIssue}, Requested: {$requisitionItem->quantity_requested}",
                         'user_id' => $user->id
                     ]);
 
-                    \Log::info('Partial issuance completed:', [
+                    \Log::info('Auto-issuance completed:', [
                         'item_id' => $item->id,
                         'quantity_issued' => $quantityToIssue,
                         'quantity_requested' => $requisitionItem->quantity_requested
                     ]);
 
                 } else {
-                    // Normal case: batch has sufficient quantity
-                    $batch->decrement('quantity', $requisitionItem->quantity_requested);
-
+                    // Process multi-batch selections from frontend
+                    \Log::info('Processing multi-batch selections for item:', ['item_name' => $item->name]);
+                    
+                    $totalIssued = 0;
+                    
+                    foreach ($batchSelections as $batchSelection) {
+                        $batch = Batch::find($batchSelection['batch_id']);
+                        if (!$batch) {
+                            \Log::warning('Selected batch not found:', $batchSelection['batch_id']);
+                            continue;
+                        }
+                        
+                        $quantityToIssue = (float) $batchSelection['quantity'];
+                        $actualQuantity = min($quantityToIssue, $batch->quantity);
+                        
+                        // Update batch quantity
+                        $batch->decrement('quantity', $actualQuantity);
+                        $totalIssued += $actualQuantity;
+                        
+                        // Create stock movement for this batch
+                        StockMovement::create([
+                            'item_id' => $item->id,
+                            'movement_type' => 'transfer',
+                            'reference_number' => $requisition->requisition_number,
+                            'quantity' => -$actualQuantity,
+                            'unit_cost' => $batch->unit_cost,
+                            'total_cost' => -($actualQuantity * $batch->unit_cost),
+                            'batch_number' => $batch->batch_number,
+                            'expiry_date' => $batch->expiry_date,
+                            'location' => 'Kitchen/Production',
+                            'notes' => "Partial issuance for requisition {$requisition->requisition_number} (Multi-batch). Issued: {$actualQuantity} from Batch {$batch->batch_number}",
+                            'user_id' => $user->id
+                        ]);
+                        
+                        \Log::info('Batch issuance completed:', [
+                            'batch_id' => $batch->id,
+                            'batch_number' => $batch->batch_number,
+                            'quantity_issued' => $actualQuantity
+                        ]);
+                    }
+                    
                     // Update requisition item issued quantity
                     $requisitionItem->update([
-                        'quantity_issued' => $requisitionItem->quantity_requested
+                        'quantity_issued' => $totalIssued
                     ]);
-
-                    // Create stock movement
-                    StockMovement::create([
-                        'item_id' => $item->id,
-                        'movement_type' => 'transfer',
-                        'reference_number' => $requisition->requisition_number,
-                        'quantity' => -$requisitionItem->quantity_requested,
-                        'unit_cost' => $batch->unit_cost,
-                        'total_cost' => -($requisitionItem->quantity_requested * $batch->unit_cost),
-                        'batch_number' => $batch->batch_number,
-                        'expiry_date' => $batch->expiry_date,
-                        'location' => 'Kitchen/Production',
-                        'notes' => "Issued for requisition {$requisition->requisition_number}",
-                        'user_id' => $user->id
-                    ]);
-
-                    \Log::info('Full issuance completed:', [
-                        'item_id' => $item->id,
-                        'quantity_issued' => $requisitionItem->quantity_requested
+                    
+                    \Log::info('Total multi-batch issuance for item:', [
+                        'item_name' => $item->name,
+                        'total_issued' => $totalIssued,
+                        'requested' => $requisitionItem->quantity_requested
                     ]);
                 }
+
             }
 
             // Update requisition status to fulfilled (even if partial)
@@ -1934,20 +1951,98 @@ class InventoryController extends Controller
                 'fulfilled_at' => now()
             ]);
 
+            // Create notifications about partial fulfillment if applicable
+            if ($partialFulfillment && !empty($shortages)) {
+                foreach ($shortages as $shortage) {
+                    // Create purchase request for shortages if auto_generate_pr is true
+                    if ($autoGeneratePR) {
+                        $this->createAutoPurchaseRequest($shortage, $user);
+                    }
+                }
+            }
+
             DB::commit();
 
-            return response()->json([
+            // Prepare response based on fulfillment type
+            $response = [
                 'success' => true,
                 'message' => 'Requisition issuance confirmed successfully'
-            ]);
+            ];
+
+            if ($partialFulfillment) {
+                $response['partial_fulfillment'] = true;
+                $response['will_issue'] = count($processedItems);
+                $response['will_backorder'] = count($shortages);
+                $response['message'] .= ' - Partial fulfillment processed';
+            }
+
+            return response()->json($response);
 
         } catch (\Exception $e) {
             DB::rollback();
-            \Log::error('Error confirming issuance: ' . $e->getMessage());
+            \Log::error('Error confirming issuance: ' . $e->getMessage(), [
+                'request_data' => $request->all(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to confirm issuance: ' . $e->getMessage()
+                'message' => 'Failed to confirm issuance: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ], 500);
+        }
+    }
+
+    /**
+     * Create automatic purchase request for shortages
+     */
+    private function createAutoPurchaseRequest($shortage, $user)
+    {
+        try {
+            // Generate PR number
+            $prNumber = 'PR-AUTO-' . date('Y') . '-' . str_pad(\App\Models\PurchaseRequest::count() + 1, 4, '0', STR_PAD_LEFT);
+
+            // Find or create item
+            $item = \App\Models\Item::find($shortage['itemId']);
+            if (!$item) {
+                \Log::warning('Item not found for auto PR:', $shortage['itemId']);
+                return;
+            }
+
+            // Create purchase request
+            $purchaseRequest = \App\Models\PurchaseRequest::create([
+                'pr_number' => $prNumber,
+                'requested_by' => $user->id,
+                'department' => 'Auto-Replenishment',
+                'priority' => 'normal',
+                'request_date' => now()->toDateString(),
+                'notes' => "Auto-generated due to shortage in requisition fulfillment. Original request: {$shortage['requestedQty']}, Shortage: {$shortage['shortageQty']}",
+                'status' => 'pending',
+                'total_estimated_cost' => $shortage['shortageQty'] * ($item->cost_price ?? 0)
+            ]);
+
+            // Create purchase request item
+            \App\Models\PurchaseRequestItem::create([
+                'purchase_request_id' => $purchaseRequest->id,
+                'item_id' => $item->id,
+                'quantity_requested' => $shortage['shortageQty'],
+                'unit_price_estimate' => $item->cost_price ?? 0,
+                'total_estimated_cost' => $shortage['shortageQty'] * ($item->cost_price ?? 0)
+            ]);
+
+            \Log::info('Auto purchase request created:', [
+                'pr_number' => $prNumber,
+                'item_name' => $item->name,
+                'shortage_qty' => $shortage['shortageQty']
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error creating auto purchase request: ' . $e->getMessage(), [
+                'shortage_data' => $shortage,
+                'user_id' => $user->id
+            ]);
         }
     }
 

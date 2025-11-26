@@ -64,15 +64,7 @@
                     <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Production</div>
                 </li>
 
-                <!-- Log Output -->
-                <li>
-                    <a href="{{ Route::has('employee.production.log') ? route('employee.production.log') : '#' }}"
-                        id="menu-employee-production-log"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.production.log') ? 'active-menu' : '' }}">
-                        <i class="fas fa-clipboard-check w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Log Output</span>
-                    </a>
-                </li>
+              
 
                 <!-- View Recipes -->
                 <li>
@@ -94,7 +86,7 @@
                             <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
                         </div>
                         <!-- Badge for unread notifications -->
-                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">3</span>
+                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">1</span>
                     </a>
                 </li>
 
