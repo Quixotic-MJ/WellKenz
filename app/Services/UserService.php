@@ -74,6 +74,11 @@ class UserService
         try {
             DB::beginTransaction();
 
+            // Auto-generate employee ID if not provided
+            if (empty($data['employee_id'])) {
+                $data['employee_id'] = $this->generateEmployeeId();
+            }
+
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -85,7 +90,7 @@ class UserService
             // Create user profile
             UserProfile::create([
                 'user_id' => $user->id,
-                'employee_id' => $data['employee_id'] ?? null,
+                'employee_id' => $data['employee_id'],
                 'phone' => $data['phone'] ?? null,
                 'department' => $data['department'] ?? null,
                 'position' => $data['position'] ?? null,
@@ -375,6 +380,21 @@ class UserService
     private function generateTemporaryPassword(): string
     {
         return substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'), 0, 12);
+    }
+
+    /**
+     * Generate a unique employee ID.
+     *
+     * @return string
+     */
+    private function generateEmployeeId(): string
+    {
+        // Get the highest employee ID to generate the next one
+        $lastProfile = UserProfile::orderBy('id', 'desc')->first();
+        $nextId = $lastProfile ? intval(substr($lastProfile->employee_id, 3)) + 1 : 1;
+        
+        // Format as EMP + 2-digit number (with leading zeros)
+        return 'EMP' . str_pad($nextId, 2, '0', STR_PAD_LEFT);
     }
 
     /**

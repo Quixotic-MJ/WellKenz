@@ -4,28 +4,28 @@
 <div class="flex flex-col lg:flex-row h-[calc(100vh-7rem)] gap-6 pb-4 lg:pb-0 relative">
     
     {{-- 1. CATALOG SECTION (Left / Main) --}}
-    <div class="flex-1 flex flex-col min-w-0 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden h-full">
+    <div class="flex-1 flex flex-col min-w-0 bg-white border border-border-soft rounded-2xl shadow-sm overflow-hidden h-full hover:shadow-md transition-shadow duration-200">
         
         <!-- Search & Filter Header -->
-        <div class="px-6 py-5 border-b border-gray-100 bg-white z-10">
+        <div class="px-6 py-5 border-b border-border-soft bg-gradient-to-r from-white to-cream-bg/30 z-10">
             <div class="flex flex-col gap-6">
                 <!-- Search Bar -->
                 <div class="relative">
-                    <i class="fas fa-search absolute left-4 top-3.5 text-gray-400 text-lg"></i>
+                    <i class="fas fa-search absolute left-4 top-3.5 text-text-muted text-lg"></i>
                     <input type="text" id="searchInput" placeholder="Search by item name or code..." 
-                           class="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-chocolate/20 focus:border-chocolate transition-all text-sm">
+                           class="w-full pl-12 pr-4 py-3 bg-white border border-border-soft rounded-xl focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all text-sm placeholder-text-muted shadow-sm">
                 </div>
                 
                 <!-- Category Dropdown -->
                 <div>
                     <div class="flex items-center justify-between mb-2 px-1">
-                        <label for="categorySelect" class="text-xs font-bold text-gray-400 uppercase tracking-wider">Filter by Category</label>
-                        <span class="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded-full">{{ $categories->count() ?? 0 }} Categories</span>
+                        <label for="categorySelect" class="text-xs font-bold text-text-muted uppercase tracking-wider">Filter by Category</label>
+                        <span class="text-[10px] text-text-muted bg-caramel/10 text-caramel px-2 py-1 rounded-full">{{ $categories->count() ?? 0 }} Categories</span>
                     </div>
                     
                     <div class="relative">
                         <select id="categorySelect" onchange="filterItems(this.value)" 
-                                class="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-chocolate focus:ring-1 focus:ring-chocolate transition-all cursor-pointer font-medium text-sm shadow-sm">
+                                class="w-full appearance-none bg-white border border-border-soft text-text-dark py-3 px-4 pr-8 rounded-xl leading-tight focus:outline-none focus:bg-white focus:border-caramel focus:ring-2 focus:ring-caramel/20 transition-all cursor-pointer font-medium text-sm shadow-sm hover:shadow-md">
                             <option value="all">All Items ({{ count($items ?? []) }})</option>
                             @if(isset($categories) && count($categories) > 0)
                                 @foreach($categories as $category)
@@ -33,10 +33,10 @@
                                 @endforeach
                             @endif
                         </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-text-muted">
                             <i class="fas fa-chevron-down text-xs"></i>
                         </div>
-                        <div class="mt-1 text-xs text-gray-500">
+                        <div class="mt-1 text-xs text-text-muted">
                             Total Categories: {{ count($categories ?? []) }} | Items: {{ count($items ?? []) }}
                         </div>
                     </div>
@@ -45,27 +45,27 @@
         </div>
 
         <!-- Items Grid (Scrollable) -->
-        <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50 scrollbar-thin scrollbar-thumb-gray-200">
-            <div id="itemsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+        <div class="flex-1 overflow-y-auto p-6 bg-cream-bg/30 custom-scrollbar">
+            <div id="itemsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 @if(isset($items) && count($items) > 0)
                     @foreach($items as $item)
-                    <div class="item-card bg-white p-5 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-chocolate/30 transition-all duration-200 group flex flex-col h-full" 
+                    <div class="item-card bg-white p-6 rounded-2xl border border-border-soft shadow-sm hover:shadow-lg hover:border-caramel/30 transition-all duration-300 group flex flex-col h-full hover:-translate-y-1"
                          data-category-id="{{ \App\Models\Category::where('name', $item['category'])->first()->id ?? '' }}" 
                          data-category="{{ $item['category'] ?? '' }}" 
                          data-name="{{ strtolower($item['name'] ?? '') }}"
                          data-code="{{ strtolower($item['item_code'] ?? '') }}">
                         
                         <!-- Header -->
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="flex items-start gap-3">
-                                <div class="w-12 h-12 rounded-xl {{ getCategoryIconClass($item['category'] ?? '') }} flex items-center justify-center text-{{ getCategoryIconColor($item['category'] ?? '') }}-600 shadow-inner">
-                                    <i class="{{ getCategoryIcon($item['category'] ?? '') }} text-xl"></i>
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-start gap-4">
+                                <div class="w-14 h-14 rounded-xl {{ getCategoryIconClass($item['category'] ?? '') }} flex items-center justify-center text-{{ getCategoryIconColor($item['category'] ?? '') }}-600 shadow-inner ring-1 ring-white">
+                                    <i class="{{ getCategoryIcon($item['category'] ?? '') }} text-2xl"></i>
                                 </div>
-                                <div>
-                                    <h3 class="font-bold text-gray-800 leading-tight text-base group-hover:text-chocolate transition-colors line-clamp-2" title="{{ $item['name'] ?? '' }}">
+                                <div class="flex-1 min-w-0">
+                                    <h3 class="font-bold text-text-dark leading-tight text-base group-hover:text-caramel transition-colors line-clamp-2" title="{{ $item['name'] ?? '' }}">
                                         {{ $item['name'] ?? 'Unknown Item' }}
                                     </h3>
-                                    <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                                    <span class="inline-flex items-center mt-2 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-caramel/10 text-caramel border border-caramel/20">
                                         {{ $item['item_code'] ?? 'N/A' }}
                                     </span>
                                 </div>
@@ -73,37 +73,37 @@
                         </div>
                         
                         <!-- Details -->
-                        <div class="mt-auto pt-4 space-y-3">
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="text-gray-500">Category</span>
-                                <span class="font-medium text-gray-700 truncate max-w-[100px]">{{ $item['category'] ?? 'N/A' }}</span>
+                        <div class="mt-auto pt-4 space-y-4">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-text-muted font-medium">Category</span>
+                                <span class="font-bold text-text-dark truncate max-w-[120px]" title="{{ $item['category'] ?? 'N/A' }}">{{ $item['category'] ?? 'N/A' }}</span>
                             </div>
                             
-                            <div class="flex items-center justify-between text-xs">
-                                <span class="text-gray-500">Current Stock</span>
-                                <span class="{{ $item['stock_class'] ?? 'text-gray-500' }} font-bold bg-white px-2 py-0.5 rounded border border-gray-100 shadow-sm">
+                            <div class="flex items-center justify-between text-sm">
+                                <span class="text-text-muted font-medium">Current Stock</span>
+                                <span class="{{ $item['stock_class'] ?? 'text-text-muted' }} font-bold bg-white px-3 py-1.5 rounded-lg border border-border-soft shadow-sm">
                                     {{ number_format($item['current_stock'] ?? 0, 3) }} {{ $item['unit'] ?? '' }}
                                 </span>
                             </div>
 
                             <!-- Add Button -->
                             <button onclick="addToCart({{ $item['id'] ?? 0 }}, '{{ addslashes($item['name'] ?? '') }}', '{{ $item['unit'] ?? '' }}', {{ $item['cost_price'] ?? 0 }})" 
-                                    class="w-full mt-2 bg-white border-2 border-gray-100 text-gray-700 hover:bg-chocolate hover:text-white hover:border-chocolate px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 active:scale-95">
+                                    class="w-full mt-4 bg-gradient-to-r from-caramel to-caramel-dark text-white hover:from-caramel-dark hover:to-chocolate px-6 py-3 rounded-xl text-sm font-bold transition-all duration-300 flex items-center justify-center gap-2 active:scale-95 shadow-md hover:shadow-lg">
                                 <i class="fas fa-plus text-xs"></i> Add to Request
                             </button>
                         </div>
                     </div>
                     @endforeach
                 @else
-                    <div class="col-span-full flex flex-col items-center justify-center py-12 text-center">
-                        <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                            <i class="fas fa-box text-3xl text-gray-400"></i>
+                    <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                        <div class="w-24 h-24 bg-caramel/10 rounded-full flex items-center justify-center mb-6 ring-4 ring-caramel/20">
+                            <i class="fas fa-box text-4xl text-caramel"></i>
                         </div>
-                        <h3 class="text-lg font-bold text-gray-900">No Items Available</h3>
-                        <p class="text-gray-500 text-sm mt-1 max-w-xs mx-auto">There are no items available for requisition at the moment.</p>
+                        <h3 class="text-xl font-bold text-text-dark">No Items Available</h3>
+                        <p class="text-text-muted text-sm mt-2 max-w-sm mx-auto">There are no items available for requisition at the moment.</p>
                         <button onclick="window.location.reload()" 
-                                class="mt-4 text-chocolate font-bold text-sm hover:underline">
-                            Refresh Page
+                                class="mt-6 text-caramel font-bold text-sm hover:text-caramel-dark hover:underline transition-colors">
+                            <i class="fas fa-refresh mr-2"></i>Refresh Page
                         </button>
                     </div>
                 @endif
@@ -111,46 +111,55 @@
 
             <!-- No Results Message -->
             <div id="noResults" class="hidden h-full flex flex-col items-center justify-center text-center py-12">
-                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <i class="fas fa-search text-3xl text-gray-400"></i>
+                <div class="w-20 h-20 bg-caramel/10 rounded-full flex items-center justify-center mb-4 ring-4 ring-caramel/20">
+                    <i class="fas fa-search text-3xl text-caramel"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900">No items found</h3>
-                <p class="text-gray-500 text-sm mt-1 max-w-xs mx-auto">We couldn't find any items matching your search or selected category.</p>
+                <h3 class="text-lg font-bold text-text-dark">No items found</h3>
+                <p class="text-text-muted text-sm mt-1 max-w-xs mx-auto">We couldn't find any items matching your search or selected category.</p>
                 <button onclick="filterItems('all'); document.getElementById('searchInput').value = ''; document.getElementById('categorySelect').value = 'all';" 
-                        class="mt-4 text-chocolate font-bold text-sm hover:underline">
-                    Reset Filters
+                        class="mt-4 text-caramel font-bold text-sm hover:text-caramel-dark hover:underline transition-colors">
+                    <i class="fas fa-undo mr-2"></i>Reset Filters
                 </button>
             </div>
         </div>
     </div>
 
     {{-- 2. CART SECTION (Right Sidebar) --}}
-    <div class="w-full lg:w-96 bg-white border border-gray-200 rounded-2xl shadow-xl flex flex-col h-full overflow-hidden">
+    <div class="w-full lg:w-96 bg-white border border-border-soft rounded-2xl shadow-xl flex flex-col h-full overflow-hidden hover:shadow-2xl transition-shadow duration-300">
         <form id="requisitionForm" action="{{ route('employee.requisitions.store') }}" method="POST" class="flex flex-col h-full">
             @csrf
             
             <!-- Cart Header -->
-            <div class="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex justify-between items-center">
+            <div class="p-6 border-b border-border-soft bg-gradient-to-r from-caramel/5 to-white flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <div class="relative">
-                        <i class="fas fa-shopping-cart text-chocolate text-xl"></i>
-                        <span class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-[10px] shadow-sm ring-2 ring-white" id="cartCount">0</span>
+                        <div class="w-12 h-12 bg-gradient-to-br from-caramel to-chocolate rounded-xl flex items-center justify-center shadow-md">
+                            <i class="fas fa-shopping-cart text-white text-lg"></i>
+                        </div>
+                        <span id="cartCount" class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-[10px] shadow-sm ring-2 ring-white">0</span>
                     </div>
-                    <h2 class="font-bold text-gray-900">Requisition Cart</h2>
+                    <div>
+                        <h2 class="font-bold text-text-dark text-lg">Requisition Cart</h2>
+                        <p class="text-xs text-text-muted">Selected items for request</p>
+                    </div>
                 </div>
-                <button type="button" onclick="clearCart()" class="text-xs text-gray-400 hover:text-red-500 font-semibold transition-colors flex items-center gap-1">
+                <button type="button" onclick="clearCart()" class="text-xs text-text-muted hover:text-red-500 font-semibold transition-colors flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-red-50">
                     <i class="fas fa-trash-alt"></i> Clear
                 </button>
             </div>
 
             <!-- Cart Items (Scrollable Area) -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50/30 scrollbar-thin scrollbar-thumb-gray-200" id="cartContainer">
-                <div id="emptyCartMessage" class="flex flex-col items-center justify-center h-full py-10 text-center">
-                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                        <i class="fas fa-basket-shopping text-2xl text-gray-300"></i>
+            <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-cream-bg/20 custom-scrollbar" id="cartContainer">
+                <div id="emptyCartMessage" class="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <div class="w-20 h-20 bg-caramel/10 rounded-full flex items-center justify-center mb-4 ring-4 ring-caramel/20">
+                        <i class="fas fa-basket-shopping text-3xl text-caramel"></i>
                     </div>
-                    <p class="text-gray-900 font-medium">Your cart is empty</p>
-                    <p class="text-gray-400 text-xs mt-1 max-w-[200px]">Select items from the catalog on the left to build your request.</p>
+                    <h3 class="text-lg font-bold text-text-dark mb-2">Your cart is empty</h3>
+                    <p class="text-text-muted text-sm max-w-[220px] leading-relaxed">Select items from the catalog on the left to build your request.</p>
+                    <div class="mt-4 flex items-center gap-2 text-xs text-caramel">
+                        <i class="fas fa-lightbulb"></i>
+                        <span class="font-medium">Tip: Use search and filters to find items quickly</span>
+                    </div>
                 </div>
             </div>
 
@@ -159,33 +168,33 @@
             <input type="hidden" name="department" value="{{ $department }}">
 
             <!-- Cart Footer (Fixed at bottom) -->
-            <div class="p-5 border-t border-gray-100 bg-white z-10 space-y-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <div class="p-6 border-t border-border-soft bg-gradient-to-t from-white to-cream-bg/30 z-10 space-y-5 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 
                 <!-- Info Summary -->
-                <div class="bg-blue-50 rounded-xl p-3 border border-blue-100 flex justify-between items-center text-xs">
+                <div class="bg-gradient-to-r from-caramel/5 to-white rounded-xl p-4 border border-caramel/20 flex justify-between items-center">
                     <div>
-                        <span class="text-blue-600 font-bold block">Department</span>
-                        <span class="text-blue-800">{{ $department }}</span>
+                        <span class="text-caramel font-bold block text-sm">Department</span>
+                        <span class="text-text-dark font-bold">{{ $department }}</span>
                     </div>
                     <div class="text-right">
-                        <span class="text-blue-600 font-bold block">Total Items</span>
-                        <span class="text-blue-800 font-bold text-sm" id="totalItems">0</span>
+                        <span class="text-caramel font-bold block text-sm">Total Items</span>
+                        <span class="text-text-dark font-bold text-lg" id="totalItems">0</span>
                     </div>
                 </div>
 
                 <!-- Notes Input -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                    <label class="block text-xs font-bold text-text-muted uppercase tracking-wide mb-2">
                         Request Purpose / Notes <span class="text-red-400">*</span>
                     </label>
-                    <textarea name="purpose" rows="2" 
-                              class="w-full border-gray-200 bg-gray-50 rounded-xl text-sm focus:ring-2 focus:ring-chocolate/20 focus:border-chocolate focus:bg-white transition-all resize-none p-3 placeholder-gray-400" 
+                    <textarea name="purpose" rows="3" 
+                              class="w-full border border-border-soft bg-white rounded-xl text-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all resize-none p-3 placeholder-text-muted shadow-sm hover:shadow-md" 
                               placeholder="e.g., Restocking for weekend production..." required></textarea>
                 </div>
                 
                 <!-- Submit Button -->
                 <button type="submit" id="submitBtn" disabled 
-                        class="w-full py-3.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm">
+                        class="w-full py-4 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm">
                     <span>Submit Request</span>
                     <i class="fas fa-paper-plane"></i>
                 </button>
@@ -292,9 +301,23 @@ document.getElementById('confirmBtn').addEventListener('click', function() {
     closeConfirmModal();
 });
 
-// Load cart from session/localStorage on page load
+// Initialize cart - clear for fresh start or load existing session
 document.addEventListener('DOMContentLoaded', function() {
-    loadCartFromStorage();
+    // Check if this is a new session (no existing cart timestamp)
+    const cartTimestamp = localStorage.getItem('requisition_cart_timestamp');
+    const currentTime = Date.now();
+    
+    // Clear cart if it's been more than 30 minutes or no timestamp exists
+    if (!cartTimestamp || (currentTime - parseInt(cartTimestamp)) > 1800000) {
+        cart = [];
+        localStorage.removeItem('requisition_cart');
+    } else {
+        loadCartFromStorage();
+    }
+    
+    // Update timestamp for current session
+    localStorage.setItem('requisition_cart_timestamp', currentTime.toString());
+    
     updateCartDisplay();
 });
 
@@ -387,7 +410,7 @@ function addToCart(itemId, itemName, unit, costPrice) {
     
     if (btn) {
         btn.innerHTML = '<i class="fas fa-check-circle"></i> Added!';
-        btn.className = 'w-full mt-2 bg-green-500 text-white border-2 border-green-500 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md transform scale-105';
+        btn.className = 'w-full mt-4 bg-green-500 text-white border-2 border-green-500 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-md transform scale-105';
         
         setTimeout(() => {
             btn.innerHTML = originalContent;
@@ -407,65 +430,90 @@ function updateCartDisplay() {
     const totalItems = document.getElementById('totalItems');
     const submitBtn = document.getElementById('submitBtn');
     
-    // Update counters
-    cartCount.textContent = cart.length;
+    // Update counters with null checks
+    if (cartCount) {
+        cartCount.textContent = cart.length;
+    }
     // Count total individual units, not just lines
     const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
-    totalItems.textContent = totalQuantity;
+    if (totalItems) {
+        totalItems.textContent = totalQuantity;
+    }
     
     // Enable/Disable Submit Button
-    if (cart.length > 0) {
-        submitBtn.disabled = false;
-        submitBtn.className = 'w-full py-3.5 bg-gradient-to-r from-chocolate to-[#8B4513] text-white font-bold rounded-xl hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 shadow-md';
-    } else {
-        submitBtn.disabled = true;
-        submitBtn.className = 'w-full py-3.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all flex items-center justify-center gap-2';
+    if (submitBtn) {
+        if (cart.length > 0) {
+            submitBtn.disabled = false;
+            submitBtn.className = 'w-full py-4 bg-gradient-to-r from-caramel to-caramel-dark text-white font-bold rounded-xl hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2 shadow-md';
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.className = 'w-full py-4 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-sm';
+        }
     }
     
     // Render Cart Items
-    cartContainer.innerHTML = '';
-    
-    if (cart.length === 0) {
-        // Show empty cart message
-        const emptyCartHTML = `
-            <div class="flex flex-col items-center justify-center h-full py-10 text-center">
-                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
-                    <i class="fas fa-basket-shopping text-2xl text-gray-300"></i>
+    if (cartContainer) {
+        cartContainer.innerHTML = '';
+        
+        if (cart.length === 0) {
+            // Show empty cart message
+            const emptyCartHTML = `
+                <div class="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <div class="w-20 h-20 bg-caramel/10 rounded-full flex items-center justify-center mb-4 ring-4 ring-caramel/20">
+                        <i class="fas fa-basket-shopping text-3xl text-caramel"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-text-dark mb-2">Your cart is empty</h3>
+                    <p class="text-text-muted text-sm max-w-[220px] leading-relaxed">Select items from the catalog on the left to build your request.</p>
+                    <div class="mt-4 flex items-center gap-2 text-xs text-caramel">
+                        <i class="fas fa-lightbulb"></i>
+                        <span class="font-medium">Tip: Use search and filters to find items quickly</span>
+                    </div>
                 </div>
-                <p class="text-gray-900 font-medium">Your cart is empty</p>
-                <p class="text-gray-400 text-xs mt-1 max-w-[200px]">Select items from the catalog on the left to build your request.</p>
-            </div>
-        `;
-        cartContainer.innerHTML = emptyCartHTML;
-        return;
+            `;
+            cartContainer.innerHTML = emptyCartHTML;
+            return;
+        }
+        
+        cart.forEach((item, index) => {
+            const cartItem = document.createElement('div');
+            cartItem.className = 'bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:border-chocolate/30 hover:shadow-md transition-all duration-200 group';
+            cartItem.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <h4 class="text-sm font-bold text-gray-800 leading-tight pr-2 line-clamp-2" title="${item.name}">${item.name}</h4>
+                    <button type="button" onclick="removeFromCart(${index})" class="text-gray-300 hover:text-red-500 transition-colors p-1 -mr-1 -mt-1 rounded-full hover:bg-red-50">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+                        ${item.unit}
+                    </div>
+                    <div class="flex items-center bg-white border-2 border-gray-200 rounded-xl focus-within:border-chocolate focus-within:ring-2 focus-within:ring-chocolate/20 transition-all">
+                        <button type="button" onclick="updateQuantity(${index}, -1)" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-chocolate hover:bg-chocolate/5 rounded-l-xl transition-colors">
+                            <i class="fas fa-minus text-xs"></i>
+                        </button>
+                        <input type="number" 
+                               value="${item.quantity}" 
+                               min="1" 
+                               step="0.1"
+                               onchange="updateQuantityDirect(${index}, this.value)"
+                               class="w-16 text-center text-sm font-bold border-none bg-transparent focus:ring-0 p-2 text-gray-900"
+                               placeholder="1">
+                        <button type="button" onclick="updateQuantity(${index}, 1)" class="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-chocolate hover:bg-chocolate/5 rounded-r-xl transition-colors">
+                            <i class="fas fa-plus text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            cartContainer.appendChild(cartItem);
+        });
+        
+        // Update hidden input for form submission
+        const cartItemsInput = document.getElementById('cartItemsInput');
+        if (cartItemsInput) {
+            cartItemsInput.value = JSON.stringify(cart);
+        }
     }
-    
-    cart.forEach((item, index) => {
-        const cartItem = document.createElement('div');
-        cartItem.className = 'bg-white p-3 rounded-xl border border-gray-200 shadow-sm group hover:border-chocolate/30 transition-colors';
-        cartItem.innerHTML = `
-            <div class="flex justify-between items-start mb-2">
-                <h4 class="text-sm font-bold text-gray-800 leading-tight pr-2">${item.name}</h4>
-                <button type="button" onclick="removeFromCart(${index})" class="text-gray-300 hover:text-red-500 transition-colors p-1 -mr-1 -mt-1">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="flex items-center justify-between">
-                <div class="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
-                    ${item.unit}
-                </div>
-                <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg">
-                    <button type="button" onclick="updateQuantity(${index}, -1)" class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-chocolate hover:bg-white rounded-l-lg transition-colors">−</button>
-                    <input type="text" value="${item.quantity}" class="w-8 text-center text-sm font-bold border-none bg-transparent focus:ring-0 p-0 text-gray-900" readonly>
-                    <button type="button" onclick="updateQuantity(${index}, 1)" class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-chocolate hover:bg-white rounded-r-lg transition-colors">+</button>
-                </div>
-            </div>
-        `;
-        cartContainer.appendChild(cartItem);
-    });
-    
-    // Update hidden input for form submission
-    document.getElementById('cartItemsInput').value = JSON.stringify(cart);
 }
 
 // Update item quantity logic
@@ -479,6 +527,24 @@ function updateQuantity(index, change) {
     
     updateCartDisplay();
     saveCartToStorage();
+}
+
+// Direct quantity input update
+function updateQuantityDirect(index, value) {
+    const quantity = parseFloat(value);
+    
+    if (isNaN(quantity) || quantity <= 0) {
+        // Invalid input, remove item
+        removeFromCart(index);
+        return;
+    }
+    
+    cart[index].quantity = Math.round(quantity * 10) / 10; // Round to 1 decimal place
+    updateCartDisplay();
+    saveCartToStorage();
+    
+    // Show success feedback
+    showToast('Quantity Updated', `Set to ${cart[index].quantity} ${cart[index].unit}`);
 }
 
 // Remove item from cart
@@ -509,8 +575,21 @@ function loadCartFromStorage() {
     const saved = localStorage.getItem('requisition_cart');
     if (saved) {
         try {
-            cart = JSON.parse(saved);
+            const parsedCart = JSON.parse(saved);
+            if (Array.isArray(parsedCart)) {
+                // Validate cart items
+                cart = parsedCart.filter(item => 
+                    item && typeof item.id !== 'undefined' && 
+                    typeof item.name !== 'undefined' &&
+                    typeof item.quantity !== 'undefined' &&
+                    item.quantity > 0
+                );
+            } else {
+                cart = [];
+            }
         } catch (e) {
+            console.warn('Invalid cart data in localStorage, clearing...');
+            localStorage.removeItem('requisition_cart');
             cart = [];
         }
     }
@@ -535,16 +614,22 @@ document.getElementById('requisitionForm').addEventListener('submit', function(e
         `Are you sure you want to submit this requisition?\n\nItems: ${cart.length} different items\nTotal Quantity: ${cart.reduce((sum, item) => sum + item.quantity, 0)} units\nEstimated Value: ₱${totalValue.toFixed(2)}\n\nThis action will send your requisition for supervisor approval.`,
         function() {
             // Update hidden input one last time
-            document.getElementById('cartItemsInput').value = JSON.stringify(cart);
+            const cartItemsInput = document.getElementById('cartItemsInput');
+            if (cartItemsInput) {
+                cartItemsInput.value = JSON.stringify(cart);
+            }
             
             // Show loading state
             const submitBtn = document.getElementById('submitBtn');
-            submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Sending...';
-            submitBtn.disabled = true;
-            submitBtn.className = 'w-full py-3.5 bg-gray-800 text-white font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2';
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Sending...';
+                submitBtn.disabled = true;
+                submitBtn.className = 'w-full py-4 bg-gray-800 text-white font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2';
+            }
             
             // Clear storage so cart is empty on page reload/redirect
             localStorage.removeItem('requisition_cart');
+            localStorage.removeItem('requisition_cart_timestamp');
             
             // Submit the form
             document.getElementById('requisitionForm').submit();

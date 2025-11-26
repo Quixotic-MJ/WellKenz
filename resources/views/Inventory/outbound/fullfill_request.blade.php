@@ -240,7 +240,7 @@
                             </span>
                             @if($isApproved)
                                 <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Ready to Pick</span>
-                                <a href="{{ route('outbound.fulfill', ['expand' => $requisition->id]) }}" 
+                                <a href="{{ route('inventory.outbound.fulfill', ['expand' => $requisition->id]) }}" 
                                    class="text-chocolate hover:text-chocolate-dark font-bold text-sm">
                                     Expand <i class="fas fa-chevron-down ml-1"></i>
                                 </a>

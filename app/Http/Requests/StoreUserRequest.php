@@ -52,4 +52,16 @@ class StoreUserRequest extends FormRequest
             'employee_id.unique' => 'This employee ID is already in use.',
         ];
     }
+
+    /**
+     * Get custom attribute names for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'employee_id' => 'employee ID',
+        ];
+    }
 }

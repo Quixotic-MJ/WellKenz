@@ -674,6 +674,34 @@ class AdminController extends Controller
     }
 
     /**
+     * Get department and position options for user dropdowns.
+     */
+    public function getUserData()
+    {
+        // Predefined department options (excluding Sales as requested)
+        $departments = [
+            'Administration',
+            'Production', 
+            'Purchasing',
+            'Inventory'
+        ];
+
+        // Predefined position options
+        $positions = [
+            'Manager',
+            'Supervisor',
+            'Officer', 
+            'Staff',
+            'Assistant'
+        ];
+
+        return response()->json([
+            'departments' => $departments,
+            'positions' => $positions
+        ]);
+    }
+
+    /**
      * Create a new user.
      */
     public function createUser(StoreUserRequest $request)

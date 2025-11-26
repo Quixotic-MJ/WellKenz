@@ -62,6 +62,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::put('/items/{item}', [AdminController::class, 'updateItem'])->name('items.update');
     Route::delete('/items/{item}', [AdminController::class, 'deleteItem'])->name('items.destroy');
     Route::get('/items/data', [AdminController::class, 'getItemData'])->name('items.data');
+    Route::get('/users/data', [AdminController::class, 'getUserData'])->name('users.data');
 
     // Categories Management
     Route::get('/categories', [AdminController::class, 'categories'])->name('categories.index');
@@ -143,6 +144,7 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
     Route::patch('/requisitions/{requisition}/approve', [SupervisorController::class, 'approveRequisition'])->name('requisitions.approve');
     Route::patch('/requisitions/{requisition}/reject', [SupervisorController::class, 'rejectRequisition'])->name('requisitions.reject');
     Route::patch('/requisitions/{requisition}/modify', [SupervisorController::class, 'modifyRequisitionQuantity'])->name('requisitions.modify');
+    Route::patch('/requisitions/{requisition}/modify-multi', [SupervisorController::class, 'modifyMultipleRequisitionItems'])->name('requisitions.modify-multi');
     Route::get('/requisitions/{requisition}/details', [SupervisorController::class, 'getRequisitionDetails'])->name('requisitions.details');
     
     // Purchase Request Actions

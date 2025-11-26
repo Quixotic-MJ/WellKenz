@@ -1,51 +1,8 @@
 @extends('Supervisor.layout.app')
 
 @section('content')
-<style>
-    /* Custom Scrollbar for Modal */
-    .modal-scroll::-webkit-scrollbar {
-        width: 8px;
-    }
-    .modal-scroll::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
-    }
-    .modal-scroll::-webkit-scrollbar-thumb {
-        background: #d1d5db;
-        border-radius: 4px;
-    }
-    .modal-scroll::-webkit-scrollbar-thumb:hover {
-        background: #9ca3af;
-    }
-    
-    /* Animation Classes */
-    .modal-backdrop {
-        transition: opacity 0.3s ease-out;
-        opacity: 0;
-        pointer-events: none;
-    }
-    .modal-backdrop.active {
-        opacity: 1;
-        pointer-events: auto;
-    }
-    .modal-panel {
-        transition: all 0.3s ease-out;
-        transform: scale(0.95) translateY(10px);
-        opacity: 0;
-    }
-    .modal-panel.active {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
-    
-    /* Z-Index Hierarchies */
-    .z-60 { z-index: 60; }
-    .z-70 { z-index: 70; }
-</style>
-
 <div class="space-y-6">
-
-    {{-- 1. HEADER & SUMMARY --}}
+    <!-- 1. HEADER & SUMMARY -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Requisition Approvals</h1>
@@ -61,32 +18,34 @@
         </div>
     </div>
 
-    {{-- 2. FILTERS --}}
+    <!-- 2. FILTERS -->
     <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
         <!-- Search -->
         <form method="GET" class="relative w-full md:w-96">
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-search text-gray-400"></i>
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
             </div>
-            <input type="text" name="search" value="{{ request('search') }}" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="Search by requester or item...">
+            <input type="text" name="search" value="{{ request('search') }}" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Search by requester or item...">
         </form>
 
         <!-- Filters -->
         <div class="flex items-center gap-3 w-full md:w-auto">
             <form method="GET" class="flex items-center gap-3 w-full md:w-auto">
                 <input type="hidden" name="search" value="{{ request('search') }}">
-                <select name="status" onchange="this.form.submit()" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
+                <select name="status" onchange="this.form.submit()" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     <option value="pending" {{ request('status', 'pending') == 'pending' ? 'selected' : '' }}>Status: Pending</option>
                     <option value="approved" {{ request('status') == 'approved' ? 'selected' : '' }}>Status: Approved</option>
                     <option value="rejected" {{ request('status') == 'rejected' ? 'selected' : '' }}>Status: Rejected</option>
                     <option value="all" {{ request('status') == 'all' ? 'selected' : '' }}>All History</option>
                 </select>
-                <input type="date" name="date" value="{{ request('date') }}" onchange="this.form.submit()" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
+                <input type="date" name="date" value="{{ request('date') }}" onchange="this.form.submit()" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
             </form>
         </div>
     </div>
 
-    {{-- 3. REQUISITIONS TABLE --}}
+    <!-- 3. REQUISITIONS TABLE -->
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -120,11 +79,14 @@
                             $initials = substr($initials, 0, 2);
                         @endphp
 
-                        <tr class="hover:bg-gray-50 transition-colors {{ $hasHighRequest && !$hasSufficientStock ? 'hover:bg-red-50 border-l-4 border-l-red-400' : '' }}">
+                        <tr class="hover:bg-gray-50 transition-colors {{ $hasHighRequest && !$hasSufficientStock ? 'bg-red-50 border-l-4 border-l-red-400' : '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-bold text-gray-900">#{{ $requisition->requisition_number }}</div>
                                 <div class="text-xs text-gray-500 mt-1">
-                                    <i class="far fa-clock mr-1"></i> {{ $requisition->created_at->diffForHumans() }}
+                                    <svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    {{ $requisition->created_at->diffForHumans() }}
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -143,16 +105,20 @@
                                     <div class="text-sm text-gray-900 font-medium">{{ $mainItem->item->name ?? 'Unknown Item' }}</div>
                                     <div class="flex items-center gap-2 mt-1 text-xs">
                                         <span class="text-gray-500">Requested: 
-                                            <span class="font-bold {{ $hasHighRequest && !$hasSufficientStock ? 'text-red-600' : 'text-chocolate' }}">
+                                            <span class="font-bold {{ $hasHighRequest && !$hasSufficientStock ? 'text-red-600' : 'text-blue-600' }}">
                                                 {{ number_format($requestedQty, 1) }} {{ $mainItem->item->unit->symbol ?? '' }}
                                             </span>
                                         </span>
                                         <span class="text-gray-400">|</span>
                                         <span class="text-gray-500">Stock: {{ number_format($currentStock, 1) }} {{ $mainItem->item->unit->symbol ?? '' }}</span>
                                         @if($hasSufficientStock)
-                                            <span class="text-green-600"><i class="fas fa-check-circle"></i></span>
+                                            <svg class="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                            </svg>
                                         @else
-                                            <span class="text-red-600 font-bold" title="High Request"><i class="fas fa-exclamation-triangle"></i></span>
+                                            <svg class="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                            </svg>
                                         @endif
                                     </div>
                                     @if($hasHighRequest && !$hasSufficientStock)
@@ -171,11 +137,17 @@
                                             @endphp
                                             @if($itemCount <= $maxIndividualButtons)
                                                 <div class="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded font-medium">
-                                                    <i class="fas fa-edit mr-1"></i>Individual modify
+                                                    <svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                    </svg>
+                                                    Individual modify
                                                 </div>
                                             @else
                                                 <div class="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-medium">
-                                                    <i class="fas fa-list mr-1"></i>Bulk modify ({{ $itemCount }} items)
+                                                    <svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                                    </svg>
+                                                    Bulk modify ({{ $itemCount }} items)
                                                 </div>
                                             @endif
                                         </div>
@@ -205,51 +177,20 @@
                                         title="Approve {{ !$hasSufficientStock ? '(Insufficient Stock)' : '' }} | Stock: {{ $currentStock }} | Requested: {{ $requestedQty }}"
                                         {{ !$hasSufficientStock ? 'disabled' : '' }}
                                     >
-                                        <i class="fas fa-check"></i>
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
                                     </button>
                                     
-                                    <!-- Item modification buttons - adaptive based on item count -->
-                                    @php
-                                        $itemCount = $requisition->requisitionItems->count();
-                                        $maxIndividualButtons = 5; // Show individual buttons for up to 5 items
-                                    @endphp
-                                    
-                                    @if($itemCount <= $maxIndividualButtons)
-                                        <!-- Individual item modify buttons (for small number of items) -->
-                                        @foreach($requisition->requisitionItems as $itemIndex => $item)
-                                            @php
-                                                $itemStockRecord = $item->currentStockRecord;
-                                                $itemCurrentStock = $itemStockRecord ? $itemStockRecord->current_quantity : 0;
-                                                $itemStockPercentage = $itemCurrentStock > 0 ? round(($item->quantity_requested / $itemCurrentStock) * 100, 1) : 0;
-                                                $itemHasSufficientStock = $itemCurrentStock >= $item->quantity_requested && $itemCurrentStock > 0;
-                                            @endphp
-                                            <button 
-                                                onclick="RequisitionManager.openModifyModal({{ $requisition->id }}, {{ $item->id }}, '{{ $item->item->name ?? 'Unknown Item' }}', {{ $item->quantity_requested }}, '{{ $item->item->unit->symbol ?? '' }}', {{ $itemCurrentStock }})" 
-                                                class="text-amber-600 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded transition text-xs" 
-                                                title="Modify: {{ $item->item->name ?? 'Unknown Item' }} ({{ $item->quantity_requested }} {{ $item->item->unit->symbol ?? '' }})"
-                                            >
-                                                <i class="fas fa-edit"></i> {{ $itemIndex + 1 }}
-                                            </button>
-                                        @endforeach
-                                    @else
-                                        <!-- Dropdown for many items -->
-                                        <div class="relative inline-block">
-                                            <button 
-                                                onclick="RequisitionManager.openMultiItemModifyModal({{ $requisition->id }})" 
-                                                class="text-amber-600 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1 rounded transition" 
-                                                title="Modify Items ({{ $itemCount }} items)"
-                                            >
-                                                <i class="fas fa-edit"></i> {{ $itemCount }} Items
-                                            </button>
-                                        </div>
-                                    @endif
-                                    
                                     <button 
-                                        onclick="RequisitionManager.viewDetails({{ $requisition->id }})"
+                                        onclick="RequisitionManager.openCombinedModal({{ $requisition->id }})"
                                         class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-1 rounded transition" 
-                                        title="View Details"
+                                        title="View & Modify Items"
                                     >
-                                        <i class="fas fa-eye"></i>
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                        </svg>
+                                        View & Modify
                                     </button>
                                     
                                     <button 
@@ -257,7 +198,9 @@
                                         class="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1 rounded transition" 
                                         title="Reject"
                                     >
-                                        <i class="fas fa-times"></i>
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                        </svg>
                                     </button>
                                 </div>
                             </td>
@@ -266,7 +209,9 @@
                         <tr>
                             <td colspan="5" class="px-6 py-12 text-center">
                                 <div class="text-gray-500">
-                                    <i class="fas fa-inbox text-4xl mb-4"></i>
+                                    <svg class="mx-auto h-12 w-12 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                                    </svg>
                                     <p class="text-lg font-medium">No requisitions found</p>
                                     <p class="text-sm">There are no requisitions matching your current filter criteria.</p>
                                 </div>
@@ -298,114 +243,83 @@
             </div>
         @endif
     </div>
-
 </div>
 
-<!-- MODIFY QUANTITY MODAL -->
-<div id="modifyModalBackdrop" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm transition-opacity" onclick="RequisitionManager.closeModifyModal()"></div>
+<!-- COMBINED MODAL -->
+<div id="combinedModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-60 transition-opacity" onclick="RequisitionManager.closeModal()"></div>
+
+        <!-- Spacer for medium screens -->
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
 
-        <div id="modifyModalPanel" class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full modal-panel">
-            
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-edit text-amber-600"></i>
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
+            <!-- Modal header -->
+            <div class="bg-white px-6 pt-6 pb-4">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                        <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                        </svg>
                     </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-bold text-gray-900" id="modal-title">Modify Requisition</h3>
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-500" id="modifyModalText">
-                                Adjusting quantity for <strong>Item Name</strong> in request <strong>REQ-XXXX</strong>.
-                            </p>
-                        </div>
-
-                        <form id="modifyForm">
-                            @csrf
-                            <input type="hidden" id="requisitionItemId" name="item_id">
-                            
-                            <div class="mt-4 space-y-4">
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs font-bold text-gray-500 uppercase">Requested Qty</label>
-                                        <div class="mt-1 text-lg font-medium text-gray-900 line-through text-red-400" id="originalQtyDisplay">50 kg</div>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-bold text-chocolate uppercase">Approved Qty</label>
-                                        <div class="mt-1 flex rounded-md shadow-sm">
-                                            <input type="number" id="newQtyInput" name="new_quantity" step="0.001" min="0.001" class="flex-1 min-w-0 block w-full px-3 py-2 rounded-l-md border border-gray-300 focus:ring-chocolate focus:border-chocolate sm:text-sm font-bold text-chocolate" value="50">
-                                            <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm" id="unitDisplay">kg</span>
-                                        </div>
-                                        <div id="stockWarning" class="text-xs text-red-600 mt-1 hidden">
-                                            Warning: Current stock is only <span id="currentStockDisplay">0</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Reason for Modification <span class="text-red-500">*</span></label>
-                                    <select name="reason" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                                        <option value="">Select a reason</option>
-                                        <option>Insufficient Stock</option>
-                                        <option>Rationing (High Demand)</option>
-                                        <option>Policy Limit Exceeded</option>
-                                        <option>Quality Issues</option>
-                                        <option>Other</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Remarks</label>
-                                    <textarea name="remarks" rows="2" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="e.g. Reduced to conserve stock for weekend."></textarea>
-                                </div>
-                            </div>
-                        </form>
+                    <div class="ml-4">
+                        <h3 class="text-lg leading-6 font-bold text-gray-900" id="modalTitle">Requisition Details</h3>
+                        <p class="text-sm text-gray-500" id="modalSubtitle">Loading requisition information...</p>
+                    </div>
+                    <div class="ml-auto">
+                        <button onclick="RequisitionManager.closeModal()" class="text-gray-400 hover:text-gray-600">
+                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-3">
-                <button type="button" onclick="RequisitionManager.submitModifyForm()" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:w-auto sm:text-sm">
-                    Confirm & Approve
-                </button>
-                <button type="button" onclick="RequisitionManager.closeModifyModal()" class="w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+            <!-- Modal content -->
+            <div class="bg-white px-6 pb-6">
+                <!-- Requisition Overview -->
+                <div id="requisitionOverview" class="mt-6">
+                    <!-- Overview will be loaded here -->
+                </div>
 
-<!-- REQUISITION DETAILS MODAL -->
-<div id="detailsModalBackdrop" class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm transition-opacity" onclick="RequisitionManager.closeDetailsModal()"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-
-        <div id="detailsModalPanel" class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full modal-panel">
-            
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-file-invoice text-blue-600"></i>
-                    </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-bold text-gray-900" id="detailsModalTitle">Requisition Details</h3>
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-500" id="detailsModalSubtitle">Loading requisition information...</p>
+                <!-- Items Section -->
+                <div class="mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-bold text-gray-900">Items for Modification</h4>
+                        <div class="text-sm text-gray-500">
+                            <span id="modifiedCount">0</span> of <span id="totalItemsCount">0</span> items modified
                         </div>
                     </div>
-                </div>
-
-                <div class="mt-6" id="requisitionDetailsContent">
-                    <!-- Details will be loaded here via JavaScript -->
+                    <div id="itemsContainer" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- Items will be loaded here -->
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="RequisitionManager.closeDetailsModal()" class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
+            <!-- Modal footer -->
+            <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row gap-3 border-t border-gray-200">
+                <button type="button" onclick="RequisitionManager.approveRequisition()" 
+                        class="inline-flex justify-center items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Approve Requisition
+                </button>
+                <button type="button" onclick="RequisitionManager.rejectRequisition()" 
+                        class="inline-flex justify-center items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                    Reject Requisition
+                </button>
+                <button type="button" onclick="RequisitionManager.closeModal()" 
+                        class="inline-flex justify-center items-center px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
                     Close
                 </button>
             </div>
@@ -413,48 +327,26 @@
     </div>
 </div>
 
-{{-- CONFIRMATION MODAL --}}
-<div id="confirmationModalBackdrop" class="fixed inset-0 z-70 flex items-center justify-center px-4 sm:px-6 modal-backdrop" aria-hidden="true">
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="RequisitionManager.closeConfirm()"></div>
-    
-    <div id="confirmationModalPanel" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col modal-panel overflow-hidden">
-        <div class="p-6 text-center">
-            <div id="confirmIconBg" class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
-                <i id="confirmIcon" class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+<!-- NOTIFICATION TOAST -->
+<div id="notificationToast" class="hidden fixed top-4 right-4 z-50 max-w-sm w-full bg-white rounded-lg shadow-lg border border-gray-200">
+    <div class="p-4">
+        <div class="flex items-start">
+            <div id="toastIcon" class="flex-shrink-0">
+                <svg class="h-6 w-6 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2" id="confirmTitle">Confirmation</h3>
-            <p class="text-sm text-gray-500" id="confirmMessage">Are you sure you want to proceed?</p>
-        </div>
-        <div class="bg-gray-50 px-6 py-4 flex flex-col sm:flex-row-reverse gap-3">
-            <button type="button" id="confirmBtn"
-                    class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:w-auto sm:text-sm">
-                Confirm
-            </button>
-            <button type="button" onclick="RequisitionManager.closeConfirm()"
-                    class="w-full inline-flex justify-center rounded-xl border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:w-auto sm:text-sm">
-                Cancel
-            </button>
-        </div>
-    </div>
-</div>
-
-{{-- NOTIFICATION MODAL --}}
-<div id="notificationModalBackdrop" class="fixed inset-0 z-70 flex items-center justify-center px-4 sm:px-6 modal-backdrop" aria-hidden="true">
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="RequisitionManager.closeNotification()"></div>
-    
-    <div id="notificationModalPanel" class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm flex flex-col modal-panel overflow-hidden">
-        <div class="p-6 text-center">
-            <div id="notifIconBg" class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-green-100 mb-5">
-                <i id="notifIcon" class="fas fa-check text-2xl text-green-600"></i>
+            <div class="ml-3 w-0 flex-1">
+                <p id="toastTitle" class="text-sm font-medium text-gray-900">Success</p>
+                <p id="toastMessage" class="mt-1 text-sm text-gray-500">Operation completed successfully.</p>
             </div>
-            <h3 class="text-lg font-bold text-gray-900 mb-2" id="notifTitle">Success</h3>
-            <div class="text-sm text-gray-500 whitespace-pre-line" id="notifMessage">Operation successful.</div>
-        </div>
-        <div class="bg-gray-50 px-6 py-3">
-            <button type="button" id="notifBtn" onclick="RequisitionManager.closeNotification()"
-                    class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-gray-800 text-base font-medium text-white hover:bg-gray-900 focus:outline-none sm:text-sm">
-                Okay, got it
-            </button>
+            <div class="ml-4 flex-shrink-0 flex">
+                <button onclick="RequisitionManager.hideToast()" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -462,631 +354,458 @@
 <script>
 const RequisitionManager = {
     currentRequisitionId: null,
+    modifiedItems: new Map(),
     
-    // DOM Elements Cache
-    elements: {
-        modifyModal: {
-            backdrop: document.getElementById('modifyModalBackdrop'),
-            panel: document.getElementById('modifyModalPanel'),
-            text: document.getElementById('modifyModalText'),
-            origQty: document.getElementById('originalQtyDisplay'),
-            newQty: document.getElementById('newQtyInput'),
-            unit: document.getElementById('unitDisplay'),
-            itemId: document.getElementById('requisitionItemId'),
-            warning: document.getElementById('stockWarning'),
-            stock: document.getElementById('currentStockDisplay'),
-            form: document.getElementById('modifyForm')
-        },
-        detailsModal: {
-            backdrop: document.getElementById('detailsModalBackdrop'),
-            panel: document.getElementById('detailsModalPanel'),
-            title: document.getElementById('detailsModalTitle'),
-            subtitle: document.getElementById('detailsModalSubtitle'),
-            content: document.getElementById('requisitionDetailsContent')
-        },
-        confirmation: {
-            backdrop: document.getElementById('confirmationModalBackdrop'),
-            panel: document.getElementById('confirmationModalPanel'),
-            title: document.getElementById('confirmTitle'),
-            message: document.getElementById('confirmMessage'),
-            btn: document.getElementById('confirmBtn'),
-            icon: document.getElementById('confirmIcon'),
-            iconBg: document.getElementById('confirmIconBg')
-        },
-        notification: {
-            backdrop: document.getElementById('notificationModalBackdrop'),
-            panel: document.getElementById('notificationModalPanel'),
-            title: document.getElementById('notifTitle'),
-            message: document.getElementById('notifMessage'),
-            btn: document.getElementById('notifBtn'),
-            icon: document.getElementById('notifIcon'),
-            iconBg: document.getElementById('notifIconBg')
-        }
-    },
-
-    // ================= MODAL UTILITIES =================
-
-    showNotification(type, title, message, callback = null) {
-        const el = this.elements.notification;
+    // Show notification toast
+    showToast(type, title, message) {
+        const toast = document.getElementById('notificationToast');
+        const icon = document.getElementById('toastIcon');
+        const titleEl = document.getElementById('toastTitle');
+        const messageEl = document.getElementById('toastMessage');
         
-        el.title.textContent = title;
-        el.message.textContent = message;
+        titleEl.textContent = title;
+        messageEl.textContent = message;
         
-        // Style based on type
-        el.iconBg.className = 'mx-auto flex items-center justify-center h-14 w-14 rounded-full mb-5 transition-colors';
-        el.icon.className = 'text-2xl transition-colors fas';
+        // Set icon based on type
+        icon.innerHTML = type === 'success' 
+            ? '<svg class="h-6 w-6 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'
+            : '<svg class="h-6 w-6 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>';
         
-        if (type === 'success') {
-            el.iconBg.classList.add('bg-green-100');
-            el.icon.classList.add('fa-check', 'text-green-600');
-        } else if (type === 'error') {
-            el.iconBg.classList.add('bg-red-100');
-            el.icon.classList.add('fa-times', 'text-red-600');
-        } else if (type === 'warning') {
-            el.iconBg.classList.add('bg-amber-100');
-            el.icon.classList.add('fa-exclamation', 'text-amber-600');
-        }
-
-        el.btn.onclick = () => {
-            this.closeNotification();
-            if (callback) callback();
-        };
-
-        el.backdrop.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            el.backdrop.classList.add('active');
-            el.panel.classList.add('active');
-        });
-    },
-
-    closeNotification() {
-        const el = this.elements.notification;
-        el.backdrop.classList.remove('active');
-        el.panel.classList.remove('active');
+        toast.classList.remove('hidden');
+        
+        // Auto hide after 4 seconds
         setTimeout(() => {
-            el.backdrop.classList.add('hidden');
-        }, 300);
+            this.hideToast();
+        }, 4000);
     },
-
-    showConfirm(title, message, type, onConfirm) {
-        const el = this.elements.confirmation;
+    
+    hideToast() {
+        document.getElementById('notificationToast').classList.add('hidden');
+    },
+    
+    // Open combined modal
+    openCombinedModal(requisitionId) {
+        this.currentRequisitionId = requisitionId;
+        this.modifiedItems.clear();
         
-        el.title.textContent = title;
-        el.message.textContent = message;
+        const modal = document.getElementById('combinedModal');
+        modal.classList.remove('hidden');
         
-        // Style based on type (danger/info)
-        el.iconBg.className = 'mx-auto flex items-center justify-center h-16 w-16 rounded-full mb-6 transition-colors';
-        el.icon.className = 'text-2xl transition-colors fas';
+        // Load requisition details
+        this.loadRequisitionDetails(requisitionId);
+    },
+    
+    closeModal() {
+        document.getElementById('combinedModal').classList.add('hidden');
+        this.currentRequisitionId = null;
+        this.modifiedItems.clear();
+    },
+    
+    // Load requisition details via API
+    loadRequisitionDetails(requisitionId) {
+        const titleEl = document.getElementById('modalTitle');
+        const subtitleEl = document.getElementById('modalSubtitle');
+        const overviewEl = document.getElementById('requisitionOverview');
+        const itemsEl = document.getElementById('itemsContainer');
+        const totalCountEl = document.getElementById('totalItemsCount');
         
-        if (type === 'danger') {
-            el.iconBg.classList.add('bg-red-100');
-            el.icon.classList.add('fa-exclamation-triangle', 'text-red-600');
-            el.btn.className = 'w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:w-auto sm:text-sm';
-        } else {
-            el.iconBg.classList.add('bg-green-100');
-            el.icon.classList.add('fa-check', 'text-green-600');
-            el.btn.className = 'w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none sm:w-auto sm:text-sm';
-        }
-
-        // Reset button listeners
-        const newBtn = el.btn.cloneNode(true);
-        el.btn.parentNode.replaceChild(newBtn, el.btn);
-        this.elements.confirmation.btn = newBtn;
-
-        newBtn.addEventListener('click', () => {
-            // Optional: Loading state on button
-            newBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-            newBtn.disabled = true;
-            if (onConfirm) onConfirm();
-            this.closeConfirm();
-        });
-
-        el.backdrop.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            el.backdrop.classList.add('active');
-            el.panel.classList.add('active');
-        });
-    },
-
-    closeConfirm() {
-        const el = this.elements.confirmation;
-        el.backdrop.classList.remove('active');
-        el.panel.classList.remove('active');
-        setTimeout(() => {
-            el.backdrop.classList.add('hidden');
-            // Reset button state
-            el.btn.innerHTML = 'Confirm';
-            el.btn.disabled = false;
-        }, 300);
-    },
-
-    // ================= BUSINESS LOGIC =================
-
-    approve(requisitionId) {
-        this.showConfirm(
-            'Approve Requisition?',
-            'Are you sure you want to approve this requisition? Inventory will be deducted upon approval.',
-            'success',
-            () => this.performAction(requisitionId, 'approve')
-        );
-    },
-
-    reject(requisitionId) {
-        this.showConfirm(
-            'Reject Requisition?',
-            'Are you sure you want to reject this requisition? This action cannot be undone.',
-            'danger',
-            () => this.performAction(requisitionId, 'reject')
-        );
-    },
-
-    performAction(id, action) {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (!csrfToken) {
-            this.showNotification('error', 'System Error', 'CSRF token not found. Please refresh.');
-            return;
-        }
-
-        fetch(`/supervisor/requisitions/${id}/${action}`, {
-            method: 'PATCH',
-            headers: {
-                'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({}),
-        })
-        .then(response => response.json().then(data => ({ status: response.status, body: data })))
-        .then(({ status, body }) => {
-            if (body.success) {
-                const msg = action === 'approve' ? 'Requisition approved successfully!' : 'Requisition rejected successfully!';
-                this.showNotification('success', 'Completed', msg, () => location.reload());
-            } else {
-                this.showNotification('error', 'Error', body.error || 'An unknown error occurred.');
-            }
-        })
-        .catch(error => {
-            this.showNotification('error', 'Network Error', 'An error occurred while processing your request.');
-        });
-    },
-
-    // ================= MODIFY LOGIC =================
-
-    openMultiItemModifyModal(requisitionId) {
-        // For requisitions with many items, show a modal with all items listed
-        // This would typically fetch the requisition details via API
-        const el = this.elements.detailsModal;
+        // Show loading state
+        titleEl.textContent = 'Loading...';
+        subtitleEl.textContent = 'Please wait while we load the requisition details.';
+        overviewEl.innerHTML = '<div class="flex justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>';
+        itemsEl.innerHTML = '<div class="flex justify-center py-8"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>';
         
-        // Loading State
-        el.title.textContent = 'Modify Requisition Items';
-        el.subtitle.textContent = 'Select items to modify...';
-        el.content.innerHTML = '<div class="flex justify-center py-12"><i class="fas fa-circle-notch fa-spin text-4xl text-chocolate/50"></i></div>';
-        
-        el.backdrop.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            el.backdrop.classList.add('active');
-            el.panel.classList.add('active');
-        });
-
+        // Make API call
         fetch(`/supervisor/requisitions/${requisitionId}/details`, {
             method: 'GET',
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 'Accept': 'application/json',
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success && data.data) {
-                this.renderMultiItemModifyForm(data.data);
+                this.renderModal(data.data);
             } else {
-                throw new Error(data.error || 'Invalid response');
+                throw new Error(data.error || 'Failed to load requisition details');
             }
         })
         .catch(error => {
-            el.content.innerHTML = `
+            console.error('Error loading requisition:', error);
+            overviewEl.innerHTML = `
                 <div class="text-center py-8">
-                    <div class="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
-                    </div>
-                    <p class="text-red-800 font-medium">Failed to load items</p>
-                    <p class="text-sm text-red-600 mt-1">${error.message || 'Please check your connection.'}</p>
-                </div>
-            `;
-        });
-    },
-
-    renderMultiItemModifyForm(data) {
-        const el = this.elements.detailsModal;
-        el.title.textContent = `Modify Items - Requisition #${data.requisition_number}`;
-        el.subtitle.textContent = `Select individual items to modify (${data.total_items} items)`;
-
-        const itemsFormHtml = data.items.map(item => {
-            const stockStatus = item.can_fulfill_full ? 
-                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-check-circle mr-1"></i>In Stock</span>' :
-                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>Low Stock</span>';
-                
-            return `
-                <div class="border border-gray-200 rounded-lg p-4 mb-3">
-                    <div class="flex items-start justify-between">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <input type="checkbox" id="select_item_${item.item_id}" class="rounded border-gray-300 text-chocolate focus:ring-chocolate">
-                                <label for="select_item_${item.item_id}" class="text-sm font-medium text-gray-900 cursor-pointer">
-                                    ${item.item_name}
-                                </label>
-                                ${stockStatus}
-                            </div>
-                            <div class="grid grid-cols-3 gap-4 text-sm text-gray-600 ml-6">
-                                <div>
-                                    <span class="font-medium">Requested:</span> 
-                                    <span class="font-bold text-chocolate">${item.quantity_requested} ${item.unit_symbol}</span>
-                                </div>
-                                <div>
-                                    <span class="font-medium">Stock:</span> 
-                                    <span class="font-bold">${item.current_stock} ${item.unit_symbol}</span>
-                                </div>
-                                <div>
-                                    <span class="font-medium">Usage:</span> 
-                                    <span class="font-bold ${item.stock_percentage > 80 ? 'text-red-600' : 'text-gray-700'}">${item.stock_percentage}%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="ml-6 mt-3 grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700">New Quantity</label>
-                            <input type="number" id="new_qty_${item.item_id}" step="0.001" min="0" 
-                                   value="${item.quantity_requested}"
-                                   class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-chocolate focus:border-chocolate">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700">Reason</label>
-                            <select id="reason_${item.item_id}" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-chocolate focus:border-chocolate">
-                                <option value="">Select reason</option>
-                                <option value="Insufficient Stock">Insufficient Stock</option>
-                                <option value="Rationing (High Demand)">Rationing (High Demand)</option>
-                                <option value="Policy Limit Exceeded">Policy Limit Exceeded</option>
-                                <option value="Quality Issues">Quality Issues</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="ml-6 mt-3">
-                        <label class="block text-xs font-medium text-gray-700">Remarks</label>
-                        <textarea id="remarks_${item.item_id}" rows="2" 
-                                  class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:ring-chocolate focus:border-chocolate"
-                                  placeholder="Optional remarks..."></textarea>
-                    </div>
-                </div>
-            `;
-        }).join('');
-
-        el.content.innerHTML = `
-            <div class="space-y-4">
-                <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-info-circle text-amber-400"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-amber-800">
-                                Select the checkboxes next to items you want to modify, then update the quantities and provide reasons.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="space-y-0">
-                    ${itemsFormHtml}
-                </div>
-                
-                <div class="mt-6 pt-4 border-t border-gray-200">
-                    <button type="button" onclick="RequisitionManager.submitMultiItemModification(${data.requisition_id})" 
-                            class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none">
-                        <i class="fas fa-save mr-2"></i>
-                        Apply Modifications
+                    <svg class="mx-auto h-12 w-12 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                    </svg>
+                    <p class="text-red-800 font-medium">Failed to load requisition</p>
+                    <p class="text-sm text-red-600 mt-1">${error.message}</p>
+                    <button onclick="RequisitionManager.closeModal()" class="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        Close
                     </button>
                 </div>
-            </div>
-        `;
-    },
-
-    submitMultiItemModification(requisitionId) {
-        // This would collect all selected items and their modifications
-        // and submit them as a batch
-        const selectedItems = [];
-        const checkboxes = document.querySelectorAll('input[id^="select_item_"]:checked');
-        
-        checkboxes.forEach(checkbox => {
-            const itemId = checkbox.id.replace('select_item_', '');
-            const newQty = document.getElementById(`new_qty_${itemId}`).value;
-            const reason = document.getElementById(`reason_${itemId}`).value;
-            const remarks = document.getElementById(`remarks_${itemId}`).value;
-            
-            if (!newQty || !reason) {
-                this.showNotification('warning', 'Validation Error', 'Please fill in quantity and reason for all selected items.');
-                return;
-            }
-            
-            selectedItems.push({
-                item_id: itemId,
-                new_quantity: newQty,
-                reason: reason,
-                remarks: remarks
-            });
-        });
-        
-        if (selectedItems.length === 0) {
-            this.showNotification('warning', 'No Selection', 'Please select at least one item to modify.');
-            return;
-        }
-        
-        // Submit the batch modification
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (!csrfToken) {
-            this.showNotification('error', 'System Error', 'CSRF token missing.');
-            return;
-        }
-
-        fetch(`/supervisor/requisitions/${requisitionId}/modify-multi`, {
-            method: 'PATCH',
-            headers: {
-                'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                modifications: selectedItems
-            })
-        })
-        .then(response => response.json().then(data => ({ status: response.status, body: data })))
-        .then(({ status, body }) => {
-            if (body.success) {
-                this.closeDetailsModal();
-                this.showNotification('success', 'Modified & Approved', 'Requisition items modified and approved successfully.', () => location.reload());
-            } else {
-                this.showNotification('error', 'Error', body.error || 'Failed to modify requisition items.');
-            }
-        })
-        .catch(error => {
-            this.showNotification('error', 'Network Error', 'An error occurred while submitting modifications.');
+            `;
         });
     },
-
-    openModifyModal(requisitionId, itemId, itemName, originalQty, unit, currentStock) {
-        const el = this.elements.modifyModal;
+    
+    // Render modal content
+    renderModal(data) {
+        const titleEl = document.getElementById('modalTitle');
+        const subtitleEl = document.getElementById('modalSubtitle');
+        const overviewEl = document.getElementById('requisitionOverview');
+        const itemsEl = document.getElementById('itemsContainer');
+        const totalCountEl = document.getElementById('totalItemsCount');
         
-        el.text.innerHTML = `Adjusting quantity for <strong>${itemName}</strong> in request <strong>REQ-${requisitionId}</strong>.`;
-        el.origQty.innerText = `${originalQty} ${unit}`;
-        el.newQty.value = originalQty;
-        el.unit.innerText = unit;
-        el.itemId.value = itemId;
-        this.currentRequisitionId = requisitionId;
+        // Set header info
+        titleEl.textContent = `Requisition #${data.requisition_number}`;
+        subtitleEl.textContent = `${data.requested_by} • ${data.department || 'General'} • ${data.time_ago}`;
+        totalCountEl.textContent = data.total_items;
         
-        el.stock.textContent = `${currentStock} ${unit}`;
-        
-        if (currentStock < originalQty) {
-            el.warning.classList.remove('hidden');
-            el.newQty.max = currentStock;
-            if (originalQty > currentStock) {
-                el.newQty.value = currentStock;
-            }
-        } else {
-            el.warning.classList.add('hidden');
-            el.newQty.max = '';
-        }
-        
-        el.backdrop.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            el.backdrop.classList.add('active');
-            el.panel.classList.add('active');
-        });
-    },
+        // Render overview
+        const statusBadge = data.status === 'pending' 
+            ? '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">PENDING</span>'
+            : `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${data.status === 'approved' ? 'green' : 'red'}-100 text-${data.status === 'approved' ? 'green' : 'red'}-800">${data.status.toUpperCase()}</span>`;
 
-    closeModifyModal() {
-        const el = this.elements.modifyModal;
-        el.backdrop.classList.remove('active');
-        el.panel.classList.remove('active');
-        setTimeout(() => {
-            el.backdrop.classList.add('hidden');
-            el.form.reset();
-        }, 300);
-        this.currentRequisitionId = null;
-    },
-
-    submitModifyForm() {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]');
-        if (!csrfToken) {
-            this.showNotification('error', 'System Error', 'CSRF token missing.');
-            return;
-        }
-
-        const el = this.elements.modifyModal;
-        const itemId = el.itemId.value;
-        const newQuantity = el.newQty.value;
-        const reason = document.querySelector('#modifyForm select[name="reason"]').value;
-        const remarks = document.querySelector('#modifyForm textarea[name="remarks"]').value;
-
-        if (!itemId || !newQuantity || !reason) {
-            this.showNotification('warning', 'Validation Error', 'Please complete all required fields (Quantity and Reason).');
-            return;
-        }
-
-        fetch(`/supervisor/requisitions/${this.currentRequisitionId}/modify`, {
-            method: 'PATCH',
-            headers: {
-                'X-CSRF-TOKEN': csrfToken.getAttribute('content'),
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-                item_id: itemId,
-                new_quantity: newQuantity,
-                reason: reason,
-                remarks: remarks,
-            })
-        })
-        .then(response => response.json().then(data => ({ status: response.status, body: data })))
-        .then(({ status, body }) => {
-            if (body.success) {
-                this.closeModifyModal();
-                this.showNotification('success', 'Modified & Approved', 'Requisition modified and approved successfully.', () => location.reload());
-            } else {
-                this.showNotification('error', 'Error', body.error || 'Failed to modify requisition.');
-            }
-        })
-        .catch(error => {
-            this.showNotification('error', 'Network Error', 'An error occurred while submitting modifications.');
-        });
-    },
-
-    // ================= DETAILS LOGIC =================
-
-    viewDetails(requisitionId) {
-        const el = this.elements.detailsModal;
-        
-        // Loading State
-        el.title.textContent = 'Requisition Details';
-        el.subtitle.textContent = 'Loading information...';
-        el.content.innerHTML = '<div class="flex justify-center py-12"><i class="fas fa-circle-notch fa-spin text-4xl text-chocolate/50"></i></div>';
-        
-        el.backdrop.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            el.backdrop.classList.add('active');
-            el.panel.classList.add('active');
-        });
-
-        fetch(`/supervisor/requisitions/${requisitionId}/details`, {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.data) {
-                this.renderDetails(data.data);
-            } else {
-                throw new Error(data.error || 'Invalid response');
-            }
-        })
-        .catch(error => {
-            el.content.innerHTML = `
-                <div class="text-center py-8">
-                    <div class="bg-red-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <i class="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+        overviewEl.innerHTML = `
+            <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                        <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Status</dt>
+                        <dd class="mt-1">${statusBadge}</dd>
                     </div>
-                    <p class="text-red-800 font-medium">Failed to load details</p>
-                    <p class="text-sm text-red-600 mt-1">${error.message || 'Please check your connection.'}</p>
+                    <div>
+                        <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Date</dt>
+                        <dd class="mt-1 text-sm font-medium text-gray-900">${new Date(data.created_at).toLocaleDateString()}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Items</dt>
+                        <dd class="mt-1 text-sm font-medium text-gray-900">${data.total_items}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Department</dt>
+                        <dd class="mt-1 text-sm font-medium text-gray-900">${data.department || 'N/A'}</dd>
+                    </div>
                 </div>
-            `;
-        });
-    },
-
-    renderDetails(data) {
-        const el = this.elements.detailsModal;
-        el.title.textContent = `Requisition #${data.requisition_number}`;
-        el.subtitle.textContent = `${data.requested_by} • ${data.department} • ${data.time_ago}`;
-
-        const itemsHtml = data.items.map(item => {
-            const stockStatus = item.can_fulfill_full ? 
-                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-check-circle mr-1"></i>In Stock</span>' :
-                '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>Low Stock</span>';
-                
-            return `
-                <tr class="border-b border-gray-100 last:border-0">
-                    <td class="px-4 py-3">
-                        <div class="font-bold text-gray-900">${item.item_name}</div>
-                        <div class="text-xs text-gray-500">Unit: ${item.unit_symbol}</div>
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                        <div class="font-medium text-gray-900 bg-gray-50 px-2 py-1 rounded inline-block border border-gray-200">${item.quantity_requested} ${item.unit_symbol}</div>
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                        <div class="font-medium text-gray-600">${item.current_stock} ${item.unit_symbol}</div>
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                        <div class="text-sm font-bold ${item.stock_percentage > 80 ? 'text-red-600' : 'text-gray-700'}">${item.stock_percentage}%</div>
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                        ${stockStatus}
-                    </td>
-                </tr>
-            `;
-        }).join('');
-
-        el.content.innerHTML = `
-            <div class="space-y-6">
-                <div class="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div>
-                            <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Status</dt>
-                            <dd class="mt-1">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                    ${data.status.toUpperCase()}
-                                </span>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Date</dt>
-                            <dd class="mt-1 text-sm font-medium text-gray-900">${new Date(data.created_at).toLocaleDateString()}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Total Items</dt>
-                            <dd class="mt-1 text-sm font-medium text-gray-900">${data.total_items}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Department</dt>
-                            <dd class="mt-1 text-sm font-medium text-gray-900">${data.department || 'N/A'}</dd>
-                        </div>
-                    </div>
+                ${data.purpose ? `
                     <div class="mt-4 pt-4 border-t border-gray-200">
                         <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Purpose</dt>
-                        <dd class="mt-1 text-sm text-gray-700 italic">"${data.purpose || 'No purpose specified'}"</dd>
+                        <dd class="mt-1 text-sm text-gray-700 italic">"${data.purpose}"</dd>
                     </div>
-                </div>
-
-                <div>
-                    <h4 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-3">Requested Items</h4>
-                    <div class="overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5 rounded-xl">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase">Item</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Req. Qty</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Stock</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Usage</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                ${itemsHtml}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
+                ` : ''}
                 ${data.notes ? `
-                    <div>
-                        <h4 class="text-sm font-bold text-gray-900 uppercase tracking-wide mb-2">Notes</h4>
-                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
-                            <p class="text-sm text-amber-800">${data.notes}</p>
-                        </div>
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <dt class="text-xs font-bold text-gray-500 uppercase tracking-wide">Notes</dt>
+                        <dd class="mt-1 text-sm text-amber-800 bg-amber-50 border-l-4 border-amber-400 p-3 rounded-r-lg">${data.notes}</dd>
                     </div>
                 ` : ''}
             </div>
         `;
+        
+        // Render items
+        this.renderItems(data.items);
     },
+    
+    // Render items list
+    renderItems(items) {
+        const itemsEl = document.getElementById('itemsContainer');
+        const modifiedCountEl = document.getElementById('modifiedCount');
+        
+        const itemsHtml = items.map(item => {
+            const stockStatus = item.can_fulfill_full 
+                ? '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"><svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>In Stock</span>'
+                : '<span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800"><svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>Low Stock</span>';
+                
+            const stockPercentageClass = item.stock_percentage > 80 ? 'text-red-600' : 'text-gray-700';
+                
+            return `
+                <div class="bg-white rounded-lg p-4 border border-gray-200 hover:border-blue-300 transition-colors" data-item-id="${item.item_id}">
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h5 class="text-sm font-bold text-gray-900">${item.item_name}</h5>
+                                <span class="text-xs text-gray-500">(${item.unit_symbol})</span>
+                                ${stockStatus}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600 mb-4">
+                        <div>
+                            <span class="font-medium">Requested:</span> 
+                            <span class="font-bold text-blue-600">${item.quantity_requested} ${item.unit_symbol}</span>
+                        </div>
+                        <div>
+                            <span class="font-medium">Stock:</span> 
+                            <span class="font-bold">${item.current_stock} ${item.unit_symbol}</span>
+                        </div>
+                        <div>
+                            <span class="font-medium">Usage:</span> 
+                            <span class="font-bold ${stockPercentageClass}">${item.stock_percentage}%</span>
+                        </div>
+                        <div>
+                            <span class="font-medium">Modified:</span> 
+                            <span id="modified-status-${item.item_id}" class="font-bold text-gray-400">No</span>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">New Quantity</label>
+                                <input type="number" 
+                                       id="new_qty_${item.item_id}" 
+                                       data-requisition-item-id="${item.id}"
+                                       step="0.001" 
+                                       min="0" 
+                                       value="${item.quantity_requested}"
+                                       data-original="${item.quantity_requested}"
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       onchange="RequisitionManager.onQuantityChange(${item.item_id})">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Reason <span class="text-red-500">*</span></label>
+                                <select id="reason_${item.item_id}" 
+                                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        onchange="RequisitionManager.onReasonChange(${item.item_id})">
+                                    <option value="">Select reason</option>
+                                    <option value="Insufficient Stock">Insufficient Stock</option>
+                                    <option value="Rationing (High Demand)">Rationing (High Demand)</option>
+                                    <option value="Policy Limit Exceeded">Policy Limit Exceeded</option>
+                                    <option value="Quality Issues">Quality Issues</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Remarks</label>
+                            <textarea id="remarks_${item.item_id}" 
+                                      rows="2" 
+                                      class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="Optional remarks..."
+                                      onchange="RequisitionManager.onRemarksChange(${item.item_id})"></textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
 
-    closeDetailsModal() {
-        const el = this.elements.detailsModal;
-        el.backdrop.classList.remove('active');
-        el.panel.classList.remove('active');
-        setTimeout(() => {
-            el.backdrop.classList.add('hidden');
-        }, 300);
+        itemsEl.innerHTML = itemsHtml;
+        modifiedCountEl.textContent = '0';
+    },
+    
+    // Handle quantity changes
+    onQuantityChange(itemId) {
+        const input = document.getElementById(`new_qty_${itemId}`);
+        const original = parseFloat(input.dataset.original);
+        const newValue = parseFloat(input.value);
+        
+        if (newValue !== original) {
+            this.trackModification(itemId, { new_quantity: newValue });
+            input.classList.add('border-blue-500', 'bg-blue-50');
+        } else {
+            this.untrackModification(itemId, 'new_quantity');
+            input.classList.remove('border-blue-500', 'bg-blue-50');
+        }
+        
+        this.updateModifiedCount();
+    },
+    
+    // Handle reason changes
+    onReasonChange(itemId) {
+        const select = document.getElementById(`reason_${itemId}`);
+        const value = select.value;
+        
+        if (value) {
+            this.trackModification(itemId, { reason: value });
+            select.classList.add('border-blue-500', 'bg-blue-50');
+        } else {
+            this.untrackModification(itemId, 'reason');
+            select.classList.remove('border-blue-500', 'bg-blue-50');
+        }
+        
+        this.updateCardStatus(itemId);
+        this.updateModifiedCount();
+    },
+    
+    // Handle remarks changes
+    onRemarksChange(itemId) {
+        const textarea = document.getElementById(`remarks_${itemId}`);
+        const value = textarea.value.trim();
+        
+        if (value) {
+            this.trackModification(itemId, { remarks: value });
+            textarea.classList.add('border-blue-500', 'bg-blue-50');
+        } else {
+            this.untrackModification(itemId, 'remarks');
+            textarea.classList.remove('border-blue-500', 'bg-blue-50');
+        }
+        
+        this.updateModifiedCount();
+    },
+    
+    // Track modifications
+    trackModification(itemId, changes) {
+        if (!this.modifiedItems.has(itemId)) {
+            this.modifiedItems.set(itemId, {});
+        }
+        
+        const current = this.modifiedItems.get(itemId);
+        Object.assign(current, changes);
+        
+        this.updateCardStatus(itemId);
+    },
+    
+    // Untrack modifications
+    untrackModification(itemId, field) {
+        if (this.modifiedItems.has(itemId)) {
+            const current = this.modifiedItems.get(itemId);
+            delete current[field];
+            
+            if (Object.keys(current).length === 0) {
+                this.modifiedItems.delete(itemId);
+            }
+        }
+        
+        this.updateCardStatus(itemId);
+    },
+    
+    // Update card status
+    updateCardStatus(itemId) {
+        const statusSpan = document.getElementById(`modified-status-${itemId}`);
+        const card = document.querySelector(`[data-item-id="${itemId}"]`);
+        
+        if (this.modifiedItems.has(itemId)) {
+            statusSpan.textContent = 'Yes';
+            statusSpan.className = 'font-bold text-green-600';
+            card.classList.add('border-blue-500', 'bg-blue-50');
+        } else {
+            statusSpan.textContent = 'No';
+            statusSpan.className = 'font-bold text-gray-400';
+            card.classList.remove('border-blue-500', 'bg-blue-50');
+        }
+    },
+    
+    // Update modified count
+    updateModifiedCount() {
+        const modifiedCountEl = document.getElementById('modifiedCount');
+        if (modifiedCountEl) {
+            modifiedCountEl.textContent = this.modifiedItems.size;
+        }
+    },
+    
+    // Approve requisition
+    approveRequisition() {
+        if (this.modifiedItems.size > 0) {
+            // Validate modifications
+            for (let [itemId, modifications] of this.modifiedItems) {
+                if (!modifications.reason) {
+                    this.showToast('error', 'Validation Required', 'Please provide a reason for all modified items before approving.');
+                    return;
+                }
+            }
+            
+            // Submit modifications first, then approve
+            this.submitModifications(() => {
+                this.performAction(this.currentRequisitionId, 'approve');
+            });
+        } else {
+            this.performAction(this.currentRequisitionId, 'approve');
+        }
+    },
+    
+    // Reject requisition
+    rejectRequisition() {
+        if (confirm('Are you sure you want to reject this requisition? This action cannot be undone.')) {
+            this.performAction(this.currentRequisitionId, 'reject');
+        }
+    },
+    
+    // Submit modifications
+    submitModifications(callback) {
+        if (this.modifiedItems.size === 0) {
+            if (callback) callback();
+            return;
+        }
+
+        const modifications = [];
+        for (let [itemId, changes] of this.modifiedItems) {
+            const input = document.getElementById(`new_qty_${itemId}`);
+            // Use the requisition_item_id from data attributes instead of item_id
+            const requisitionItemId = input.dataset.requisitionItemId;
+            modifications.push({
+                item_id: requisitionItemId, // This should be the requisition_items.id
+                new_quantity: changes.new_quantity || parseFloat(input.dataset.original),
+                reason: changes.reason,
+                remarks: changes.remarks || ''
+            });
+        }
+
+        fetch(`/supervisor/requisitions/${this.currentRequisitionId}/modify-multi`, {
+            method: 'PATCH',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                modifications: modifications
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.showToast('success', 'Modified', data.message || 'Items modified successfully.');
+                if (callback) callback();
+            } else {
+                this.showToast('error', 'Error', data.error || 'Failed to modify requisition items.');
+            }
+        })
+        .catch(error => {
+            console.error('Network error:', error);
+            this.showToast('error', 'Network Error', 'An error occurred while submitting modifications.');
+        });
+    },
+    
+    // Perform action (approve/reject)
+    performAction(id, action) {
+        fetch(`/supervisor/requisitions/${id}/${action}`, {
+            method: 'PATCH',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const msg = action === 'approve' ? 'Requisition approved successfully!' : 'Requisition rejected successfully!';
+                this.showToast('success', 'Completed', msg);
+                this.closeModal();
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                this.showToast('error', 'Error', data.error || 'An unknown error occurred.');
+            }
+        })
+        .catch(error => {
+            console.error('Network error:', error);
+            this.showToast('error', 'Network Error', 'An error occurred while processing your request.');
+        });
+    },
+    
+    // Simple approve from table
+    approve(id) {
+        if (confirm('Are you sure you want to approve this requisition?')) {
+            this.performAction(id, 'approve');
+        }
+    },
+    
+    // Simple reject from table
+    reject(id) {
+        if (confirm('Are you sure you want to reject this requisition? This action cannot be undone.')) {
+            this.performAction(id, 'reject');
+        }
     }
 };
 </script>

@@ -670,6 +670,125 @@ class SupervisorController extends Controller
             ], 500);
         }
     }
+    /**
+     * Modify multiple requisition items at once
+     */
+    public function modifyMultipleRequisitionItems(Requisition $requisition, Request $request)
+    {
+        try {
+            if ($requisition->status !== 'pending') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Requisition has already been processed'
+                ], 400);
+            }
+
+            // Validate the request - expect an array of modifications
+            $request->validate([
+                'modifications' => 'required|array|min:1',
+                'modifications.*.item_id' => 'required|integer|exists:requisition_items,id',
+                'modifications.*.new_quantity' => 'required|numeric|min:0.001|max:999999.999',
+                'modifications.*.reason' => 'required|string|max:255',
+                'modifications.*.remarks' => 'nullable|string|max:500'
+            ]);
+
+            $modifications = $request->modifications;
+            $successfulModifications = 0;
+            $errors = [];
+
+            foreach ($modifications as $modification) {
+                try {
+                    // Find the specific requisition item and ensure it belongs to this requisition
+                    $requisitionItem = RequisitionItem::where('id', $modification['item_id'])
+                        ->where('requisition_id', $requisition->id)
+                        ->first();
+
+                    if (!$requisitionItem) {
+                        $errors[] = "Item with ID {$modification['item_id']} not found in this requisition";
+                        continue;
+                    }
+
+                    // Check if new quantity exceeds available stock
+                    $currentStock = CurrentStock::where('item_id', $requisitionItem->item_id)->first();
+                    if ($currentStock && $modification['new_quantity'] > $currentStock->current_quantity) {
+                        $itemName = $requisitionItem->item ? ($requisitionItem->item->name ?? 'Unknown') : 'Unknown';
+                        $errors[] = "Item '{$itemName}': Requested quantity ({$modification['new_quantity']}) exceeds available stock ({$currentStock->current_quantity})";
+                        continue;
+                    }
+
+                    // Update the quantity
+                    $oldQuantity = $requisitionItem->quantity_requested;
+                    $newQuantity = $modification['new_quantity'];
+                    
+                    $requisitionItem->update([
+                        'quantity_requested' => $newQuantity,
+                        'total_estimated_value' => $newQuantity * $requisitionItem->unit_cost_estimate
+                    ]);
+
+                    // Create audit log for this item modification
+                    AuditLog::create([
+                        'table_name' => 'requisition_items',
+                        'record_id' => $requisitionItem->id,
+                        'action' => 'UPDATE',
+                        'user_id' => Auth::id(),
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'old_values' => json_encode(['quantity_requested' => $oldQuantity]),
+                        'new_values' => json_encode([
+                            'quantity_requested' => $newQuantity, 
+                            'reason' => $modification['reason'], 
+                            'remarks' => isset($modification['remarks']) ? $modification['remarks'] : ''
+                        ])
+                    ]);
+
+                    $successfulModifications++;
+
+                } catch (\Exception $e) {
+                    $errors[] = "Failed to modify item ID {$modification['item_id']}: " . $e->getMessage();
+                }
+            }
+
+            if ($successfulModifications === 0) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'No items were modified successfully',
+                    'details' => $errors
+                ], 422);
+            }
+
+            // If there were some successful modifications but also errors
+            if (count($errors) > 0) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "{$successfulModifications} items modified successfully",
+                    'warnings' => $errors
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$successfulModifications} items modified successfully"
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Flatten the validation errors into a single string
+            $errorMessages = [];
+            foreach ($e->errors() as $field => $messages) {
+                $errorMessages = array_merge($errorMessages, $messages);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed: ' . implode(', ', $errorMessages)
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error modifying multiple requisition items: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to modify requisition items: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     /**
      * Get requisition details for modal

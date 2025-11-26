@@ -55,7 +55,7 @@
                         id="menu-inventory-inbound-labels"
                         class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.inbound.labels') ? 'active-menu' : '' }}">
                         <i class="fas fa-qrcode w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Print Batch Labels</span>
+                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Batch records</span>
                     </a>
                 </li>
 

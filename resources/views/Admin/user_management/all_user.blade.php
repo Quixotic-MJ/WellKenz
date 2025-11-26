@@ -16,7 +16,68 @@
     const adminUsersBaseUrl = "{{ url('/admin/users') }}";
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+    // Global variables for user data
+    let userData = {
+        departments: [],
+        positions: []
+    };
+
     // --- 1. User Create/Edit Modal Functions ---
+
+    // Load department and position data for dropdowns
+    function loadUserData() {
+        fetch('{{ route('admin.users.data') }}', {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            userData.departments = data.departments || [];
+            userData.positions = data.positions || [];
+            
+            // Populate department dropdown
+            const departmentSelect = document.getElementById('department');
+            departmentSelect.innerHTML = '<option value="">Select Department</option>';
+            userData.departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                departmentSelect.appendChild(option);
+            });
+
+            // Populate position dropdown
+            const positionSelect = document.getElementById('position');
+            positionSelect.innerHTML = '<option value="">Select Position</option>';
+            userData.positions.forEach(pos => {
+                const option = document.createElement('option');
+                option.value = pos;
+                option.textContent = pos;
+                positionSelect.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading user data:', error);
+            showNotification('Error', 'Failed to load department and position options.', true);
+        });
+    }
+
+    // Generate employee ID (frontend - will be overridden by backend if needed)
+    function generateEmployeeId() {
+        // Simple client-side generation based on current timestamp
+        // This will be replaced by server-generated ID during save
+        const timestamp = Date.now().toString();
+        const lastTwoDigits = timestamp.slice(-2);
+        return 'EMP' + lastTwoDigits;
+    }
+
+    // Auto-fill employee ID field
+    function fillEmployeeId() {
+        const employeeIdField = document.getElementById('employee_id');
+        employeeIdField.value = generateEmployeeId();
+    }
 
     function openUserModal() {
         isEditMode = false;
@@ -25,6 +86,13 @@
         document.getElementById('submitBtnText').textContent = 'Create Account';
         document.getElementById('passwordField').style.display = 'block';
         document.getElementById('userForm').reset();
+        
+        // Load user data and populate dropdowns
+        loadUserData();
+        
+        // Auto-generate employee ID
+        fillEmployeeId();
+        
         document.getElementById('userModal').classList.remove('hidden');
     }
 
@@ -416,6 +484,10 @@
         document.getElementById('modal-title').textContent = 'Edit User';
         document.getElementById('submitBtnText').textContent = 'Update User';
         document.getElementById('passwordField').style.display = 'none';
+        document.getElementById('userForm').reset();
+        
+        // Load user data and populate dropdowns
+        loadUserData();
         
         fetch(`${adminUsersBaseUrl}/${userId}/edit`)
             .then(response => response.json())
@@ -425,8 +497,13 @@
                 document.getElementById('role').value = data.role;
                 document.getElementById('employee_id').value = data.employee_id || '';
                 document.getElementById('phone').value = data.phone || '';
-                document.getElementById('department').value = data.department || '';
-                document.getElementById('position').value = data.position || '';
+                
+                // Set dropdown values after they're loaded
+                setTimeout(() => {
+                    document.getElementById('department').value = data.department || '';
+                    document.getElementById('position').value = data.position || '';
+                }, 100);
+                
                 document.getElementById('userModal').classList.remove('hidden');
             })
             .catch(error => showNotification('Error', 'Failed to load user details', true));
@@ -674,7 +751,12 @@
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label for="employee_id" class="block text-sm font-medium text-gray-700">Employee ID</label>
-                                        <input type="text" id="employee_id" name="employee_id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm">
+                                        <div class="relative">
+                                            <input type="text" id="employee_id" name="employee_id" readonly class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-50 text-gray-500 focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="Auto-generated">
+                                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                <i class="fas fa-lock text-gray-400 text-sm"></i>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
                                         <label for="phone" class="block text-sm font-medium text-gray-700">Phone</label>
@@ -684,11 +766,15 @@
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label for="department" class="block text-sm font-medium text-gray-700">Department</label>
-                                        <input type="text" id="department" name="department" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm">
+                                        <select id="department" name="department" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm">
+                                            <option value="">Select Department</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label for="position" class="block text-sm font-medium text-gray-700">Position</label>
-                                        <input type="text" id="position" name="position" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm">
+                                        <select id="position" name="position" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm">
+                                            <option value="">Select Position</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div id="passwordField">
