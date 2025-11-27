@@ -1,213 +1,209 @@
 @extends('Admin.layout.app')
 
 @section('content')
-<div class="space-y-6 relative">
+<div class="space-y-8 font-sans text-gray-600">
 
     {{-- 1. HEADER & ACTIONS --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Supplier Management</h1>
-            <p class="text-sm text-gray-500 mt-1">Manage vendor profiles, contact details, and payment terms.</p>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-2">Supplier Management</h1>
+            <p class="text-sm text-gray-500">Manage vendor profiles, contact details, and payment terms.</p>
         </div>
-        <div class="flex items-center gap-3">
-            <button class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition shadow-sm">
-                <i class="fas fa-file-export mr-2"></i> Export List
+        <div class="flex flex-wrap items-center gap-3">
+            <button class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-border-soft text-chocolate text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm group">
+                <i class="fas fa-file-export mr-2 opacity-70 group-hover:opacity-100"></i> Export List
             </button>
             <button onclick="openAddModal()" 
-                class="inline-flex items-center justify-center px-4 py-2 bg-chocolate text-white text-sm font-medium rounded-lg hover:bg-chocolate-dark transition shadow-sm">
+                class="inline-flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                 <i class="fas fa-plus mr-2"></i> Add New Supplier
             </button>
         </div>
     </div>
 
-    {{-- 2. SEARCH & FILTERS --}}
-    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+    {{-- 2. STATS OVERVIEW --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm flex items-center justify-between relative overflow-hidden group hover:border-caramel transition-colors">
+            <div class="absolute right-0 top-0 h-full w-1 bg-chocolate"></div>
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Suppliers</p>
+                <p class="font-display text-3xl font-bold text-chocolate mt-1">{{ $stats['total'] }}</p>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-cream-bg flex items-center justify-center text-chocolate group-hover:scale-110 transition-transform">
+                <i class="fas fa-building text-xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm flex items-center justify-between relative overflow-hidden group hover:border-green-200 transition-colors">
+            <div class="absolute right-0 top-0 h-full w-1 bg-green-500"></div>
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Active Partners</p>
+                <p class="font-display text-3xl font-bold text-green-600 mt-1">{{ $stats['active'] }}</p>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-600 group-hover:scale-110 transition-transform">
+                <i class="fas fa-check-circle text-xl"></i>
+            </div>
+        </div>
+
+        <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm flex items-center justify-between relative overflow-hidden group hover:border-red-200 transition-colors">
+            <div class="absolute right-0 top-0 h-full w-1 bg-red-500"></div>
+            <div>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Inactive</p>
+                <p class="font-display text-3xl font-bold text-red-600 mt-1">{{ $stats['inactive'] }}</p>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-600 group-hover:scale-110 transition-transform">
+                <i class="fas fa-times-circle text-xl"></i>
+            </div>
+        </div>
+    </div>
+
+    {{-- 3. SEARCH & FILTERS --}}
+    <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm">
         <form method="GET" action="{{ route('admin.suppliers.index') }}" class="flex flex-col md:flex-row items-center gap-4 w-full">
-            <!-- Search -->
-            <div class="relative w-full md:w-96">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
+            <div class="relative w-full md:flex-1 group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400 group-focus-within:text-caramel transition-colors"></i>
                 </div>
-                <input type="text" name="search" value="{{ request('search') }}" class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="Search by Company, TIN, or Contact Person...">
+                <input type="text" name="search" value="{{ request('search') }}" 
+                    class="block w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg bg-cream-bg placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all" 
+                    placeholder="Search by Company, TIN, or Contact Person...">
             </div>
             
-            <!-- Status Filter -->
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                 <select name="status" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm" onchange="this.form.submit()">
+            <div class="w-full md:w-48 relative">
+                <select name="status" onchange="this.form.submit()" 
+                    class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer">
                     <option value="">All Status</option>
                     <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                     <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                 </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
             </div>
             
-            <button type="submit" class="px-4 py-2 bg-chocolate text-white rounded-md hover:bg-chocolate-dark transition">
-                <i class="fas fa-search mr-1"></i> Search
-            </button>
-            
-            @if(request('search') || request('status'))
-            <a href="{{ route('admin.suppliers.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition">
-                <i class="fas fa-times mr-1"></i> Clear
-            </a>
-            @endif
+            <div class="flex gap-2 w-full md:w-auto">
+                <button type="submit" class="px-5 py-2.5 bg-chocolate text-white rounded-lg hover:bg-chocolate-dark transition-all shadow-md font-medium text-sm flex-1 md:flex-none justify-center flex">
+                    <i class="fas fa-search mr-2"></i> Search
+                </button>
+                
+                @if(request('search') || request('status'))
+                <a href="{{ route('admin.suppliers.index') }}" class="px-5 py-2.5 bg-white border border-border-soft text-gray-600 rounded-lg hover:bg-gray-50 transition-all font-medium text-sm flex-1 md:flex-none justify-center flex items-center">
+                    <i class="fas fa-times mr-2"></i> Clear
+                </a>
+                @endif
+            </div>
         </form>
     </div>
 
-    {{-- Stats Cards --}}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div class="flex items-center">
-                <div class="p-3 bg-blue-100 rounded-lg">
-                    <i class="fas fa-building text-blue-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm text-gray-500">Total Suppliers</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['total'] }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div class="flex items-center">
-                <div class="p-3 bg-green-100 rounded-lg">
-                    <i class="fas fa-check-circle text-green-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm text-gray-500">Active</p>
-                    <p class="text-2xl font-bold text-green-600">{{ $stats['active'] }}</p>
-                </div>
-            </div>
-        </div>
-        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div class="flex items-center">
-                <div class="p-3 bg-red-100 rounded-lg">
-                    <i class="fas fa-times-circle text-red-600"></i>
-                </div>
-                <div class="ml-4">
-                    <p class="text-sm text-gray-500">Inactive</p>
-                    <p class="text-2xl font-bold text-red-600">{{ $stats['inactive'] }}</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- 3. SUPPLIERS TABLE --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    {{-- 4. SUPPLIERS TABLE --}}
+    <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-border-soft">
+                <thead class="bg-cream-bg">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company Details</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Contact</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Business Info</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Company Details</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Primary Contact</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Business Info</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Status</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-caramel uppercase tracking-widest font-display">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    
+                <tbody class="bg-white divide-y divide-border-soft">
                     @forelse($suppliers as $supplier)
-                    <tr class="hover:bg-gray-50 transition-colors {{ !$supplier->is_active ? 'bg-gray-50 opacity-75' : '' }}">
+                    <tr class="group hover:bg-cream-bg transition-colors duration-200 {{ !$supplier->is_active ? 'opacity-60 bg-gray-50' : '' }}">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-start">
-                                <div class="flex-shrink-0 h-10 w-10 {{ $supplier->is_active ? 'bg-blue-100' : 'bg-gray-200' }} rounded-lg flex items-center justify-center {{ $supplier->is_active ? 'text-blue-700' : 'text-gray-500' }} font-bold border {{ $supplier->is_active ? 'border-blue-200' : 'border-gray-300' }}">
+                                <div class="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-chocolate to-caramel rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm ring-2 ring-white">
                                     {{ strtoupper(substr($supplier->name, 0, 2)) }}
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-bold {{ $supplier->is_active ? 'text-gray-900' : 'text-gray-500' }}">{{ $supplier->name }}</div>
-                                    <div class="text-xs {{ $supplier->is_active ? 'text-gray-500' : 'text-gray-400' }} flex items-center mt-0.5">
-                                        <i class="fas fa-map-marker-alt mr-1 {{ $supplier->is_active ? 'text-gray-400' : 'text-gray-300' }}"></i> 
-                                        {{ $supplier->address ?? 'No address' }}{{ $supplier->city ? ', ' . $supplier->city : '' }}
+                                    <div class="text-sm font-bold text-chocolate">{{ $supplier->name }}</div>
+                                    <div class="text-xs text-gray-500 flex items-center mt-0.5">
+                                        <i class="fas fa-map-marker-alt mr-1 text-caramel/60"></i> 
+                                        {{ Str::limit($supplier->address ?? 'No address', 20) }}{{ $supplier->city ? ', ' . $supplier->city : '' }}
                                     </div>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 {{ $supplier->is_active ? 'text-gray-800' : 'text-gray-500' }} mt-1">
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-gray-100 text-gray-600 mt-1 border border-gray-200">
                                         {{ $supplier->supplier_code }}
                                     </span>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium {{ $supplier->is_active ? 'text-gray-900' : 'text-gray-500' }}">{{ $supplier->contact_person ?? 'N/A' }}</div>
-                            <div class="text-xs {{ $supplier->is_active ? 'text-gray-500' : 'text-gray-400' }} mt-1">
-                                <i class="fas fa-envelope mr-1"></i> {{ $supplier->email ?? 'No email' }}
-                            </div>
-                            <div class="text-xs {{ $supplier->is_active ? 'text-gray-500' : 'text-gray-400' }} mt-0.5">
-                                <i class="fas fa-phone mr-1"></i> {{ $supplier->phone ?? $supplier->mobile ?? 'No phone' }}
+                            <div class="text-sm font-bold text-gray-700">{{ $supplier->contact_person ?? 'N/A' }}</div>
+                            <div class="flex flex-col space-y-0.5 mt-1">
+                                <div class="text-xs text-gray-500">
+                                    <i class="fas fa-envelope mr-1.5 text-caramel/60"></i> {{ $supplier->email ?? '-' }}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    <i class="fas fa-phone mr-1.5 text-caramel/60"></i> {{ $supplier->phone ?? $supplier->mobile ?? '-' }}
+                                </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex flex-col space-y-1">
-                                <div class="flex items-center text-xs {{ $supplier->is_active ? 'text-gray-600' : 'text-gray-500' }}">
-                                    <span class="w-16 font-semibold {{ $supplier->is_active ? 'text-gray-500' : '' }}">TIN:</span> 
-                                    <span class="font-mono">{{ $supplier->tax_id ?? '---' }}</span>
+                            <div class="flex flex-col space-y-1.5">
+                                <div class="flex items-center text-xs text-gray-600">
+                                    <span class="w-12 font-bold text-chocolate/70">TIN:</span> 
+                                    <span class="font-mono bg-white px-1 rounded border border-border-soft">{{ $supplier->tax_id ?? '---' }}</span>
                                 </div>
-                                <div class="flex items-center text-xs {{ $supplier->is_active ? 'text-gray-600' : 'text-gray-500' }}">
-                                    <span class="w-16 font-semibold {{ $supplier->is_active ? 'text-gray-500' : '' }}">Terms:</span> 
+                                <div class="flex items-center text-xs text-gray-600">
+                                    <span class="w-12 font-bold text-chocolate/70">Terms:</span> 
                                     @if($supplier->payment_terms)
                                         @if($supplier->payment_terms == 0)
-                                            <span class="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-100 font-bold">COD</span>
+                                            <span class="text-amber-700 font-bold">COD</span>
                                         @else
-                                            <span class="bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-100 font-bold">Net {{ $supplier->payment_terms }} Days</span>
+                                            <span class="text-green-700 font-bold">Net {{ $supplier->payment_terms }}</span>
                                         @endif
                                     @else
-                                        <span>Unknown</span>
+                                        <span class="text-gray-400">-</span>
                                     @endif
                                 </div>
                                 @if($supplier->rating)
-                                <div class="flex items-center text-xs text-gray-600">
-                                    <span class="w-16 font-semibold text-gray-500">Rating:</span>
+                                <div class="flex items-center text-xs mt-1">
                                     @for($i = 1; $i <= 5; $i++)
-                                        <i class="fas fa-star {{ $i <= $supplier->rating ? 'text-yellow-400' : 'text-gray-300' }} text-xs"></i>
+                                        <i class="fas fa-star {{ $i <= $supplier->rating ? 'text-caramel' : 'text-gray-200' }} text-[10px]"></i>
                                     @endfor
                                 </div>
                                 @endif
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            @if($supplier->is_active)
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                    Active
-                                </span>
-                            @else
-                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                    Inactive
-                                </span>
-                            @endif
+                            <span class="px-2.5 py-0.5 inline-flex text-[10px] leading-5 font-bold uppercase tracking-wide rounded-full {{ $supplier->is_active ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
+                                {{ $supplier->is_active ? 'Active' : 'Inactive' }}
+                            </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="openEditModal({{ $supplier->id }})" class="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded hover:bg-blue-100 transition tooltip" title="Edit Details">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="confirmToggleStatus({{ $supplier->id }}, '{{ $supplier->name }}', {{ $supplier->is_active ? 'true' : 'false' }})" class="text-{{ $supplier->is_active ? 'amber' : 'green' }}-600 hover:text-{{ $supplier->is_active ? 'amber' : 'green' }}-900 bg-{{ $supplier->is_active ? 'amber' : 'green' }}-50 p-2 rounded hover:bg-{{ $supplier->is_active ? 'amber' : 'green' }}-100 transition tooltip" title="{{ $supplier->is_active ? 'Deactivate' : 'Activate' }}">
-                                <i class="fas fa-{{ $supplier->is_active ? 'ban' : 'check' }}"></i>
-                            </button>
-                            <button onclick="confirmDelete({{ $supplier->id }}, '{{ $supplier->name }}')" class="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded hover:bg-red-100 transition tooltip" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <div class="flex justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                                <button onclick="openEditModal({{ $supplier->id }})" class="text-chocolate hover:text-white hover:bg-chocolate p-2 rounded-lg transition-all tooltip" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="confirmToggleStatus({{ $supplier->id }}, '{{ $supplier->name }}', {{ $supplier->is_active ? 'true' : 'false' }})" class="text-amber-600 hover:text-white hover:bg-amber-600 p-2 rounded-lg transition-all tooltip" title="{{ $supplier->is_active ? 'Deactivate' : 'Activate' }}">
+                                    <i class="fas fa-{{ $supplier->is_active ? 'ban' : 'check' }}"></i>
+                                </button>
+                                <button onclick="confirmDelete({{ $supplier->id }}, '{{ $supplier->name }}')" class="text-red-600 hover:text-white hover:bg-red-600 p-2 rounded-lg transition-all tooltip" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
                         <td colspan="5" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center">
-                                <i class="fas fa-building text-gray-300 text-5xl mb-4"></i>
-                                <p class="text-gray-500 text-lg">No suppliers found</p>
-                                <p class="text-gray-400 text-sm mt-1">Try adjusting your search or add a new supplier</p>
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 border border-border-soft">
+                                    <i class="fas fa-building text-chocolate/30 text-2xl"></i>
+                                </div>
+                                <h3 class="font-display text-lg font-bold text-chocolate">No suppliers found</h3>
+                                <p class="text-sm text-gray-400 mt-1">Try adjusting your search or add a new supplier.</p>
                             </div>
                         </td>
                     </tr>
                     @endforelse
-
                 </tbody>
             </table>
         </div>
         
-        <!-- Pagination -->
         @if($suppliers->hasPages())
-        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <p class="text-sm text-gray-700">
-                    Showing <span class="font-medium">{{ $suppliers->firstItem() }}</span> to <span class="font-medium">{{ $suppliers->lastItem() }}</span> of <span class="font-medium">{{ $suppliers->total() }}</span> suppliers
-                </p>
-                {{ $suppliers->links() }}
-            </div>
+        <div class="bg-white px-6 py-4 border-t border-border-soft">
+            {{ $suppliers->appends(request()->query())->links() }}
         </div>
         @endif
     </div>
@@ -216,146 +212,140 @@
 
 {{-- ===================== UI COMPONENTS ===================== --}}
 
-<!-- ADD/EDIT SUPPLIER MODAL -->
 <div id="supplierModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeModal()"></div>
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="closeModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full border border-border-soft">
             
-            <div class="bg-chocolate px-4 py-3 sm:px-6 flex justify-between items-center">
-                <h3 class="text-lg leading-6 font-medium text-white" id="modal-title">Add New Supplier</h3>
-                <button onclick="closeModal()" class="text-white hover:text-gray-200">
-                    <i class="fas fa-times"></i>
+            <div class="bg-chocolate px-6 py-4 flex justify-between items-center">
+                <h3 class="font-display text-xl font-bold text-white" id="modal-title">Add New Supplier</h3>
+                <button onclick="closeModal()" class="text-white/70 hover:text-white transition-colors">
+                    <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
 
-            <div class="px-4 py-5 sm:p-6">
+            <div class="px-8 py-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <form id="supplierForm">
                     @csrf
                     <input type="hidden" id="supplierId" name="supplier_id">
-                    <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         
-                        <!-- Company Name -->
-                        <div class="sm:col-span-4">
-                            <label class="block text-sm font-medium text-gray-700">Company / Vendor Name <span class="text-red-500">*</span></label>
-                            <div class="mt-1 relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-building text-gray-400"></i>
+                        <div class="space-y-4">
+                            <h4 class="text-xs font-bold text-caramel uppercase tracking-widest border-b border-border-soft pb-2 mb-4">Company Profile</h4>
+                            
+                            <div>
+                                <label class="block text-sm font-bold text-chocolate mb-1">Company Name <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-building text-gray-400"></i>
+                                    </div>
+                                    <input type="text" name="name" id="supplierName" required class="block w-full pl-10 border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="e.g., Golden Grain Supplies">
                                 </div>
-                                <input type="text" name="name" id="supplierName" required class="focus:ring-chocolate focus:border-chocolate block w-full pl-10 sm:text-sm border-gray-300 rounded-md" placeholder="e.g., Golden Grain Supplies">
                             </div>
-                        </div>
 
-                        <!-- Status -->
-                        <div class="sm:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700">Status</label>
-                            <select name="is_active" id="supplierStatus" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                                <option value="1">Active</option>
-                                <option value="0">Inactive</option>
-                            </select>
-                        </div>
-
-                        <!-- TIN -->
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">Tax ID No. (TIN)</label>
-                            <input type="text" name="tax_id" id="supplierTaxId" class="mt-1 focus:ring-chocolate focus:border-chocolate block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="000-000-000-000">
-                        </div>
-
-                        <!-- Payment Terms -->
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">Payment Terms (Days)</label>
-                            <input type="number" name="payment_terms" id="supplierPaymentTerms" min="0" class="mt-1 focus:ring-chocolate focus:border-chocolate block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="30">
-                        </div>
-
-                        <div class="sm:col-span-6 border-t border-gray-100 my-2"></div>
-
-                        <!-- Contact Person -->
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">Contact Person</label>
-                            <div class="mt-1 relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-user text-gray-400"></i>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Status</label>
+                                    <select name="is_active" id="supplierStatus" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all">
+                                        <option value="1">Active</option>
+                                        <option value="0">Inactive</option>
+                                    </select>
                                 </div>
-                                <input type="text" name="contact_person" id="supplierContactPerson" class="focus:ring-chocolate focus:border-chocolate block w-full pl-10 sm:text-sm border-gray-300 rounded-md" placeholder="Sales Representative">
-                            </div>
-                        </div>
-
-                        <!-- Phone -->
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">Phone / Mobile</label>
-                            <div class="mt-1 relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-phone text-gray-400"></i>
+                                <div>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Tax ID (TIN)</label>
+                                    <input type="text" name="tax_id" id="supplierTaxId" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="000-000-000">
                                 </div>
-                                <input type="text" name="phone" id="supplierPhone" class="focus:ring-chocolate focus:border-chocolate block w-full pl-10 sm:text-sm border-gray-300 rounded-md" placeholder="(032) ...">
                             </div>
-                        </div>
 
-                        <!-- Email -->
-                        <div class="sm:col-span-6">
-                            <label class="block text-sm font-medium text-gray-700">Email Address</label>
-                            <div class="mt-1 relative rounded-md shadow-sm">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-envelope text-gray-400"></i>
+                            <div>
+                                <label class="block text-sm font-bold text-chocolate mb-1">Full Address</label>
+                                <textarea rows="3" name="address" id="supplierAddress" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="Street Address"></textarea>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">City</label>
+                                    <input type="text" name="city" id="supplierCity" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all">
                                 </div>
-                                <input type="email" name="email" id="supplierEmail" class="focus:ring-chocolate focus:border-chocolate block w-full pl-10 sm:text-sm border-gray-300 rounded-md" placeholder="email@company.com">
+                                <div>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Province</label>
+                                    <input type="text" name="province" id="supplierProvince" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all">
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Address -->
-                        <div class="sm:col-span-6">
-                            <label class="block text-sm font-medium text-gray-700">Full Address</label>
-                            <div class="mt-1">
-                                <textarea rows="2" name="address" id="supplierAddress" class="shadow-sm focus:ring-chocolate focus:border-chocolate block w-full sm:text-sm border border-gray-300 rounded-md" placeholder="Street Address"></textarea>
+                        <div class="space-y-4">
+                            <h4 class="text-xs font-bold text-caramel uppercase tracking-widest border-b border-border-soft pb-2 mb-4">Contact & Terms</h4>
+
+                            <div>
+                                <label class="block text-sm font-bold text-chocolate mb-1">Contact Person</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <i class="fas fa-user text-gray-400"></i>
+                                    </div>
+                                    <input type="text" name="contact_person" id="supplierContactPerson" class="block w-full pl-10 border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="Sales Representative">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Phone</label>
+                                    <input type="text" name="phone" id="supplierPhone" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="(032) ...">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Email</label>
+                                    <input type="email" name="email" id="supplierEmail" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="@company.com">
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 p-4 rounded-lg border border-border-soft space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Payment Terms</label>
+                                        <div class="relative">
+                                            <input type="number" name="payment_terms" id="supplierPaymentTerms" min="0" class="block w-full border-gray-200 bg-white rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="Days">
+                                            <span class="absolute right-3 top-2 text-xs text-gray-400">Days</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Credit Limit</label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-2 text-xs text-gray-400">₱</span>
+                                            <input type="number" name="credit_limit" id="supplierCreditLimit" min="0" step="0.01" class="block w-full pl-6 border-gray-200 bg-white rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Rating</label>
+                                    <select name="rating" id="supplierRating" class="block w-full border-gray-200 bg-white rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all">
+                                        <option value="">No Rating</option>
+                                        <option value="5">⭐⭐⭐⭐⭐ (5 Stars)</option>
+                                        <option value="4">⭐⭐⭐⭐ (4 Stars)</option>
+                                        <option value="3">⭐⭐⭐ (3 Stars)</option>
+                                        <option value="2">⭐⭐ (2 Stars)</option>
+                                        <option value="1">⭐ (1 Star)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-chocolate mb-1">Notes</label>
+                                <textarea rows="2" name="notes" id="supplierNotes" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="Internal notes..."></textarea>
                             </div>
                         </div>
-
-                        <!-- City & Province -->
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">City</label>
-                            <input type="text" name="city" id="supplierCity" class="mt-1 focus:ring-chocolate focus:border-chocolate block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="City">
-                        </div>
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">Province</label>
-                            <input type="text" name="province" id="supplierProvince" class="mt-1 focus:ring-chocolate focus:border-chocolate block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="Province">
-                        </div>
-
-                        <!-- Rating -->
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">Rating (1-5)</label>
-                            <select name="rating" id="supplierRating" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                                <option value="">No Rating</option>
-                                <option value="1">1 Star</option>
-                                <option value="2">2 Stars</option>
-                                <option value="3">3 Stars</option>
-                                <option value="4">4 Stars</option>
-                                <option value="5">5 Stars</option>
-                            </select>
-                        </div>
-
-                        <!-- Credit Limit -->
-                        <div class="sm:col-span-3">
-                            <label class="block text-sm font-medium text-gray-700">Credit Limit</label>
-                            <input type="number" name="credit_limit" id="supplierCreditLimit" min="0" step="0.01" class="mt-1 focus:ring-chocolate focus:border-chocolate block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" placeholder="0.00">
-                        </div>
-
-                        <!-- Notes -->
-                        <div class="sm:col-span-6">
-                            <label class="block text-sm font-medium text-gray-700">Notes</label>
-                            <textarea rows="2" name="notes" id="supplierNotes" class="mt-1 shadow-sm focus:ring-chocolate focus:border-chocolate block w-full sm:text-sm border border-gray-300 rounded-md" placeholder="Additional notes..."></textarea>
-                        </div>
-
                     </div>
                 </form>
             </div>
 
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" id="saveBtn" onclick="saveSupplier()" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+            <div class="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" id="saveBtn" onclick="saveSupplier()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-chocolate text-base font-bold text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     <i class="fas fa-save mr-2"></i> Save Supplier
                 </button>
-                <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Cancel
                 </button>
             </div>
@@ -363,30 +353,29 @@
     </div>
 </div>
 
-<!-- GENERIC CONFIRMATION MODAL -->
 <div id="confirmationModal" class="hidden fixed inset-0 z-[60] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeConfirmation()"></div>
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="closeConfirmation()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-border-soft">
+            <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
                     <div id="confIconContainer" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                         <i id="confIcon" class="fas fa-exclamation-triangle text-red-600"></i>
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="confTitle">Confirmation</h3>
+                        <h3 class="text-lg leading-6 font-bold text-chocolate font-display" id="confTitle">Confirmation</h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500" id="confMessage">Are you sure you want to proceed?</p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" id="confConfirmBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+            <div class="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" id="confConfirmBtn" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-red-600 text-base font-bold text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Confirm
                 </button>
-                <button type="button" onclick="closeConfirmation()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeConfirmation()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Cancel
                 </button>
             </div>
@@ -394,19 +383,18 @@
     </div>
 </div>
 
-<!-- TOAST NOTIFICATION -->
-<div id="toast" class="hidden fixed top-5 right-5 z-[70] max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden transform transition-all duration-300 ease-out translate-y-2 opacity-0">
-    <div class="p-4">
+<div id="toast" class="hidden fixed top-5 right-5 z-[70] max-w-sm w-full bg-white shadow-xl rounded-xl pointer-events-auto border border-border-soft overflow-hidden transform transition-all duration-300 ease-out translate-y-2 opacity-0">
+    <div class="p-4 bg-cream-bg">
         <div class="flex items-start">
             <div class="flex-shrink-0">
-                <i id="toastIcon" class="fas fa-check-circle text-green-400"></i>
+                <i id="toastIcon" class="fas fa-check-circle text-green-500 text-xl"></i>
             </div>
             <div class="ml-3 w-0 flex-1 pt-0.5">
-                <p id="toastTitle" class="text-sm font-medium text-gray-900">Notification</p>
+                <p id="toastTitle" class="text-sm font-bold text-chocolate">Notification</p>
                 <p id="toastMessage" class="mt-1 text-sm text-gray-500"></p>
             </div>
             <div class="ml-4 flex-shrink-0 flex">
-                <button onclick="hideToast()" class="bg-white rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+                <button onclick="hideToast()" class="inline-flex text-gray-400 hover:text-chocolate focus:outline-none transition-colors">
                     <span class="sr-only">Close</span>
                     <i class="fas fa-times"></i>
                 </button>
@@ -437,7 +425,7 @@
         toastMsg.textContent = message || '';
 
         // Reset classes
-        toastIcon.className = 'fas';
+        toastIcon.className = 'fas text-xl';
         
         if(type === 'success') {
             toastIcon.classList.add('fa-check-circle', 'text-green-500');
@@ -480,15 +468,15 @@
 
         // Style based on type (danger vs warning)
         if (type === 'danger') {
-            btn.className = "w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm";
+            btn.className = "w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-red-600 text-base font-bold text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all";
             iconContainer.className = "mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10";
             icon.className = "fas fa-trash text-red-600";
             btn.textContent = "Delete";
         } else {
-            // Warning/Toggle
-            btn.className = "w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-500 text-base font-medium text-white hover:bg-yellow-600 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm";
-            iconContainer.className = "mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 sm:mx-0 sm:h-10 sm:w-10";
-            icon.className = "fas fa-exclamation-triangle text-yellow-600";
+            // Warning/Toggle - Use Caramel theme
+            btn.className = "w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-caramel text-base font-bold text-white hover:bg-chocolate focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all";
+            iconContainer.className = "mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 sm:mx-0 sm:h-10 sm:w-10";
+            icon.className = "fas fa-exclamation-triangle text-amber-600";
             btn.textContent = "Confirm";
         }
 
@@ -527,9 +515,6 @@
         editSupplierId = id;
         document.getElementById('modal-title').textContent = 'Edit Supplier';
         document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save mr-2"></i> Update Supplier';
-        
-        // Show loading toast while fetching
-        // showToast('Loading...', 'Fetching supplier details', 'info');
         
         fetch(`{{ url('admin/suppliers') }}/${id}/edit`)
             .then(response => {
@@ -685,5 +670,4 @@
         });
     }
 </script>
-
 @endsection

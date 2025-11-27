@@ -53,16 +53,30 @@
         }
         
         .sidebar {
-            transition: all 0.3s ease;
+            transition: flex-basis 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             background: linear-gradient(180deg, #3d2817 0%, #2a1a0f 100%);
+            flex-shrink: 0;
         }
         
         .sidebar.collapsed {
-            width: 70px;
+            flex-basis: 0;
+            width: 0;
+            transform: translateX(-10px);
+            opacity: 0.8;
         }
         
-        .sidebar.collapsed .sidebar-text {
-            display: none;
+        /* When sidebar is collapsed, fade out content smoothly */
+        .sidebar.collapsed > * {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Ensure main content container expands when sidebar is collapsed */
+        .main-content-container {
+            transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            flex: 1;
         }
         
         .active-menu {
@@ -114,6 +128,27 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                z-index: 50;
+            }
+            
+            .sidebar.collapsed {
+                transform: translateX(-100%);
+                flex-basis: 0;
+                width: 0;
+            }
+            
+            .main-content-container {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body class="antialiased body-pattern font-sans">
@@ -121,8 +156,8 @@
         <!-- Sidebar -->
         @include('Inventory.layout.sidebar')
         
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Main Content Container -->
+        <div class="main-content-container flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
             @include('Inventory.layout.header')
             

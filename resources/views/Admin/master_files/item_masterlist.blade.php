@@ -1,83 +1,100 @@
 @extends('Admin.layout.app')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-8 font-sans text-gray-600">
 
     {{-- 1. HEADER & ACTIONS --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Item Masterlist</h1>
-            <p class="text-sm text-gray-500 mt-1">The central database for all inventory items, unit conversions, and pricing.</p>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-2">Item Masterlist</h1>
+            <p class="text-sm text-gray-500">The central database for all inventory items, unit conversions, and pricing.</p>
         </div>
-        <div class="flex items-center gap-3">
-            <button class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition shadow-sm">
-                <i class="fas fa-file-import mr-2"></i> Import CSV
+        <div class="flex flex-wrap items-center gap-3">
+            <button class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-border-soft text-chocolate text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm group">
+                <i class="fas fa-file-import mr-2 opacity-70 group-hover:opacity-100"></i> Import CSV
             </button>
             <button onclick="document.getElementById('itemModal').classList.remove('hidden')" 
-                class="inline-flex items-center justify-center px-4 py-2 bg-chocolate text-white text-sm font-medium rounded-lg hover:bg-chocolate-dark transition shadow-sm">
+                class="inline-flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                 <i class="fas fa-plus mr-2"></i> Add New Item
             </button>
         </div>
     </div>
 
     {{-- 2. FILTERS --}}
-    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <!-- Search -->
-        <div class="relative w-full md:w-96">
-            <input type="text" id="searchInput" value="{{ request('search') }}" class="block w-full pl-10 pr-12 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="Search Item Name, SKU...">
-            <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                <button type="button" id="searchBtn" class="text-gray-400 hover:text-gray-600 focus:outline-none">
-                    <i class="fas fa-search"></i>
+    <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="relative w-full md:w-96 group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400 group-focus-within:text-caramel transition-colors"></i>
+                </div>
+                <input type="text" id="searchInput" value="{{ request('search') }}" 
+                    class="block w-full pl-11 pr-12 py-2.5 border border-gray-200 rounded-lg bg-cream-bg placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all" 
+                    placeholder="Search Item Name, SKU...">
+                <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <button type="button" id="searchBtn" class="text-gray-400 hover:text-chocolate focus:outline-none transition-colors">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div class="relative w-full md:w-48">
+                    <select id="categoryFilter" class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer">
+                        <option value="">All Categories</option>
+                        @foreach($categories as $category)
+                            <option value="{{ $category->name }}" {{ request('category') == $category->name ? 'selected' : '' }}>{{ $category->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+
+                <div class="relative w-full md:w-40">
+                    <select id="stockFilter" class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer">
+                        <option value="">Stock Status</option>
+                        <option value="low" {{ request('stock_status') == 'low' ? 'selected' : '' }}>Low Stock</option>
+                        <option value="out" {{ request('stock_status') == 'out' ? 'selected' : '' }}>Out of Stock</option>
+                        <option value="good" {{ request('stock_status') == 'good' ? 'selected' : '' }}>Good Stock</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+
+                <button id="clearFiltersBtn" class="px-4 py-2.5 text-sm font-medium text-chocolate bg-white border border-border-soft rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm tooltip" title="Clear Filters">
+                    <i class="fas fa-undo"></i>
                 </button>
             </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="flex items-center gap-3 w-full md:w-auto">
-            <select id="categoryFilter" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                <option value="">All Categories</option>
-                @foreach($categories as $category)
-                    <option value="{{ $category->name }}" {{ request('category') == $category->name ? 'selected' : '' }}>{{ $category->name }}</option>
-                @endforeach
-            </select>
-            <select id="stockFilter" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                <option value="">Stock Status</option>
-                <option value="low" {{ request('stock_status') == 'low' ? 'selected' : '' }}>Low Stock</option>
-                <option value="out" {{ request('stock_status') == 'out' ? 'selected' : '' }}>Out of Stock</option>
-                <option value="good" {{ request('stock_status') == 'good' ? 'selected' : '' }}>Good Stock</option>
-            </select>
-            <button id="clearFiltersBtn" class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-chocolate transition-colors">
-                <i class="fas fa-times mr-1"></i> Clear
-            </button>
         </div>
     </div>
 
     {{-- 3. ITEMS TABLE --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-border-soft">
+                <thead class="bg-cream-bg">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Details</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Level</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Config (Factor)</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Costing</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Item Details</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Stock Level</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Unit Config</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Costing</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Status</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-caramel uppercase tracking-widest font-display">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="bg-white divide-y divide-border-soft">
                     @forelse($items as $item)
-                    <tr class="hover:bg-gray-50 transition-colors">
+                    <tr class="group hover:bg-cream-bg transition-colors duration-200">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-start">
-                                <div class="flex-shrink-0 h-10 w-10 bg-amber-50 rounded flex items-center justify-center text-amber-600">
-                                    <i class="fas fa-box text-lg"></i>
+                                <div class="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-chocolate to-caramel rounded-lg flex items-center justify-center text-white shadow-sm ring-2 ring-white">
+                                    <i class="fas fa-box text-sm"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-bold text-gray-900">{{ $item->name }}</div>
-                                    <div class="text-xs text-gray-500">SKU: {{ $item->item_code }}</div>
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 mt-1">
+                                    <div class="text-sm font-bold text-chocolate">{{ $item->name }}</div>
+                                    <div class="text-xs text-gray-400 font-mono mt-0.5">SKU: {{ $item->item_code }}</div>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-cream-bg text-caramel border border-border-soft mt-1">
                                         {{ $item->category->name ?? 'Uncategorized' }}
                                     </span>
                                 </div>
@@ -88,53 +105,60 @@
                                 $currentStock = $item->currentStockRecord ? $item->currentStockRecord->current_quantity : 0;
                                 $stockLevel = $currentStock > $item->reorder_point ? 'good' : ($currentStock > 0 ? 'low' : 'out');
                             @endphp
-                            <div class="text-sm font-bold text-gray-900">
-                                {{ number_format($currentStock, 1) }} {{ $item->unit->symbol ?? '' }}
+                            <div class="text-sm font-bold text-chocolate">
+                                {{ number_format($currentStock, 1) }} <span class="text-xs text-gray-500 font-normal">{{ $item->unit->symbol ?? '' }}</span>
                             </div>
-                            <div class="text-xs {{ $stockLevel === 'good' ? 'text-green-500' : 'text-red-500' }}">
-                                Reorder at: {{ number_format($item->reorder_point, 1) }} {{ $item->unit->symbol ?? '' }}
+                            <div class="text-[10px] font-bold uppercase tracking-wider mt-1 {{ $stockLevel === 'good' ? 'text-green-600' : ($stockLevel === 'low' ? 'text-amber-600' : 'text-red-600') }}">
+                                @if($stockLevel === 'good')
+                                    <i class="fas fa-check-circle mr-1"></i> Healthy
+                                @elseif($stockLevel === 'low')
+                                    <i class="fas fa-exclamation-circle mr-1"></i> Low Stock
+                                @else
+                                    <i class="fas fa-times-circle mr-1"></i> Empty
+                                @endif
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex flex-col space-y-1">
+                            <div class="flex flex-col space-y-1.5">
                                 <div class="flex items-center text-xs text-gray-600">
-                                    <span class="w-16 font-semibold">Buy:</span> 
-                                    <span class="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">{{ $item->unit->symbol ?? 'unit' }}</span>
+                                    <span class="w-12 font-semibold text-chocolate/70">Buy:</span> 
+                                    <span class="bg-white border border-border-soft px-1.5 py-0.5 rounded text-gray-700">{{ $item->unit->symbol ?? 'unit' }}</span>
                                 </div>
                                 <div class="flex items-center text-xs text-gray-600">
-                                    <span class="w-16 font-semibold">Stock:</span> 
-                                    <span class="bg-green-50 text-green-700 px-1.5 py-0.5 rounded border border-green-100">{{ $item->unit->symbol ?? 'unit' }}</span>
-                                </div>
-                                <div class="text-xs font-bold text-chocolate mt-1">
-                                    1 {{ $item->unit->name ?? 'unit' }} = 1 {{ $item->unit->symbol ?? 'unit' }}
+                                    <span class="w-12 font-semibold text-chocolate/70">Stock:</span> 
+                                    <span class="bg-white border border-border-soft px-1.5 py-0.5 rounded text-gray-700">{{ $item->unit->symbol ?? 'unit' }}</span>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">₱{{ number_format($item->cost_price ?? 0, 2) }}</div>
-                            <div class="text-xs text-gray-500">~ ₱{{ number_format(($item->cost_price ?? 0), 2) }} / {{ $item->unit->symbol ?? 'unit' }}</div>
+                            <div class="text-sm font-bold text-chocolate">₱{{ number_format($item->cost_price ?? 0, 2) }}</div>
+                            <div class="text-xs text-gray-400">per {{ $item->unit->symbol ?? 'unit' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $item->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                            <span class="px-2.5 py-0.5 inline-flex text-[10px] leading-5 font-bold uppercase tracking-wide rounded-full {{ $item->is_active ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
                                 {{ $item->is_active ? 'Active' : 'Inactive' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button onclick="editItem({{ $item->id }})" class="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded hover:bg-blue-100 transition">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button onclick="deleteItem({{ $item->id }})" class="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded hover:bg-red-100 transition ml-1">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <div class="flex justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                                <button onclick="editItem({{ $item->id }})" class="text-chocolate hover:text-white hover:bg-chocolate p-2 rounded-lg transition-all tooltip" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteItem({{ $item->id }})" class="text-red-600 hover:text-white hover:bg-red-600 p-2 rounded-lg transition-all tooltip" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
                         <td colspan="6" class="px-6 py-12 text-center">
-                            <div class="flex flex-col items-center">
-                                <i class="fas fa-box text-gray-300 text-4xl mb-4"></i>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">No Items Found</h3>
-                                <p class="text-gray-500">Start by adding your first item to the masterlist.</p>
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 border border-border-soft">
+                                    <i class="fas fa-box text-chocolate/30 text-2xl"></i>
+                                </div>
+                                <h3 class="font-display text-lg font-bold text-chocolate">No Items Found</h3>
+                                <p class="text-gray-500 text-sm mt-1">Start by adding your first item to the masterlist.</p>
                             </div>
                         </td>
                     </tr>
@@ -143,35 +167,39 @@
             </table>
         </div>
         
-        <!-- Pagination -->
-        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div class="bg-white px-6 py-4 flex items-center justify-between border-t border-border-soft">
             <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <p class="text-sm text-gray-700">Showing {{ $items->firstItem() ?? 0 }} to {{ $items->lastItem() ?? 0 }} of {{ $items->total() }} results</p>
+                <p class="text-sm text-gray-600">
+                    Showing <span class="font-bold text-chocolate">{{ $items->firstItem() ?? 0 }}</span> 
+                    to <span class="font-bold text-chocolate">{{ $items->lastItem() ?? 0 }}</span> 
+                    of <span class="font-bold text-chocolate">{{ $items->total() }}</span> results
+                </p>
+                
                 <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                     @if($items->previousPageUrl())
-                        <a href="{{ $items->previousPageUrl() }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <a href="{{ $items->previousPageUrl() }}" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-cream-bg transition-colors">
                             <i class="fas fa-chevron-left"></i>
                         </a>
                     @else
-                        <button disabled class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300">
+                        <button disabled class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-200 bg-gray-50 text-sm font-medium text-gray-300 cursor-not-allowed">
                             <i class="fas fa-chevron-left"></i>
                         </button>
                     @endif
 
                     @for($i = 1; $i <= $items->lastPage(); $i++)
                         @if($i == $items->currentPage())
-                            <button class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-chocolate text-white text-sm font-medium">{{ $i }}</button>
+                            <button class="relative inline-flex items-center px-4 py-2 border border-chocolate bg-chocolate text-white text-sm font-bold">{{ $i }}</button>
                         @else
-                            <a href="{{ $items->url($i) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50">{{ $i }}</a>
+                            <a href="{{ $items->url($i) }}" class="relative inline-flex items-center px-4 py-2 border border-gray-200 bg-white text-gray-700 text-sm font-medium hover:bg-cream-bg transition-colors">{{ $i }}</a>
                         @endif
                     @endfor
 
                     @if($items->nextPageUrl())
-                        <a href="{{ $items->nextPageUrl() }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                        <a href="{{ $items->nextPageUrl() }}" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-200 bg-white text-sm font-medium text-gray-500 hover:bg-cream-bg transition-colors">
                             <i class="fas fa-chevron-right"></i>
                         </a>
                     @else
-                        <button disabled class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300">
+                        <button disabled class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-200 bg-gray-50 text-sm font-medium text-gray-300 cursor-not-allowed">
                             <i class="fas fa-chevron-right"></i>
                         </button>
                     @endif
@@ -181,45 +209,39 @@
     </div>
 </div>
 
-<!-- ADD ITEM MODAL (Redesigned) -->
 <div id="itemModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="document.getElementById('itemModal').classList.add('hidden')"></div>
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="closeModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full border border-border-soft">
             
-            <!-- Modal Header -->
             <div class="bg-chocolate px-6 py-4 flex justify-between items-center">
                 <div>
-                    <h3 class="text-lg leading-6 font-bold text-white" id="modal-title">Add New Master Item</h3>
-                    <p class="text-xs text-white/80 mt-1">Define basic info, conversion logic, and stock thresholds.</p>
+                    <h3 class="text-xl font-display font-bold text-white" id="modal-title">Add New Master Item</h3>
+                    <p class="text-xs text-white/70 mt-0.5">Define basic info, conversion logic, and stock thresholds.</p>
                 </div>
-                <button onclick="closeModal()" class="text-white hover:text-gray-200 focus:outline-none">
+                <button onclick="closeModal()" class="text-white/60 hover:text-white transition-colors focus:outline-none">
                     <i class="fas fa-times text-lg"></i>
                 </button>
             </div>
 
-            <!-- Modal Body -->
-            <div class="px-6 py-6">
+            <div class="px-8 py-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
                 <form id="itemForm">
                     @csrf
                     <div class="space-y-8">
 
-                        <!-- Section 1: Identity -->
                         <div>
-                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">1. Item Identity</h4>
+                            <h4 class="text-xs font-bold text-caramel uppercase tracking-widest mb-4 border-b border-border-soft pb-2">1. Item Identity</h4>
                             <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                                <!-- Name -->
                                 <div class="md:col-span-8">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Item Name <span class="text-red-500">*</span></label>
-                                    <input type="text" name="name" id="itemName" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="e.g. Bread Flour" required>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Item Name <span class="text-red-500">*</span></label>
+                                    <input type="text" name="name" id="itemName" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" placeholder="e.g. Bread Flour" required>
                                 </div>
                                 
-                                <!-- Category -->
                                 <div class="md:col-span-4">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Category <span class="text-red-500">*</span></label>
-                                    <select name="category_id" id="itemCategory" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" required>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Category <span class="text-red-500">*</span></label>
+                                    <select name="category_id" id="itemCategory" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" required>
                                         <option value="">Select Category</option>
                                         @foreach($categories as $category)
                                             <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -227,16 +249,19 @@
                                     </select>
                                 </div>
 
-                                <!-- SKU -->
                                 <div class="md:col-span-6">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">SKU / Code <span class="text-red-500">*</span></label>
-                                    <input type="text" name="item_code" id="itemCode" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="e.g. ING-001" required>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">SKU / Code <span class="text-red-500">*</span></label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <i class="fas fa-barcode text-gray-400 text-xs"></i>
+                                        </div>
+                                        <input type="text" name="item_code" id="itemCode" class="block w-full pl-9 border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm font-mono" placeholder="e.g. ING-001" required>
+                                    </div>
                                 </div>
 
-                                <!-- Item Type -->
                                 <div class="md:col-span-6">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Item Type <span class="text-red-500">*</span></label>
-                                    <select name="item_type" id="itemType" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" required>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Item Type <span class="text-red-500">*</span></label>
+                                    <select name="item_type" id="itemType" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" required>
                                         <option value="">Select Type</option>
                                         <option value="raw_material">Raw Material</option>
                                         <option value="finished_good">Finished Good</option>
@@ -247,67 +272,59 @@
                             </div>
                         </div>
 
-                        <!-- Section 2: Unit & Pricing -->
-                        <div class="bg-blue-50/50 rounded-xl border border-blue-100 p-5 relative">
-                            <h4 class="text-xs font-bold text-blue-800 uppercase tracking-wider flex items-center mb-4">
-                                <span class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center mr-2 text-blue-600"><i class="fas fa-balance-scale"></i></span>
+                        <div class="bg-cream-bg rounded-xl border border-border-soft p-5 relative">
+                            <h4 class="text-xs font-bold text-chocolate uppercase tracking-widest flex items-center mb-4">
+                                <span class="w-6 h-6 rounded-full bg-white border border-border-soft flex items-center justify-center mr-2 text-caramel"><i class="fas fa-balance-scale text-[10px]"></i></span>
                                 2. Unit & Pricing
                             </h4>
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Unit -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Unit <span class="text-red-500">*</span></label>
-                                    <select name="unit_id" id="itemUnit" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" required>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Unit <span class="text-red-500">*</span></label>
+                                    <select name="unit_id" id="itemUnit" class="block w-full border-gray-200 bg-white rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" required>
                                         <option value="">Select Unit</option>
-                                        <!-- Units will be loaded dynamically -->
-                                    </select>
+                                        </select>
                                 </div>
 
-                                <!-- Cost Price -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Cost Price</label>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Cost Price</label>
                                     <div class="relative rounded-md shadow-sm">
                                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <span class="text-gray-500 sm:text-sm">₱</span>
                                         </div>
-                                        <input type="number" name="cost_price" id="costPrice" step="0.01" class="block w-full pl-7 border-gray-300 rounded-lg focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="0.00">
+                                        <input type="number" name="cost_price" id="costPrice" step="0.01" class="block w-full pl-7 border-gray-200 bg-white rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" placeholder="0.00">
                                     </div>
                                 </div>
 
-                                <!-- Selling Price -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Selling Price</label>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Selling Price</label>
                                     <div class="relative rounded-md shadow-sm">
                                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <span class="text-gray-500 sm:text-sm">₱</span>
                                         </div>
-                                        <input type="number" name="selling_price" id="sellingPrice" step="0.01" class="block w-full pl-7 border-gray-300 rounded-lg focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="0.00">
+                                        <input type="number" name="selling_price" id="sellingPrice" step="0.01" class="block w-full pl-7 border-gray-200 bg-white rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" placeholder="0.00">
                                     </div>
                                 </div>
 
-                                <!-- Reorder Point -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Reorder Level</label>
-                                    <input type="number" name="reorder_point" id="reorderLevel" step="0.01" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="0.00">
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Reorder Level</label>
+                                    <input type="number" name="reorder_point" id="reorderLevel" step="0.01" class="block w-full border-gray-200 bg-white rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" placeholder="0.00">
+                                    <p class="text-[10px] text-gray-500 mt-1">Alert when stock drops below this.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Section 3: Additional Info -->
                         <div>
-                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">3. Additional Information</h4>
+                            <h4 class="text-xs font-bold text-caramel uppercase tracking-widest mb-4 border-b border-border-soft pb-2">3. Additional Information</h4>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <!-- Description -->
                                 <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                    <textarea name="description" id="itemDescription" rows="3" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="Item description..."></textarea>
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Description</label>
+                                    <textarea name="description" id="itemDescription" rows="3" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" placeholder="Item description..."></textarea>
                                 </div>
 
-                                <!-- Shelf Life -->
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-1">Shelf Life (Days)</label>
-                                    <input type="number" name="shelf_life_days" id="shelfLife" min="0" class="block w-full border-gray-300 rounded-lg shadow-sm focus:ring-chocolate focus:border-chocolate sm:text-sm" placeholder="0">
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Shelf Life (Days)</label>
+                                    <input type="number" name="shelf_life_days" id="shelfLife" min="0" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm" placeholder="0">
                                 </div>
                             </div>
                         </div>
@@ -316,12 +333,11 @@
                 </form>
             </div>
 
-            <!-- Modal Footer -->
-            <div class="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse border-t border-gray-100">
-                <button type="button" onclick="saveItem()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-chocolate sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+            <div class="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" onclick="saveItem()" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-chocolate text-base font-bold text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Save Master Item
                 </button>
-                <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
+                <button type="button" onclick="closeModal()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Cancel
                 </button>
             </div>
@@ -543,8 +559,8 @@
             if (data.success) {
                 // Show success message
                 const successMessage = document.createElement('div');
-                successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-                successMessage.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${data.message}`;
+                successMessage.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center font-bold animate-pulse';
+                successMessage.innerHTML = `<i class="fas fa-check-circle mr-3"></i>${data.message}`;
                 document.body.appendChild(successMessage);
                 
                 // Remove success message after 3 seconds
@@ -640,7 +656,7 @@
     
     // Add event listener for modal close button
     document.getElementById('itemModal').addEventListener('click', function(e) {
-        if (e.target.classList.contains('bg-gray-500')) {
+        if (e.target.classList.contains('bg-gray-900')) {
             closeModal();
         }
     });

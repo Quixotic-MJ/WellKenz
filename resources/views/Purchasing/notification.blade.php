@@ -1,100 +1,128 @@
- @extends('Purchasing.layout.app')
+@extends('Purchasing.layout.app')
 
 @section('title', 'Notifications - Purchasing')
 
 @section('content')
-<div class="w-full px-4 sm:px-6 lg:px-8 space-y-6 relative pb-20">
+<div class="w-full px-4 sm:px-6 lg:px-8 space-y-6 relative pb-24 font-sans text-gray-600">
 
-    {{-- 1. HEADER & TABS --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Notifications</h1>
-                <p class="text-sm text-gray-500 mt-1">Stay updated with production alerts and system messages.</p>
-            </div>
-            <div class="flex items-center gap-3">
-                <button id="markAllAsRead" class="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition-colors">
-                    <i class="fas fa-check-double mr-2"></i> Mark all read
-                </button>
-            </div>
+    {{-- 1. HEADER --}}
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="font-display text-3xl font-bold text-chocolate">Notifications</h1>
+            <p class="text-sm text-gray-500 mt-1 font-sans">Stay updated with production alerts, system messages, and requisition status.</p>
         </div>
-
-        {{-- Filter Tabs --}}
-        <div class="flex overflow-x-auto bg-gray-50 px-6">
-            @php
-                $tabs = [
-                    'all' => ['label' => 'All', 'count' => $stats['total']],
-                    'unread' => ['label' => 'Unread', 'count' => $stats['unread']],
-                    'high' => ['label' => 'High Priority', 'count' => $stats['high_priority']],
-                    'urgent' => ['label' => 'Urgent', 'count' => $stats['urgent']],
-                ];
-            @endphp
-
-            @foreach($tabs as $key => $tab)
-                <a href="{{ request()->fullUrlWithQuery(['filter' => $key]) }}" 
-                   data-filter="{{ $key }}"
-                   class="flex items-center py-4 px-4 border-b-2 text-sm font-medium whitespace-nowrap transition-colors
-                   {{ $filter === $key ? 'border-chocolate text-chocolate' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                    {{ $tab['label'] }}
-                    <span class="ml-2 py-0.5 px-2 rounded-full text-xs {{ $filter === $key ? 'bg-chocolate/10 text-chocolate' : 'bg-gray-200 text-gray-600' }}">
-                        {{ $tab['count'] }}
-                    </span>
-                </a>
-            @endforeach
+        <div class="flex items-center gap-3">
+            <button id="markAllAsRead" 
+                    class="inline-flex items-center px-4 py-2 bg-white border border-border-soft hover:bg-cream-bg text-chocolate text-sm font-medium rounded-lg transition-all shadow-sm">
+                <i class="fas fa-check-double mr-2"></i> Mark all read
+            </button>
         </div>
     </div>
 
-    {{-- 2. NOTIFICATION LIST --}}
-    <div class="space-y-3">
-        @forelse(($notifications ?? collect()) as $notification)
-            <div class="notification-item group relative bg-white border border-gray-200 rounded-xl p-4 hover:shadow-md transition-all duration-200 {{ !$notification->is_read ? 'bg-blue-50/30' : '' }}"
-                 data-notification-id="{{ $notification->id }}"
-                 data-read="{{ $notification->is_read ? 'true' : 'false' }}">
-                
-                <div class="flex items-start gap-4">
+    {{-- 2. MAIN CARD --}}
+    <div class="bg-white rounded-xl border border-border-soft shadow-sm overflow-hidden">
+        
+        {{-- Filter Tabs --}}
+        <div class="border-b border-border-soft bg-gray-50/50 px-6">
+            <nav class="flex space-x-8 overflow-x-auto" aria-label="Tabs">
+                @php
+                    $tabs = [
+                        'all' => ['label' => 'All', 'count' => $stats['total']],
+                        'unread' => ['label' => 'Unread', 'count' => $stats['unread']],
+                        'high' => ['label' => 'High Priority', 'count' => $stats['high_priority']],
+                        'urgent' => ['label' => 'Urgent', 'count' => $stats['urgent']],
+                    ];
+                @endphp
+
+                @foreach($tabs as $key => $tab)
+                    <a href="{{ request()->fullUrlWithQuery(['filter' => $key]) }}" 
+                       data-filter="{{ $key }}"
+                       class="group inline-flex items-center py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-all
+                       {{ $filter === $key ? 'border-caramel text-chocolate' : 'border-transparent text-gray-500 hover:text-chocolate hover:border-gray-300' }}">
+                        {{ $tab['label'] }}
+                        <span class="ml-2 py-0.5 px-2.5 rounded-full text-xs transition-colors
+                        {{ $filter === $key ? 'bg-chocolate text-white' : 'bg-gray-200 text-gray-600 group-hover:bg-gray-300' }}">
+                            {{ $tab['count'] }}
+                        </span>
+                    </a>
+                @endforeach
+            </nav>
+        </div>
+
+        {{-- Notification List --}}
+        <div class="divide-y divide-border-soft">
+            @forelse(($notifications ?? collect()) as $notification)
+                <div class="notification-item group relative p-5 hover:bg-gray-50 transition-all duration-200 flex items-start gap-4 {{ !$notification->is_read ? 'bg-cream-bg' : 'bg-white' }}"
+                     data-notification-id="{{ $notification->id }}"
+                     data-read="{{ $notification->is_read ? 'true' : 'false' }}">
+                    
                     {{-- Checkbox --}}
-                    <div class="pt-1 flex items-center h-full">
+                    <div class="pt-1 flex-shrink-0">
                         <input type="checkbox" 
-                               class="notification-checkbox h-4 w-4 text-chocolate focus:ring-chocolate border-gray-300 rounded cursor-pointer transition-transform transform hover:scale-110"
+                               class="notification-checkbox w-4 h-4 text-chocolate focus:ring-caramel border-gray-300 rounded cursor-pointer"
                                data-notification-id="{{ $notification->id }}">
                     </div>
 
                     {{-- Icon --}}
                     <div class="flex-shrink-0">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center {{ $notification->getIconClass() }} shadow-sm ring-4 ring-white">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-border-soft text-chocolate shadow-sm">
                             <i class="{{ explode(' ', $notification->getIconClass())[0] }}"></i>
                         </div>
                     </div>
 
                     {{-- Content --}}
                     <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-2">
-                            <div>
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                            <div class="space-y-1">
                                 <div class="flex items-center gap-2">
-                                    <h3 class="text-sm font-bold text-gray-900 {{ !$notification->is_read ? 'text-chocolate' : '' }}">
+                                    <h3 class="text-sm font-semibold text-gray-900 {{ !$notification->is_read ? 'text-chocolate' : '' }}">
                                         {{ $notification->title }}
                                     </h3>
+                                    {{-- Unread Indicator --}}
                                     @if(!$notification->is_read)
-                                        <span class="inline-block w-2 h-2 bg-chocolate rounded-full"></span>
+                                        <span class="inline-block w-2 h-2 bg-caramel rounded-full"></span>
                                     @endif
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider {{ $notification->getPriorityBadgeColor() }}">
+                                    
+                                    {{-- Priority Badge --}}
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200">
                                         {{ $notification->priority }}
                                     </span>
                                 </div>
-                                <p class="text-sm text-gray-600 mt-1 leading-relaxed">{{ $notification->message }}</p>
+                                <p class="text-sm text-gray-600 leading-relaxed">{{ $notification->message }}</p>
                             </div>
-                            
-                            <span class="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
-                                {{ $notification->getTimeAgoAttribute() }}
-                            </span>
+
+                            {{-- Time & Actions --}}
+                            <div class="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
+                                <span class="text-xs text-gray-400 whitespace-nowrap">
+                                    {{ $notification->getTimeAgoAttribute() }}
+                                </span>
+                                
+                                {{-- Hover Actions --}}
+                                <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    @if($notification->action_url)
+                                        <a href="{{ $notification->action_url }}" class="text-xs font-medium text-chocolate hover:underline">
+                                            View
+                                        </a>
+                                        <span class="text-gray-300">|</span>
+                                    @endif
+                                    
+                                    <button class="mark-read-unread text-xs font-medium text-caramel hover:text-chocolate transition-colors" title="{{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}">
+                                        {{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}
+                                    </button>
+                                    <span class="text-gray-300">|</span>
+                                    <button class="delete-notification text-gray-400 hover:text-red-600 transition-colors" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
-                        {{-- Metadata & Actions Row --}}
-                        <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-                            <div class="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                                @if($notification->metadata && count($notification->metadata) > 0)
+                        {{-- Metadata --}}
+                        @if(($notification->metadata && count($notification->metadata) > 0) || ($notification->expires_at && $notification->expires_at->isBefore(now()->addDays(1))))
+                            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                                @if($notification->metadata)
                                     @foreach(array_slice($notification->metadata, 0, 3) as $key => $value)
-                                        <div class="flex items-center bg-gray-100 px-2 py-1 rounded">
+                                        <div class="flex items-center bg-gray-50 border border-border-soft px-2 py-1 rounded">
                                             <span class="font-medium text-gray-700 mr-1">{{ ucfirst(str_replace('_', ' ', $key)) }}:</span> 
                                             <span class="truncate max-w-[150px]">{{ $value }}</span>
                                         </div>
@@ -102,101 +130,70 @@
                                 @endif
 
                                 @if($notification->expires_at && $notification->expires_at->isBefore(now()->addDays(1)))
-                                    <span class="text-amber-600 flex items-center">
+                                    <span class="text-caramel flex items-center font-medium">
                                         <i class="fas fa-clock mr-1"></i> Expires {{ $notification->expires_at->diffForHumans() }}
                                     </span>
                                 @endif
                             </div>
-
-                            {{-- Hover Actions --}}
-                            <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                @if($notification->action_url)
-                                    <a href="{{ $notification->action_url }}" class="text-xs font-medium text-chocolate hover:text-chocolate-dark underline decoration-chocolate/30">
-                                        View Details
-                                    </a>
-                                    <span class="text-gray-300">|</span>
-                                @endif
-                                
-                                <button class="mark-read-unread text-xs font-medium text-gray-500 hover:text-chocolate transition-colors" title="{{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}">
-                                    {{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}
-                                </button>
-                                <span class="text-gray-300">|</span>
-                                <button class="delete-notification text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
+                        @endif
                     </div>
                 </div>
-            </div>
-        @empty
-            <div class="text-center py-12">
-                <div class="flex flex-col items-center">
-                    <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fas fa-bell text-3xl text-gray-400"></i>
+            @empty
+                <div class="text-center py-16">
+                    <div class="mx-auto w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 text-chocolate/50">
+                        <i class="fas fa-bell-slash text-2xl"></i>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">No notifications</h3>
-                    <p class="text-sm text-gray-500 text-center max-w-sm">
+                    <h3 class="font-display text-lg font-medium text-chocolate mb-2">No notifications found</h3>
+                    <p class="text-sm text-gray-500 max-w-sm mx-auto">
                         @if($filter === 'all')
-                            You don't have any notifications yet. You'll receive updates about production alerts, requisitions, and system messages here.
+                            You don't have any notifications yet.
                         @elseif($filter === 'unread')
-                            You're all caught up! No unread notifications to show.
-                        @elseif($filter === 'high')
-                            No high priority notifications at the moment.
+                            You're all caught up! No unread notifications.
                         @else
-                            No urgent notifications to display.
+                            No notifications match your current filter.
                         @endif
                     </p>
                     @if($filter !== 'all')
                         <a href="{{ request()->fullUrlWithQuery(['filter' => 'all']) }}" 
-                           class="mt-4 inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-chocolate">
-                            <i class="fas fa-list mr-2"></i> View All Notifications
+                           class="mt-4 inline-flex items-center px-4 py-2 border border-border-soft shadow-sm text-sm font-medium rounded-lg text-chocolate bg-white hover:bg-cream-bg transition-all">
+                            Clear Filters
                         </a>
                     @endif
                 </div>
+            @endforelse
+        </div>
+        
+        {{-- Pagination --}}
+        @if(isset($notifications) && method_exists($notifications, 'hasPages') && $notifications->hasPages())
+            <div class="bg-gray-50 border-t border-border-soft px-6 py-4">
+                {{ $notifications->appends(['filter' => $filter])->links() }}
             </div>
-        @endforelse
+        @elseif(!empty($notifications) && $notifications->count() > 0)
+            <div class="bg-gray-50 border-t border-border-soft px-6 py-3 flex items-center justify-between text-sm text-gray-500">
+                <p>Showing <span class="font-medium">{{ $notifications->count() }}</span> results</p>
+            </div>
+        @endif
     </div>
 
-    {{-- 3. PAGINATION --}}
-    @if(isset($notifications) && method_exists($notifications, 'hasPages') && $notifications->hasPages())
-        <div class="mt-6">
-            {{ $notifications->appends(['filter' => $filter])->links() }}
-        </div>
-    @elseif(!empty($notifications) && $notifications->count() > 0)
-        {{-- Show pagination info for cases where notifications exist but no links needed --}}
-        <div class="bg-white px-4 py-3 flex items-center justify-between border border-gray-200 rounded-lg shadow-sm sm:px-6 mt-6">
-            <p class="text-sm text-gray-700">
-                Showing 
-                <span class="font-medium">{{ $notifications->firstItem() ?? 1 }}</span> 
-                to 
-                <span class="font-medium">{{ $notifications->lastItem() ?? $notifications->count() }}</span> 
-                of 
-                <span class="font-medium">{{ $notifications->total() }}</span> 
-                notifications
-            </p>
-        </div>
-    @endif
-
-    {{-- 4. STICKY BULK ACTIONS BAR --}}
+    {{-- 3. BULK ACTIONS BAR (Sticky) --}}
     <div id="bulkActionsBar" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 hidden transition-all duration-300 ease-in-out">
-        <div class="bg-gray-900 text-white rounded-full shadow-2xl px-6 py-3 flex items-center gap-6">
-            <div class="flex items-center gap-2 text-sm font-medium border-r border-gray-700 pr-6">
-                <div class="bg-white text-gray-900 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold" id="selectedCount">0</div>
+        <div class="bg-chocolate text-white rounded-full shadow-2xl px-6 py-3 flex items-center gap-6 border border-chocolate-dark">
+            <div class="flex items-center gap-3 text-sm font-medium border-r border-white/20 pr-6">
+                <div class="bg-white text-chocolate rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold" id="selectedCount">0</div>
                 <span>Selected</span>
             </div>
             <div class="flex items-center gap-2">
-                <button id="bulkMarkRead" class="p-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white transition-colors tooltip" title="Mark Read">
+                <button id="bulkMarkRead" class="p-2 rounded-full hover:bg-white/10 text-white transition-colors tooltip" title="Mark Read">
                     <i class="fas fa-envelope-open"></i>
                 </button>
-                <button id="bulkMarkUnread" class="p-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white transition-colors tooltip" title="Mark Unread">
+                <button id="bulkMarkUnread" class="p-2 rounded-full hover:bg-white/10 text-white transition-colors tooltip" title="Mark Unread">
                     <i class="fas fa-envelope"></i>
                 </button>
-                <button id="bulkDelete" class="p-2 rounded-full hover:bg-red-600/20 text-gray-300 hover:text-red-400 transition-colors tooltip" title="Delete">
+                <button id="bulkDelete" class="p-2 rounded-full hover:bg-red-500/20 text-red-200 hover:text-white transition-colors tooltip" title="Delete">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
-            <button id="cancelBulk" class="ml-2 text-xs text-gray-400 hover:text-white uppercase font-bold tracking-wide">
+            <button id="cancelBulk" class="ml-2 text-xs text-caramel hover:text-white uppercase font-bold tracking-wide transition-colors">
                 Cancel
             </button>
         </div>
@@ -204,32 +201,31 @@
 
 </div>
 
-{{-- UI COMPONENTS --}}
+{{-- MODALS --}}
 
-<!-- Confirmation Modal -->
-<div id="confirmModal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+<div id="confirmModal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeConfirmModal()"></div>
+        <div class="fixed inset-0 bg-chocolate/30 backdrop-blur-sm transition-opacity" onclick="closeConfirmModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full border border-border-soft">
             <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-chocolate/10 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-exclamation text-chocolate"></i>
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-cream-bg sm:mx-0 sm:h-10 sm:w-10 text-caramel">
+                        <i class="fas fa-exclamation"></i>
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="confirmTitle">Confirm Action</h3>
+                        <h3 class="text-lg leading-6 font-display font-medium text-chocolate" id="confirmTitle">Confirm Action</h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500" id="confirmMessage">Are you sure you want to proceed?</p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" id="confirmBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" id="confirmBtn" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-colors">
                     Confirm
                 </button>
-                <button type="button" onclick="closeConfirmModal()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="closeConfirmModal()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-colors">
                     Cancel
                 </button>
             </div>
@@ -237,14 +233,13 @@
     </div>
 </div>
 
-<!-- Toast Notification -->
 <div id="toast" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-full opacity-0">
-    <div class="bg-white border-l-4 border-chocolate rounded shadow-lg p-4 flex items-center w-80">
+    <div class="bg-white border-l-4 border-chocolate rounded-lg shadow-xl p-4 flex items-center w-80 ring-1 ring-black ring-opacity-5">
         <div class="flex-shrink-0">
             <i id="toastIcon" class="fas fa-check-circle text-chocolate"></i>
         </div>
         <div class="ml-3">
-            <p class="text-sm font-medium text-gray-900" id="toastTitle">Success</p>
+            <p class="text-sm font-medium text-chocolate" id="toastTitle">Success</p>
             <p class="text-xs text-gray-500" id="toastMessage">Operation completed.</p>
         </div>
         <button onclick="hideToast()" class="ml-auto text-gray-400 hover:text-gray-600">
@@ -259,29 +254,24 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Set notifications as active menu item
-    setActiveMenu('menu-purchasing-notifications');
+    if(typeof setActiveMenu === 'function') setActiveMenu('menu-purchasing-notifications');
     let confirmCallback = null;
 
     // Update tab counts after actions
     function updateTabCounts() {
-        // Fetch updated counts from the server
         fetch('{{ route("purchasing.notifications.stats") }}')
             .then(response => response.json())
             .then(data => {
-                // Update tab counts in the UI
                 document.querySelector('[data-filter="all"] span')?.textContent = data.total;
                 document.querySelector('[data-filter="unread"] span')?.textContent = data.unread;
                 document.querySelector('[data-filter="high"] span')?.textContent = data.high_priority;
                 document.querySelector('[data-filter="urgent"] span')?.textContent = data.urgent;
                 
-                // Update the stats object for template
                 if (typeof window.notificationStats !== 'undefined') {
                     window.notificationStats = data;
                 }
             })
-            .catch(error => {
-                console.error('Error fetching notification stats:', error);
-            });
+            .catch(error => console.error('Error fetching stats:', error));
     }
 
     /* --- UI HELPER FUNCTIONS --- */
@@ -294,12 +284,12 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('toastMessage').innerText = message;
         
         // Reset classes
-        icon.className = type === 'success' ? 'fas fa-check-circle text-green-500' : 'fas fa-exclamation-circle text-red-500';
-        toast.querySelector('.border-l-4').className = `bg-white border-l-4 rounded shadow-lg p-4 flex items-center w-80 ${type === 'success' ? 'border-green-500' : 'border-red-500'}`;
+        icon.className = type === 'success' ? 'fas fa-check-circle text-green-600' : 'fas fa-exclamation-circle text-red-600';
+        // Ensure toast border color matches type
+        toast.querySelector('.border-l-4').className = `bg-white border-l-4 rounded-lg shadow-xl p-4 flex items-center w-80 ring-1 ring-black ring-opacity-5 ${type === 'success' ? 'border-green-600' : 'border-red-600'}`;
 
         toast.classList.remove('hidden');
-        // Trigger reflow
-        void toast.offsetWidth;
+        void toast.offsetWidth; // Trigger reflow
         toast.classList.remove('translate-y-full', 'opacity-0');
 
         setTimeout(hideToast, 3000);
@@ -334,13 +324,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const markAllBtn = document.getElementById('markAllAsRead');
     if (markAllBtn) {
         markAllBtn.addEventListener('click', function() {
-            console.log('Mark all as read clicked');
             openConfirmModal(
                 'Mark All as Read',
                 'Are you sure you want to mark all notifications as read?',
                 function() {
-                    console.log('Proceeding with mark all as read...');
-                    // Actual API call
                     fetch('{{ route("purchasing.notifications.mark_all_read") }}', {
                         method: 'POST',
                         headers: {
@@ -350,41 +337,37 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     })
                     .then(response => {
-                        console.log('Response received:', response);
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
-                        }
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                         return response.json();
                     })
                     .then(data => {
-                        console.log('API Response data:', data);
                         if (data.success) {
-                            console.log('Success! Updating UI...');
                             showToast('Success', 'All notifications marked as read');
                             // Update UI
                             document.querySelectorAll('.notification-item').forEach(item => {
                                 if (item.dataset.read === 'false') {
                                     item.dataset.read = 'true';
-                                    item.classList.remove('bg-blue-50/30');
+                                    // Update styling for READ state
+                                    item.classList.remove('bg-cream-bg');
+                                    item.classList.add('bg-white');
+                                    
                                     const h3 = item.querySelector('h3');
                                     if (h3) h3.classList.remove('text-chocolate');
+                                    
                                     const dot = h3?.nextElementSibling;
                                     if (dot && dot.tagName === 'SPAN') dot.remove();
+                                    
                                     const btn = item.querySelector('.mark-read-unread');
                                     if (btn) btn.textContent = 'Mark Unread';
                                 }
                             });
-                            console.log('UI updated, calling updateTabCounts...');
-                            // Update tab counts
                             updateTabCounts();
                         } else {
-                            console.error('API returned failure:', data);
                             showToast('Error', 'Failed to mark notifications as read', 'error');
                         }
                     })
                     .catch(error => {
-                        console.error('Fetch error:', error);
-                        showToast('Error', 'An error occurred while updating notifications', 'error');
+                        showToast('Error', 'An error occurred', 'error');
                     });
                 }
             );
@@ -402,7 +385,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const isRead = item.dataset.read === 'true';
                 const action = isRead ? 'unread' : 'read';
                 
-                // Actual API call
                 fetch(`{{ route('purchasing.notifications') }}/${notificationId}/mark-${action}`, {
                     method: 'POST',
                     headers: {
@@ -417,7 +399,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         item.dataset.read = (!isRead).toString();
                         if(!isRead) {
                             // Marked as Read
-                            item.classList.remove('bg-blue-50/30');
+                            item.classList.remove('bg-cream-bg');
+                            item.classList.add('bg-white');
                             const h3 = item.querySelector('h3');
                             if (h3) h3.classList.remove('text-chocolate');
                             const dot = h3?.nextElementSibling;
@@ -425,9 +408,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             markReadUnreadBtn.textContent = 'Mark Unread';
                         } else {
                             // Marked as Unread
-                            item.classList.add('bg-blue-50/30');
+                            item.classList.remove('bg-white');
+                            item.classList.add('bg-cream-bg');
                             const h3 = item.querySelector('h3');
                             if (h3) h3.classList.add('text-chocolate');
+                            // Add dot back if missing
+                            if (!h3?.nextElementSibling || h3.nextElementSibling.tagName !== 'SPAN') {
+                                const dot = document.createElement('span');
+                                dot.className = 'inline-block w-2 h-2 bg-caramel rounded-full ml-2 align-middle';
+                                h3?.insertAdjacentElement('afterend', dot);
+                            }
                             markReadUnreadBtn.textContent = 'Mark Read';
                         }
                         showToast('Success', 'Notification updated');
@@ -437,8 +427,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    showToast('Error', 'An error occurred while updating notification', 'error');
+                    showToast('Error', 'An error occurred', 'error');
                 });
             });
         }
@@ -448,7 +437,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (deleteBtn) {
             deleteBtn.addEventListener('click', function() {
                 openConfirmModal('Delete Notification', 'This action cannot be undone.', function() {
-                    // Actual API call to delete notification
                     fetch(`{{ route('purchasing.notifications') }}/${notificationId}`, {
                         method: 'DELETE',
                         headers: {
@@ -469,8 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     })
                     .catch(error => {
-                        console.error('Error:', error);
-                        showToast('Error', 'An error occurred while deleting notification', 'error');
+                        showToast('Error', 'An error occurred', 'error');
                     });
                 });
             });
@@ -512,7 +499,6 @@ document.addEventListener('DOMContentLoaded', function() {
         else { title = 'Update Selected'; msg = `Update ${selectedIds.length} notifications?`; }
 
         openConfirmModal(title, msg, function() {
-            // Actual bulk operation via API
             fetch('{{ route("purchasing.notifications.bulk_operations") }}', {
                 method: 'POST',
                 headers: {
@@ -529,42 +515,39 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     showToast('Success', data.message);
-                    if (operation === 'delete') {
-                        document.querySelectorAll('.notification-checkbox:checked').forEach(cb => {
-                            const item = cb.closest('.notification-item');
+                    
+                    document.querySelectorAll('.notification-checkbox:checked').forEach(cb => {
+                        const item = cb.closest('.notification-item');
+                        
+                        if (operation === 'delete') {
                             item.style.opacity = '0';
                             setTimeout(() => item.remove(), 300);
-                        });
-                    } else if (operation === 'mark_read') {
-                        // Update UI to mark as read
-                        document.querySelectorAll('.notification-checkbox:checked').forEach(cb => {
-                            const item = cb.closest('.notification-item');
+                        } else if (operation === 'mark_read') {
                             item.dataset.read = 'true';
-                            item.classList.remove('bg-blue-50/30');
+                            item.classList.remove('bg-cream-bg');
+                            item.classList.add('bg-white');
                             const h3 = item.querySelector('h3');
                             if (h3) h3.classList.remove('text-chocolate');
                             const dot = h3?.nextElementSibling;
                             if (dot && dot.tagName === 'SPAN') dot.remove();
                             const btn = item.querySelector('.mark-read-unread');
                             if (btn) btn.textContent = 'Mark Unread';
-                        });
-                    } else if (operation === 'mark_unread') {
-                        // Update UI to mark as unread
-                        document.querySelectorAll('.notification-checkbox:checked').forEach(cb => {
-                            const item = cb.closest('.notification-item');
+                        } else if (operation === 'mark_unread') {
                             item.dataset.read = 'false';
-                            item.classList.add('bg-blue-50/30');
+                            item.classList.remove('bg-white');
+                            item.classList.add('bg-cream-bg');
                             const h3 = item.querySelector('h3');
                             if (h3) h3.classList.add('text-chocolate');
                             if (!h3?.nextElementSibling || h3.nextElementSibling.tagName !== 'SPAN') {
                                 const dot = document.createElement('span');
-                                dot.className = 'inline-block w-2 h-2 bg-chocolate rounded-full';
+                                dot.className = 'inline-block w-2 h-2 bg-caramel rounded-full ml-2 align-middle';
                                 h3?.insertAdjacentElement('afterend', dot);
                             }
                             const btn = item.querySelector('.mark-read-unread');
                             if (btn) btn.textContent = 'Mark Read';
-                        });
-                    }
+                        }
+                    });
+                    
                     checkboxes.forEach(cb => cb.checked = false);
                     updateBulkBar();
                     updateTabCounts();
@@ -573,7 +556,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showToast('Error', 'An error occurred during bulk operation', 'error');
             });
         });

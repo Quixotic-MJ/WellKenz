@@ -4,323 +4,297 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Level Report - WellKenz Bakery</title>
+    
+    {{-- Load Fonts --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    {{-- Font Awesome for Icons --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
+        :root {
+            --chocolate: #3d2817;
+            --caramel: #c48d3f;
+            --cream: #faf7f3;
+            --border: #e8dfd4;
+            --text-main: #374151;
+            --text-light: #6b7280;
+        }
+
         @page {
-            margin: 0.5in;
-            size: A4;
+            margin: 10mm;
+            size: A4 portrait;
         }
-        
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #333;
+            font-family: 'Inter', sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
+            color: var(--text-main);
+            background-color: white;
             margin: 0;
-            padding: 0;
+            padding: 20px;
         }
+
+        /* Typography */
+        h1, h2, h3, h4 { font-family: 'Playfair Display', serif; color: var(--chocolate); margin: 0; }
         
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #8B4513;
-            padding-bottom: 15px;
-        }
-        
-        .company-name {
-            font-size: 20px;
-            font-weight: bold;
-            color: #8B4513;
-            margin-bottom: 5px;
-        }
-        
-        .report-title {
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .report-date {
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .metrics {
+        /* Utilities */
+        .no-print { }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: 600; }
+        .uppercase { text-transform: uppercase; }
+        .tracking-wide { letter-spacing: 0.05em; }
+
+        /* Header */
+        .header-container {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 20px;
-            gap: 10px;
+            align-items: flex-end;
+            border-bottom: 2px solid var(--chocolate);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
         }
-        
+
+        .brand-section h1 { font-size: 24pt; line-height: 1; }
+        .brand-section p { color: var(--caramel); font-weight: bold; font-size: 9pt; letter-spacing: 2px; margin-top: 5px; text-transform: uppercase; }
+
+        .report-info { text-align: right; }
+        .report-info h2 { font-size: 16pt; margin-bottom: 5px; }
+        .report-info p { font-size: 9pt; color: var(--text-light); }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
         .metric-card {
-            flex: 1;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
-            text-align: center;
-            background-color: #f9f9f9;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            background-color: var(--cream);
         }
-        
-        .metric-label {
-            font-size: 10px;
-            color: #666;
-            text-transform: uppercase;
-            font-weight: bold;
-        }
-        
-        .metric-value {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 5px;
-        }
-        
-        .metric-good { color: #22c55e; }
-        .metric-low { color: #f59e0b; }
-        .metric-critical { color: #ef4444; }
-        .metric-total { color: #374151; }
-        
-        .table-container {
-            margin-top: 20px;
-        }
-        
+
+        .metric-title { font-size: 8pt; font-weight: bold; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-value { font-size: 18pt; font-weight: 700; color: var(--chocolate); margin-top: 5px; font-family: 'Playfair Display', serif; }
+
+        .metric-card.good .metric-value { color: #059669; }
+        .metric-card.low .metric-value { color: #d97706; }
+        .metric-card.critical .metric-value { color: #dc2626; }
+
+        /* Table */
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10px;
+            margin-bottom: 20px;
         }
-        
+
         th {
-            background-color: #f3f4f6;
-            padding: 8px 4px;
+            background-color: var(--chocolate);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 8pt;
+            letter-spacing: 0.5px;
+            padding: 10px 8px;
             text-align: left;
-            font-weight: bold;
-            border: 1px solid #d1d5db;
-            font-size: 9px;
         }
-        
+
         td {
-            padding: 6px 4px;
-            border: 1px solid #d1d5db;
+            border-bottom: 1px solid var(--border);
+            padding: 8px;
+            font-size: 9pt;
             vertical-align: middle;
         }
-        
-        .item-info {
-            font-weight: bold;
-        }
-        
-        .item-code {
-            font-size: 9px;
-            color: #666;
-            margin-top: 2px;
-        }
-        
-        .status-good {
-            background-color: #dcfce7;
-            color: #166534;
+
+        tr:nth-child(even) { background-color: rgba(250, 247, 243, 0.5); }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
             padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8px;
-            font-weight: bold;
-        }
-        
-        .status-low {
-            background-color: #fef3c7;
-            color: #92400e;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8px;
-            font-weight: bold;
-        }
-        
-        .status-critical {
-            background-color: #fee2e2;
-            color: #991b1b;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8px;
-            font-weight: bold;
-        }
-        
-        .category-badge {
-            background-color: #e5e7eb;
-            color: #374151;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 8px;
-        }
-        
-        .stock-bar {
-            width: 60px;
-            height: 8px;
-            background-color: #e5e7eb;
             border-radius: 4px;
+            font-size: 7pt;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-good { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .badge-low { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .badge-critical { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .badge-cat { background-color: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+
+        /* Progress Bar */
+        .progress-track {
+            background-color: #e5e7eb;
+            height: 6px;
+            border-radius: 3px;
+            width: 100%;
+            margin-top: 4px;
             overflow: hidden;
-            position: relative;
         }
-        
-        .stock-bar-fill {
-            height: 100%;
-            border-radius: 4px;
-            transition: width 0.3s ease;
-        }
-        
-        .stock-good { background-color: #22c55e; }
-        .stock-low { background-color: #f59e0b; }
-        .stock-critical { background-color: #ef4444; }
-        
+        .progress-fill { height: 100%; border-radius: 3px; }
+        .fill-good { background-color: #10b981; }
+        .fill-low { background-color: #f59e0b; }
+        .fill-critical { background-color: #ef4444; }
+
+        /* Footer */
         .footer {
-            margin-top: 20px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            text-align: center;
-            font-size: 9px;
-            color: #666;
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+            font-size: 8pt;
+            color: var(--text-light);
+            display: flex;
+            justify-content: space-between;
         }
-        
-        .print-button {
+
+        /* Print Button (Screen Only) */
+        .fab-print {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            background-color: #8B4513;
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--chocolate);
             color: white;
-            padding: 10px 20px;
             border: none;
-            border-radius: 5px;
-            cursor: pointer;
+            border-radius: 50px;
+            padding: 12px 24px;
             font-weight: bold;
-            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(61, 40, 23, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
         }
-        
-        .print-button:hover {
-            background-color: #654321;
-        }
-        
+        .fab-print:hover { background-color: #2c1d10; transform: translateY(-2px); }
+
         @media print {
-            .print-button {
-                display: none;
-            }
-            
-            .page-break {
-                page-break-before: always;
-            }
+            .no-print, .fab-print { display: none !important; }
+            body { background-color: white; padding: 0; }
+            .metric-card { border: 1px solid #ccc; background-color: white; }
+            th { background-color: #3d2817 !important; color: white !important; -webkit-print-color-adjust: exact; }
+            .badge { border: 1px solid #ccc; }
         }
     </style>
 </head>
 <body>
-    <button class="print-button" onclick="window.print()">🖨️ Print Report</button>
-    
-    <div class="header">
-        <div class="company-name">WellKenz Bakery</div>
-        <div class="report-title">Live Stock Level Report</div>
-        <div class="report-date">Generated on: {{ now()->format('F d, Y \a\t h:i A') }}</div>
-    </div>
-    
-    <div class="metrics">
-        <div class="metric-card">
-            <div class="metric-label">Total Items</div>
-            <div class="metric-value metric-total">{{ number_format($metrics['total_items']) }}</div>
+
+    <!-- Floating Print Button -->
+    <button class="fab-print no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Report
+    </button>
+
+    <!-- Header -->
+    <div class="header-container">
+        <div class="brand-section">
+            <h1>WellKenz</h1>
+            <p>Inventory Management</p>
         </div>
-        <div class="metric-card">
-            <div class="metric-label">Healthy Stock</div>
-            <div class="metric-value metric-good">{{ number_format($metrics['healthy_stock']) }}</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Low Stock</div>
-            <div class="metric-value metric-low">{{ number_format($metrics['low_stock']) }}</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Critical / Out</div>
-            <div class="metric-value metric-critical">{{ number_format($metrics['critical_stock']) }}</div>
+        <div class="report-info">
+            <h2>Stock Level Report</h2>
+            <p>Generated: {{ now()->format('F d, Y • h:i A') }}</p>
+            <p>User: {{ auth()->user()->name ?? 'System' }}</p>
         </div>
     </div>
-    
-    <div class="table-container">
-        <table>
-            <thead>
+
+    <!-- Key Metrics -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-title">Total Items</div>
+            <div class="metric-value">{{ number_format($metrics['total_items']) }}</div>
+        </div>
+        <div class="metric-card good">
+            <div class="metric-title">Healthy Stock</div>
+            <div class="metric-value">{{ number_format($metrics['healthy_stock']) }}</div>
+        </div>
+        <div class="metric-card low">
+            <div class="metric-title">Low Stock</div>
+            <div class="metric-value">{{ number_format($metrics['low_stock']) }}</div>
+        </div>
+        <div class="metric-card critical">
+            <div class="metric-title">Critical / Out</div>
+            <div class="metric-value">{{ number_format($metrics['critical_stock']) }}</div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Item Details</th>
+                <th style="width: 15%;">Category</th>
+                <th style="width: 15%; text-align: right;">Current Stock</th>
+                <th style="width: 15%; text-align: center;">Availability</th>
+                <th style="width: 25%;">Status & Thresholds</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($stockData as $data)
                 <tr>
-                    <th style="width: 20%;">Item Information</th>
-                    <th style="width: 12%;">Category</th>
-                    <th style="width: 15%;">Current Stock</th>
-                    <th style="width: 12%;">Stock Level</th>
-                    <th style="width: 10%;">Status</th>
-                    <th style="width: 15%;">Stock Thresholds</th>
-                    <th style="width: 16%;">Last Movement</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($stockData as $data)
-                    <tr>
-                        <td>
-                            <div class="item-info">{{ $data['item']->name }}</div>
-                            <div class="item-code">SKU: {{ $data['item']->item_code }}</div>
-                        </td>
-                        <td>
-                            <span class="category-badge">{{ $data['item']->category->name ?? 'Uncategorized' }}</span>
-                        </td>
-                        <td>
-                            <div style="font-weight: bold; {{ $data['status_class'] }}">{{ number_format($data['current_stock'], 1) }} {{ $data['item']->unit->symbol ?? '' }}</div>
-                            <div class="stock-bar">
-                                <div class="stock-bar-fill @if($data['status'] == 'Critical') stock-critical @elseif($data['status'] == 'Low') stock-low @else stock-good @endif" 
-                                     style="width: {{ min(100, $data['percentage']) }}%"></div>
+                    <td>
+                        <div style="font-weight: bold; color: var(--chocolate); font-size: 10pt;">{{ $data['item']->name }}</div>
+                        <div style="color: var(--text-light); font-size: 8pt; margin-top: 2px;">SKU: <span style="font-family: monospace;">{{ $data['item']->item_code }}</span></div>
+                    </td>
+                    <td>
+                        <span class="badge badge-cat">{{ $data['item']->category->name ?? 'General' }}</span>
+                    </td>
+                    <td class="text-right">
+                        <div style="font-weight: bold; font-size: 11pt;">{{ number_format($data['current_stock'], 2) }}</div>
+                        <div style="font-size: 8pt; color: var(--text-light);">{{ $data['item']->unit->symbol ?? 'units' }}</div>
+                    </td>
+                    <td style="padding: 0 15px;">
+                        <div class="progress-track">
+                            <div class="progress-fill 
+                                @if($data['status'] == 'Critical') fill-critical 
+                                @elseif($data['status'] == 'Low') fill-low 
+                                @else fill-good @endif" 
+                                style="width: {{ min(100, $data['percentage']) }}%">
                             </div>
-                            <div style="font-size: 8px; color: #666; margin-top: 2px;">{{ $data['percentage'] }}%</div>
-                        </td>
-                        <td>
-                            <div style="font-size: 9px;">
-                                <div>Min: {{ number_format($data['min_stock_level'], 1) }}</div>
-                                <div>Reorder: {{ number_format($data['reorder_point'], 1) }}</div>
-                                <div>Max: {{ number_format($data['max_stock_level'], 1) }}</div>
-                            </div>
-                        </td>
-                        <td>
+                        </div>
+                        <div class="text-center" style="font-size: 7pt; color: var(--text-light); margin-top: 2px;">
+                            {{ $data['percentage'] }}% Capacity
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
                             @if($data['status'] == 'Critical')
-                                <span class="status-critical">CRITICAL</span>
+                                <span class="badge badge-critical"><i class="fas fa-exclamation-circle"></i> CRITICAL</span>
                             @elseif($data['status'] == 'Low')
-                                <span class="status-low">LOW</span>
+                                <span class="badge badge-low"><i class="fas fa-exclamation-triangle"></i> LOW</span>
                             @else
-                                <span class="status-good">GOOD</span>
+                                <span class="badge badge-good"><i class="fas fa-check-circle"></i> GOOD</span>
                             @endif
-                        </td>
-                        <td>
-                            <div style="font-size: 9px;">
-                                @if($data['reorder_point'] > 0)
-                                    <div>Reorder Point: {{ number_format($data['reorder_point'], 1) }} {{ $data['item']->unit->symbol ?? '' }}</div>
-                                @endif
-                                @if($data['min_stock_level'] > 0)
-                                    <div>Min Level: {{ number_format($data['min_stock_level'], 1) }} {{ $data['item']->unit->symbol ?? '' }}</div>
-                                @endif
-                                @if($data['max_stock_level'] > 0)
-                                    <div>Max Level: {{ number_format($data['max_stock_level'], 1) }} {{ $data['item']->unit->symbol ?? '' }}</div>
-                                @endif
-                            </div>
-                        </td>
-                        <td>
-                            <div style="font-size: 9px; color: #666;">{{ $data['last_movement'] }}</div>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-    
+                            <span style="font-size: 8pt; color: var(--text-light);">
+                                {{ $data['last_movement'] }}
+                            </span>
+                        </div>
+                        <div style="font-size: 8pt; color: var(--text-light);">
+                            Min: <strong>{{ number_format($data['min_stock_level']) }}</strong> | 
+                            Reorder: <strong>{{ number_format($data['reorder_point']) }}</strong>
+                        </div>
+                    </td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+
+    <!-- Footer -->
     <div class="footer">
-        <p><strong>WellKenz Bakery ERP System</strong></p>
-        <p>Report generated by: {{ auth()->user()->name ?? 'System' }} | Role: {{ auth()->user()->role ?? 'Unknown' }}</p>
-        <p>This report contains confidential information. Please handle with care.</p>
+        <div>© {{ date('Y') }} WellKenz Bakery ERP System</div>
+        <div>Confidential Document</div>
+        <div>Page <span class="page-number"></span></div>
     </div>
-    
+
     <script>
-        // Auto-print when page loads (optional - uncomment if needed)
-        // window.onload = function() { window.print(); }
-        
-        // Print settings
-        window.onbeforeprint = function() {
-            console.log('Preparing to print stock report...');
-        };
-        
-        window.onafterprint = function() {
-            console.log('Print completed or cancelled.');
-        };
+        // Auto-print logic (optional)
+        // window.onload = function() { setTimeout(window.print, 500); }
     </script>
 </body>
 </html>

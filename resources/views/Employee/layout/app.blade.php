@@ -53,16 +53,30 @@
         }
         
         .sidebar {
-            transition: all 0.3s ease;
+            transition: flex-basis 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             background: linear-gradient(180deg, #3d2817 0%, #2a1a0f 100%);
+            flex-shrink: 0;
         }
         
         .sidebar.collapsed {
-            width: 70px;
+            flex-basis: 0;
+            width: 0;
+            transform: translateX(-10px);
+            opacity: 0.8;
         }
         
-        .sidebar.collapsed .sidebar-text {
-            display: none;
+        /* When sidebar is collapsed, fade out content smoothly */
+        .sidebar.collapsed > * {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        /* Ensure main content container expands when sidebar is collapsed */
+        .main-content-container {
+            transition: flex 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            flex: 1;
         }
         
         .active-menu {
@@ -121,8 +135,8 @@
         <!-- Sidebar -->
         @include('Employee.layout.sidebar')
         
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Main Content Container -->
+        <div class="main-content-container flex-1 flex flex-col overflow-hidden">
             <!-- Header -->
             @include('Employee.layout.header')
             
@@ -135,12 +149,6 @@
 
     <!-- Scripts -->
     <script>
-        // Toggle sidebar
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('collapsed');
-        }
-
         // Set active menu item (optional manual override)
         function setActiveMenu(menuId) {
             // Remove active class from all menu items
@@ -154,31 +162,6 @@
                 menuItem.classList.add('active-menu');
             }
         }
-
-        // Toggle dropdowns
-        function toggleNotifications() {
-            document.getElementById('notificationsDropdown').classList.toggle('hidden');
-        }
-
-        function toggleProfile() {
-            document.getElementById('profileDropdown').classList.toggle('hidden');
-        }
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            const notificationsBtn = document.getElementById('notificationsBtn');
-            const profileBtn = document.getElementById('profileBtn');
-            const notificationsDropdown = document.getElementById('notificationsDropdown');
-            const profileDropdown = document.getElementById('profileDropdown');
-
-            if (notificationsBtn && !notificationsBtn.contains(event.target) && notificationsDropdown && !notificationsDropdown.contains(event.target)) {
-                notificationsDropdown.classList.add('hidden');
-            }
-
-            if (profileBtn && !profileBtn.contains(event.target) && profileDropdown && !profileDropdown.contains(event.target)) {
-                profileDropdown.classList.add('hidden');
-            }
-        });
 
         // Set dashboard as active by default if no menu is currently active
         document.addEventListener('DOMContentLoaded', function() {

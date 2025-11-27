@@ -1,80 +1,98 @@
 @extends('Inventory.layout.app')
 
 @section('content')
-<div class="space-y-6">
-    {{-- 1. HEADER & SEARCH --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-8 text-center">
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">Batch Locator</h1>
-        <p class="text-sm text-gray-500 mb-6">Find exactly where specific items or batches are stored in the warehouse.</p>
-        
-        <div class="max-w-2xl mx-auto relative">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <i class="fas fa-search text-gray-400 text-lg"></i>
-            </div>
-            <input type="text" 
-                   id="batchSearchInput" 
-                   class="block w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-full shadow-sm focus:ring-chocolate focus:border-chocolate text-lg" 
-                   placeholder="Scan Barcode or Type Item Name / Batch #..." 
-                   autofocus
-                   autocomplete="off">
-            <button id="searchBtn" 
-                    class="absolute inset-y-1 right-1 px-6 bg-chocolate text-white font-medium rounded-full hover:bg-chocolate-dark transition">
-                Search
-            </button>
-        </div>
+<div class="space-y-8 font-sans text-gray-600">
 
-        {{-- Search Filters --}}
-        <div class="mt-6 flex justify-center gap-4 flex-wrap">
-            <select id="statusFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-chocolate focus:border-chocolate">
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="quarantine">Quarantine</option>
-                <option value="expired">Expired</option>
-                <option value="consumed">Consumed</option>
-            </select>
+    {{-- 1. HEADER & SEARCH --}}
+    <div class="bg-white border border-border-soft rounded-2xl shadow-sm p-10 text-center relative overflow-hidden">
+        {{-- Decorative Elements --}}
+        <div class="absolute top-0 left-0 w-32 h-32 bg-cream-bg rounded-br-full -ml-10 -mt-10 z-0"></div>
+        <div class="absolute bottom-0 right-0 w-24 h-24 bg-caramel/10 rounded-tl-full -mr-5 -mb-5 z-0"></div>
+
+        <div class="relative z-10 max-w-3xl mx-auto">
+            <h1 class="font-display text-4xl font-bold text-chocolate mb-3">Batch Locator</h1>
+            <p class="text-gray-500 mb-8 max-w-lg mx-auto">Locate inventory batches instantly. Search by batch number, item name, or scan a barcode.</p>
             
-            <select id="expiryFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-chocolate focus:border-chocolate">
-                <option value="all">All Items</option>
-                <option value="active">Not Expired</option>
-                <option value="expiring_soon">Expiring Soon (≤7 days)</option>
-                <option value="expired">Expired</option>
-                <option value="no_expiry">No Expiry Date</option>
-            </select>
+            <div class="relative group">
+                <div class="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-caramel text-xl group-focus-within:text-chocolate transition-colors"></i>
+                </div>
+                <input type="text" 
+                       id="batchSearchInput" 
+                       class="block w-full pl-14 pr-36 py-5 border-2 border-border-soft bg-cream-bg/50 rounded-full shadow-inner focus:outline-none focus:ring-0 focus:border-caramel/50 focus:bg-white transition-all text-lg placeholder-gray-400 font-medium" 
+                       placeholder="Scan Barcode or Type Item Name / Batch #..." 
+                       autofocus 
+                       autocomplete="off">
+                <button id="searchBtn" 
+                        class="absolute inset-y-2 right-2 px-8 bg-chocolate text-white font-bold rounded-full hover:bg-chocolate-dark shadow-md transition-all transform hover:scale-105 active:scale-95">
+                    Search
+                </button>
+            </div>
+
+            {{-- Search Filters --}}
+            <div class="mt-6 flex justify-center gap-4 flex-wrap">
+                <div class="relative">
+                    <select id="statusFilter" class="appearance-none pl-4 pr-10 py-2.5 bg-white border border-border-soft rounded-xl text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel cursor-pointer shadow-sm">
+                        <option value="all">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="quarantine">Quarantine</option>
+                        <option value="expired">Expired</option>
+                        <option value="consumed">Consumed</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+                
+                <div class="relative">
+                    <select id="expiryFilter" class="appearance-none pl-4 pr-10 py-2.5 bg-white border border-border-soft rounded-xl text-sm font-medium text-gray-600 focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel cursor-pointer shadow-sm">
+                        <option value="all">All Items</option>
+                        <option value="active">Not Expired</option>
+                        <option value="expiring_soon">Expiring Soon (≤7 days)</option>
+                        <option value="expired">Expired</option>
+                        <option value="no_expiry">No Expiry Date</option>
+                    </select>
+                    <div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-gray-400">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     {{-- 2. SEARCH RESULTS CONTAINER --}}
-    <div id="searchResultsContainer">
+    <div id="searchResultsContainer" class="min-h-[200px]">
         {{-- Loading Spinner --}}
-        <div id="loadingSpinner" class="hidden flex justify-center py-12">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-chocolate"></div>
+        <div id="loadingSpinner" class="hidden flex flex-col items-center justify-center py-16">
+            <div class="animate-spin rounded-full h-12 w-12 border-[3px] border-border-soft border-t-chocolate mb-4"></div>
+            <p class="text-sm font-bold text-chocolate uppercase tracking-widest">Searching Warehouse...</p>
         </div>
 
         {{-- No Search State (Initial Load) --}}
-        <div id="noSearchState" class="text-center py-12">
-            <div class="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-search text-4xl text-gray-400"></i>
+        <div id="noSearchState" class="text-center py-16 border-2 border-dashed border-border-soft rounded-2xl bg-gray-50/50">
+            <div class="w-20 h-20 mx-auto mb-6 bg-white rounded-full flex items-center justify-center shadow-sm border border-border-soft">
+                <i class="fas fa-search text-3xl text-caramel/50"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Search Batches</h3>
-            <p class="text-gray-500">Enter a batch number, item name, or barcode to find specific inventory items.</p>
+            <h3 class="font-display text-xl font-bold text-gray-900 mb-2">Ready to Search</h3>
+            <p class="text-gray-500 text-sm max-w-md mx-auto">Enter a keyword above to locate specific inventory batches across all warehouse locations.</p>
         </div>
 
         {{-- No Results State --}}
-        <div id="noResultsState" class="hidden text-center py-12">
-            <div class="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-exclamation-triangle text-4xl text-red-400"></i>
+        <div id="noResultsState" class="hidden text-center py-16 border-2 border-dashed border-border-soft rounded-2xl bg-white">
+            <div class="w-20 h-20 mx-auto mb-6 bg-cream-bg rounded-full flex items-center justify-center shadow-inner">
+                <i class="fas fa-box-open text-3xl text-chocolate/40"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">No Batches Found</h3>
-            <p class="text-gray-500">No batches match your search criteria. Try different keywords or adjust your filters.</p>
+            <h3 class="font-display text-xl font-bold text-chocolate mb-2">No Batches Found</h3>
+            <p class="text-gray-500 text-sm">We couldn't find any batches matching your criteria. Try adjusting your filters.</p>
         </div>
 
         {{-- Error State --}}
-        <div id="errorState" class="hidden text-center py-12">
-            <div class="w-24 h-24 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-                <i class="fas fa-times-circle text-4xl text-red-400"></i>
+        <div id="errorState" class="hidden text-center py-16 border-2 border-red-100 rounded-2xl bg-red-50/30">
+            <div class="w-20 h-20 mx-auto mb-6 bg-red-50 rounded-full flex items-center justify-center border border-red-100">
+                <i class="fas fa-exclamation-triangle text-3xl text-red-400"></i>
             </div>
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Search Error</h3>
-            <p id="errorMessage" class="text-gray-500">An error occurred while searching. Please try again.</p>
+            <h3 class="font-display text-xl font-bold text-red-800 mb-2">Search Error</h3>
+            <p id="errorMessage" class="text-red-600 text-sm">An error occurred while searching. Please try again.</p>
         </div>
 
         {{-- Search Results Grid --}}
@@ -85,8 +103,14 @@
 
     {{-- 3. INITIAL RECENT BATCHES (if any) --}}
     @if(isset($recentBatches) && $recentBatches->count() > 0)
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-        <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Batches</h2>
+    <div class="pt-8 border-t border-border-soft">
+        <div class="flex items-center gap-3 mb-6">
+            <div class="w-8 h-8 bg-chocolate rounded-lg flex items-center justify-center text-white shadow-sm">
+                <i class="fas fa-history text-sm"></i>
+            </div>
+            <h2 class="font-display text-xl font-bold text-chocolate">Recently Added Batches</h2>
+        </div>
+        
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             @foreach($recentBatches as $batch)
                 @php
@@ -97,94 +121,99 @@
                     $isExpiringSoon = !$isExpired && $expiryDays !== null && $expiryDays <= 7;
                     
                     // Determine border color based on status and expiry
-                    $borderColor = 'border-green-500';
+                    $borderColor = 'border-l-green-500';
                     if ($isExpired) {
-                        $borderColor = 'border-red-500';
+                        $borderColor = 'border-l-red-500';
                     } elseif ($isExpiringSoon) {
-                        $borderColor = 'border-yellow-500';
+                        $borderColor = 'border-l-amber-500';
                     } elseif ($batch->status === 'quarantine') {
-                        $borderColor = 'border-yellow-500';
+                        $borderColor = 'border-l-amber-500';
                     }
                     
                     // Get icon based on item type
                     $itemType = $batch->item->item_type ?? 'supply';
                     $iconMap = [
-                        'raw_material' => ['class' => 'fas fa-seedling', 'bg' => 'bg-green-100', 'color' => 'text-green-700'],
-                        'finished_good' => ['class' => 'fas fa-birthday-cake', 'bg' => 'bg-purple-100', 'color' => 'text-purple-700'],
-                        'semi_finished' => ['class' => 'fas fa-cookie-bite', 'bg' => 'bg-orange-100', 'color' => 'text-orange-700'],
-                        'supply' => ['class' => 'fas fa-box', 'bg' => 'bg-blue-100', 'color' => 'text-blue-700'],
+                        'raw_material' => ['class' => 'fas fa-wheat', 'bg' => 'bg-amber-50', 'color' => 'text-amber-700'],
+                        'finished_good' => ['class' => 'fas fa-bread-slice', 'bg' => 'bg-orange-50', 'color' => 'text-orange-700'],
+                        'semi_finished' => ['class' => 'fas fa-cookie-bite', 'bg' => 'bg-chocolate/10', 'color' => 'text-chocolate'],
+                        'supply' => ['class' => 'fas fa-box', 'bg' => 'bg-blue-50', 'color' => 'text-blue-700'],
                     ];
                     $icon = $iconMap[$itemType] ?? $iconMap['supply'];
                     
                     // Status badge
                     $statusBadge = match($batch->status) {
-                        'active' => ['class' => 'bg-green-100 text-green-800', 'text' => 'Active'],
-                        'quarantine' => ['class' => 'bg-yellow-100 text-yellow-800', 'text' => 'Quarantine'],
-                        'expired' => ['class' => 'bg-red-100 text-red-800', 'text' => 'Expired'],
-                        'consumed' => ['class' => 'bg-gray-100 text-gray-800', 'text' => 'Consumed'],
-                        default => ['class' => 'bg-gray-100 text-gray-800', 'text' => ucfirst($batch->status)]
+                        'active' => ['class' => 'bg-green-100 text-green-800 border-green-200', 'text' => 'Active'],
+                        'quarantine' => ['class' => 'bg-amber-100 text-amber-800 border-amber-200', 'text' => 'Quarantine'],
+                        'expired' => ['class' => 'bg-red-100 text-red-800 border-red-200', 'text' => 'Expired'],
+                        'consumed' => ['class' => 'bg-gray-100 text-gray-800 border-gray-200', 'text' => 'Consumed'],
+                        default => ['class' => 'bg-gray-100 text-gray-800 border-gray-200', 'text' => ucfirst($batch->status)]
                     };
                     
                     if ($isExpiringSoon && $batch->status === 'active') {
-                        $statusBadge = ['class' => 'bg-red-100 text-red-800 animate-pulse', 'text' => 'Expiring Soon'];
+                        $statusBadge = ['class' => 'bg-red-50 text-red-700 border-red-200 animate-pulse', 'text' => 'Expiring Soon'];
+                    }
+                    
+                    // Expiry Display
+                    $expiryTextClass = 'text-gray-800';
+                    $expiryLabel = $batch->expiry_date ? \Carbon\Carbon::parse($batch->expiry_date)->format('M d, Y') : 'No Expiry';
+                    
+                    if ($isExpired) {
+                        $expiryTextClass = 'text-red-600 font-bold';
+                        $expiryLabel .= ' (Expired)';
+                    } elseif ($isExpiringSoon) {
+                        $expiryTextClass = 'text-amber-600 font-bold';
+                        $expiryLabel .= " ({$expiryDays} days)";
                     }
                 @endphp
                 
-                <div class="bg-white border-l-4 {{ $borderColor }} border-y border-r border-gray-200 rounded-lg shadow-sm hover:shadow-md transition p-6">
+                <div class="bg-white border-l-4 {{ $borderColor }} border-y border-r border-border-soft rounded-xl shadow-sm hover:shadow-md transition-all p-6 group">
                     <div class="flex justify-between items-start mb-4">
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 {{ $icon['bg'] }} rounded-lg flex items-center justify-center {{ $icon['color'] }} text-xl">
+                            <div class="w-12 h-12 {{ $icon['bg'] }} rounded-xl flex items-center justify-center {{ $icon['color'] }} text-lg shadow-sm border border-white">
                                 <i class="{{ $icon['class'] }}"></i>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">{{ $batch->item->name }}</h3>
-                                <p class="text-sm text-gray-500">SKU: {{ $batch->item->item_code }}</p>
+                                <h3 class="text-lg font-bold text-chocolate group-hover:text-caramel transition-colors">{{ $batch->item->name }}</h3>
+                                <p class="text-xs text-gray-500 font-mono mt-0.5">SKU: {{ $batch->item->item_code }}</p>
                             </div>
                         </div>
-                        <span class="{{ $statusBadge['class'] }} text-xs font-bold px-3 py-1 rounded-full">
+                        <span class="{{ $statusBadge['class'] }} text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide">
                             {{ $statusBadge['text'] }}
                         </span>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="bg-gray-50 p-3 rounded border border-gray-100">
-                            <p class="text-xs text-gray-400 uppercase font-bold">Batch Number</p>
+                    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                        <div class="bg-cream-bg p-3 rounded-lg border border-border-soft">
+                            <p class="text-[10px] text-caramel uppercase font-bold tracking-widest">Batch Number</p>
                             <p class="font-mono text-gray-800 font-bold mt-1">{{ $batch->batch_number }}</p>
                         </div>
-                        <div class="bg-gray-50 p-3 rounded border border-gray-100">
-                            <p class="text-xs text-gray-400 uppercase font-bold">Expiry Date</p>
-                            <p class="text-gray-800 font-medium mt-1">
-                                @if($expiryDate)
-                                    {{ $expiryDate->format('M d, Y') }}
-                                    @if($isExpired)
-                                        <span class="text-red-600">(Expired)</span>
-                                    @elseif($isExpiringSoon)
-                                        <span class="text-yellow-600">({{ $expiryDays }} days)</span>
-                                    @endif
-                                @else
-                                    No Expiry
-                                @endif
+                        <div class="bg-white p-3 rounded-lg border border-border-soft">
+                            <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Expiry Date</p>
+                            <p class="{{ $expiryTextClass }} mt-1 text-xs">{{ $expiryLabel }}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100 flex justify-between items-center">
+                        <div>
+                            <p class="text-[10px] text-blue-600 uppercase font-bold tracking-widest">Location</p>
+                            <p class="text-sm text-blue-900 font-bold mt-0.5 flex items-center gap-1">
+                                <i class="fas fa-map-marker-alt"></i> {{ $batch->location ?? 'Main Storage' }}
                             </p>
                         </div>
-                        <div class="bg-blue-50 p-3 rounded border border-blue-100 col-span-2 flex justify-between items-center">
-                            <div>
-                                <p class="text-xs text-blue-600 uppercase font-bold">Warehouse Location</p>
-                                <p class="text-lg text-blue-900 font-bold mt-1">
-                                    <i class="fas fa-map-marker-alt mr-2"></i>
-                                    {{ $batch->location ?? 'Main Storage' }}
-                                </p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-blue-600 uppercase font-bold">Qty Here</p>
-                                <p class="text-lg text-blue-900 font-bold">{{ number_format($batch->quantity, 2) }} {{ $batch->item->unit->symbol ?? 'pcs' }}</p>
-                            </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-blue-600 uppercase font-bold tracking-widest">Qty Available</p>
+                            <p class="text-lg text-blue-900 font-bold mt-0.5">{{ number_format($batch->quantity, 2) }} <span class="text-xs font-normal">{{ $batch->item->unit->symbol ?? 'pcs' }}</span></p>
                         </div>
                     </div>
                     
                     @if($batch->supplier)
-                    <div class="mt-3 text-xs text-gray-500">
-                        <i class="fas fa-truck mr-1"></i>
-                        Supplier: {{ $batch->supplier->name }}
+                    <div class="mt-4 pt-3 border-t border-border-soft flex justify-between items-center">
+                        <div class="text-xs text-gray-500">
+                            <i class="fas fa-truck mr-1.5 text-gray-400"></i> {{ $batch->supplier->name }}
+                        </div>
+                        <div class="text-[10px] text-gray-400">
+                            Added {{ $batch->created_at->diffForHumans() }}
+                        </div>
                     </div>
                     @endif
                 </div>
@@ -271,79 +300,80 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Create batch element
+    // Create batch element (Updated with New Design System classes)
     function createBatchElement(batch) {
         const div = document.createElement('div');
-        div.className = `bg-white border-l-4 ${batch.priority_color} border-y border-r border-gray-200 rounded-lg shadow-sm hover:shadow-md transition p-6`;
+        div.className = `bg-white border-l-4 ${batch.priority_color} border-y border-r border-border-soft rounded-xl shadow-sm hover:shadow-md transition p-6 group`;
         
         // Format expiry date display
         let expiryDisplay = batch.expiry_date;
         let expiryClass = 'text-gray-800';
         
         if (batch.is_expired) {
-            expiryClass = 'text-red-600';
+            expiryClass = 'text-red-600 font-bold';
             expiryDisplay += ' (Expired)';
         } else if (batch.is_expiring_soon) {
-            expiryClass = 'text-yellow-600';
+            expiryClass = 'text-amber-600 font-bold';
             expiryDisplay += ` (${batch.expiry_days} days)`;
         }
         
         if (!batch.expiry_date || batch.expiry_date === 'No Expiry') {
             expiryDisplay = 'No Expiry';
-            expiryClass = 'text-gray-800';
+            expiryClass = 'text-gray-500 italic';
         }
         
+        // Use JS template literal for dynamic HTML structure matching the blade design
         div.innerHTML = `
             <div class="flex justify-between items-start mb-4">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 ${batch.icon.bg} rounded-lg flex items-center justify-center ${batch.icon.color} text-xl">
+                    <div class="w-12 h-12 ${batch.icon.bg} rounded-xl flex items-center justify-center ${batch.icon.color} text-lg shadow-sm border border-white">
                         <i class="${batch.icon.class}"></i>
                     </div>
                     <div>
-                        <h3 class="text-lg font-bold text-gray-900">${batch.item.name}</h3>
-                        <p class="text-sm text-gray-500">SKU: ${batch.item.item_code}</p>
+                        <h3 class="text-lg font-bold text-chocolate group-hover:text-caramel transition-colors">${batch.item.name}</h3>
+                        <p class="text-xs text-gray-500 font-mono mt-0.5">SKU: ${batch.item.item_code}</p>
                     </div>
                 </div>
-                <span class="${batch.status_badge.class} text-xs font-bold px-3 py-1 rounded-full">
+                <span class="${batch.status_badge.class} text-[10px] font-bold px-2.5 py-1 rounded-full border uppercase tracking-wide">
                     ${batch.status_badge.text}
                 </span>
             </div>
             
-            <div class="grid grid-cols-2 gap-4 text-sm">
-                <div class="bg-gray-50 p-3 rounded border border-gray-100">
-                    <p class="text-xs text-gray-400 uppercase font-bold">Batch Number</p>
+            <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div class="bg-cream-bg p-3 rounded-lg border border-border-soft">
+                    <p class="text-[10px] text-caramel uppercase font-bold tracking-widest">Batch Number</p>
                     <p class="font-mono text-gray-800 font-bold mt-1">${batch.batch_number}</p>
                 </div>
-                <div class="bg-gray-50 p-3 rounded border border-gray-100">
-                    <p class="text-xs text-gray-400 uppercase font-bold">Expiry Date</p>
-                    <p class="${expiryClass} font-medium mt-1">${expiryDisplay}</p>
+                <div class="bg-white p-3 rounded-lg border border-border-soft">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Expiry Date</p>
+                    <p class="${expiryClass} text-xs mt-1">${expiryDisplay}</p>
                 </div>
-                <div class="bg-blue-50 p-3 rounded border border-blue-100 col-span-2 flex justify-between items-center">
-                    <div>
-                        <p class="text-xs text-blue-600 uppercase font-bold">Warehouse Location</p>
-                        <p class="text-lg text-blue-900 font-bold mt-1">
-                            <i class="fas fa-map-marker-alt mr-2"></i>
-                            ${batch.location}
-                        </p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-xs text-blue-600 uppercase font-bold">Qty Here</p>
-                        <p class="text-lg text-blue-900 font-bold">${batch.quantity.toFixed(2)} ${batch.item.unit.symbol}</p>
-                    </div>
+            </div>
+            
+            <div class="bg-blue-50/50 p-4 rounded-lg border border-blue-100 flex justify-between items-center">
+                <div>
+                    <p class="text-[10px] text-blue-600 uppercase font-bold tracking-widest">Location</p>
+                    <p class="text-sm text-blue-900 font-bold mt-0.5 flex items-center gap-1">
+                        <i class="fas fa-map-marker-alt"></i>
+                        ${batch.location}
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-[10px] text-blue-600 uppercase font-bold tracking-widest">Qty Here</p>
+                    <p class="text-lg text-blue-900 font-bold mt-0.5">${batch.quantity.toFixed(2)} <span class="text-xs font-normal">${batch.item.unit.symbol}</span></p>
                 </div>
             </div>
             
             ${batch.supplier.name !== 'N/A' ? `
-            <div class="mt-3 text-xs text-gray-500">
-                <i class="fas fa-truck mr-1"></i>
-                Supplier: ${batch.supplier.name}
+            <div class="mt-4 pt-3 border-t border-border-soft flex justify-between items-center">
+                <div class="text-xs text-gray-500">
+                    <i class="fas fa-truck mr-1.5 text-gray-400"></i> ${batch.supplier.name}
+                </div>
+                <div class="text-[10px] text-gray-400">
+                    Added: ${batch.created_at}
+                </div>
             </div>
             ` : ''}
-            
-            <div class="mt-3 text-xs text-gray-400">
-                <i class="fas fa-calendar mr-1"></i>
-                Added: ${batch.created_at}
-            </div>
         `;
         
         return div;
@@ -412,9 +442,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Focus search input when clicking on search area
-    document.querySelector('.max-w-2xl').addEventListener('click', function() {
-        searchInput.focus();
+    // Focus search input when clicking on search area (Visual enhancement)
+    document.querySelector('.max-w-3xl').addEventListener('click', function(e) {
+        // Only focus if not clicking on the select inputs
+        if(e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') {
+             searchInput.focus();
+        }
     });
 });
 </script>

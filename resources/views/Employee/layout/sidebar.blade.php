@@ -1,112 +1,123 @@
-<aside id="sidebar"
-    class="sidebar w-64 flex flex-col text-white relative overflow-hidden bg-chocolate transition-all duration-300 ease-in-out">
-    <!-- Overlay gradient -->
-    <div class="absolute inset-0 bg-gradient-to-br from-chocolate/95 via-chocolate/90 to-chocolate-dark/95"></div>
-
-    <!-- Decorative Elements -->
-    <div class="absolute top-20 -right-20 w-64 h-64 bg-caramel/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-20 -left-20 w-64 h-64 bg-caramel/10 rounded-full blur-3xl"></div>
-
-    <div class="relative z-10 flex flex-col h-full">
-        <!-- Logo Section -->
-        <div class="p-6 border-b border-white/10">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-caramel/20 backdrop-blur-sm flex items-center justify-center border border-caramel/30 flex-shrink-0">
-                    <i class="fas fa-user-tag text-caramel text-lg animate-float"></i>
-                </div>
-                <div class="sidebar-text transition-opacity duration-300">
-                    <h1 class="font-display text-xl font-bold tracking-wide">WellKenz</h1>
-                    <p class="text-xs text-white/60 uppercase tracking-widest">Employee Portal</p>
-                </div>
+<aside id="sidebar" 
+    class="sidebar w-64 flex flex-col h-screen sticky top-0 bg-chocolate text-white border-r border-white/5 transition-all duration-300 z-40 font-sans shadow-2xl">
+    
+    {{-- 1. BRANDING SECTION --}}
+    <div class="relative z-10 p-6 pb-8 border-b border-white/10">
+        {{-- Decorative Glow --}}
+        <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+        
+        <div class="relative flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-caramel to-chocolate-dark border border-white/10 flex items-center justify-center shadow-lg">
+                <i class="fas fa-user-tag text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-display text-2xl font-bold tracking-wide text-white leading-none">WellKenz</h1>
+                <p class="text-[10px] text-caramel font-bold uppercase tracking-[0.2em] mt-1">Employee Portal</p>
             </div>
         </div>
+    </div>
 
-        <nav class="flex-1 overflow-y-auto py-4 no-scrollbar">
-            <ul class="space-y-1 px-3">
-                
-                <!-- 1. DASHBOARD -->
-                <li>
-                    <a href="{{ Route::has('employee.dashboard') ? route('employee.dashboard') : '#' }}"
-                        id="menu-employee-dashboard"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.dashboard') ? 'active-menu' : '' }}">
-                        <i class="fas fa-home w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My Hub</span>
-                    </a>
-                </li>
+    {{-- 2. NAVIGATION --}}
+    <nav class="flex-1 overflow-y-auto custom-scrollbar px-4 py-6 space-y-1">
 
-                <!-- 2. REQUISITIONS (Get Ingredients) -->
-                <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Requisitions</div>
-                </li>
+        {{-- DASHBOARD --}}
+        <a href="{{ Route::has('employee.dashboard') ? route('employee.dashboard') : '#' }}"
+           id="menu-employee-dashboard"
+           class="group flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-6
+           {{ request()->routeIs('employee.dashboard') 
+              ? 'bg-caramel text-white shadow-md shadow-caramel/20' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white' }}">
+            <i class="fas fa-home w-6 text-center text-sm {{ request()->routeIs('employee.dashboard') ? 'text-white' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">My Hub</span>
+        </a>
 
-                <!-- New Request (Add to Cart) -->
-                <li>
-                    <a href="{{ Route::has('employee.requisitions.create') ? route('employee.requisitions.create') : '#' }}"
-                        id="menu-employee-requisitions-create"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.requisitions.create') ? 'active-menu' : '' }}">
-                        <i class="fas fa-shopping-basket w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">New Request</span>
-                    </a>
-                </li>
+        {{-- SECTION: REQUISITIONS --}}
+        <div class="px-3 pt-2 pb-2">
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">Requisitions</p>
+        </div>
 
-                <!-- My History -->
-                <li>
-                    <a href="{{ Route::has('employee.requisitions.history') ? route('employee.requisitions.history') : '#' }}"
-                        id="menu-employee-requisitions-history"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.requisitions.history') ? 'active-menu' : '' }}">
-                        <i class="fas fa-history w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">My History</span>
-                    </a>
-                </li>
+        {{-- New Request --}}
+        <a href="{{ Route::has('employee.requisitions.create') ? route('employee.requisitions.create') : '#' }}"
+           id="menu-employee-requisitions-create"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('employee.requisitions.create') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-shopping-basket w-6 text-center text-sm {{ request()->routeIs('employee.requisitions.create') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">New Request</span>
+        </a>
 
-                <!-- 3. PRODUCTION -->
-                <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Production</div>
-                </li>
+        {{-- My History --}}
+        <a href="{{ Route::has('employee.requisitions.history') ? route('employee.requisitions.history') : '#' }}"
+           id="menu-employee-requisitions-history"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('employee.requisitions.history') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-history w-6 text-center text-sm {{ request()->routeIs('employee.requisitions.history') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">My History</span>
+        </a>
 
-              
+        {{-- SECTION: PRODUCTION --}}
+        <div class="px-3 pt-6 pb-2">
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">Production</p>
+        </div>
 
-                <!-- View Recipes -->
-                <li>
-                    <a href="{{ Route::has('employee.recipes.index') ? route('employee.recipes.index') : '#' }}"
-                        id="menu-employee-recipes"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.recipes.index') ? 'active-menu' : '' }}">
-                        <i class="fas fa-book-open w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">View Recipes</span>
-                    </a>
-                </li>
+        {{-- View Recipes --}}
+        <a href="{{ Route::has('employee.recipes.index') ? route('employee.recipes.index') : '#' }}"
+           id="menu-employee-recipes"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('employee.recipes.index') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-book-open w-6 text-center text-sm {{ request()->routeIs('employee.recipes.index') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">View Recipes</span>
+        </a>
 
-                <!-- Notifications -->
-                <li>
-                    <a href="{{ Route::has('employee.notifications') ? route('employee.notifications') : '#' }}"
-                        id="menu-employee-notifications"
-                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('employee.notifications') ? 'active-menu' : '' }}">
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
-                        </div>
-                        <!-- Badge for unread notifications -->
-                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">1</span>
-                    </a>
-                </li>
+        {{-- SECTION: SYSTEM --}}
+        <div class="px-3 pt-6 pb-2">
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">System</p>
+        </div>
 
-            </ul>
-        </nav>
+        {{-- Notifications --}}
+        <a href="{{ Route::has('employee.notifications') ? route('employee.notifications') : '#' }}"
+           id="menu-employee-notifications"
+           class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('employee.notifications') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <div class="flex items-center">
+                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('employee.notifications') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <span class="ml-2">Notifications</span>
+            </div>
+            {{-- Static Badge as per original code --}}
+            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm">1</span>
+        </a>
+
+    </nav>
+
+    {{-- DECORATIVE FOOTER ELEMENT --}}
+    <div class="p-4 relative overflow-hidden mt-auto">
+        <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-caramel/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="relative z-10 flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest">
+            <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> Portal Active
+        </div>
     </div>
 </aside>
 
+{{-- Custom Scrollbar Style --}}
 <style>
-    .active-menu {
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        color: white !important;
-        border-left-color: #D2691E !important; /* caramel color */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
     }
-    
-    .active-menu i {
-        color: white !important;
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
     }
-    
-    .active-menu span {
-        color: white !important;
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.4);
     }
 </style>

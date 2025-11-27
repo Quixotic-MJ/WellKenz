@@ -21,7 +21,7 @@ The WellKenz Bakery ERP System is a comprehensive enterprise solution designed t
   - Manage batch records and expiry dates
   - Process returns to vendor (RTV)
   - Fulfill material requests
-  - Handle direct issuances
+
   - Track stock levels and batch information
 
 ### 3. **Purchasing Module** 🛒

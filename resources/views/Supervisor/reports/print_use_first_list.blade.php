@@ -5,79 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Use First List - {{ date('M j, Y') }}</title>
     
+    {{-- Load Fonts --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    
     {{-- Font Awesome for Icons --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         :root {
-            --primary: #D2691E; /* Chocolate */
-            --primary-dark: #8B4513;
-            --danger: #dc2626;
-            --warning: #d97706;
-            --success: #16a34a;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-700: #374151;
-            --gray-900: #111827;
+            --chocolate: #3d2817;
+            --caramel: #c48d3f;
+            --cream: #faf7f3;
+            --border: #e8dfd4;
+            --text-main: #374151;
+            --text-light: #6b7280;
+            
+            /* Alert Colors */
+            --critical-bg: #fee2e2;
+            --critical-text: #991b1b;
+            --warning-bg: #fef3c7;
+            --warning-text: #92400e;
+            --good-bg: #d1fae5;
+            --good-text: #065f46;
         }
 
-        * {
-            box-sizing: border-box;
+        @page {
+            margin: 10mm;
+            size: A4 portrait;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif;
+            font-size: 10pt;
             line-height: 1.5;
-            color: var(--gray-900);
-            background-color: #f9fafb; /* Light gray background for screen */
+            color: var(--text-main);
+            background-color: white; /* Better for print preview than cream */
             margin: 0;
             padding: 20px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
         }
 
-        .page-container {
-            max-width: 8.5in;
-            margin: 0 auto;
-            background: white;
-            padding: 40px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border-radius: 8px;
-        }
+        /* Typography */
+        h1, h2, h3 { font-family: 'Playfair Display', serif; color: var(--chocolate); margin: 0; }
+        
+        /* Utilities */
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: 600; }
+        .uppercase { text-transform: uppercase; }
+        .tracking-wide { letter-spacing: 0.05em; }
 
-        /* Header Section */
-        .header {
+        /* Header */
+        .header-container {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            border-bottom: 3px solid var(--primary);
+            align-items: flex-end;
+            border-bottom: 3px solid var(--chocolate);
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
 
-        .company-info h1 {
-            margin: 0;
-            color: var(--primary);
-            font-size: 28px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        .brand-section h1 { font-size: 28pt; line-height: 1; font-weight: 700; }
+        .brand-section p { color: var(--caramel); font-weight: 700; font-size: 9pt; letter-spacing: 3px; margin-top: 5px; text-transform: uppercase; }
 
-        .company-info p {
-            margin: 5px 0 0;
-            font-size: 18px;
-            color: var(--gray-700);
-            font-weight: 600;
-        }
+        .report-info { text-align: right; }
+        .report-info h2 { font-size: 18pt; margin-bottom: 5px; font-weight: 600; }
+        .report-info p { font-size: 9pt; color: var(--text-light); }
+        .report-badge { display: inline-block; background: var(--cream); border: 1px solid var(--border); padding: 4px 8px; font-size: 8pt; font-weight: 600; border-radius: 4px; color: var(--chocolate); margin-top: 5px; }
 
-        .report-meta {
-            text-align: right;
-            font-size: 14px;
-            color: #666;
-        }
-
-        /* Summary Cards */
+        /* Summary Grid */
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -86,402 +83,295 @@
         }
 
         .card {
-            background: white;
-            border: 1px solid var(--gray-200);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 20px;
+            padding: 15px;
             text-align: center;
+            background-color: white;
             position: relative;
             overflow: hidden;
         }
 
-        .card.critical { background-color: #fef2f2; border-color: #fee2e2; }
-        .card.warning { background-color: #fffbeb; border-color: #fef3c7; }
-        .card.total { background-color: #f0fdf4; border-color: #dcfce7; }
+        .card.critical { background-color: var(--critical-bg); border-color: #fecaca; }
+        .card.warning { background-color: var(--warning-bg); border-color: #fde68a; }
+        .card.total { background-color: var(--cream); border-color: var(--border); }
 
         .card-number {
-            font-size: 32px;
-            font-weight: 800;
+            font-size: 28pt;
+            font-weight: 700;
             line-height: 1;
             margin-bottom: 5px;
+            font-family: 'Playfair Display', serif;
         }
+
+        .card.critical .card-number { color: var(--critical-text); }
+        .card.warning .card-number { color: var(--warning-text); }
+        .card.total .card-number { color: var(--chocolate); }
 
         .card-label {
-            font-size: 12px;
+            font-size: 9pt;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-            color: var(--gray-700);
+            letter-spacing: 1px;
+            font-weight: 700;
+            color: var(--text-main);
         }
 
-        .text-danger { color: var(--danger); }
-        .text-warning { color: var(--warning); }
-        .text-success { color: var(--success); }
+        .card-sub { font-size: 8pt; opacity: 0.8; margin-top: 5px; font-weight: 500; }
+        .card-icon { position: absolute; top: 10px; right: 10px; font-size: 24pt; opacity: 0.1; }
 
         /* Instructions Box */
         .alert-box {
-            background-color: #fff7ed; /* Orange tint */
-            border-left: 5px solid var(--primary);
+            background-color: #fff7ed;
+            border-left: 4px solid var(--caramel);
             padding: 15px 20px;
             margin-bottom: 30px;
             border-radius: 4px;
+            font-size: 9pt;
         }
 
         .alert-title {
             font-weight: 700;
-            color: var(--primary-dark);
+            color: var(--chocolate);
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            font-size: 16px;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 10pt;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .alert-content ul {
-            margin: 0;
-            padding-left: 25px;
-            color: var(--gray-700);
-            font-size: 14px;
-        }
+        .alert-content ul { margin: 0; padding-left: 20px; color: var(--text-main); }
+        .alert-content li { margin-bottom: 2px; }
 
-        .alert-content li {
-            margin-bottom: 4px;
-        }
-
-        /* Data Table */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-        }
-
+        /* Table */
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 13px;
+            margin-bottom: 20px;
         }
 
         th {
-            background-color: var(--gray-100);
-            color: var(--gray-700);
-            font-weight: 700;
+            background-color: var(--chocolate);
+            color: white;
+            font-weight: 600;
             text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 0.5px;
+            font-size: 8pt;
+            letter-spacing: 1px;
             padding: 12px 10px;
             text-align: left;
-            border-bottom: 2px solid var(--gray-200);
         }
 
         td {
-            padding: 12px 10px;
-            border-bottom: 1px solid var(--gray-200);
+            border-bottom: 1px solid var(--border);
+            padding: 10px;
+            font-size: 9pt;
             vertical-align: middle;
         }
 
-        tr.row-expired { background-color: #fef2f2; }
-        tr.row-critical { background-color: #fff7ed; }
-        
-        /* Item Info Styling */
-        .item-name {
-            font-weight: 700;
-            color: var(--gray-900);
-            font-size: 14px;
-            display: block;
-        }
-        
-        .item-meta {
-            font-size: 11px;
-            color: #666;
-            margin-top: 2px;
-        }
+        tr.row-expired td { background-color: #fff1f2; color: #9f1239; }
+        tr.row-critical td { background-color: #fff7ed; color: #9a3412; }
 
-        /* Badges */
+        /* Data Styling */
+        .item-name { font-weight: 700; color: var(--chocolate); font-size: 10pt; display: block; }
+        .item-meta { font-size: 8pt; color: var(--text-light); margin-top: 2px; font-family: monospace; }
+        
         .badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 9999px;
-            font-size: 10px;
-            font-weight: 700;
-            text-align: center;
-            white-space: nowrap;
-        }
-
-        .badge-expired { background-color: var(--danger); color: white; }
-        .badge-critical { background-color: #ef4444; color: white; }
-        .badge-warning { background-color: var(--warning); color: white; }
-        .badge-normal { background-color: var(--success); color: white; }
-
-        /* Footer */
-        .footer {
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid var(--gray-200);
-            text-align: center;
-            font-size: 12px;
-            color: #999;
-        }
-
-        .signatures {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 60px;
-            page-break-inside: avoid;
-        }
-
-        .sig-block {
-            width: 200px;
-            text-align: center;
-        }
-
-        .sig-line {
-            border-bottom: 1px solid black;
-            margin-bottom: 8px;
-            height: 30px;
-        }
-
-        .sig-label {
-            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 7pt;
             font-weight: 700;
             text-transform: uppercase;
         }
-
-        /* No Print Elements */
-        .no-print-bar {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: white;
-            padding: 10px 20px;
-            border-radius: 50px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        .badge-cat { background: var(--gray-100); color: var(--gray-700); border: 1px solid var(--gray-200); }
+        
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-size: 8pt;
+            color: var(--text-light);
             display: flex;
-            gap: 10px;
-            z-index: 1000;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .btn {
+        /* Floating Print Button (Screen Only) */
+        .fab-print {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--chocolate);
+            color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 25px;
+            border-radius: 50px;
+            padding: 12px 25px;
             font-weight: 600;
+            box-shadow: 0 4px 15px rgba(61, 40, 23, 0.3);
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: transform 0.2s;
+            font-family: 'Inter', sans-serif;
+            z-index: 100;
+            transition: transform 0.2s, background-color 0.2s;
         }
+        .fab-print:hover { background-color: #2c1d10; transform: translateY(-2px); }
 
-        .btn:hover { transform: translateY(-2px); }
-
-        .btn-print { background-color: var(--primary); color: white; }
-        .btn-close { background-color: var(--gray-200); color: var(--gray-700); }
-
-        /* Print Media Queries */
         @media print {
-            body {
-                background: none;
-                padding: 0;
-                margin: 0;
-            }
-            
-            .page-container {
-                box-shadow: none;
-                padding: 0;
-                margin: 0;
-                width: 100%;
-                max-width: 100%;
-            }
-
-            .no-print-bar, .no-print {
-                display: none !important;
-            }
-
-            /* Ensure background colors print */
-            .card.critical, .card.warning, .card.total, 
-            .alert-box, .badge, 
-            tr.row-expired, tr.row-critical {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
+            .no-print, .fab-print { display: none !important; }
+            body { background-color: white; padding: 0; }
+            .page-container { box-shadow: none; padding: 0; max-width: 100%; }
+            th { background-color: #3d2817 !important; color: white !important; -webkit-print-color-adjust: exact; }
+            .card.critical, .card.warning { -webkit-print-color-adjust: exact; }
+            tr.row-expired, tr.row-critical { -webkit-print-color-adjust: exact; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Floating Print Button -->
+    <button class="fab-print no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> Print Report
+    </button>
+
     <div class="page-container">
         <!-- Header -->
-        <div class="header">
-            <div class="company-info">
-                <h1>WellKenz Bakery</h1>
-                <p><i class="fas fa-clipboard-list" style="font-size: 0.8em; margin-right: 8px;"></i> Use First List</p>
+        <div class="header-container">
+            <div class="brand-section">
+                <h1>WellKenz</h1>
+                <p>Bakery Inventory</p>
             </div>
-            <div class="report-meta">
-                <div><strong>Generated:</strong> {{ date('F j, Y') }}</div>
-                <div><strong>Time:</strong> {{ date('g:i A') }}</div>
-                <div style="margin-top: 5px;"><span class="badge" style="background:#eee; color:#333; border:1px solid #ddd;">Priority Items Only</span></div>
+            <div class="report-info">
+                <h2>Use First List</h2>
+                <p>Generated: {{ now()->format('F d, Y • h:i A') }}</p>
+                <span class="report-badge">PRIORITY ACTION REQUIRED</span>
             </div>
         </div>
 
         <!-- Summary Cards -->
         <div class="summary-grid">
             <div class="card critical">
-                <div class="card-number text-danger">{{ $criticalCount }}</div>
-                <div class="card-label">Critical Items</div>
-                <div style="font-size: 11px; color: #dc2626; margin-top: 4px;">Expires  48hrs</div>
-                <i class="fas fa-exclamation-circle" style="position: absolute; top: 10px; right: 10px; color: #fee2e2; font-size: 40px;"></i>
+                <i class="fas fa-exclamation-circle card-icon"></i>
+                <div class="card-number">{{ $criticalCount }}</div>
+                <div class="card-label">Critical Batches</div>
+                <div class="card-sub">Expires ≤ 48 Hours</div>
             </div>
             <div class="card warning">
-                <div class="card-number text-warning">{{ $warningCount }}</div>
-                <div class="card-label">Warning Items</div>
-                <div style="font-size: 11px; color: #d97706; margin-top: 4px;">Expires  7 days</div>
-                <i class="fas fa-clock" style="position: absolute; top: 10px; right: 10px; color: #fef3c7; font-size: 40px;"></i>
+                <i class="fas fa-clock card-icon"></i>
+                <div class="card-number">{{ $warningCount }}</div>
+                <div class="card-label">Warning Batches</div>
+                <div class="card-sub">Expires ≤ 7 Days</div>
             </div>
             <div class="card total">
-                <div class="card-number text-success">{{ $totalCount }}</div>
-                <div class="card-label">Total Batches</div>
-                <div style="font-size: 11px; color: #16a34a; margin-top: 4px;">Value: ₱{{ number_format($totalValue, 2) }}</div>
-                <i class="fas fa-boxes" style="position: absolute; top: 10px; right: 10px; color: #dcfce7; font-size: 40px;"></i>
+                <i class="fas fa-boxes card-icon"></i>
+                <div class="card-number">{{ $totalCount }}</div>
+                <div class="card-label">Total Tracked</div>
+                <div class="card-sub">Value: ₱{{ number_format($totalValue, 2) }}</div>
             </div>
         </div>
 
         <!-- Instructions -->
         <div class="alert-box">
             <div class="alert-title">
-                <i class="fas fa-hard-hat"></i> ACTION REQUIRED
+                <i class="fas fa-clipboard-check"></i> Baker Instructions
             </div>
             <div class="alert-content">
                 <ul>
-                    <li><strong>CRITICAL (Red):</strong> Prioritize these items immediately. Use within 24-48 hours.</li>
-                    <li><strong>WARNING (Orange):</strong> Plan production to use these items within the week.</li>
-                    <li><strong>EXPIRED:</strong> Do not use. Segregate and report to Inventory Supervisor for write-off.</li>
+                    <li><strong>RED HIGHLIGHTS:</strong> Must be used in today's production or transferred to staff meals immediately.</li>
+                    <li><strong>ORANGE HIGHLIGHTS:</strong> Schedule these items for production within the current week.</li>
+                    <li><strong>FIFO POLICY:</strong> Always verify batch numbers matches the physical item before use.</li>
                 </ul>
             </div>
         </div>
 
         <!-- Table -->
         @if($batches->count() > 0)
-            <div class="table-responsive">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 25%;">Item Details</th>
-                            <th style="width: 15%;">Expiry Date</th>
-                            <th style="width: 10%; text-align: center;">Status</th>
-                            <th style="width: 15%; text-align: right;">Stock Qty</th>
-                            <th style="width: 15%; text-align: right;">Unit Cost</th>
-                            <th style="width: 20%;">Supplier</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($batches as $batch)
-                            @php
-                                $now = \Carbon\Carbon::now();
-                                $expiryDate = \Carbon\Carbon::parse($batch->expiry_date);
-                                $daysUntilExpiry = $now->diffInDays($expiryDate, false);
-                                $isPastExpiry = $expiryDate->isPast();
-                                
-                                $rowClass = '';
-                                $badgeClass = 'badge-normal';
-                                $statusText = 'NORMAL';
-                                
-                                if ($isPastExpiry) {
-                                    $rowClass = 'row-expired';
-                                    $badgeClass = 'badge-expired';
-                                    $statusText = 'EXPIRED';
-                                } elseif ($daysUntilExpiry <= 1) {
-                                    $rowClass = 'row-critical';
-                                    $badgeClass = 'badge-critical';
-                                    $statusText = $daysUntilExpiry <= 0 ? 'TODAY' : '1 DAY LEFT';
-                                } elseif ($daysUntilExpiry <= 7) {
-                                    $badgeClass = 'badge-warning';
-                                    $statusText = round($daysUntilExpiry) . ' DAYS';
-                                }
-                            @endphp
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Item Details</th>
+                        <th style="width: 15%;">Category</th>
+                        <th style="width: 15%;">Expiry Date</th>
+                        <th style="width: 10%; text-align: center;">Status</th>
+                        <th style="width: 15%; text-align: right;">Qty</th>
+                        <th style="width: 15%;">Supplier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($batches as $batch)
+                        @php
+                            $now = \Carbon\Carbon::now();
+                            $expiryDate = \Carbon\Carbon::parse($batch->expiry_date);
+                            $daysUntilExpiry = $now->diffInDays($expiryDate, false);
+                            $isPastExpiry = $expiryDate->isPast();
                             
-                            <tr class="{{ $rowClass }}">
-                                <td>
-                                    <span class="item-name">{{ $batch->item->name ?? 'Unknown Item' }}</span>
-                                    <div class="item-meta">
-                                        Code: <strong>{{ $batch->item->item_code ?? 'N/A' }}</strong> | 
-                                        Batch: {{ $batch->batch_number }}
-                                    </div>
-                                </td>
-                                <td>
-                                    <div style="font-weight: 600; color: var(--gray-900);">
-                                        {{ $expiryDate->format('M d, Y') }}
-                                    </div>
-                                    <div style="font-size: 10px; color: #666;">
-                                        {{ $expiryDate->format('D') }}
-                                    </div>
-                                </td>
-                                <td style="text-align: center;">
-                                    <span class="badge {{ $badgeClass }}">
-                                        {{ $statusText }}
-                                    </span>
-                                </td>
-                                <td style="text-align: right;">
-                                    <div style="font-weight: 700; font-size: 14px;">{{ number_format($batch->quantity, 2) }}</div>
-                                    <div style="font-size: 10px; color: #666;">{{ $batch->item->unit->symbol ?? 'units' }}</div>
-                                </td>
-                                <td style="text-align: right;">
-                                    <div>₱{{ number_format($batch->unit_cost, 2) }}</div>
-                                    <div style="font-size: 10px; color: #666;">Total: ₱{{ number_format($batch->quantity * $batch->unit_cost, 2) }}</div>
-                                </td>
-                                <td>
-                                    <div style="font-size: 12px; color: var(--gray-700);">
-                                        {{ Str::limit($batch->supplier->name ?? 'Unknown Supplier', 20) }}
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                            $rowClass = '';
+                            $statusText = 'NORMAL';
+                            $statusStyle = 'background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0;'; // Good (Green)
+
+                            if ($isPastExpiry) {
+                                $rowClass = 'row-expired';
+                                $statusText = 'EXPIRED';
+                                $statusStyle = 'background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;'; // Critical (Red)
+                            } elseif ($daysUntilExpiry <= 1) {
+                                $rowClass = 'row-critical';
+                                $statusText = 'CRITICAL';
+                                $statusStyle = 'background: #fee2e2; color: #991b1b; border: 1px solid #fecaca;'; // Critical (Red)
+                            } elseif ($daysUntilExpiry <= 7) {
+                                $statusText = 'WARNING';
+                                $statusStyle = 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;'; // Warning (Orange)
+                            }
+                        @endphp
+                        <tr class="{{ $rowClass }}">
+                            <td>
+                                <span class="item-name">{{ $batch->item->name }}</span>
+                                <div class="item-meta">SKU: {{ $batch->item->item_code }} | Batch: {{ $batch->batch_number }}</div>
+                            </td>
+                            <td>
+                                <span class="badge badge-cat">{{ $batch->item->category->name ?? 'General' }}</span>
+                            </td>
+                            <td>
+                                <div style="font-weight: 600;">{{ $expiryDate->format('M d, Y') }}</div>
+                                <div style="font-size: 8pt; color: var(--text-light);">{{ $expiryDate->format('l') }}</div>
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="badge" style="{{ $statusStyle }}">
+                                    {{ $statusText }}
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="font-weight: 700; font-size: 11pt;">{{ number_format($batch->quantity, 2) }}</div>
+                                <div style="font-size: 8pt; color: var(--text-light);">{{ $batch->item->unit->symbol ?? 'units' }}</div>
+                            </td>
+                            <td style="font-size: 8pt;">
+                                {{ \Illuminate\Support\Str::limit($batch->supplier->name ?? 'Unknown', 20) }}
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
         @else
-            <div style="text-align: center; padding: 60px; color: var(--gray-700); background: var(--gray-100); border-radius: 8px;">
-                <i class="fas fa-check-circle" style="font-size: 48px; color: var(--success); margin-bottom: 15px;"></i>
-                <h3>All Clear!</h3>
-                <p>No priority expiry items found. All stock is fresh.</p>
+            <div style="text-align: center; padding: 40px; border: 2px dashed var(--border); border-radius: 8px; color: var(--text-light);">
+                <i class="fas fa-check-circle" style="font-size: 32px; color: var(--success); margin-bottom: 10px;"></i>
+                <p style="margin: 0; font-weight: 600;">No priority items found.</p>
+                <p style="margin: 5px 0 0; font-size: 9pt;">All inventory batches are fresh.</p>
             </div>
         @endif
 
-        <!-- Signatures -->
-        <div class="signatures">
-            <div class="sig-block">
-                <div class="sig-line"></div>
-                <div class="sig-label">Inventory Supervisor</div>
-            </div>
-            <div class="sig-block">
-                <div class="sig-line"></div>
-                <div class="sig-label">Head Baker</div>
-            </div>
-            <div class="sig-block">
-                <div class="sig-line"></div>
-                <div class="sig-label">Date Verified</div>
-            </div>
-        </div>
-
         <!-- Footer -->
         <div class="footer">
-            <p>WellKenz Bakery ERP System | Generated by {{ auth()->user()->name ?? 'System' }}</p>
+            <div>© {{ date('Y') }} WellKenz Bakery ERP System</div>
+            <div style="text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Internal Use Only</div>
+            <div>User: {{ auth()->user()->name ?? 'System' }}</div>
         </div>
-    </div>
-
-    <!-- Floating Action Bar (Screen Only) -->
-    <div class="no-print-bar">
-        <button onclick="window.print()" class="btn btn-print">
-            <i class="fas fa-print"></i> Print List
-        </button>
-        <button onclick="window.close()" class="btn btn-close">
-            <i class="fas fa-times"></i> Close
-        </button>
     </div>
 
     <script>
-        window.onload = function() {
-            // Optional: auto-print check could go here
-        }
+        // Auto-print prompt when loaded
+        // window.onload = function() { setTimeout(window.print, 500); }
     </script>
 </body>
 </html>

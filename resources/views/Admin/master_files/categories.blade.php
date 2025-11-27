@@ -1,88 +1,89 @@
 @extends('Admin.layout.app')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-8 font-sans text-gray-600">
 
     {{-- 1. HEADER & ACTIONS --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Category Management</h1>
-            <p class="text-sm text-gray-500 mt-1">Organize your inventory items into logical groups for easier reporting and requisitions.</p>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-2">Category Management</h1>
+            <p class="text-sm text-gray-500">Organize your inventory items into logical groups for easier reporting and requisitions.</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div>
             <button onclick="openCategoryModal()" 
-                class="inline-flex items-center justify-center px-4 py-2 bg-chocolate text-white text-sm font-medium rounded-lg hover:bg-chocolate-dark transition shadow-sm">
+                class="inline-flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                 <i class="fas fa-plus mr-2"></i> Create Category
             </button>
         </div>
     </div>
 
     {{-- 2. SEARCH & FILTERS --}}
-    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-        <!-- Search -->
-        <div class="relative w-full md:w-96">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <i class="fas fa-search text-gray-400"></i>
+    <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm">
+        <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="relative w-full md:w-96 group">
+                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <i class="fas fa-search text-gray-400 group-focus-within:text-caramel transition-colors"></i>
+                </div>
+                <input type="text" 
+                    id="searchInput" 
+                    class="block w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg bg-cream-bg placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all" 
+                    placeholder="Search categories..."
+                    onkeyup="searchCategories()">
             </div>
-            <input type="text" 
-                   id="searchInput" 
-                   class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm" 
-                   placeholder="Search categories..."
-                   onkeyup="searchCategories()">
-        </div>
-        
-        <!-- Status Filter -->
-        <div class="w-full md:w-48">
-             <select id="statusFilter" 
-                     class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm"
-                     onchange="filterCategories()">
-                <option value="">All Status</option>
-                <option value="active">Active Only</option>
-                <option value="inactive">Inactive Only</option>
-            </select>
+            
+            <div class="w-full md:w-48 relative">
+                <select id="statusFilter" 
+                        class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer"
+                        onchange="filterCategories()">
+                    <option value="">All Status</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                </select>
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
+                </div>
+            </div>
         </div>
     </div>
 
     {{-- 3. CATEGORIES TABLE --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-border-soft">
+                <thead class="bg-cream-bg">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category Name</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Linked Items</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Category Name</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Description</th>
+                        <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-caramel uppercase tracking-widest font-display">Linked Items</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Status</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-caramel uppercase tracking-widest font-display">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="categoriesTableBody" class="bg-white divide-y divide-gray-200">
+                <tbody id="categoriesTableBody" class="bg-white divide-y divide-border-soft">
                     @forelse($categories as $category)
-                    <tr class="hover:bg-gray-50 transition-colors {{ !$category->is_active ? 'bg-gray-50 opacity-75' : '' }}" 
+                    <tr class="group hover:bg-cream-bg transition-colors duration-200 {{ !$category->is_active ? 'bg-gray-50 opacity-60' : '' }}" 
                         id="category-row-{{ $category->id }}">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
-                                <div class="flex-shrink-0 h-10 w-10 {{ $category->is_active ? 'bg-amber-100' : 'bg-gray-100' }} rounded-lg flex items-center justify-center {{ $category->is_active ? 'text-amber-700' : 'text-gray-500' }}">
+                                <div class="flex-shrink-0 h-10 w-10 {{ $category->is_active ? 'bg-white border border-border-soft' : 'bg-gray-100' }} rounded-lg flex items-center justify-center {{ $category->is_active ? 'text-chocolate' : 'text-gray-400' }} shadow-sm">
                                     <i class="{{ getCategoryIcon($category->name) }} text-lg"></i>
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-bold text-gray-900 category-name">{{ $category->name }}</div>
+                                    <div class="text-sm font-bold text-chocolate category-name">{{ $category->name }}</div>
                                     @if($category->description)
-                                        <div class="text-xs text-gray-500 truncate max-w-xs category-desc">{{ $category->description }}</div>
-                                    @else
-                                        <div class="text-xs text-gray-400 category-desc">No description</div>
+                                        <div class="text-[10px] text-gray-400 uppercase tracking-wide truncate max-w-xs category-desc font-medium">{{ Str::limit($category->description, 25) }}</div>
                                     @endif
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="text-sm text-gray-600 max-w-xs truncate">
-                                {{ $category->description ?? 'No description available' }}
+                                {{ $category->description ?? '-' }}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $category->linked_items_count > 0 ? 'bg-gray-100 text-gray-800' : 'bg-gray-200 text-gray-600' }}">
-                                {{ $category->linked_items_count }} {{ $category->linked_items_count == 1 ? 'Item' : 'Items' }}
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold {{ $category->linked_items_count > 0 ? 'bg-chocolate/10 text-chocolate' : 'bg-gray-100 text-gray-500' }}">
+                                {{ $category->linked_items_count }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -91,31 +92,35 @@
                                        class="sr-only peer category-toggle" 
                                        data-category-id="{{ $category->id }}"
                                        {{ $category->is_active ? 'checked' : '' }}>
-                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
-                                <span class="ml-3 text-sm font-medium {{ $category->is_active ? 'text-green-600' : 'text-gray-500' }}">
+                                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-caramel/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600 shadow-inner"></div>
+                                <span class="ml-3 text-xs font-bold uppercase tracking-wide {{ $category->is_active ? 'text-green-600' : 'text-gray-400' }}">
                                     {{ $category->is_active ? 'Active' : 'Inactive' }}
                                 </span>
                             </label>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button class="text-blue-600 hover:text-blue-900 bg-blue-50 p-2 rounded hover:bg-blue-100 transition"
-                                    onclick="editCategory({{ $category->id }})">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="text-red-600 hover:text-red-900 bg-red-50 p-2 rounded hover:bg-red-100 transition ml-2"
-                                    onclick="confirmDeleteCategory({{ $category->id }}, '{{ $category->name }}')"
-                                    {{ $category->linked_items_count > 0 || $category->children()->count() > 0 ? 'disabled' : '' }}>
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <div class="flex justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                                <button class="text-chocolate hover:text-white hover:bg-chocolate p-2 rounded-lg transition-all tooltip"
+                                        onclick="editCategory({{ $category->id }})" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="text-red-600 hover:text-white hover:bg-red-600 p-2 rounded-lg transition-all tooltip"
+                                        onclick="confirmDeleteCategory({{ $category->id }}, '{{ $category->name }}')"
+                                        {{ $category->linked_items_count > 0 || $category->children()->count() > 0 ? 'disabled' : '' }} title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="px-6 py-12 text-center text-gray-500">
-                            <div class="flex flex-col items-center">
-                                <i class="fas fa-folder-open text-4xl mb-4 text-gray-300"></i>
-                                <p class="text-lg font-medium">No categories found</p>
-                                <p class="text-sm text-gray-400">Get started by creating your first category</p>
+                        <td colspan="5" class="px-6 py-12 text-center">
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 border border-border-soft">
+                                    <i class="fas fa-folder-open text-chocolate/30 text-2xl"></i>
+                                </div>
+                                <p class="font-display text-lg font-bold text-chocolate">No categories found</p>
+                                <p class="text-sm text-gray-400 mt-1">Get started by creating your first category</p>
                             </div>
                         </td>
                     </tr>
@@ -126,7 +131,7 @@
 
         {{-- Pagination --}}
         @if($categories->hasPages())
-        <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+        <div class="bg-white px-6 py-4 border-t border-border-soft">
             {{ $categories->links() }}
         </div>
         @endif
@@ -134,86 +139,77 @@
 
 </div>
 
-<!-- ==================== MODALS ==================== -->
-
-<!-- 1. CREATE/EDIT CATEGORY MODAL -->
 <div id="categoryModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeCategoryModal()"></div>
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="closeCategoryModal()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
 
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-border-soft">
             
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                <div class="sm:flex sm:items-start">
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Create Category</h3>
-                        <div class="mt-4 space-y-4">
-                            
-                            <!-- Name -->
-                            <div>
-                                <label for="categoryName" class="block text-sm font-medium text-gray-700">Category Name</label>
-                                <input type="text" 
-                                       id="categoryName" 
-                                       name="name"
-                                       class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm" 
-                                       placeholder="e.g., Decor & Toppers"
-                                       required>
-                                <div id="nameError" class="mt-1 text-sm text-red-600 hidden"></div>
-                            </div>
+            <div class="bg-chocolate px-6 py-4">
+                <h3 class="font-display text-lg font-bold text-white" id="modal-title">Create Category</h3>
+            </div>
 
-                            <!-- Description -->
-                            <div>
-                                <label for="categoryDescription" class="block text-sm font-medium text-gray-700">Description</label>
-                                <textarea id="categoryDescription" 
-                                          name="description"
-                                          rows="3" 
-                                          class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm" 
-                                          placeholder="Briefly describe what items belong here..."></textarea>
-                                <div id="descriptionError" class="mt-1 text-sm text-red-600 hidden"></div>
-                            </div>
-
-                            <!-- Parent Category (Optional) -->
-                            <div>
-                                <label for="parentCategory" class="block text-sm font-medium text-gray-700">Parent Category (Optional)</label>
-                                <select id="parentCategory" 
-                                        name="parent_id"
-                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                                    <option value="">No Parent Category</option>
-                                    <!-- Options will be loaded dynamically -->
-                                </select>
-                                <div id="parentError" class="mt-1 text-sm text-red-600 hidden"></div>
-                            </div>
-
-                            <!-- Icon Selection (Visual Only) -->
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Visual Icon</label>
-                                <div class="mt-2 flex gap-3 flex-wrap">
-                                    <button type="button" class="icon-option w-10 h-10 rounded-full bg-chocolate text-white flex items-center justify-center ring-2 ring-offset-2 ring-chocolate" data-icon="fas fa-tag"><i class="fas fa-tag"></i></button>
-                                    <button type="button" class="icon-option w-10 h-10 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center" data-icon="fas fa-utensils"><i class="fas fa-utensils"></i></button>
-                                    <button type="button" class="icon-option w-10 h-10 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center" data-icon="fas fa-box"><i class="fas fa-box"></i></button>
-                                    <button type="button" class="icon-option w-10 h-10 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center" data-icon="fas fa-tint"><i class="fas fa-tint"></i></button>
-                                    <button type="button" class="icon-option w-10 h-10 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center" data-icon="fas fa-wheat"><i class="fas fa-wheat"></i></button>
-                                    <button type="button" class="icon-option w-10 h-10 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center" data-icon="fas fa-snowflake"><i class="fas fa-snowflake"></i></button>
-                                </div>
-                                <input type="hidden" id="selectedIcon" name="icon" value="fas fa-tag">
-                            </div>
-
-                        </div>
+            <div class="bg-white px-6 pt-6 pb-6">
+                <div class="space-y-5">
+                    
+                    <div>
+                        <label for="categoryName" class="block text-sm font-bold text-chocolate mb-1">Category Name</label>
+                        <input type="text" 
+                               id="categoryName" 
+                               name="name"
+                               class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2.5 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" 
+                               placeholder="e.g., Decor & Toppers"
+                               required>
+                        <div id="nameError" class="mt-1 text-xs text-red-600 hidden font-bold"></div>
                     </div>
+
+                    <div>
+                        <label for="categoryDescription" class="block text-sm font-bold text-chocolate mb-1">Description</label>
+                        <textarea id="categoryDescription" 
+                                  name="description"
+                                  rows="3" 
+                                  class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2.5 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" 
+                                  placeholder="Briefly describe what items belong here..."></textarea>
+                        <div id="descriptionError" class="mt-1 text-xs text-red-600 hidden font-bold"></div>
+                    </div>
+
+                    <div>
+                        <label for="parentCategory" class="block text-sm font-bold text-chocolate mb-1">Parent Category (Optional)</label>
+                        <select id="parentCategory" 
+                                name="parent_id"
+                                class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2.5 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all">
+                            <option value="">No Parent Category</option>
+                            </select>
+                        <div id="parentError" class="mt-1 text-xs text-red-600 hidden font-bold"></div>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg border border-border-soft">
+                        <label class="block text-sm font-bold text-chocolate mb-2">Visual Icon</label>
+                        <div class="flex gap-3 flex-wrap justify-center sm:justify-start">
+                            <button type="button" class="icon-option w-10 h-10 rounded-lg bg-chocolate text-white flex items-center justify-center ring-2 ring-offset-2 ring-chocolate shadow-sm transition-all" data-icon="fas fa-tag"><i class="fas fa-tag"></i></button>
+                            <button type="button" class="icon-option w-10 h-10 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-caramel hover:border-caramel flex items-center justify-center transition-all" data-icon="fas fa-utensils"><i class="fas fa-utensils"></i></button>
+                            <button type="button" class="icon-option w-10 h-10 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-caramel hover:border-caramel flex items-center justify-center transition-all" data-icon="fas fa-box"><i class="fas fa-box"></i></button>
+                            <button type="button" class="icon-option w-10 h-10 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-caramel hover:border-caramel flex items-center justify-center transition-all" data-icon="fas fa-tint"><i class="fas fa-tint"></i></button>
+                            <button type="button" class="icon-option w-10 h-10 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-caramel hover:border-caramel flex items-center justify-center transition-all" data-icon="fas fa-wheat"><i class="fas fa-wheat"></i></button>
+                            <button type="button" class="icon-option w-10 h-10 rounded-lg bg-white border border-gray-200 text-gray-400 hover:text-caramel hover:border-caramel flex items-center justify-center transition-all" data-icon="fas fa-snowflake"><i class="fas fa-snowflake"></i></button>
+                        </div>
+                        <input type="hidden" id="selectedIcon" name="icon" value="fas fa-tag">
+                    </div>
+
                 </div>
             </div>
 
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <div class="bg-gray-50 px-6 py-4 sm:flex sm:flex-row-reverse border-t border-border-soft">
                 <button type="button" 
                         id="saveCategoryBtn"
                         onclick="saveCategory()" 
-                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                        class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-chocolate text-base font-bold text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Save Category
                 </button>
                 <button type="button" 
                         onclick="closeCategoryModal()" 
-                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Cancel
                 </button>
             </div>
@@ -221,30 +217,29 @@
     </div>
 </div>
 
-<!-- 2. CONFIRMATION MODAL -->
 <div id="confirmModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="cancelConfirm()"></div>
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="cancelConfirm()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-border-soft">
+            <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-exclamation-triangle text-amber-600 text-lg"></i>
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-cream-bg border border-border-soft sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle text-caramel text-lg"></i>
                     </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="confirmTitle">Confirm Action</h3>
+                        <h3 class="text-lg leading-6 font-bold text-chocolate font-display" id="confirmTitle">Confirm Action</h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500" id="confirmMessage">Are you sure?</p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" id="confirmBtn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+            <div class="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" id="confirmBtn" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-chocolate text-base font-bold text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Confirm
                 </button>
-                <button type="button" onclick="cancelConfirm()" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" onclick="cancelConfirm()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Cancel
                 </button>
             </div>
@@ -252,27 +247,25 @@
     </div>
 </div>
 
-<!-- 3. NOTIFICATION MODAL -->
 <div id="notificationModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="closeNotification()"></div>
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="closeNotification()"></div>
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full border border-border-soft">
+            <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4">
                 <div class="sm:flex sm:items-start">
                     <div id="notifIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10">
-                        <!-- Icon inserted via JS -->
-                    </div>
+                        </div>
                     <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="notifTitle">Notification</h3>
+                        <h3 class="text-lg leading-6 font-bold text-chocolate font-display" id="notifTitle">Notification</h3>
                         <div class="mt-2">
                             <p class="text-sm text-gray-500" id="notifMessage"></p>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button type="button" onclick="closeNotification()" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+            <div class="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" onclick="closeNotification()" class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
                     Close
                 </button>
             </div>
@@ -280,15 +273,12 @@
     </div>
 </div>
 
-<!-- Loading Overlay -->
-<div id="loadingOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
-        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-chocolate"></div>
-        <span class="text-gray-700">Processing...</span>
+<div id="loadingOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-chocolate/20 backdrop-blur-sm">
+    <div class="bg-white rounded-xl p-6 flex items-center space-x-4 shadow-2xl border border-border-soft">
+        <div class="animate-spin rounded-full h-8 w-8 border-[3px] border-border-soft border-t-caramel"></div>
+        <span class="text-chocolate font-bold font-display">Processing...</span>
     </div>
 </div>
-
-@endsection
 
 @php
 function getCategoryIcon($categoryName) {
@@ -372,11 +362,15 @@ function setupIconSelection() {
     iconButtons.forEach(button => {
         button.addEventListener('click', function() {
             iconButtons.forEach(btn => {
+                // Remove active classes
                 btn.classList.remove('bg-chocolate', 'text-white', 'ring-2', 'ring-offset-2', 'ring-chocolate');
-                btn.classList.add('bg-gray-100', 'text-gray-500', 'hover:bg-gray-200');
+                // Add inactive classes
+                btn.classList.add('bg-white', 'border', 'border-gray-200', 'text-gray-400', 'hover:text-caramel', 'hover:border-caramel');
             });
-            this.classList.remove('bg-gray-100', 'text-gray-500', 'hover:bg-gray-200');
+            // Add active classes to clicked
+            this.classList.remove('bg-white', 'border', 'border-gray-200', 'text-gray-400', 'hover:text-caramel', 'hover:border-caramel');
             this.classList.add('bg-chocolate', 'text-white', 'ring-2', 'ring-offset-2', 'ring-chocolate');
+            
             document.getElementById('selectedIcon').value = this.dataset.icon;
         });
     });
@@ -431,6 +425,20 @@ function openCategoryModal() {
     document.getElementById('categoryDescription').value = '';
     document.getElementById('parentCategory').value = '';
     document.getElementById('selectedIcon').value = 'fas fa-tag';
+    
+    // Reset visual selection of icons
+    const iconButtons = document.querySelectorAll('.icon-option');
+    iconButtons.forEach(btn => {
+        btn.classList.remove('bg-chocolate', 'text-white', 'ring-2', 'ring-offset-2', 'ring-chocolate');
+        btn.classList.add('bg-white', 'border', 'border-gray-200', 'text-gray-400', 'hover:text-caramel', 'hover:border-caramel');
+    });
+    // Select the first one (tag)
+    const firstBtn = iconButtons[0];
+    if(firstBtn) {
+        firstBtn.classList.remove('bg-white', 'border', 'border-gray-200', 'text-gray-400', 'hover:text-caramel', 'hover:border-caramel');
+        firstBtn.classList.add('bg-chocolate', 'text-white', 'ring-2', 'ring-offset-2', 'ring-chocolate');
+    }
+
     setupIconSelection();
     clearErrors();
     document.getElementById('categoryModal').classList.remove('hidden');
@@ -466,6 +474,7 @@ function saveCategory() {
     const name = document.getElementById('categoryName').value.trim();
     const description = document.getElementById('categoryDescription').value.trim();
     const parentId = document.getElementById('parentCategory').value;
+    const icon = document.getElementById('selectedIcon').value;
     
     if (!name) {
         showError('nameError', 'Category name is required');
@@ -477,6 +486,9 @@ function saveCategory() {
     const formData = new FormData();
     formData.append('name', name);
     formData.append('description', description);
+    // Note: The backend logic likely doesn't save the icon from this form field based on your original code
+    // but we send it anyway in case you implement it later.
+    formData.append('icon', icon); 
     if (parentId) formData.append('parent_id', parentId);
     
     // Add CSRF token
@@ -574,7 +586,7 @@ function confirmToggleStatus(categoryId, isChecked) {
     
     document.getElementById('confirmBtn').onclick = executeToggle;
     // Reset styling
-    document.getElementById('confirmBtn').className = "w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-chocolate text-base font-medium text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm";
+    document.getElementById('confirmBtn').className = "w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-chocolate text-base font-bold text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all";
     
     document.getElementById('confirmModal').classList.remove('hidden');
 }
@@ -622,10 +634,10 @@ function executeToggle() {
             const row = document.getElementById(`category-row-${pendingToggleId}`);
             if (row) {
                 // Update status text
-                const span = row.querySelector('.ml-3.text-sm.font-medium');
+                const span = row.querySelector('.ml-3.text-xs.font-bold');
                 if(span) {
                     span.textContent = pendingToggleState ? 'Active' : 'Inactive';
-                    span.className = `ml-3 text-sm font-medium ${pendingToggleState ? 'text-green-600' : 'text-gray-500'}`;
+                    span.className = `ml-3 text-xs font-bold uppercase tracking-wide ${pendingToggleState ? 'text-green-600' : 'text-gray-400'}`;
                 }
                 
                 // Update checkbox state
@@ -636,9 +648,9 @@ function executeToggle() {
                 
                 // Update row styling
                 if (!pendingToggleState) {
-                    row.classList.add('bg-gray-50', 'opacity-75');
+                    row.classList.add('bg-gray-50', 'opacity-60');
                 } else {
-                    row.classList.remove('bg-gray-50', 'opacity-75');
+                    row.classList.remove('bg-gray-50', 'opacity-60');
                 }
             }
             
@@ -738,7 +750,7 @@ function searchCategories() {
     const tr = table.getElementsByTagName("tr");
 
     for (let i = 0; i < tr.length; i++) {
-        const tdName = tr[i].getElementsByTagName("td")[0];
+        const tdName = tr[i].querySelector(".category-name");
         if (tdName) {
             const txtValue = tdName.textContent || tdName.innerText;
             if (txtValue.toUpperCase().indexOf(filter) > -1) {
@@ -770,21 +782,4 @@ function filterCategories() {
     }
 }
 </script>
-
-<style>
-.icon-option {
-    transition: all 0.2s ease-in-out;
-}
-.icon-option:hover {
-    transform: scale(1.1);
-}
-.peer:checked ~ span {
-    transition: color 0.2s ease-in-out;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-.animate-spin {
-    animation: spin 1s linear infinite;
-}
-</style>
+@endsection

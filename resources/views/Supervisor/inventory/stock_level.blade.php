@@ -1,109 +1,139 @@
 @extends('Supervisor.layout.app')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-8 font-sans text-gray-600">
 
     {{-- 1. HEADER --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Live Stock Levels</h1>
-            <p class="text-sm text-gray-500 mt-1">Real-time view of current warehouse inventory.</p>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Live Stock Levels</h1>
+            <p class="text-sm text-gray-500">Real-time view of current warehouse inventory.</p>
         </div>
         <div class="flex items-center gap-3">
             <a href="{{ route('supervisor.inventory.print-stock-report') }}" 
                target="_blank"
-               class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition shadow-sm">
-                <i class="fas fa-print mr-2"></i> Print Stock Sheet
+               class="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-border-soft text-gray-600 text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-chocolate transition-all shadow-sm group">
+                <i class="fas fa-print mr-2 opacity-70 group-hover:opacity-100"></i> Print Report
             </a>
             <a href="{{ route('supervisor.inventory.export-stock-csv') }}" 
-               class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition shadow-sm">
-                <i class="fas fa-file-excel mr-2"></i> Export CSV
+               class="inline-flex items-center justify-center px-4 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                <i class="fas fa-file-csv mr-2"></i> Export CSV
             </a>
         </div>
     </div>
 
     {{-- 2. METRICS SUMMARY --}}
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <!-- Total SKU -->
-        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Items</p>
-                <p class="text-2xl font-bold text-gray-900 mt-1">{{ number_format($metrics['total_items']) }}</p>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Total Items -->
+        <div class="bg-white p-5 rounded-xl border border-border-soft shadow-sm flex flex-col justify-between group hover:border-chocolate/30 transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-chocolate/10 rounded-lg text-chocolate group-hover:bg-chocolate group-hover:text-white transition-colors">
+                    <i class="fas fa-boxes text-lg"></i>
+                </div>
             </div>
-            <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
-                <i class="fas fa-boxes"></i>
+            <div>
+                <p class="text-3xl font-display font-bold text-gray-900">{{ number_format($metrics['total_items']) }}</p>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">Total Items</p>
             </div>
         </div>
 
-        <!-- Good Stock -->
-        <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-green-600 uppercase tracking-wider">Healthy Stock</p>
-                <p class="text-2xl font-bold text-green-700 mt-1">{{ number_format($metrics['healthy_stock']) }}</p>
+        <!-- Healthy Stock -->
+        <div class="bg-white p-5 rounded-xl border border-border-soft shadow-sm flex flex-col justify-between group hover:border-green-200 transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-green-50 rounded-lg text-green-600 group-hover:bg-green-100 transition-colors">
+                    <i class="fas fa-check-circle text-lg"></i>
+                </div>
             </div>
-            <div class="w-10 h-10 bg-green-50 rounded-full flex items-center justify-center text-green-600">
-                <i class="fas fa-check-circle"></i>
+            <div>
+                <p class="text-3xl font-display font-bold text-green-700">{{ number_format($metrics['healthy_stock']) }}</p>
+                <p class="text-xs font-bold text-green-600/70 uppercase tracking-wider mt-1">Healthy Stock</p>
             </div>
         </div>
 
         <!-- Low Stock -->
-        <div class="bg-white border-l-4 border-amber-400 border-y border-r border-gray-200 rounded-lg p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-amber-600 uppercase tracking-wider">Low Stock</p>
-                <p class="text-2xl font-bold text-amber-700 mt-1">{{ number_format($metrics['low_stock']) }}</p>
+        <div class="bg-white p-5 rounded-xl border border-border-soft border-l-4 border-l-amber-400 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-amber-50 rounded-lg text-amber-600 group-hover:bg-amber-100 transition-colors">
+                    <i class="fas fa-exclamation-triangle text-lg"></i>
+                </div>
             </div>
-            <div class="w-10 h-10 bg-amber-50 rounded-full flex items-center justify-center text-amber-600">
-                <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <p class="text-3xl font-display font-bold text-amber-700">{{ number_format($metrics['low_stock']) }}</p>
+                <p class="text-xs font-bold text-amber-600/70 uppercase tracking-wider mt-1">Low Stock</p>
             </div>
         </div>
 
         <!-- Critical / Out -->
-        <div class="bg-white border-l-4 border-red-500 border-y border-r border-gray-200 rounded-lg p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-red-600 uppercase tracking-wider">Critical / Out</p>
-                <p class="text-2xl font-bold text-red-700 mt-1">{{ number_format($metrics['critical_stock']) }}</p>
+        <div class="bg-white p-5 rounded-xl border border-border-soft border-l-4 border-l-red-500 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all">
+            <div class="flex justify-between items-start mb-4">
+                <div class="p-2 bg-red-50 rounded-lg text-red-600 group-hover:bg-red-100 transition-colors">
+                    <i class="fas fa-times-circle text-lg"></i>
+                </div>
             </div>
-            <div class="w-10 h-10 bg-red-50 rounded-full flex items-center justify-center text-red-600">
-                <i class="fas fa-times-circle"></i>
+            <div>
+                <p class="text-3xl font-display font-bold text-red-700">{{ number_format($metrics['critical_stock']) }}</p>
+                <p class="text-xs font-bold text-red-600/70 uppercase tracking-wider mt-1">Critical / Out</p>
             </div>
         </div>
     </div>
 
     {{-- 3. FILTERS --}}
-    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-        <form method="GET" action="{{ route('supervisor.inventory.stock-level') }}" class="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="relative w-full md:w-96">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400"></i>
+    <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm">
+        <form method="GET" action="{{ route('supervisor.inventory.stock-level') }}" class="flex flex-col lg:flex-row items-center gap-4 w-full">
+            <div class="relative w-full lg:flex-1 group">
+                <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-1">Search</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400 group-focus-within:text-caramel transition-colors"></i>
+                    </div>
+                    <input type="text" name="search" value="{{ request('search') }}" 
+                           class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 bg-cream-bg rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all placeholder-gray-400" 
+                           placeholder="Search Item Name, SKU...">
                 </div>
-                <input type="text" 
-                       name="search" 
-                       value="{{ request('search') }}"
-                       class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm" 
-                       placeholder="Search Item Name, SKU...">
             </div>
 
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                <select name="category" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                    <option value="">All Categories</option>
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>
-                            {{ $cat->name }}
-                        </option>
-                    @endforeach
-                </select>
-                <select name="status" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                    <option value="">All Statuses</option>
-                    <option value="good" {{ request('status') == 'good' ? 'selected' : '' }}>Good</option>
-                    <option value="low" {{ request('status') == 'low' ? 'selected' : '' }}>Low</option>
-                    <option value="critical" {{ request('status') == 'critical' ? 'selected' : '' }}>Critical</option>
-                </select>
-                <select name="per_page" class="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-sm">
-                    <option value="20" {{ request('per_page') == '20' ? 'selected' : '' }}>20 per page</option>
-                    <option value="50" {{ request('per_page') == '50' ? 'selected' : '' }}>50 per page</option>
-                    <option value="100" {{ request('per_page') == '100' ? 'selected' : '' }}>100 per page</option>
-                </select>
-                <button type="submit" class="px-4 py-2 bg-chocolate text-white rounded-md hover:bg-chocolate-dark transition">
+            <div class="w-full lg:w-auto">
+                <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-1">Category</label>
+                <div class="relative">
+                    <select name="category" class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel appearance-none cursor-pointer min-w-[160px]">
+                        <option value="">All Categories</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}" {{ request('category') == $cat->id ? 'selected' : '' }}>
+                                {{ $cat->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="fas fa-chevron-down text-xs"></i></div>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-auto">
+                <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-1">Status</label>
+                <div class="relative">
+                    <select name="status" class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel appearance-none cursor-pointer min-w-[140px]">
+                        <option value="">All Statuses</option>
+                        <option value="good" {{ request('status') == 'good' ? 'selected' : '' }}>Good</option>
+                        <option value="low" {{ request('status') == 'low' ? 'selected' : '' }}>Low</option>
+                        <option value="critical" {{ request('status') == 'critical' ? 'selected' : '' }}>Critical</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="fas fa-chevron-down text-xs"></i></div>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-auto">
+                <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-1">Per Page</label>
+                <div class="relative">
+                    <select name="per_page" class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel appearance-none cursor-pointer">
+                        <option value="20" {{ request('per_page') == '20' ? 'selected' : '' }}>20</option>
+                        <option value="50" {{ request('per_page') == '50' ? 'selected' : '' }}>50</option>
+                        <option value="100" {{ request('per_page') == '100' ? 'selected' : '' }}>100</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="fas fa-chevron-down text-xs"></i></div>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 self-end">
+                <button type="submit" class="px-6 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-sm">
                     Filter
                 </button>
             </div>
@@ -111,20 +141,20 @@
     </div>
 
     {{-- 4. INVENTORY TABLE --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-border-soft">
+                <thead class="bg-cream-bg">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Info</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Physical Stock</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Movement</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Item Info</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Category</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Physical Stock</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Status</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Last Movement</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-caramel uppercase tracking-widest font-display">Action</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="bg-white divide-y divide-gray-100">
                     @forelse($stockItems as $item)
                         @php
                             $currentStock = $item->currentStockRecord ? $item->currentStockRecord->current_quantity : 0;
@@ -132,23 +162,23 @@
                             $minStockLevel = $item->min_stock_level ?? 0;
                             $maxStockLevel = $item->max_stock_level ?? 0;
                             
-                            // Determine stock status
+                            // Determine stock status styles
                             $status = 'Good';
-                            $statusClass = 'text-green-600';
-                            $statusBgClass = 'bg-green-100 text-green-800';
+                            $statusClass = 'text-green-700';
+                            $statusBgClass = 'bg-green-100 border-green-200';
                             $rowClass = '';
                             $barColor = 'bg-green-500';
                             
                             if ($currentStock <= 0 || $currentStock <= $reorderPoint * 0.5) {
                                 $status = 'Critical';
-                                $statusClass = 'text-red-600';
-                                $statusBgClass = 'bg-red-100 text-red-800';
-                                $rowClass = 'bg-red-50/30 border-l-4 border-l-red-400';
+                                $statusClass = 'text-red-700';
+                                $statusBgClass = 'bg-red-100 border-red-200';
+                                $rowClass = 'bg-red-50/30';
                                 $barColor = 'bg-red-600';
                             } elseif ($currentStock <= $reorderPoint) {
                                 $status = 'Low Stock';
-                                $statusClass = 'text-amber-600';
-                                $statusBgClass = 'bg-amber-100 text-amber-800';
+                                $statusClass = 'text-amber-700';
+                                $statusBgClass = 'bg-amber-100 border-amber-200';
                                 $rowClass = 'bg-amber-50/30';
                                 $barColor = 'bg-amber-500';
                             }
@@ -160,86 +190,79 @@
                             // Get last movement
                             $lastMovement = $item->stockMovements->first();
                             $lastMovementText = 'No movement';
+                            $lastMovementSub = '';
                             if ($lastMovement) {
-                                $timeDiff = Carbon\Carbon::now()->diffForHumans($lastMovement->created_at, true);
-                                $lastMovementText = $timeDiff . ' ago (' . ucfirst($lastMovement->movement_type) . ')';
+                                $lastMovementText = $lastMovement->created_at->diffForHumans();
+                                $lastMovementSub = ucfirst($lastMovement->movement_type);
                             }
                             
-                            // Get category color
-                            $categoryColors = [
-                                'Flour & Grains' => 'bg-amber-100 text-amber-800',
-                                'Dairy Products' => 'bg-blue-100 text-blue-800',
-                                'Sweeteners' => 'bg-pink-100 text-pink-800',
-                                'Fats & Oils' => 'bg-yellow-100 text-yellow-800',
-                                'Finished Products' => 'bg-green-100 text-green-800',
-                                'Packaging Materials' => 'bg-purple-100 text-purple-800',
-                                'Cleaning Supplies' => 'bg-gray-100 text-gray-800'
-                            ];
-                            $categoryClass = $categoryColors[$item->category->name ?? ''] ?? 'bg-gray-100 text-gray-800';
+                            // Category Styling
+                            $catName = $item->category->name ?? 'Uncategorized';
                         @endphp
                         
-                        <tr class="hover:bg-gray-50 transition-colors {{ $rowClass }}">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-10 w-10 bg-gray-100 rounded flex items-center justify-center text-gray-600">
+                        <tr class="hover:bg-cream-bg/50 transition-colors group {{ $rowClass }}">
+                            <td class="px-6 py-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="w-10 h-10 rounded-lg bg-white border border-border-soft flex items-center justify-center text-gray-400 flex-shrink-0 shadow-sm">
                                         <i class="fas fa-box"></i>
                                     </div>
-                                    <div class="ml-4">
-                                        <div class="text-sm font-bold text-gray-900">{{ $item->name }}</div>
-                                        <div class="text-xs text-gray-500">SKU: {{ $item->item_code }}</div>
+                                    <div>
+                                        <div class="text-sm font-bold text-chocolate">{{ $item->name }}</div>
+                                        <div class="text-xs text-gray-500 font-mono mt-0.5">{{ $item->item_code }}</div>
                                     </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $categoryClass }}">
-                                    {{ $item->category->name ?? 'Uncategorized' }}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                                    {{ $catName }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-bold {{ $statusClass }}">{{ number_format($currentStock, 1) }} {{ $item->unit->symbol ?? '' }}</div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-sm font-bold {{ $statusClass }}">{{ number_format($currentStock, 1) }} {{ $item->unit->symbol ?? '' }}</span>
+                                    <span class="text-[10px] text-gray-400">{{ $percentage }}%</span>
+                                </div>
                                 <!-- Visual Health Bar -->
-                                <div class="w-24 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                                    <div class="{{ $barColor }} h-1.5 rounded-full transition-all duration-300" style="width: {{ $barWidth }}%"></div>
+                                <div class="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                    <div class="{{ $barColor }} h-full rounded-full transition-all duration-500" style="width: {{ $barWidth }}%"></div>
                                 </div>
-                                <div class="text-[10px] {{ $statusClass }} mt-0.5">
-                                    @if($status == 'Critical')
-                                        <span class="font-bold">Below Reorder ({{ $reorderPoint }} {{ $item->unit->symbol ?? '' }})</span>
-                                    @elseif($status == 'Low Stock')
-                                        <span class="font-medium">Near Reorder ({{ $reorderPoint }} {{ $item->unit->symbol ?? '' }})</span>
-                                    @else
-                                        <span class="text-gray-400">Reorder at {{ $reorderPoint }} {{ $item->unit->symbol ?? '' }}</span>
-                                    @endif
-                                </div>
+                                <div class="text-[10px] text-gray-400 mt-1">Max: {{ number_format($maxStockLevel) }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $statusBgClass }}">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide border {{ $statusBgClass }}">
                                     @if($status == 'Critical')
-                                        <i class="fas fa-times-circle mr-1"></i>
+                                        <i class="fas fa-times-circle mr-1.5"></i>
                                     @elseif($status == 'Low Stock')
-                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        <i class="fas fa-exclamation-circle mr-1.5"></i>
                                     @else
-                                        <i class="fas fa-check-circle mr-1"></i>
+                                        <i class="fas fa-check-circle mr-1.5"></i>
                                     @endif
                                     {{ $status }}
                                 </span>
+                                @if($status != 'Good')
+                                    <div class="text-[10px] text-gray-500 mt-1 pl-1">Reorder: {{ $reorderPoint }}</div>
+                                @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ $lastMovementText }}
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-700">{{ $lastMovementText }}</div>
+                                <div class="text-xs text-gray-400">{{ $lastMovementSub }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <a href="{{ route('supervisor.inventory.stock-card', $item) }}" 
-                                   class="text-chocolate hover:text-chocolate-dark font-bold text-xs border border-border-soft px-3 py-1.5 rounded hover:bg-cream-bg transition">
-                                    View Card
+                                   class="text-chocolate hover:text-white hover:bg-chocolate border border-border-soft px-3 py-1.5 rounded-lg transition-all inline-flex items-center text-xs font-bold">
+                                    <i class="fas fa-file-alt mr-1.5"></i> View Card
                                 </a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-12 text-center">
-                                <div class="text-gray-500">
-                                    <i class="fas fa-box-open text-4xl mb-4"></i>
-                                    <p class="text-lg font-medium">No items found</p>
-                                    <p class="text-sm">Try adjusting your search filters</p>
+                            <td colspan="6" class="px-6 py-16 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 border border-border-soft">
+                                        <i class="fas fa-box-open text-chocolate/30 text-3xl"></i>
+                                    </div>
+                                    <h3 class="font-display text-lg font-bold text-chocolate">No Items Found</h3>
+                                    <p class="text-sm text-gray-500 mt-1">Try adjusting your filters to find what you're looking for.</p>
                                 </div>
                             </td>
                         </tr>
@@ -247,19 +270,15 @@
                 </tbody>
             </table>
         </div>
-
-        <!-- Pagination -->
+        
+        {{-- Pagination --}}
         @if($stockItems->hasPages())
-            <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                    <p class="text-sm text-gray-700">
-                        Showing <span class="font-medium">{{ $stockItems->firstItem() }}</span> 
-                        to <span class="font-medium">{{ $stockItems->lastItem() }}</span> 
-                        of <span class="font-medium">{{ $stockItems->total() }}</span> results
+            <div class="bg-white px-6 py-4 border-t border-border-soft">
+                <div class="flex items-center justify-between">
+                    <p class="text-xs text-gray-500">
+                        Showing <span class="font-bold text-chocolate">{{ $stockItems->firstItem() }}</span> to <span class="font-bold text-chocolate">{{ $stockItems->lastItem() }}</span> of <span class="font-bold text-chocolate">{{ $stockItems->total() }}</span> results
                     </p>
-                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                        {{ $stockItems->links() }}
-                    </nav>
+                    {{ $stockItems->links() }}
                 </div>
             </div>
         @endif

@@ -5,11 +5,23 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\AuthController;
 
 // --- Import your controllers (Ready for when you move logic to controllers) ---
-use App\Http\Controllers\AdminController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PurchasingController;
 use App\Http\Controllers\SupervisorController;
+
+// Admin namespace controllers
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\UserManagement\UserController;
+use App\Http\Controllers\Admin\UserManagement\RoleController;
+use App\Http\Controllers\Admin\MasterData\ItemController;
+use App\Http\Controllers\Admin\MasterData\CategoryController;
+use App\Http\Controllers\Admin\MasterData\UnitController;
+use App\Http\Controllers\Admin\System\AuditLogController;
+use App\Http\Controllers\Admin\System\SettingController;
+use App\Http\Controllers\Admin\System\NotificationController;
+use App\Http\Controllers\Admin\System\BackupController;
+use App\Http\Controllers\Admin\Partner\SupplierController;
 
 
 /* ----------------------------------------------------------
@@ -30,101 +42,124 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', [AdminController::class, 'systemOverview'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'systemOverview'])->name('dashboard');
 
     // User Management
-    Route::get('/users', [AdminController::class, 'allUsers'])->name('users.index');
-    Route::get('/roles', [AdminController::class, 'userRoles'])->name('roles.index');
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
+        Route::patch('/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('reset-password');
+        Route::post('/{user}/change-password', [UserController::class, 'changePassword'])->name('change-password');
+        Route::post('/bulk-operations', [UserController::class, 'bulkOperations'])->name('bulk-operations');
+        Route::get('/search', [UserController::class, 'search'])->name('search');
+    });
 
-    // User Management AJAX routes - KEEP route model binding
-    Route::post('/users', [AdminController::class, 'createUser'])->name('users.store');
-    Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('users.edit');
-    Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
-    Route::patch('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
-    Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('users.destroy');
-    Route::get('/users/search', [AdminController::class, 'searchUsers'])->name('users.search');
-    
-    // User password management - KEEP route model binding
-    Route::post('/users/{user}/reset-password', [AdminController::class, 'resetUserPassword'])->name('users.reset-password');
-    Route::post('/users/{user}/change-password', [AdminController::class, 'changeUserPassword'])->name('users.change-password');
-    Route::post('/users/bulk-operations', [AdminController::class, 'bulkUserOperations'])->name('users.bulk-operations');
+    Route::prefix('roles')->name('roles.')->group(function () {
+        Route::get('/', [RoleController::class, 'index'])->name('index');
+        Route::post('/', [RoleController::class, 'store'])->name('store');
+        Route::get('/{role}/details', [RoleController::class, 'details'])->name('details');
+        Route::post('/{role}/permissions', [RoleController::class, 'savePermissions'])->name('permissions');
+        Route::get('/{role}/permissions', [RoleController::class, 'getPermissions'])->name('permissions.get');
+    });
 
-    // Role Management routes
-    Route::get('/roles/{role}/details', [AdminController::class, 'getRoleDetails'])->name('roles.details');
-    Route::post('/roles/{role}/permissions', [AdminController::class, 'saveRolePermissions'])->name('roles.permissions');
-    Route::get('/roles/{role}/permissions', [AdminController::class, 'getRolePermissions'])->name('roles.permissions.get');
-    Route::post('/roles/create', [AdminController::class, 'createRole'])->name('roles.create');
+    // Master Data - Items
+    Route::prefix('items')->name('items.')->group(function () {
+        Route::get('/', [ItemController::class, 'index'])->name('index');
+        Route::post('/', [ItemController::class, 'store'])->name('store');
+        Route::get('/{item}/edit', [ItemController::class, 'edit'])->name('edit');
+        Route::put('/{item}', [ItemController::class, 'update'])->name('update');
+        Route::delete('/{item}', [ItemController::class, 'destroy'])->name('destroy');
+        Route::get('/data', [ItemController::class, 'getItemData'])->name('data');
+        Route::get('/search', [ItemController::class, 'search'])->name('search');
+    });
 
-    // Master Files
-    Route::get('/items', [AdminController::class, 'items'])->name('items.index');
-    Route::post('/items', [AdminController::class, 'createItem'])->name('items.store');
-    Route::get('/items/{item}/edit', [AdminController::class, 'editItem'])->name('items.edit');
-    Route::put('/items/{item}', [AdminController::class, 'updateItem'])->name('items.update');
-    Route::delete('/items/{item}', [AdminController::class, 'deleteItem'])->name('items.destroy');
-    Route::get('/items/data', [AdminController::class, 'getItemData'])->name('items.data');
-    Route::get('/users/data', [AdminController::class, 'getUserData'])->name('users.data');
+    // Master Data - Categories
+    Route::prefix('categories')->name('categories.')->group(function () {
+        Route::get('/', [CategoryController::class, 'index'])->name('index');
+        Route::post('/', [CategoryController::class, 'store'])->name('store');
+        Route::get('/{category}/edit', [CategoryController::class, 'edit'])->name('edit');
+        Route::put('/{category}', [CategoryController::class, 'update'])->name('update');
+        Route::patch('/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])->name('toggle-status');
+        Route::delete('/{category}', [CategoryController::class, 'destroy'])->name('destroy');
+        Route::get('/parent', [CategoryController::class, 'getParentCategories'])->name('parent');
+        Route::get('/search', [CategoryController::class, 'search'])->name('search');
+    });
 
-    // Categories Management
-    Route::get('/categories', [AdminController::class, 'categories'])->name('categories.index');
-    Route::post('/categories', [AdminController::class, 'createCategory'])->name('categories.store');
-    Route::get('/categories/{category}/edit', [AdminController::class, 'editCategory'])->name('categories.edit');
-    Route::put('/categories/{category}', [AdminController::class, 'updateCategory'])->name('categories.update');
-    Route::patch('/categories/{category}/toggle-status', [AdminController::class, 'toggleCategoryStatus'])->name('categories.toggle-status');
-    Route::delete('/categories/{category}', [AdminController::class, 'deleteCategory'])->name('categories.destroy');
-    Route::get('/categories/parent', [AdminController::class, 'getParentCategories'])->name('categories.parent');
-    Route::get('/categories/search', [AdminController::class, 'searchCategories'])->name('categories.search');
+    // Master Data - Units
+    Route::prefix('units')->name('units.')->group(function () {
+        Route::get('/', [UnitController::class, 'index'])->name('index');
+        Route::post('/', [UnitController::class, 'store'])->name('store');
+        Route::get('/{unit}/edit', [UnitController::class, 'edit'])->name('edit');
+        Route::put('/{unit}', [UnitController::class, 'update'])->name('update');
+        Route::patch('/{unit}/toggle-status', [UnitController::class, 'toggleStatus'])->name('toggle-status');
+        Route::delete('/{unit}', [UnitController::class, 'destroy'])->name('destroy');
+        Route::get('/base', [UnitController::class, 'getBaseUnits'])->name('base');
+        Route::get('/search', [UnitController::class, 'search'])->name('search');
+    });
 
-    Route::get('/units', [AdminController::class, 'units'])->name('units.index');
-    Route::post('/units', [AdminController::class, 'createUnit'])->name('units.store');
-    Route::get('/units/{unit}/edit', [AdminController::class, 'editUnit'])->name('units.edit');
-    Route::put('/units/{unit}', [AdminController::class, 'updateUnit'])->name('units.update');
-    Route::patch('/units/{unit}/toggle-status', [AdminController::class, 'toggleUnitStatus'])->name('units.toggle-status');
-    Route::delete('/units/{unit}', [AdminController::class, 'deleteUnit'])->name('units.destroy');
-    Route::get('/units/base', [AdminController::class, 'getBaseUnits'])->name('units.base');
-    Route::get('/units/search', [AdminController::class, 'searchUnits'])->name('units.search');
+    // Partners - Supplier Management
+    Route::prefix('suppliers')->name('suppliers.')->group(function () {
+        Route::get('/', [SupplierController::class, 'index'])->name('index');
+        Route::post('/', [SupplierController::class, 'store'])->name('store');
+        Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit');
+        Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
+        Route::patch('/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('toggle-status');
+        Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+        Route::get('/search', [SupplierController::class, 'search'])->name('search');
+        Route::get('/{supplier}', [SupplierController::class, 'show'])->name('show');
+    });
 
-    // External Partners
-    Route::get('/suppliers', [AdminController::class, 'supplierList'])->name('suppliers.index');
-    Route::post('/suppliers', [AdminController::class, 'storeSupplier'])->name('suppliers.store');
-    Route::get('/suppliers/{supplier}/edit', [AdminController::class, 'editSupplier'])->name('suppliers.edit');
-    Route::put('/suppliers/{supplier}', [AdminController::class, 'updateSupplier'])->name('suppliers.update');
-    Route::patch('/suppliers/{supplier}/toggle-status', [AdminController::class, 'toggleSupplierStatus'])->name('suppliers.toggle-status');
-    Route::delete('/suppliers/{supplier}', [AdminController::class, 'deleteSupplier'])->name('suppliers.destroy');
+    // System & Security - Audit Logs
+    Route::prefix('audit-logs')->name('audit-logs.')->group(function () {
+        Route::get('/', [AuditLogController::class, 'index'])->name('index');
+        Route::get('/{auditLog}', [AuditLogController::class, 'show'])->name('show');
+        Route::post('/export', [AuditLogController::class, 'export'])->name('export');
+        Route::get('/{auditLog}/export', [AuditLogController::class, 'exportProof'])->name('proof-export');
+        Route::get('/tables', [AuditLogController::class, 'getTableNames'])->name('tables');
+        Route::get('/actions', [AuditLogController::class, 'getActions'])->name('actions');
+    });
 
-    // System & Security
-    Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
-    Route::post('/audit-logs/export', [AdminController::class, 'exportAuditLogs'])->name('audit-logs.export');
-    Route::get('/audit-logs/{auditLog}/export', [AdminController::class, 'exportAuditLogProof'])->name('audit-logs.proof-export');
-    Route::get('/audit-logs/{auditLog}', [AdminController::class, 'showAuditLog'])->name('audit-logs.show');
+    // System & Security - Settings
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [SettingController::class, 'index'])->name('index');
+        Route::post('/', [SettingController::class, 'update'])->name('update');
+        Route::get('/health', [SettingController::class, 'getSystemHealth'])->name('health');
+        Route::post('/clear-cache', [SettingController::class, 'clearCache'])->name('clear-cache');
+        Route::post('/optimize', [SettingController::class, 'optimize'])->name('optimize');
+    });
 
-    Route::get('/settings', [AdminController::class, 'generalSettings'])->name('settings');
-    Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    // System & Security - Backup Management
+    Route::prefix('backups')->name('backups.')->group(function () {
+        Route::get('/', [BackupController::class, 'index'])->name('index');
+        Route::post('/create', [BackupController::class, 'create'])->name('create');
+        Route::get('/download/{filename}', [BackupController::class, 'download'])->name('download');
+        Route::get('/history', [BackupController::class, 'history'])->name('history');
+        Route::post('/restore', [BackupController::class, 'restore'])->name('restore');
+        Route::get('/files', [BackupController::class, 'getBackupFiles'])->name('files');
+        Route::delete('/{filename}', [BackupController::class, 'destroy'])->name('destroy');
+    });
 
-    Route::get('/backups', [AdminController::class, 'backup'])->name('backups');
-    Route::post('/backups/create', [AdminController::class, 'createBackup'])->name('backups.create');
-    Route::get('/backups/download/{filename}', [AdminController::class, 'downloadBackup'])->name('backups.download');
-    Route::get('/backups/history', [AdminController::class, 'getBackupHistory'])->name('backups.history');
-    Route::post('/backups/restore', [AdminController::class, 'restoreBackup'])->name('backups.restore');
-
-    // Notifications
-    Route::get('/notifications', [AdminController::class, 'notifications'])->name('notifications');
-    
-    // Notification management routes - More specific routes first to avoid model binding conflicts
-    Route::get('/notifications/header', [AdminController::class, 'getHeaderNotifications'])->name('notifications.header');
-    Route::get('/notifications/unread-count', [AdminController::class, 'getUnreadNotificationCount'])->name('notifications.unread_count');
-    Route::post('/notifications/mark-all-read', [AdminController::class, 'markAllNotificationsAsRead'])->name('notifications.mark_all_read');
-    Route::post('/notifications', [AdminController::class, 'createNotification'])->name('notifications.store');
-    Route::post('/notifications/bulk-operations', [AdminController::class, 'bulkNotificationOperations'])->name('notifications.bulk_operations');
-    
-    // Routes with model binding - with constraints to prevent conflicts
-    Route::get('/notifications/{notification}', [AdminController::class, 'getNotificationDetails'])->name('notifications.show')
-        ->where('notification', '[0-9]+');
-    Route::post('/notifications/{notification}/mark-read', [AdminController::class, 'markNotificationAsRead'])->name('notifications.mark_read')
-        ->where('notification', '[0-9]+');
-    Route::post('/notifications/{notification}/mark-unread', [AdminController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread')
-        ->where('notification', '[0-9]+');
-    Route::delete('/notifications/{notification}', [AdminController::class, 'deleteNotification'])->name('notifications.destroy')
-        ->where('notification', '[0-9]+');
+    // Notifications - Admin System Management
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/', [NotificationController::class, 'index'])->name('index');
+        Route::get('/header', [NotificationController::class, 'getHeaderNotifications'])->name('header');
+        Route::get('/unread-count', [NotificationController::class, 'getUnreadNotificationCount'])->name('unread_count');
+        Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('mark_all_read');
+        Route::post('/', [NotificationController::class, 'store'])->name('store');
+        Route::post('/bulk-operations', [NotificationController::class, 'bulkOperations'])->name('bulk_operations');
+        Route::get('/{notification}', [NotificationController::class, 'getNotificationDetails'])->name('show')
+            ->where('notification', '[0-9]+');
+        Route::post('/{notification}/mark-read', [NotificationController::class, 'markAsRead'])->name('mark_read')
+            ->where('notification', '[0-9]+');
+        Route::post('/{notification}/mark-unread', [NotificationController::class, 'markAsUnread'])->name('mark_unread')
+            ->where('notification', '[0-9]+');
+        Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy')
+            ->where('notification', '[0-9]+');
+    });
 
 });
 
@@ -357,9 +392,7 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::get('/purchase-requests/categories', [InventoryController::class, 'getCategories'])->name('purchase-requests.categories');
     Route::get('/purchase-requests/departments', [InventoryController::class, 'getDepartments'])->name('purchase-requests.departments');
 
-    Route::get('/outbound/direct', [InventoryController::class, 'createIssuance'])->name('outbound.direct');
-    Route::post('/outbound/direct', [InventoryController::class, 'storeIssuance'])->name('outbound.direct.store');
-    Route::post('/outbound/direct/verify-pin', [InventoryController::class, 'verifySupervisorPin'])->name('outbound.verify-supervisor-pin');
+
 
 
     // Stock Mgmt

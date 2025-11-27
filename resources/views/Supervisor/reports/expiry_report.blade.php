@@ -1,21 +1,22 @@
 @extends('Supervisor.layout.app')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-8 font-sans text-gray-600">
 
     {{-- 1. HEADER & ACTIONS --}}
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">Expiry Monitoring Report</h1>
-            <p class="text-sm text-gray-500 mt-1">Track expiring batches to minimize waste and prioritize usage.</p>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Expiry Monitoring</h1>
+            <p class="text-sm text-gray-500">Track expiring batches to minimize waste and prioritize usage.</p>
         </div>
         <div class="flex items-center gap-3">
             <a href="{{ route('supervisor.reports.print_use_first_list') }}" target="_blank" 
-               class="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition shadow-sm">
-                <i class="fas fa-file-pdf mr-2"></i> Print "Use First" List
+               class="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-border-soft text-gray-600 text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-chocolate transition-all shadow-sm group">
+                <i class="fas fa-file-pdf mr-2 opacity-70 group-hover:opacity-100 text-red-500"></i> Print "Use First" List
             </a>
             <button onclick="alertBakers()" 
-                    class="inline-flex items-center justify-center px-4 py-2 bg-chocolate text-white text-sm font-medium rounded-lg hover:bg-chocolate-dark transition shadow-sm">
+                    id="alertBtn"
+                    class="inline-flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                 <i class="fas fa-bullhorn mr-2"></i> Alert Bakers
             </button>
         </div>
@@ -23,240 +24,230 @@
 
     {{-- 2. RISK SUMMARY --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
         <!-- Critical (Today/Tomorrow) -->
-        <div class="bg-white border-l-4 border-red-500 rounded-lg p-5 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-red-600 uppercase tracking-wider">Critical </p>
-                <p class="text-3xl font-bold text-gray-900 mt-1">{{ $summary['critical_count'] }} Batches</p>
-                <p class="text-xs text-gray-500 mt-1">Action required immediately</p>
-                @if($summary['critical_count'] > 0)
-                    <p class="text-xs font-medium text-red-600 mt-1">₱{{ number_format($summary['critical_value'], 2) }} at risk</p>
-                @endif
+        <div class="bg-white border border-border-soft border-l-4 border-l-red-500 rounded-xl p-6 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-red-50 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110"></div>
+            
+            <div class="flex justify-between items-start relative z-10">
+                <div>
+                    <p class="text-xs font-bold text-red-600 uppercase tracking-widest">Critical Action</p>
+                    <p class="text-3xl font-display font-bold text-gray-900 mt-2">{{ $summary['critical_count'] }}</p>
+                    <p class="text-sm text-gray-500 font-medium">Batches expiring ≤ 48h</p>
+                </div>
+                <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center text-red-600 shadow-sm">
+                    <i class="fas fa-hourglass-end text-lg"></i>
+                </div>
             </div>
-            <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center text-red-600">
-                <i class="fas fa-hourglass-end text-xl"></i>
-            </div>
+            
+            @if($summary['critical_count'] > 0)
+                <div class="mt-4 pt-3 border-t border-gray-100 relative z-10">
+                    <p class="text-xs font-bold text-red-600 flex items-center">
+                        <i class="fas fa-coins mr-1.5"></i> ₱{{ number_format($summary['critical_value'], 2) }} at risk
+                    </p>
+                </div>
+            @endif
         </div>
 
         <!-- Warning (Next 7 Days) -->
-        <div class="bg-white border-l-4 border-amber-500 rounded-lg p-5 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-amber-600 uppercase tracking-wider">Warning (7 Days)</p>
-                <p class="text-3xl font-bold text-gray-900 mt-1">{{ $summary['warning_count'] }} Batches</p>
-                <p class="text-xs text-gray-500 mt-1">Plan into production schedule</p>
-                @if($summary['warning_count'] > 0)
-                    <p class="text-xs font-medium text-amber-600 mt-1">₱{{ number_format($summary['warning_value'], 2) }} at risk</p>
-                @endif
+        <div class="bg-white border border-border-soft border-l-4 border-l-amber-400 rounded-xl p-6 shadow-sm flex flex-col justify-between group hover:shadow-md transition-all relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-amber-50 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110"></div>
+            
+            <div class="flex justify-between items-start relative z-10">
+                <div>
+                    <p class="text-xs font-bold text-amber-600 uppercase tracking-widest">Warning (7 Days)</p>
+                    <p class="text-3xl font-display font-bold text-gray-900 mt-2">{{ $summary['warning_count'] }}</p>
+                    <p class="text-sm text-gray-500 font-medium">Plan into production</p>
+                </div>
+                <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 shadow-sm">
+                    <i class="fas fa-calendar-week text-lg"></i>
+                </div>
             </div>
-            <div class="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center text-amber-600">
-                <i class="fas fa-calendar-week text-xl"></i>
-            </div>
+
+            @if($summary['warning_count'] > 0)
+                <div class="mt-4 pt-3 border-t border-gray-100 relative z-10">
+                    <p class="text-xs font-bold text-amber-600 flex items-center">
+                        <i class="fas fa-coins mr-1.5"></i> ₱{{ number_format($summary['warning_value'], 2) }} potential loss
+                    </p>
+                </div>
+            @endif
         </div>
 
         <!-- Total Value at Risk -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Value at Risk</p>
-                <p class="text-3xl font-bold text-gray-900 mt-1">{{ $summary['formatted_total_value'] }}</p>
-                <p class="text-xs text-gray-500 mt-1">Potential loss if unused</p>
-                @if($summary['expired_count'] > 0)
-                    <p class="text-xs font-medium text-red-500 mt-1">{{ $summary['expired_count'] }} already expired</p>
-                @endif
+        <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm flex flex-col justify-between group hover:border-chocolate/30 transition-all relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-20 h-20 bg-chocolate/5 rounded-bl-full -mr-6 -mt-6 transition-transform group-hover:scale-110"></div>
+            
+            <div class="flex justify-between items-start relative z-10">
+                <div>
+                    <p class="text-xs font-bold text-gray-400 uppercase tracking-widest">Total Risk Value</p>
+                    <p class="text-3xl font-display font-bold text-chocolate mt-2">{{ $summary['formatted_total_value'] }}</p>
+                    <p class="text-sm text-gray-500 font-medium">Cumulative inventory exposure</p>
+                </div>
+                <div class="w-10 h-10 bg-cream-bg border border-border-soft rounded-lg flex items-center justify-center text-chocolate shadow-sm">
+                    <i class="fas fa-chart-pie text-lg"></i>
+                </div>
             </div>
-            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
-                <i class="fas fa-coins text-xl"></i>
-            </div>
+
+            @if($summary['expired_count'] > 0)
+                <div class="mt-4 pt-3 border-t border-gray-100 relative z-10">
+                    <p class="text-xs font-bold text-gray-400 flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
+                        {{ $summary['expired_count'] }} items already expired
+                    </p>
+                </div>
+            @endif
         </div>
     </div>
 
     {{-- 3. EXPIRY TABLE --}}
-    <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+    <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
         
         <!-- Toolbar -->
-        <div class="p-4 border-b border-gray-200 bg-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-2">
-                <span class="text-sm font-medium text-gray-700">Show:</span>
-                <select class="block w-40 py-1.5 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-xs" 
+        <div class="p-5 border-b border-border-soft bg-white flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <span class="text-xs font-bold text-chocolate uppercase tracking-wide">Timeframe:</span>
+                <select class="block w-full md:w-48 py-2 px-3 border border-gray-200 bg-cream-bg rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel cursor-pointer font-medium text-gray-700 transition-all" 
                         onchange="updateFilter(this.value)">
                     <option value="7days" {{ $filter == '7days' ? 'selected' : '' }}>Next 7 Days</option>
                     <option value="30days" {{ $filter == '30days' ? 'selected' : '' }}>Next 30 Days</option>
                     <option value="expired" {{ $filter == 'expired' ? 'selected' : '' }}>Already Expired</option>
                 </select>
             </div>
-            <div class="relative w-full md:w-64">
-                <form method="GET" action="{{ route('supervisor.reports.expiry') }}" class="flex gap-2">
+            
+            <form method="GET" action="{{ route('supervisor.reports.expiry') }}" class="w-full md:w-auto flex gap-2">
+                <div class="relative flex-1 md:w-64 group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fas fa-search text-gray-400 group-focus-within:text-caramel transition-colors text-xs"></i>
+                    </div>
                     <input type="text" 
                            name="search" 
                            value="{{ $search }}" 
-                           class="block w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-chocolate focus:border-chocolate sm:text-xs" 
-                           placeholder="Filter by item...">
+                           class="block w-full pl-9 pr-3 py-2 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all placeholder-gray-400" 
+                           placeholder="Filter by item name...">
                     <input type="hidden" name="filter" value="{{ $filter }}">
-                    <button type="submit" class="px-3 py-1.5 bg-chocolate text-white text-sm rounded-md hover:bg-chocolate-dark">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </form>
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <i class="fas fa-search text-gray-400 text-xs"></i>
                 </div>
-            </div>
+                <button type="submit" class="px-4 py-2 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-colors shadow-sm">
+                    Filter
+                </button>
+            </form>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
+            <table class="min-w-full divide-y divide-border-soft">
+                <thead class="bg-cream-bg">
                     <tr>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item / Batch Info</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expiry Date</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Countdown</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining Qty</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                        <th scope="col" class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Priority Status</th>
-                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Item / Batch Info</th>
+                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Expiry Date</th>
+                        <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-caramel uppercase tracking-widest font-display">Countdown</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-caramel uppercase tracking-widest font-display">Remaining Qty</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-caramel uppercase tracking-widest font-display">Value</th>
+                        <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-caramel uppercase tracking-widest font-display">Status</th>
+                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-caramel uppercase tracking-widest font-display">Action</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody class="bg-white divide-y divide-gray-100">
                     
                     @forelse($expiringBatches as $batch)
                         @php
-                            $batchData = $expiringBatches->firstWhere('id', $batch->id);
-                            // Convert to formatBatchData array for backward compatibility
-                            $formattedBatch = [
-                                'id' => $batch->id,
-                                'batch_number' => $batch->batch_number,
-                                'item_name' => $batch->item->name ?? 'Unknown Item',
-                                'item_code' => $batch->item->item_code ?? '',
-                                'unit_symbol' => $batch->item->unit->symbol ?? '',
-                                'quantity' => number_format($batch->quantity, 1),
-                                'unit_cost' => number_format($batch->unit_cost, 2),
-                                'total_value' => number_format($batch->quantity * $batch->unit_cost, 2),
-                                'expiry_date' => \Carbon\Carbon::parse($batch->expiry_date)->format('M j, Y'),
-                                'manufacturing_date' => $batch->manufacturing_date ? \Carbon\Carbon::parse($batch->manufacturing_date)->format('M j, Y') : 'N/A',
-                                'days_until_expiry' => \Carbon\Carbon::now()->diffInDays(\Carbon\Carbon::parse($batch->expiry_date), false),
-                                'countdown_text' => '',
-                                'countdown_class' => '',
-                                'priority' => '',
-                                'priority_class' => '',
-                                'status_class' => '',
-                                'supplier_name' => $batch->supplier->name ?? 'Unknown Supplier',
-                                'location' => $batch->location ?? 'Storage',
-                                'urgent_action' => false,
-                                'is_expired' => \Carbon\Carbon::parse($batch->expiry_date)->isPast(),
-                                'is_critical' => false,
-                                'is_warning' => false
-                            ];
-                            
-                            // Calculate countdown and priority
+                            // Recalculate logic for display purposes within template
                             $now = \Carbon\Carbon::now();
                             $expiryDate = \Carbon\Carbon::parse($batch->expiry_date);
                             $daysUntilExpiry = $now->diffInDays($expiryDate, false);
                             $isPastExpiry = $expiryDate->isPast();
                             
+                            $countdownText = '';
+                            $countdownClass = '';
+                            $rowClass = 'hover:bg-cream-bg/50 transition-colors group';
+                            $statusBadge = '';
+                            $urgentAction = false;
+                            
                             if ($isPastExpiry) {
-                                $formattedBatch['countdown_text'] = 'EXPIRED';
-                                $formattedBatch['countdown_class'] = 'bg-red-600 text-white animate-pulse';
-                                $formattedBatch['priority'] = 'EXPIRED';
-                                $formattedBatch['priority_class'] = 'text-red-600 font-bold';
-                                $formattedBatch['status_class'] = 'text-red-600 font-bold';
-                                $formattedBatch['urgent_action'] = true;
-                                $formattedBatch['is_expired'] = true;
+                                $countdownText = 'EXPIRED';
+                                $countdownClass = 'bg-gray-100 text-gray-500 border border-gray-200';
+                                $rowClass = 'bg-gray-50 hover:bg-gray-100 transition-colors opacity-75';
+                                $statusBadge = '<span class="text-xs font-bold text-gray-500 uppercase tracking-wide">Expired</span>';
                             } elseif ($daysUntilExpiry <= 1) {
-                                $formattedBatch['countdown_text'] = $daysUntilExpiry == 0 ? 'EXPIRES TODAY' : '1 Day Left';
-                                $formattedBatch['countdown_class'] = $daysUntilExpiry == 0 ? 'bg-red-600 text-white animate-pulse' : 'bg-red-600 text-white';
-                                $formattedBatch['priority'] = $daysUntilExpiry == 0 ? 'Use Immediately' : 'High Priority';
-                                $formattedBatch['priority_class'] = 'text-red-600 font-bold';
-                                $formattedBatch['status_class'] = 'text-red-600 font-bold';
-                                $formattedBatch['urgent_action'] = true;
-                                $formattedBatch['is_critical'] = true;
+                                $countdownText = $daysUntilExpiry <= 0 ? 'EXPIRES TODAY' : '1 Day Left';
+                                $countdownClass = 'bg-red-600 text-white shadow-sm animate-pulse';
+                                $rowClass = 'bg-red-50/40 hover:bg-red-50 transition-colors border-l-4 border-l-red-500';
+                                $statusBadge = '<span class="text-xs font-bold text-red-600 uppercase tracking-wide">Critical</span>';
+                                $urgentAction = true;
                             } elseif ($daysUntilExpiry <= 3) {
-                                $formattedBatch['countdown_text'] = $daysUntilExpiry . ' Days Left';
-                                $formattedBatch['countdown_class'] = 'bg-red-100 text-red-800 border border-red-200';
-                                $formattedBatch['priority'] = 'Plan Usage';
-                                $formattedBatch['priority_class'] = 'text-red-600';
-                                $formattedBatch['status_class'] = 'text-red-600';
-                                $formattedBatch['is_warning'] = true;
+                                $countdownText = $daysUntilExpiry . ' Days Left';
+                                $countdownClass = 'bg-red-100 text-red-800 border border-red-200';
+                                $rowClass = 'bg-red-50/20 hover:bg-red-50 transition-colors';
+                                $statusBadge = '<span class="text-xs font-bold text-red-600 uppercase tracking-wide">High Priority</span>';
+                                $urgentAction = true;
                             } elseif ($daysUntilExpiry <= 7) {
-                                $formattedBatch['countdown_text'] = $daysUntilExpiry . ' Days Left';
-                                $formattedBatch['countdown_class'] = 'bg-amber-100 text-amber-800';
-                                $formattedBatch['priority'] = 'Monitor';
-                                $formattedBatch['priority_class'] = 'text-amber-600';
-                                $formattedBatch['status_class'] = 'text-amber-600';
-                                $formattedBatch['is_warning'] = true;
+                                $countdownText = $daysUntilExpiry . ' Days Left';
+                                $countdownClass = 'bg-amber-100 text-amber-800 border border-amber-200';
+                                $statusBadge = '<span class="text-xs font-bold text-amber-600 uppercase tracking-wide">Warning</span>';
                             } else {
-                                $formattedBatch['countdown_text'] = $daysUntilExpiry . ' Days Left';
-                                $formattedBatch['countdown_class'] = 'bg-gray-100 text-gray-600';
-                                $formattedBatch['priority'] = 'Normal';
-                                $formattedBatch['priority_class'] = 'text-green-600';
-                                $formattedBatch['status_class'] = 'text-green-600';
+                                $countdownText = $daysUntilExpiry . ' Days Left';
+                                $countdownClass = 'bg-white text-gray-600 border border-gray-200';
+                                $statusBadge = '<span class="text-xs font-bold text-green-600 uppercase tracking-wide">Monitor</span>';
                             }
                         @endphp
                     
-                        {{-- Dynamic Row --}}
-                        <tr class="{{ $formattedBatch['urgent_action'] ? 'bg-red-50 hover:bg-red-100' : ($formattedBatch['is_warning'] ? 'hover:bg-amber-50' : 'hover:bg-gray-50') }} transition-colors border-l-4 {{ $formattedBatch['urgent_action'] ? 'border-red-500' : ($formattedBatch['is_warning'] ? 'border-amber-300' : 'border-transparent') }}">
+                        <tr class="{{ $rowClass }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <div class="flex-shrink-0 h-10 w-10 {{ $formattedBatch['urgent_action'] ? 'bg-white rounded border border-red-200 flex items-center justify-center text-red-600 font-bold text-xs' : 'bg-gray-100 rounded flex items-center justify-center text-gray-500 text-lg' }}">
-                                        @if($formattedBatch['urgent_action'])
-                                            {{ strtoupper(substr($formattedBatch['item_name'], 0, 4)) }}
+                                    <div class="flex-shrink-0 h-10 w-10 {{ $urgentAction ? 'bg-red-50 border-red-200 text-red-500' : 'bg-white border-border-soft text-gray-400' }} rounded-lg border flex items-center justify-center shadow-sm">
+                                        @if($urgentAction)
+                                            <i class="fas fa-exclamation-triangle"></i>
                                         @else
-                                            <i class="fas fa-{{ $formattedBatch['is_warning'] ? 'clock' : 'box' }}"></i>
+                                            <i class="fas fa-box"></i>
                                         @endif
                                     </div>
                                     <div class="ml-4">
-                                        <div class="text-sm font-bold text-gray-900">{{ $formattedBatch['item_name'] }}</div>
-                                        <div class="text-xs text-gray-500">Batch #{{ $formattedBatch['batch_number'] }}</div>
-                                        @if($formattedBatch['supplier_name'] !== 'Unknown Supplier')
-                                            <div class="text-xs text-gray-400">{{ $formattedBatch['supplier_name'] }}</div>
-                                        @endif
+                                        <div class="text-sm font-bold text-gray-900">{{ $batch->item->name ?? 'Unknown Item' }}</div>
+                                        <div class="text-xs text-gray-500 mt-0.5 font-mono">Batch #{{ $batch->batch_number }}</div>
                                     </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm {{ $formattedBatch['urgent_action'] ? 'text-red-600 font-bold' : 'text-gray-900' }}">
-                                {{ $formattedBatch['expiry_date'] }}
+                            <td class="px-6 py-4 whitespace-nowrap text-sm {{ $urgentAction ? 'text-red-700 font-bold' : 'text-gray-900' }}">
+                                {{ \Carbon\Carbon::parse($batch->expiry_date)->format('M d, Y') }}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
-                                <span class="px-2 py-1 text-xs font-bold {{ $formattedBatch['countdown_class'] }} rounded">
-                                    {{ $formattedBatch['countdown_text'] }}
+                                <span class="px-2.5 py-1 text-[10px] font-bold rounded-md {{ $countdownClass }} inline-block min-w-[80px] text-center">
+                                    {{ $countdownText }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right">
-                                <div class="text-sm font-bold text-gray-900">{{ $formattedBatch['quantity'] }} {{ $formattedBatch['unit_symbol'] }}</div>
-                                <div class="text-xs text-gray-500">@ ₱{{ $formattedBatch['unit_cost'] }}/{{ $formattedBatch['unit_symbol'] }}</div>
+                                <div class="text-sm font-bold text-gray-900">{{ number_format($batch->quantity, 1) }} {{ $batch->item->unit->symbol ?? '' }}</div>
+                                <div class="text-[10px] text-gray-400">@ ₱{{ number_format($batch->unit_cost, 2) }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right">
-                                <div class="text-sm font-bold text-gray-900">₱{{ $formattedBatch['total_value'] }}</div>
+                                <div class="text-sm font-bold text-chocolate">₱{{ number_format($batch->quantity * $batch->unit_cost, 2) }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-center">
-                                <span class="text-xs font-bold {{ $formattedBatch['priority_class'] }} uppercase tracking-wide">
-                                    {{ $formattedBatch['priority'] }}
-                                </span>
+                                {!! $statusBadge !!}
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                @if($formattedBatch['urgent_action'])
-                                    <button class="text-white bg-chocolate hover:bg-chocolate-dark px-3 py-1 rounded text-xs shadow-sm transition">
-                                        Use Now
-                                    </button>
-                                @elseif($formattedBatch['is_warning'])
-                                    <button class="text-chocolate hover:text-chocolate-dark font-bold text-xs border border-chocolate/30 px-3 py-1 rounded hover:bg-orange-50 transition">
+                                @if($urgentAction)
+                                    <button class="inline-flex items-center justify-center px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all shadow-sm">
                                         Use Now
                                     </button>
                                 @else
-                                    <button class="text-gray-500 hover:text-gray-700 font-bold text-xs border border-gray-300 px-3 py-1 rounded hover:bg-gray-50 transition">
-                                        Details
+                                    <button class="text-gray-400 hover:text-chocolate hover:bg-cream-bg p-2 rounded-lg transition-all" title="View Details">
+                                        <i class="fas fa-eye"></i>
                                     </button>
                                 @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-6 py-12 text-center">
-                                <div class="flex flex-col items-center">
-                                    <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
-                                    <h3 class="text-lg font-medium text-gray-900 mb-2">No expiring batches found</h3>
+                            <td colspan="7" class="px-6 py-16 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 border border-border-soft shadow-inner">
+                                        <i class="fas fa-shield-alt text-chocolate/30 text-3xl"></i>
+                                    </div>
+                                    <h3 class="font-display text-lg font-bold text-chocolate mb-1">Safe Zone</h3>
                                     <p class="text-sm text-gray-500">
                                         @if($search)
-                                            No batches match your search criteria for "{{ $search }}"
+                                            No batches match your search for "{{ $search }}"
                                         @else
-                                            All batches are within their shelf life
+                                            No batches found matching the current expiry filter.
                                         @endif
                                     </p>
                                 </div>
@@ -270,19 +261,15 @@
         
         {{-- Pagination --}}
         @if($expiringBatches->hasPages())
-            <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+            <div class="bg-white px-6 py-4 border-t border-border-soft">
                 {{ $expiringBatches->appends(['filter' => $filter, 'search' => $search])->links() }}
             </div>
         @endif
         
         <!-- Footer Note -->
-        <div class="bg-gray-50 px-4 py-3 border-t border-gray-200">
-            <p class="text-xs text-gray-500 text-center italic">
-                Note: Items marked "Use Immediately" should be prioritized in today's production or transferred to the staff cafeteria to avoid waste.
-                @if($summary['total_batches'] > 0)
-                    <br>
-                    <strong>Summary:</strong> {{ $summary['critical_count'] }} critical, {{ $summary['warning_count'] }} warning, {{ $summary['expired_count'] }} expired batches. Total value at risk: {{ $summary['formatted_total_value'] }}
-                @endif
+        <div class="bg-gray-50 px-6 py-3 border-t border-gray-200">
+            <p class="text-[10px] text-gray-400 text-center uppercase tracking-wide font-medium">
+                <i class="fas fa-info-circle mr-1"></i> FIFO Policy: Prioritize using batches marked as "Critical" or "Warning" first.
             </p>
         </div>
     </div>
@@ -302,10 +289,11 @@ function alertBakers() {
         return;
     }
     
-    const button = event.target;
-    const originalText = button.innerHTML;
+    const button = document.getElementById('alertBtn');
+    const originalHTML = button.innerHTML;
     button.disabled = true;
     button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+    button.classList.add('opacity-75', 'cursor-not-allowed');
     
     fetch('{{ route("supervisor.reports.alert_bakers") }}', {
         method: 'POST',
@@ -328,21 +316,28 @@ function alertBakers() {
     })
     .finally(() => {
         button.disabled = false;
-        button.innerHTML = originalText;
+        button.innerHTML = originalHTML;
+        button.classList.remove('opacity-75', 'cursor-not-allowed');
     });
 }
 
 // Auto-refresh every 5 minutes
 setInterval(function() {
-    if (document.hidden) return; // Don't refresh if tab is not visible
+    if (document.hidden) return; 
     
     const currentTime = new Date();
     const lastUpdate = localStorage.getItem('lastExpiryRefresh');
     
-    if (!lastUpdate || (currentTime.getTime() - parseInt(lastUpdate)) > 300000) { // 5 minutes
+    if (!lastUpdate || (currentTime.getTime() - parseInt(lastUpdate)) > 300000) { 
         localStorage.setItem('lastExpiryRefresh', currentTime.getTime());
         window.location.reload();
     }
-}, 60000); // Check every minute
+}, 60000);
+
+// CSRF Token for AJAX
+const meta = document.createElement('meta');
+meta.name = "csrf-token";
+meta.content = "{{ csrf_token() }}";
+document.head.appendChild(meta);
 </script>
 @endsection

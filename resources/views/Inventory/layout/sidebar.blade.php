@@ -1,164 +1,172 @@
-<aside id="sidebar"
-    class="sidebar w-64 flex flex-col text-white relative overflow-hidden bg-chocolate transition-all duration-300 ease-in-out">
-    <!-- Overlay gradient -->
-    <div class="absolute inset-0 bg-gradient-to-br from-chocolate/95 via-chocolate/90 to-chocolate-dark/95"></div>
-
-    <!-- Decorative Elements -->
-    <div class="absolute top-20 -right-20 w-64 h-64 bg-caramel/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-20 -left-20 w-64 h-64 bg-caramel/10 rounded-full blur-3xl"></div>
-
-    <div class="relative z-10 flex flex-col h-full">
-        <!-- Logo Section -->
-        <div class="p-6 border-b border-white/10">
-            <div class="flex items-center space-x-3">
-                <div class="w-10 h-10 bg-caramel/20 backdrop-blur-sm flex items-center justify-center border border-caramel/30 flex-shrink-0">
-                    <i class="fas fa-warehouse text-caramel text-lg animate-float"></i>
-                </div>
-                <div class="sidebar-text transition-opacity duration-300">
-                    <h1 class="font-display text-xl font-bold tracking-wide">WellKenz</h1>
-                    <p class="text-xs text-white/60 uppercase tracking-widest">Inventory</p>
-                </div>
+<aside id="sidebar" 
+    class="sidebar w-64 flex flex-col h-screen sticky top-0 bg-chocolate text-white border-r border-white/5 transition-all duration-300 z-40 font-sans shadow-2xl">
+    
+    {{-- 1. BRANDING SECTION --}}
+    <div class="relative z-10 p-6 pb-8 border-b border-white/10">
+        {{-- Decorative Glow --}}
+        <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
+        
+        <div class="relative flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-caramel to-chocolate-dark border border-white/10 flex items-center justify-center shadow-lg">
+                <i class="fas fa-warehouse text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-display text-2xl font-bold tracking-wide text-white leading-none">WellKenz</h1>
+                <p class="text-[10px] text-caramel font-bold uppercase tracking-[0.2em] mt-1">Inventory</p>
             </div>
         </div>
+    </div>
 
-        <nav class="flex-1 overflow-y-auto py-4 no-scrollbar">
-            <ul class="space-y-1 px-3">
-                
-                <!-- 1. DASHBOARD -->
-                <li>
-                    <a href="{{ Route::has('inventory.dashboard') ? route('inventory.dashboard') : '#' }}"
-                        id="menu-inventory-dashboard"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.dashboard') ? 'active-menu' : '' }}">
-                        <i class="fas fa-tachometer-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Warehouse Home</span>
-                    </a>
-                </li>
+    {{-- 2. NAVIGATION --}}
+    <nav class="flex-1 overflow-y-auto custom-scrollbar px-4 py-6 space-y-1">
 
-                <!-- 2. INBOUND (Receiving) -->
-                <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Inbound Operations</div>
-                </li>
+        {{-- DASHBOARD --}}
+        <a href="{{ Route::has('inventory.dashboard') ? route('inventory.dashboard') : '#' }}"
+           id="menu-inventory-dashboard"
+           class="group flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-6
+           {{ request()->routeIs('inventory.dashboard') 
+              ? 'bg-caramel text-white shadow-md shadow-caramel/20' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white' }}">
+            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('inventory.dashboard') ? 'text-white' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Warehouse Home</span>
+        </a>
 
-                <!-- Receive Delivery -->
-                <li>
-                    <a href="{{ Route::has('inventory.inbound.receive') ? route('inventory.inbound.receive') : '#' }}"
-                        id="menu-inventory-inbound-receive"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.inbound.receive') ? 'active-menu' : '' }}">
-                        <i class="fas fa-truck-loading w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Receive Delivery</span>
-                    </a>
-                </li>
+        {{-- SECTION: INBOUND --}}
+        <div class="px-3 pt-2 pb-2">
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">Inbound Operations</p>
+        </div>
 
-                <!-- Print Batch Labels -->
-                <li>
-                    <a href="{{ Route::has('inventory.inbound.labels') ? route('inventory.inbound.labels') : '#' }}"
-                        id="menu-inventory-inbound-labels"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.inbound.labels') ? 'active-menu' : '' }}">
-                        <i class="fas fa-qrcode w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Batch records</span>
-                    </a>
-                </li>
+        {{-- Receive Delivery --}}
+        <a href="{{ Route::has('inventory.inbound.receive') ? route('inventory.inbound.receive') : '#' }}"
+           id="menu-inventory-inbound-receive"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.inbound.receive') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-truck-loading w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.receive') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Receive Delivery</span>
+        </a>
 
-                <!-- Return to Vendor (RTV) -->
-                <li>
-                    <a href="{{ Route::has('inventory.inbound.rtv') ? route('inventory.inbound.rtv') : '#' }}"
-                        id="menu-inventory-inbound-rtv"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.inbound.rtv') ? 'active-menu' : '' }}">
-                        <i class="fas fa-undo-alt w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Log Returns (RTV)</span>
-                    </a>
-                </li>
+        {{-- Batch Records --}}
+        <a href="{{ Route::has('inventory.inbound.labels') ? route('inventory.inbound.labels') : '#' }}"
+           id="menu-inventory-inbound-labels"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.inbound.labels') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-qrcode w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.labels') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Batch Records</span>
+        </a>
 
-                <!-- 3. OUTBOUND (Issuance) -->
-                <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Outbound Operations</div>
-                </li>
+        {{-- RTV --}}
+        <a href="{{ Route::has('inventory.inbound.rtv') ? route('inventory.inbound.rtv') : '#' }}"
+           id="menu-inventory-inbound-rtv"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.inbound.rtv') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-undo-alt w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.rtv') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Log Returns (RTV)</span>
+        </a>
 
-                <!-- Fulfill Requests -->
-                <li>
-                    <a href="{{ Route::has('inventory.outbound.fulfill') ? route('inventory.outbound.fulfill') : '#' }}"
-                        id="menu-inventory-outbound-fulfill"
-                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.outbound.fulfill') ? 'active-menu' : '' }}">
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-dolly w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Fulfill Requests</span>
-                        </div>
-                        <span class="bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">3</span>
-                    </a>
-                </li>
+        {{-- SECTION: OUTBOUND --}}
+        <div class="px-3 pt-6 pb-2">
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">Outbound & Requests</p>
+        </div>
 
-                <!-- Direct Issuance (Restricted) -->
-                <li>
-                    <a href="{{ Route::has('inventory.outbound.direct') ? route('inventory.outbound.direct') : '#' }}"
-                        id="menu-inventory-outbound-direct"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.outbound.direct') ? 'active-menu' : '' }}">
-                        <i class="fas fa-hand-holding-box w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Direct Issuance <i class="fas fa-lock text-[10px] ml-1 opacity-50"></i></span>
-                    </a>
-                </li>
+        {{-- Fulfill Requests --}}
+        <a href="{{ Route::has('inventory.outbound.fulfill') ? route('inventory.outbound.fulfill') : '#' }}"
+           id="menu-inventory-outbound-fulfill"
+           class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.outbound.fulfill') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <div class="flex items-center">
+                <i class="fas fa-dolly w-6 text-center text-sm {{ request()->routeIs('inventory.outbound.fulfill') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <span class="ml-2">Fulfill Requests</span>
+            </div>
+            {{-- Dynamic count badge --}}
+            @if(isset($pendingRequisitionsCount) && $pendingRequisitionsCount > 0)
+            <span class="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm">
+                {{ $pendingRequisitionsCount }}
+            </span>
+            @endif
+        </a>
 
-                <!-- Create Purchase Request -->
-                <li>
-                    <a href="{{ Route::has('inventory.purchase-requests.create') ? route('inventory.purchase-requests.create') : '#' }}"
-                        id="menu-inventory-purchase-requests-create"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.purchase-requests.create') ? 'active-menu' : '' }}">
-                        <i class="fas fa-cart-plus w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Create Purchase Request</span>
-                    </a>
-                </li>
+        {{-- Create Purchase Request --}}
+        <a href="{{ Route::has('inventory.purchase-requests.create') ? route('inventory.purchase-requests.create') : '#' }}"
+           id="menu-inventory-purchase-requests-create"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.purchase-requests.create') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-cart-plus w-6 text-center text-sm {{ request()->routeIs('inventory.purchase-requests.create') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Create PR</span>
+        </a>
 
-                <!-- 4. STOCK MANAGEMENT -->
-                <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">Stock Management</div>
-                </li>
+        {{-- SECTION: STOCK MANAGEMENT --}}
+        <div class="px-3 pt-6 pb-2">
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">Stock Management</p>
+        </div>
 
+        {{-- Batch Lookup --}}
+        <a href="{{ Route::has('inventory.stock.lookup') ? route('inventory.stock.lookup') : '#' }}"
+           id="menu-inventory-stock-lookup"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.stock.lookup') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-search-location w-6 text-center text-sm {{ request()->routeIs('inventory.stock.lookup') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Batch Lookup</span>
+        </a>
 
-                <!-- Batch Lookup -->
-                <li>
-                    <a href="{{ Route::has('inventory.stock.lookup') ? route('inventory.stock.lookup') : '#' }}"
-                        id="menu-inventory-stock-lookup"
-                        class="menu-item group flex items-center space-x-3 px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.stock.lookup') ? 'active-menu' : '' }}">
-                        <i class="fas fa-search-location w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                        <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Batch Lookup</span>
-                    </a>
-                </li>
-                
-                <!-- 5. SYSTEM -->
-                <li class="pt-4">
-                    <div class="px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider">System</div>
-                </li>
+        {{-- SECTION: SYSTEM --}}
+        <div class="px-3 pt-6 pb-2">
+            <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">System</p>
+        </div>
 
-                <!-- Notifications -->
-                <li>
-                    <a href="{{ Route::has('inventory.notifications') ? route('inventory.notifications') : '#' }}"
-                        id="menu-inventory-notifications"
-                        class="menu-item group flex items-center justify-between px-4 py-3 text-white/70 hover:text-white hover:bg-white/10 transition-all duration-200 border-l-3 border-transparent hover:border-caramel {{ request()->routeIs('inventory.notifications') ? 'active-menu' : '' }}">
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-bell w-5 text-center text-sm group-hover:scale-110 transition-transform"></i>
-                            <span class="sidebar-text font-medium text-sm transition-opacity duration-300">Notifications</span>
-                        </div>
-                        <!-- Badge for unread notifications -->
-                        <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm sidebar-text">3</span>
-                    </a>
-                </li>
+        {{-- Notifications --}}
+        <a href="{{ Route::has('inventory.notifications') ? route('inventory.notifications') : '#' }}"
+           id="menu-inventory-notifications"
+           class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.notifications') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <div class="flex items-center">
+                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('inventory.notifications') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <span class="ml-2">Notifications</span>
+            </div>
+            @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
+            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm">
+                {{ $unreadNotificationsCount }}
+            </span>
+            @endif
+        </a>
 
-            </ul>
-        </nav>
+    </nav>
+
+    {{-- DECORATIVE FOOTER ELEMENT --}}
+    <div class="p-4 relative overflow-hidden mt-auto">
+        <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-caramel/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="relative z-10 flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest">
+            <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> System Online
+        </div>
     </div>
 </aside>
 
+{{-- Custom Scrollbar Style (Inline for isolation or move to CSS) --}}
 <style>
-    .active-menu {
-        background-color: rgba(255, 255, 255, 0.15) !important;
-        color: white !important;
-        border-left-color: #D2691E !important; /* caramel color */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
     }
-    
-    .active-menu i {
-        color: white !important;
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
     }
-    
-    .active-menu span {
-        color: white !important;
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.4);
     }
 </style>
