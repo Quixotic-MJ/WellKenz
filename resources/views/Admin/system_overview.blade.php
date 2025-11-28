@@ -221,10 +221,7 @@
                     <span class="text-sm font-medium"><i class="fas fa-box-open mr-3 opacity-60"></i>Add New Item</span>
                     <i class="fas fa-chevron-right text-xs opacity-40"></i>
                 </a>
-                <a href="{{ route('admin.backups.index') }}" class="flex items-center justify-between w-full px-5 py-3 border border-border-soft text-chocolate hover:border-caramel hover:text-caramel hover:bg-cream-bg transition-all rounded-lg">
-                    <span class="text-sm font-medium"><i class="fas fa-cloud-download-alt mr-3 opacity-60"></i>Backups</span>
-                    <i class="fas fa-chevron-right text-xs opacity-40"></i>
-                </a>
+
                 <a href="{{ route('admin.audit-logs.index') }}" class="flex items-center justify-between w-full px-5 py-3 border border-border-soft text-chocolate hover:border-caramel hover:text-caramel hover:bg-cream-bg transition-all rounded-lg">
                     <span class="text-sm font-medium"><i class="fas fa-file-contract mr-3 opacity-60"></i>Audit Logs</span>
                     <i class="fas fa-chevron-right text-xs opacity-40"></i>

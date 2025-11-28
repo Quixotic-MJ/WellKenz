@@ -28,9 +28,13 @@ class UnitController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'ilike', "%{$search}%")
-                  ->orWhere('symbol', 'ilike', "%{$search}%")
-                  ->orWhere('description', 'ilike', "%{$search}%");
+                  ->orWhere('symbol', 'ilike', "%{$search}%");
             });
+        }
+
+        // Type filter (NEW - was missing)
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
         }
 
         // Status filter
@@ -50,18 +54,51 @@ class UnitController extends Controller
                 return $unit;
             });
 
-        // Separate base units and packaging units for the view
-        $baseUnits = Unit::with('items')
+        // Separate base units and packaging units for the view - APPLY SAME FILTERS
+        $baseUnitsQuery = Unit::with('items')
             ->whereNull('base_unit_id')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
-            
-        $packagingUnits = Unit::with(['items', 'baseUnit'])
+            ->orderBy('name');
+
+        $packagingUnitsQuery = Unit::with(['items', 'baseUnit'])
             ->whereNotNull('base_unit_id')
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+            ->orderBy('name');
+
+        // Apply same filters to base units
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $baseUnitsQuery->where(function($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('symbol', 'ilike', "%{$search}%");
+            });
+            $packagingUnitsQuery->where(function($q) use ($search) {
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('symbol', 'ilike', "%{$search}%");
+            });
+        }
+
+        // Apply type filter to base units
+        if ($request->filled('type')) {
+            $baseUnitsQuery->where('type', $request->type);
+            $packagingUnitsQuery->where('type', $request->type);
+        }
+
+        // Apply status filter to base units
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $baseUnitsQuery->where('is_active', true);
+                $packagingUnitsQuery->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $baseUnitsQuery->where('is_active', false);
+                $packagingUnitsQuery->where('is_active', false);
+            }
+        } else {
+            // Default to active units only if no status filter
+            $baseUnitsQuery->where('is_active', true);
+            $packagingUnitsQuery->where('is_active', true);
+        }
+
+        $baseUnits = $baseUnitsQuery->get();
+        $packagingUnits = $packagingUnitsQuery->get();
 
         return view('Admin.master_files.unit_config', compact('units', 'baseUnits', 'packagingUnits'));
     }
@@ -77,6 +114,7 @@ class UnitController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:units,name',
             'symbol' => 'required|string|max:10|unique:units,symbol',
+            'type' => 'required|in:weight,volume,piece,length',
             'description' => 'nullable|string|max:500',
             'base_unit_id' => 'nullable|exists:units,id',
             'conversion_factor' => 'nullable|numeric|min:0',
@@ -86,6 +124,7 @@ class UnitController extends Controller
             $unit = Unit::create([
                 'name' => $request->name,
                 'symbol' => $request->symbol,
+                'type' => $request->type,
                 'description' => $request->description,
                 'base_unit_id' => $request->base_unit_id,
                 'conversion_factor' => $request->conversion_factor ?? 1,
@@ -139,6 +178,7 @@ class UnitController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:units,name,' . $unit->id,
             'symbol' => 'required|string|max:10|unique:units,symbol,' . $unit->id,
+            'type' => 'required|in:weight,volume,piece,length',
             'description' => 'nullable|string|max:500',
             'base_unit_id' => 'nullable|exists:units,id',
             'conversion_factor' => 'nullable|numeric|min:0',
@@ -150,6 +190,7 @@ class UnitController extends Controller
             $unit->update([
                 'name' => $request->name,
                 'symbol' => $request->symbol,
+                'type' => $request->type,
                 'description' => $request->description,
                 'base_unit_id' => $request->base_unit_id,
                 'conversion_factor' => $request->conversion_factor ?? 1,
@@ -275,13 +316,20 @@ class UnitController extends Controller
     /**
      * Get base units for dropdown.
      *
+     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
-    public function getBaseUnits()
+    public function getBaseUnits(Request $request)
     {
-        $units = Unit::where('is_active', true)
-            ->whereNull('base_unit_id')
-            ->orderBy('name')
+        $query = Unit::where('is_active', true)
+            ->whereNull('base_unit_id');
+
+        // Filter by type if provided
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $units = $query->orderBy('name')
             ->get(['id', 'name', 'symbol']);
 
         return response()->json($units);
@@ -317,8 +365,8 @@ class UnitController extends Controller
         
         $units = Unit::where('is_active', true)
             ->where(function($q) use ($query) {
-                $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('symbol', 'like', "%{$query}%");
+                $q->where('name', 'ilike', "%{$query}%")
+                  ->orWhere('symbol', 'ilike', "%{$query}%");
             })
             ->limit(10)
             ->get(['id', 'name', 'symbol', 'description']);

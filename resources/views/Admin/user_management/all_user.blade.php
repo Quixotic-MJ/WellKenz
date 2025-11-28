@@ -21,6 +21,7 @@
 
     const adminUsersBaseUrl = "{{ url('/admin/users') }}";
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const currentAdminId = {{ $currentAdminId ?? 'null' }};
 
     // Global variables for user data
     let userData = {
@@ -32,7 +33,7 @@
 
     // Load department and position data for dropdowns
     function loadUserData() {
-        fetch('{{ route('admin.users.search') }}', {
+        fetch('{{ route('admin.users.data') }}', {
             method: 'GET',
             headers: {
                 'X-CSRF-TOKEN': csrfToken,
@@ -142,13 +143,206 @@
         };
     }
 
-    // Apply filters and search
-    function applyFilters() {
+    // Show loading state
+    function showLoadingState() {
+        const tableBody = document.querySelector('tbody');
+        const paginationContainer = document.querySelector('.pagination-custom');
+        
+        // Add loading overlay to table
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-chocolate mb-3"></div>
+                            <p class="text-sm text-gray-500">Loading users...</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Hide pagination during loading
+        if (paginationContainer) {
+            paginationContainer.style.opacity = '0.5';
+        }
+    }
+
+    // Hide loading state
+    function hideLoadingState() {
+        const paginationContainer = document.querySelector('.pagination-custom');
+        if (paginationContainer) {
+            paginationContainer.style.opacity = '1';
+        }
+    }
+
+    // Render users table from JSON data
+    function renderUsersTable(users, pagination) {
+        const tableBody = document.querySelector('tbody');
+        const paginationContainer = document.querySelector('.pagination-custom');
+        
+        if (!tableBody) return;
+
+        if (users.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-6 py-12 text-center text-gray-500 bg-cream-bg/30">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-border-soft mb-3">
+                                <i class="fas fa-users text-gray-300 text-2xl"></i>
+                            </div>
+                            <h3 class="font-display text-lg font-bold text-chocolate">No users found</h3>
+                            <p class="text-sm text-gray-400 mt-1">Try adjusting your search or filters.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        } else {
+            tableBody.innerHTML = users.map(user => `
+                <tr class="group hover:bg-cream-bg transition-colors duration-200 ${!user.is_active ? 'opacity-60 bg-gray-50' : ''} ${user.is_current_admin ? 'bg-blue-50 border-l-4 border-blue-400' : ''}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        ${user.is_current_admin ? 
+                            `<input type="checkbox" class="user-checkbox rounded border-gray-300 text-chocolate focus:ring-chocolate cursor-not-allowed opacity-50" 
+                                   data-user-id="${user.id}" disabled>
+                             <span class="ml-2 text-xs text-blue-600 font-medium">(You)</span>` :
+                            `<input type="checkbox" class="user-checkbox rounded border-gray-300 text-chocolate focus:ring-chocolate cursor-pointer" 
+                                   data-user-id="${user.id}">`
+                        }
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                ${user.profile_photo_path ? 
+                                    `<img class="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm" src="${user.profile_photo_path}" alt="${user.name}">` :
+                                    `<div class="h-10 w-10 rounded-full bg-gradient-to-br from-chocolate to-caramel text-white flex items-center justify-center font-bold text-sm shadow-sm ring-2 ring-white">
+                                        ${user.initials}
+                                    </div>`
+                                }
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-bold text-chocolate">${user.name}</div>
+                                <div class="text-xs text-gray-500">${user.email}</div>
+                                ${user.employee_id ? 
+                                    `<div class="text-[10px] text-gray-400 font-medium uppercase tracking-wider mt-0.5">ID: ${user.employee_id}</div>` : 
+                                    ''
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full shadow-sm ${user.role_color_class}">
+                            ${user.formatted_role}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only peer user-status-toggle" 
+                                   data-user-id="${user.id}" ${user.is_active ? 'checked' : ''}>
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-caramel/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600 shadow-inner"></div>
+                            <span class="ml-3 text-xs font-bold uppercase tracking-wide ${user.is_active ? 'text-green-600' : 'text-gray-400'}">
+                                ${user.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        </label>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
+                        ${user.formatted_last_login || 'Never'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                            <button class="text-amber-600 hover:text-white hover:bg-amber-600 p-2 rounded-lg transition-all tooltip" onclick="confirmResetPassword(${user.id})" title="Reset Password">
+                                <i class="fas fa-key"></i>
+                            </button>
+                            <button class="text-chocolate hover:text-white hover:bg-chocolate p-2 rounded-lg transition-all tooltip" onclick="editUser(${user.id})" title="Edit User">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="text-red-600 hover:text-white hover:bg-red-600 p-2 rounded-lg transition-all tooltip" onclick="confirmDeleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')" title="Delete User">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update pagination
+        if (paginationContainer && pagination) {
+            const currentPage = pagination.current_page;
+            const lastPage = pagination.last_page;
+            const perPage = pagination.per_page;
+            const total = pagination.total;
+            const from = pagination.from;
+            const to = pagination.to;
+
+            // Update results info
+            const resultsInfo = document.querySelector('.bg-white.px-6.py-4 .text-sm.text-gray-600');
+            if (resultsInfo) {
+                resultsInfo.innerHTML = `
+                    Showing <span class="font-bold text-chocolate">${from || 0}</span> 
+                    to <span class="font-bold text-chocolate">${to || 0}</span> 
+                    of <span class="font-bold text-chocolate">${total}</span> results
+                `;
+            }
+
+            // Render pagination links if there are multiple pages
+            if (lastPage > 1) {
+                let paginationHtml = '<div class="flex justify-center space-x-1">';
+                
+                // Previous button
+                if (currentPage > 1) {
+                    paginationHtml += `<button onclick="changePage(${currentPage - 1})" class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-l-md hover:bg-gray-50">Previous</button>`;
+                }
+                
+                // Page numbers
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(lastPage, currentPage + 2);
+                
+                if (startPage > 1) {
+                    paginationHtml += `<button onclick="changePage(1)" class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 hover:bg-gray-50">1</button>`;
+                    if (startPage > 2) {
+                        paginationHtml += `<span class="px-3 py-2 text-sm font-medium text-gray-500">...</span>`;
+                    }
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    const activeClass = i === currentPage ? 'bg-chocolate text-white' : 'text-gray-500 bg-white hover:bg-gray-50';
+                    paginationHtml += `<button onclick="changePage(${i})" class="px-3 py-2 text-sm font-medium border border-gray-300 ${activeClass}">${i}</button>`;
+                }
+                
+                if (endPage < lastPage) {
+                    if (endPage < lastPage - 1) {
+                        paginationHtml += `<span class="px-3 py-2 text-sm font-medium text-gray-500">...</span>`;
+                    }
+                    paginationHtml += `<button onclick="changePage(${lastPage})" class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 hover:bg-gray-50">${lastPage}</button>`;
+                }
+                
+                // Next button
+                if (currentPage < lastPage) {
+                    paginationHtml += `<button onclick="changePage(${currentPage + 1})" class="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-r-md hover:bg-gray-50">Next</button>`;
+                }
+                
+                paginationHtml += '</div>';
+                paginationContainer.innerHTML = paginationHtml;
+            } else {
+                paginationContainer.innerHTML = '';
+            }
+        }
+
+        // Re-setup event listeners for new elements
+        setupEventListeners();
+    }
+
+    // Change page function for AJAX pagination
+    window.changePage = function(page) {
+        applyFilters(page);
+    };
+
+    // Export users to CSV
+    function exportUsers() {
         const searchTerm = document.getElementById('searchInput').value;
         const roleFilter = document.getElementById('roleFilter').value;
         const statusFilter = document.getElementById('statusFilter').value;
         
-        // Build query parameters
+        // Build query parameters for export URL
         const params = new URLSearchParams();
         
         if (searchTerm.trim()) {
@@ -161,12 +355,82 @@
             params.append('status', statusFilter);
         }
         
-        // Redirect with parameters
-        const baseUrl = "{{ url('/admin/users') }}";
+        // Create export URL
+        const baseUrl = "{{ url('/admin/users/export') }}";
         const queryString = params.toString();
-        const newUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+        const exportUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
         
-        window.location.href = newUrl;
+        // Show loading notification
+        showNotification('Exporting', 'Preparing user data for download...', false);
+        
+        // Create temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = exportUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Close notification after a short delay
+        setTimeout(() => {
+            closeNotification();
+        }, 2000);
+    }
+
+    // Apply filters and search using AJAX
+    function applyFilters(page = 1) {
+        const searchTerm = document.getElementById('searchInput').value;
+        const roleFilter = document.getElementById('roleFilter').value;
+        const statusFilter = document.getElementById('statusFilter').value;
+        
+        showLoadingState();
+
+        fetch('{{ route('admin.users.filter') }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                search: searchTerm.trim(),
+                role: roleFilter,
+                status: statusFilter,
+                page: page,
+                per_page: 10
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoadingState();
+            
+            if (data.success) {
+                renderUsersTable(data.users, data.pagination);
+            } else {
+                throw new Error(data.message || 'Failed to load users');
+            }
+        })
+        .catch(error => {
+            hideLoadingState();
+            console.error('Error applying filters:', error);
+            showNotification('Error', 'Failed to load users. Please try again.', true);
+            
+            // Restore table content on error
+            const tableBody = document.querySelector('tbody');
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-12 text-center text-red-500 bg-red-50">
+                            <div class="flex flex-col items-center justify-center">
+                                <i class="fas fa-exclamation-triangle text-red-400 text-2xl mb-3"></i>
+                                <h3 class="font-display text-lg font-bold text-red-600">Error Loading Users</h3>
+                                <p class="text-sm text-red-400 mt-1">Please try again or contact support.</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
     }
 
     // Setup search and filter event listeners
@@ -177,17 +441,17 @@
 
         // Search input with debounce
         if (searchInput) {
-            const debouncedSearch = debounce(applyFilters, 500);
+            const debouncedSearch = debounce(() => applyFilters(), 300);
             searchInput.addEventListener('input', debouncedSearch);
         }
 
         // Filter dropdowns
         if (roleFilter) {
-            roleFilter.addEventListener('change', applyFilters);
+            roleFilter.addEventListener('change', () => applyFilters());
         }
         
         if (statusFilter) {
-            statusFilter.addEventListener('change', applyFilters);
+            statusFilter.addEventListener('change', () => applyFilters());
         }
 
         // Handle Enter key in search input
@@ -228,7 +492,11 @@
     function openBulkModal() {
         const selectedUsers = [];
         document.querySelectorAll('.user-checkbox:checked').forEach(checkbox => {
-            selectedUsers.push(checkbox.dataset.userId);
+            const userId = parseInt(checkbox.dataset.userId);
+            // Exclude current admin from bulk operations
+            if (userId !== currentAdminId) {
+                selectedUsers.push(userId);
+            }
         });
 
         if (selectedUsers.length === 0) {
@@ -249,11 +517,20 @@
         const operation = document.getElementById('bulkActionSelect').value;
         const selectedUsers = [];
         document.querySelectorAll('.user-checkbox:checked').forEach(checkbox => {
-            selectedUsers.push(checkbox.dataset.userId);
+            const userId = parseInt(checkbox.dataset.userId);
+            // Exclude current admin from bulk operations
+            if (userId !== currentAdminId) {
+                selectedUsers.push(userId);
+            }
         });
 
         if (!operation) {
             showNotification('Error', 'Please select an action.', true);
+            return;
+        }
+
+        if (selectedUsers.length === 0) {
+            showNotification('Error', 'No valid users selected for bulk operation.', true);
             return;
         }
 
@@ -441,7 +718,7 @@
         const selectAllCheckbox = document.getElementById('selectAllUsers');
         if (selectAllCheckbox) {
             selectAllCheckbox.addEventListener('change', function() {
-                const userCheckboxes = document.querySelectorAll('.user-checkbox');
+                const userCheckboxes = document.querySelectorAll('.user-checkbox:not([disabled])');
                 userCheckboxes.forEach(checkbox => {
                     checkbox.checked = selectAllCheckbox.checked;
                 });
@@ -469,12 +746,12 @@
         // Update select all checkbox when individual checkboxes change
         document.querySelectorAll('.user-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
-                const allCheckboxes = document.querySelectorAll('.user-checkbox');
-                const checkedCheckboxes = document.querySelectorAll('.user-checkbox:checked');
+                const allCheckboxes = document.querySelectorAll('.user-checkbox:not([disabled])');
+                const checkedCheckboxes = document.querySelectorAll('.user-checkbox:not([disabled]):checked');
                 const selectAllCheckbox = document.getElementById('selectAllUsers');
                 
                 if (selectAllCheckbox) {
-                    selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length;
+                    selectAllCheckbox.checked = allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length;
                 }
             });
         });
@@ -568,6 +845,10 @@
             <p class="text-sm text-gray-500">Manage system access, roles, and security protocols.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
+            <button onclick="exportUsers()" 
+                class="inline-flex items-center justify-center px-5 py-2.5 bg-green-600 text-white border border-green-600 text-sm font-bold rounded-lg hover:bg-green-700 transition-all shadow-sm group">
+                <i class="fas fa-download mr-2 opacity-70 group-hover:opacity-100"></i> Export CSV
+            </button>
             <button onclick="openBulkModal()" 
                 class="inline-flex items-center justify-center px-5 py-2.5 bg-white text-chocolate border border-border-soft text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel hover:border-caramel transition-all shadow-sm group">
                 <i class="fas fa-layer-group mr-2 opacity-70 group-hover:opacity-100"></i> Bulk Actions
@@ -642,10 +923,17 @@
                 </thead>
                 <tbody class="bg-white divide-y divide-border-soft">
                     @forelse($users as $user)
-                    <tr class="group hover:bg-cream-bg transition-colors duration-200 {{ !$user->is_active ? 'opacity-60 bg-gray-50' : '' }}">
+                    <tr class="group hover:bg-cream-bg transition-colors duration-200 {{ !$user->is_active ? 'opacity-60 bg-gray-50' : '' }} {{ $user->id == $currentAdminId ? 'bg-blue-50 border-l-4 border-blue-400' : '' }}">
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <input type="checkbox" class="user-checkbox rounded border-gray-300 text-chocolate focus:ring-chocolate cursor-pointer" 
-                                   data-user-id="{{ $user->id }}">
+                            @if($user->id == $currentAdminId)
+                                {{-- Current admin cannot be selected for bulk operations --}}
+                                <input type="checkbox" class="user-checkbox rounded border-gray-300 text-chocolate focus:ring-chocolate cursor-not-allowed opacity-50" 
+                                       data-user-id="{{ $user->id }}" disabled>
+                                <span class="ml-2 text-xs text-blue-600 font-medium">(You)</span>
+                            @else
+                                <input type="checkbox" class="user-checkbox rounded border-gray-300 text-chocolate focus:ring-chocolate cursor-pointer" 
+                                       data-user-id="{{ $user->id }}">
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
@@ -684,7 +972,11 @@
                             </label>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">
-                            {{ $user->formatted_last_login }}
+                            @if($user->last_login_at)
+                                {{ $user->last_login_at->diffForHumans() }}
+                            @else
+                                Never
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex justify-end gap-2 opacity-80 group-hover:opacity-100 transition-opacity">

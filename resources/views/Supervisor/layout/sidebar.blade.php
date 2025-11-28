@@ -155,13 +155,6 @@
 
     </nav>
 
-    {{-- DECORATIVE FOOTER ELEMENT --}}
-    <div class="p-4 relative overflow-hidden mt-auto">
-        <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-caramel/10 rounded-full blur-2xl pointer-events-none"></div>
-        <div class="relative z-10 flex items-center gap-2 text-[10px] text-white/30 uppercase tracking-widest">
-            <div class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div> System Online
-        </div>
-    </div>
 </aside>
 
 {{-- Custom Scrollbar Style --}}

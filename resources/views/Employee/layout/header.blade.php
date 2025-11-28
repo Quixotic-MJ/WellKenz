@@ -185,8 +185,8 @@
             const data = await response.json();
 
             if (data.success) {
-                const notifications = data.notifications;
-                const unreadCount = data.unread_count;
+                const notifications = data.notifications || [];
+                const unreadCount = data.unread_count || 0;
 
                 // Hide loading
                 loadingEl.classList.add('hidden');

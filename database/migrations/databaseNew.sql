@@ -51,6 +51,7 @@ CREATE TABLE users (
     remember_token VARCHAR(100) NULL,
     password_reset_token VARCHAR(100) NULL,
     password_reset_expires TIMESTAMP NULL,
+    deleted_at TIMESTAMP NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -94,7 +95,9 @@ CREATE TABLE categories (
     parent_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    icon VARCHAR(100) DEFAULT 'fas fa-tag',
+    color VARCHAR(20) DEFAULT '#8B4513'
 );
 
 CREATE INDEX idx_categories_parent_id ON categories(parent_id);
@@ -169,7 +172,9 @@ CREATE TABLE suppliers (
     is_active BOOLEAN NOT NULL DEFAULT true,
     notes TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id)
 );
 
 CREATE INDEX idx_suppliers_code ON suppliers(supplier_code);
@@ -682,18 +687,28 @@ CREATE TRIGGER calculate_req_item_totals
 -- SEED DATA - COMPREHENSIVE SAMPLE DATA (1000+ records total)
 -- ============================================================================
 
--- Insert default system settings
+-- Insert default system settings for General Settings Page
 INSERT INTO system_settings (setting_key, setting_value, setting_type, description, is_public) VALUES
 ('app_name', 'WellKenz', 'string', 'Application name', true),
 ('app_timezone', 'Asia/Manila', 'string', 'Application timezone', false),
 ('company_name', 'WellKenz Bakery', 'string', 'Company name', true),
+('company_logo', '', 'string', 'Company logo URL or base64', true),
+('company_address', '', 'string', 'Company address', true),
+('tax_id', '', 'string', 'Tax identification number', true),
+('contact_email', 'admin@wellkenz.com', 'string', 'Contact email address', true),
+('contact_phone', '', 'string', 'Contact phone number', true),
 ('currency', 'PHP', 'string', 'Default currency', true),
+('tax_rate', '0.12', 'decimal', 'VAT tax rate', false),
 ('low_stock_threshold', '10', 'integer', 'Low stock alert threshold', false),
 ('default_lead_time', '3', 'integer', 'Default supplier lead time in days', false),
 ('business_hours_open', '06:00', 'string', 'Business opening time', true),
 ('business_hours_close', '20:00', 'string', 'Business closing time', true),
-('tax_rate', '0.12', 'decimal', 'VAT tax rate', false),
 ('default_batch_size', '100', 'integer', 'Default production batch size', false),
+('maintenance_mode', 'false', 'boolean', 'System maintenance mode', false),
+('notif_lowstock', 'true', 'boolean', 'Low stock notifications', false),
+('notif_req', 'true', 'boolean', 'Requisition request notifications', false),
+('notif_expiry', 'true', 'boolean', 'Expiry warning notifications', false),
+('notif_system', 'false', 'boolean', 'System security alerts', false),
 ('inventory_alert_days', '7', 'integer', 'Days before expiry to send alert', false),
 ('auto_pr_approval', 'false', 'boolean', 'Automatically approve purchase requests', false),
 ('backup_schedule', 'daily', 'string', 'Database backup schedule', false),

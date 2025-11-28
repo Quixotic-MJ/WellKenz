@@ -574,6 +574,13 @@ async function updateBaseUnitOptions() {
 document.getElementById('unitForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
+    // VALIDATION: Check if type is selected
+    const unitType = document.getElementById('unitType').value;
+    if (!unitType) {
+        showToast('Error', 'Please select a unit type before saving', 'error');
+        return;
+    }
+    
     const formData = new FormData(this);
     const saveBtn = document.getElementById('saveUnitBtn');
     const originalBtnText = saveBtn.innerHTML;
@@ -585,6 +592,12 @@ document.getElementById('unitForm').addEventListener('submit', async function(e)
         const url = currentEditingUnitId ? `/admin/units/${currentEditingUnitId}` : '/admin/units';
         const method = currentEditingUnitId ? 'PUT' : 'POST';
         
+        // Ensure type field is included in the request
+        const formObject = Object.fromEntries(formData);
+        if (!formObject.type) {
+            formObject.type = document.getElementById('unitType').value;
+        }
+        
         const response = await fetch(url, {
             method: method,
             headers: {
@@ -592,7 +605,7 @@ document.getElementById('unitForm').addEventListener('submit', async function(e)
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(Object.fromEntries(formData))
+            body: JSON.stringify(formObject)
         });
         
         const result = await response.json();

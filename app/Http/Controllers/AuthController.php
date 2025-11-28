@@ -37,6 +37,9 @@ class AuthController extends Controller
             // Log the user in
             Auth::login($user);
             
+            // Update last login time
+            $user->update(['last_login_at' => now()]);
+            
             // Store role in session for easy access
             session(['role' => $user->role]);
             session(['user_name' => $user->name]);

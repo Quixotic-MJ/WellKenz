@@ -4,6 +4,7 @@ namespace App\View\Composers;
 
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Notification;
 
 class NotificationComposer
 {
@@ -16,9 +17,13 @@ class NotificationComposer
             if (Auth::check()) {
                 $user = Auth::user();
                 if ($user && $user->exists) {
-                    // Set default notification data - implement proper notification system later
-                    $unreadNotificationsCount = 0;
-                    $recentNotifications = collect([]);
+                    // Get actual unread notification count from the Notification model
+                    $unreadNotificationsCount = Notification::unreadCountForCurrentUser();
+                    
+                    // Get recent notifications (last 5 unread notifications)
+                    $recentNotifications = Notification::forCurrentUser('unread')
+                        ->take(5)
+                        ->get();
                 } else {
                     // If user doesn't exist (invalid session), logout
                     Auth::logout();

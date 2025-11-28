@@ -10,9 +10,22 @@
             <p class="text-sm text-gray-500">Manage vendor profiles, contact details, and payment terms.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-            <button class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-border-soft text-chocolate text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm group">
-                <i class="fas fa-file-export mr-2 opacity-70 group-hover:opacity-100"></i> Export List
-            </button>
+            <div class="relative group">
+                <button onclick="toggleExportMenu()" class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-border-soft text-chocolate text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm group">
+                    <i class="fas fa-file-export mr-2 opacity-70 group-hover:opacity-100"></i> Export List
+                    <i class="fas fa-chevron-down ml-2 text-xs opacity-70 group-hover:opacity-100"></i>
+                </button>
+                <div id="exportMenu" class="hidden absolute right-0 mt-2 w-48 bg-white border border-border-soft rounded-lg shadow-lg z-10">
+                    <div class="py-2">
+                        <button onclick="exportSuppliers('csv')" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-cream-bg hover:text-chocolate transition-colors">
+                            <i class="fas fa-file-csv mr-3 text-green-600"></i> Export as CSV
+                        </button>
+                        <button onclick="exportSuppliers('pdf')" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-cream-bg hover:text-chocolate transition-colors">
+                            <i class="fas fa-file-pdf mr-3 text-red-600"></i> Export as PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
             <button onclick="openAddModal()" 
                 class="inline-flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                 <i class="fas fa-plus mr-2"></i> Add New Supplier
@@ -71,7 +84,7 @@
             <div class="w-full md:w-48 relative">
                 <select name="status" onchange="this.form.submit()" 
                     class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer">
-                    <option value="">All Status</option>
+                    <option value="all" {{ request('status') === 'all' || request('status') === '' ? 'selected' : '' }}>All Status</option>
                     <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>Active</option>
                     <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                 </select>
@@ -85,7 +98,7 @@
                     <i class="fas fa-search mr-2"></i> Search
                 </button>
                 
-                @if(request('search') || request('status'))
+                @if(request('search') || (request('status') && request('status') !== 'all'))
                 <a href="{{ route('admin.suppliers.index') }}" class="px-5 py-2.5 bg-white border border-border-soft text-gray-600 rounded-lg hover:bg-gray-50 transition-all font-medium text-sm flex-1 md:flex-none justify-center flex items-center">
                     <i class="fas fa-times mr-2"></i> Clear
                 </a>
@@ -119,7 +132,10 @@
                                     <div class="text-sm font-bold text-chocolate">{{ $supplier->name }}</div>
                                     <div class="text-xs text-gray-500 flex items-center mt-0.5">
                                         <i class="fas fa-map-marker-alt mr-1 text-caramel/60"></i> 
-                                        {{ Str::limit($supplier->address ?? 'No address', 20) }}{{ $supplier->city ? ', ' . $supplier->city : '' }}
+                                        {{ Str::limit($supplier->address ?? 'No address', 20) }}
+                                        @if($supplier->city), {{ $supplier->city }}@endif
+                                        @if($supplier->province), {{ $supplier->province }}@endif
+                                        @if($supplier->postal_code) ({{ $supplier->postal_code }})@endif
                                     </div>
                                     <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-gray-100 text-gray-600 mt-1 border border-gray-200">
                                         {{ $supplier->supplier_code }}
@@ -134,8 +150,13 @@
                                     <i class="fas fa-envelope mr-1.5 text-caramel/60"></i> {{ $supplier->email ?? '-' }}
                                 </div>
                                 <div class="text-xs text-gray-500">
-                                    <i class="fas fa-phone mr-1.5 text-caramel/60"></i> {{ $supplier->phone ?? $supplier->mobile ?? '-' }}
+                                    <i class="fas fa-phone mr-1.5 text-caramel/60"></i> {{ $supplier->phone ?? '-' }}
                                 </div>
+                                @if($supplier->mobile)
+                                <div class="text-xs text-gray-500">
+                                    <i class="fas fa-mobile-alt mr-1.5 text-caramel/60"></i> {{ $supplier->mobile }}
+                                </div>
+                                @endif
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -275,6 +296,11 @@
                                     <input type="text" name="province" id="supplierProvince" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all">
                                 </div>
                             </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-chocolate mb-1">Postal Code</label>
+                                <input type="text" name="postal_code" id="supplierPostalCode" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="1234">
+                            </div>
                         </div>
 
                         <div class="space-y-4">
@@ -296,9 +322,14 @@
                                     <input type="text" name="phone" id="supplierPhone" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="(032) ...">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-bold text-chocolate mb-1">Email</label>
-                                    <input type="email" name="email" id="supplierEmail" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="@company.com">
+                                    <label class="block text-sm font-bold text-chocolate mb-1">Mobile</label>
+                                    <input type="text" name="mobile" id="supplierMobile" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="+63 9XX ...">
                                 </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-chocolate mb-1">Email</label>
+                                <input type="email" name="email" id="supplierEmail" class="block w-full border-gray-200 bg-cream-bg rounded-lg shadow-sm py-2 px-3 focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm transition-all" placeholder="@company.com">
                             </div>
 
                             <div class="bg-gray-50 p-4 rounded-lg border border-border-soft space-y-4">
@@ -412,6 +443,30 @@
     let confirmActionCallback = null;
 
     /* ===========================
+       DEBUGGING HELPERS
+       =========================== */
+    
+    function debugSupplierOperation(operation, data = null) {
+        if (window.localStorage.getItem('supplier_debug') === 'true') {
+            console.log(`[SUPPLIER DEBUG] ${operation}`, data || {});
+        }
+    }
+    
+    function toggleDebugMode() {
+        const current = window.localStorage.getItem('supplier_debug') === 'true';
+        window.localStorage.setItem('supplier_debug', (!current).toString());
+        showToast(
+            'Debug Mode', 
+            `Debug logging ${!current ? 'enabled' : 'disabled'}`, 
+            'info'
+        );
+    }
+    
+    // Add debug mode toggle to console for easy access
+    window.toggleSupplierDebug = toggleDebugMode;
+    debugSupplierOperation('Script loaded');
+
+    /* ===========================
        UI HELPERS (TOAST & MODALS)
        =========================== */
 
@@ -516,32 +571,80 @@
         document.getElementById('modal-title').textContent = 'Edit Supplier';
         document.getElementById('saveBtn').innerHTML = '<i class="fas fa-save mr-2"></i> Update Supplier';
         
-        fetch(`{{ url('admin/suppliers') }}/${id}/edit`)
+        fetch(`{{ route('admin.suppliers.edit', ':id') }}`.replace(':id', id))
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
                 return response.json();
             })
             .then(data => {
-                document.getElementById('supplierId').value = data.id;
-                document.getElementById('supplierName').value = data.name || '';
-                document.getElementById('supplierStatus').value = data.is_active ? '1' : '0';
-                document.getElementById('supplierTaxId').value = data.tax_id || '';
-                document.getElementById('supplierPaymentTerms').value = data.payment_terms || '';
-                document.getElementById('supplierContactPerson').value = data.contact_person || '';
-                document.getElementById('supplierPhone').value = data.phone || '';
-                document.getElementById('supplierEmail').value = data.email || '';
-                document.getElementById('supplierAddress').value = data.address || '';
-                document.getElementById('supplierCity').value = data.city || '';
-                document.getElementById('supplierProvince').value = data.province || '';
-                document.getElementById('supplierRating').value = data.rating || '';
-                document.getElementById('supplierCreditLimit').value = data.credit_limit || '';
-                document.getElementById('supplierNotes').value = data.notes || '';
+                console.log('Edit modal data received:', data); // Debug logging
                 
+                if (!data.success || !data.supplier) {
+                    console.error('Invalid response format:', data);
+                    
+                    // Handle different error scenarios
+                    if (data.message) {
+                        throw new Error(data.message);
+                    }
+                    
+                    throw new Error('Invalid response format from server');
+                }
+                
+                const supplier = data.supplier;
+                console.log('Supplier data:', supplier); // Debug logging
+                
+                // Populate all form fields with error handling
+                const fields = {
+                    'supplierId': supplier.id,
+                    'supplierName': supplier.name,
+                    'supplierStatus': supplier.is_active ? '1' : '0',
+                    'supplierTaxId': supplier.tax_id,
+                    'supplierPaymentTerms': supplier.payment_terms,
+                    'supplierContactPerson': supplier.contact_person,
+                    'supplierPhone': supplier.phone,
+                    'supplierMobile': supplier.mobile,
+                    'supplierEmail': supplier.email,
+                    'supplierAddress': supplier.address,
+                    'supplierCity': supplier.city,
+                    'supplierProvince': supplier.province,
+                    'supplierPostalCode': supplier.postal_code,
+                    'supplierRating': supplier.rating,
+                    'supplierCreditLimit': supplier.credit_limit,
+                    'supplierNotes': supplier.notes
+                };
+                
+                // Set values with error checking
+                Object.keys(fields).forEach(fieldId => {
+                    const element = document.getElementById(fieldId);
+                    if (element) {
+                        element.value = fields[fieldId] || '';
+                        console.log(`Set ${fieldId} to:`, fields[fieldId]);
+                    } else {
+                        console.warn(`Element with ID '${fieldId}' not found`);
+                    }
+                });
+                
+                console.log('Form fields populated successfully'); // Debug logging
                 document.getElementById('supplierModal').classList.remove('hidden');
             })
             .catch(error => {
-                showToast('Error', 'Failed to load supplier data', 'error');
-                console.error(error);
+                console.error('Error loading supplier data:', error); // Debug logging
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    response: error.response,
+                    status: error.status
+                });
+                showToast('Error', 'Failed to load supplier data: ' + error.message, 'error');
+                
+                // Show more detailed error for debugging
+                if (error.response) {
+                    error.response.json().then(errorData => {
+                        console.error('Server error response:', errorData);
+                    }).catch(() => {
+                        console.error('Could not parse error response');
+                    });
+                }
             });
     }
 
@@ -565,16 +668,44 @@
 
         const formData = new FormData(form);
         const url = isEditMode 
-            ? `{{ url('admin/suppliers') }}/${editSupplierId}` 
+            ? `{{ route('admin.suppliers.update', ':id') }}`.replace(':id', editSupplierId)
             : '{{ route('admin.suppliers.store') }}';
         const method = isEditMode ? 'PUT' : 'POST';
         
-        const data = {};
-        formData.forEach((value, key) => {
-            data[key] = value;
+        // Collect form data manually for better control
+        const data = {
+            name: document.getElementById('supplierName').value,
+            is_active: document.getElementById('supplierStatus').value === '1',
+            tax_id: document.getElementById('supplierTaxId').value,
+            payment_terms: parseInt(document.getElementById('supplierPaymentTerms').value) || 0,
+            contact_person: document.getElementById('supplierContactPerson').value,
+            phone: document.getElementById('supplierPhone').value,
+            mobile: document.getElementById('supplierMobile').value,
+            email: document.getElementById('supplierEmail').value,
+            address: document.getElementById('supplierAddress').value,
+            city: document.getElementById('supplierCity').value,
+            province: document.getElementById('supplierProvince').value,
+            postal_code: document.getElementById('supplierPostalCode').value,
+            rating: parseInt(document.getElementById('supplierRating').value) || null,
+            credit_limit: parseFloat(document.getElementById('supplierCreditLimit').value) || 0,
+            notes: document.getElementById('supplierNotes').value
+        };
+        
+        debugSupplierOperation('Saving supplier', {
+            url: url,
+            method: method,
+            data: data,
+            isEditMode: isEditMode,
+            editSupplierId: editSupplierId
         });
-        // Ensure boolean/integer conversion matches backend expectation
-        data.is_active = data.is_active === '1';
+        
+        console.log('Saving supplier data:', {
+            url: url,
+            method: method,
+            data: data,
+            isEditMode: isEditMode,
+            editSupplierId: editSupplierId
+        });
 
         fetch(url, {
             method: method,
@@ -585,19 +716,91 @@
             },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            // Handle different response types
+            if (!response.ok) {
+                // Try to parse error response
+                return response.json().catch(() => {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }).then(errorData => {
+                    // Add HTTP status to error data for better handling
+                    errorData.http_status = response.status;
+                    throw errorData;
+                });
+            }
+            
+            return response.json();
+        })
         .then(result => {
+            console.log('Save supplier response:', result); // Debug logging
+            
             if (result.success) {
                 closeModal();
                 showToast('Success', result.message, 'success');
-                setTimeout(() => window.location.reload(), 700);
+                
+                console.log('Supplier saved successfully, reloading page...');
+                if (isEditMode && result.supplier) {
+                    console.log('Updated supplier data:', result.supplier);
+                    // For edit mode, reload the page to show updated data
+                    setTimeout(() => window.location.reload(), 1000);
+                } else if (!isEditMode && result.supplier) {
+                    // For new suppliers, we need to reload to show them in the list
+                    setTimeout(() => window.location.reload(), 1000);
+                }
             } else {
-                showToast('Error', result.message || 'Error saving supplier', 'error');
+                console.error('Save failed:', result);
+                
+                // Handle validation errors more gracefully
+                let errorMessage = result.message || 'Error saving supplier';
+                
+                if (result.errors) {
+                    // Format validation errors nicely
+                    const errorList = Object.values(result.errors).flat().join(', ');
+                    errorMessage = errorList || 'Validation failed';
+                }
+                
+                showToast('Validation Error', errorMessage, 'error');
             }
         })
         .catch(error => {
-            showToast('Error', 'An unexpected error occurred', 'error');
-            console.error(error);
+            console.error('Save supplier error:', error); // Debug logging
+            
+            let errorMessage = 'An unexpected error occurred';
+            let errorTitle = 'Error';
+            
+            if (error.http_status) {
+                switch(error.http_status) {
+                    case 422:
+                        errorTitle = 'Validation Error';
+                        errorMessage = error.message || 'Please check your input and try again.';
+                        break;
+                    case 419:
+                        errorTitle = 'Session Error';
+                        errorMessage = 'Your session has expired. Please refresh the page and try again.';
+                        break;
+                    case 403:
+                        errorTitle = 'Access Denied';
+                        errorMessage = 'You do not have permission to perform this action.';
+                        break;
+                    case 404:
+                        errorTitle = 'Not Found';
+                        errorMessage = 'The requested supplier was not found.';
+                        break;
+                    case 500:
+                        errorTitle = 'Server Error';
+                        errorMessage = 'A server error occurred. Please try again later.';
+                        break;
+                    default:
+                        errorMessage = error.message || `HTTP ${error.http_status} error occurred`;
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            
+            showToast(errorTitle, errorMessage, 'error');
         })
         .finally(() => {
             btn.disabled = false;
@@ -616,26 +819,162 @@
     }
 
     function toggleStatus(id) {
-        fetch(`{{ url('admin/suppliers') }}/${id}/toggle-status`, {
+        fetch(`{{ route('admin.suppliers.toggle-status', ':id') }}`.replace(':id', id), {
             method: 'PATCH',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(result => {
+            console.log('Toggle status response:', result); // Debug logging
+            
             if (result.success) {
                 showToast('Updated', result.message, 'success');
-                setTimeout(() => window.location.reload(), 700);
+                
+                // Try to update UI, but reload as fallback if it fails
+                try {
+                    updateSupplierRow(id, result.is_active);
+                    updateStats(result.is_active);
+                } catch (error) {
+                    console.error('UI update failed, reloading page:', error);
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+                
+                // Verify the change persisted after 2 seconds
+                setTimeout(() => {
+                    console.log('Status after update:', result.is_active); // Debug logging
+                    // If UI doesn't reflect the change, reload the page
+                    const statusBadge = document.querySelector(`button[onclick*="confirmToggleStatus(${id},"]`);
+                    if (statusBadge) {
+                        const row = statusBadge.closest('tr');
+                        const badge = row?.querySelector('td:nth-child(4) span');
+                        const expectedText = result.is_active ? 'Active' : 'Inactive';
+                        if (badge && badge.textContent !== expectedText) {
+                            console.log('UI not updated correctly, reloading page...');
+                            window.location.reload();
+                        }
+                    }
+                }, 2000);
             } else {
+                console.error('Toggle status failed:', result);
                 showToast('Error', result.message || 'Error updating status', 'error');
+                // Reload page as fallback to show correct data
+                setTimeout(() => window.location.reload(), 2000);
             }
         })
         .catch(error => {
-            showToast('Error', 'Failed to update status', 'error');
-            console.error(error);
+            console.error('Toggle status error:', error); // Debug logging
+            showToast('Error', 'Failed to update status: ' + error.message, 'error');
+            // Reload page as fallback
+            setTimeout(() => window.location.reload(), 2000);
         });
+    }
+
+    function updateSupplierRow(supplierId, newStatus) {
+        // Find the supplier row by looking for data attribute or unique identifier
+        const rows = document.querySelectorAll('tbody tr');
+        let targetRow = null;
+        let targetButton = null;
+        
+        rows.forEach(row => {
+            const buttons = row.querySelectorAll('button[onclick*="confirmToggleStatus"]');
+            buttons.forEach(button => {
+                const onclickAttr = button.getAttribute('onclick');
+                if (onclickAttr && onclickAttr.includes(`confirmToggleStatus(${supplierId},`)) {
+                    targetRow = row;
+                    targetButton = button;
+                }
+            });
+        });
+        
+        if (!targetRow || !targetButton) {
+            console.error('Could not find supplier row with ID:', supplierId);
+            // Reload the page as fallback
+            setTimeout(() => window.location.reload(), 1000);
+            return;
+        }
+        
+        // Update status badge (4th column)
+        const statusBadge = targetRow.querySelector('td:nth-child(4) span');
+        if (statusBadge) {
+            statusBadge.textContent = newStatus ? 'Active' : 'Inactive';
+            statusBadge.className = newStatus 
+                ? 'px-2.5 py-0.5 inline-flex text-[10px] leading-5 font-bold uppercase tracking-wide rounded-full bg-green-50 text-green-700 border border-green-200'
+                : 'px-2.5 py-0.5 inline-flex text-[10px] leading-5 font-bold uppercase tracking-wide rounded-full bg-red-50 text-red-700 border border-red-200';
+        }
+        
+        // Update toggle button icon and tooltip
+        const icon = targetButton.querySelector('i');
+        if (icon) {
+            if (newStatus) {
+                icon.className = 'fas fa-ban';
+                targetButton.title = 'Deactivate';
+            } else {
+                icon.className = 'fas fa-check';
+                targetButton.title = 'Activate';
+            }
+        }
+        
+        // Update row styling for inactive state
+        if (newStatus) {
+            targetRow.classList.remove('opacity-60', 'bg-gray-50');
+        } else {
+            targetRow.classList.add('opacity-60', 'bg-gray-50');
+        }
+        
+        // Update the confirmToggleStatus onclick attribute with current supplier name
+        const companyNameElement = targetRow.querySelector('td:nth-child(1) .text-sm.font-bold.text-chocolate');
+        const companyName = companyNameElement ? companyNameElement.textContent : 'Unknown Supplier';
+        const newOnclick = `confirmToggleStatus(${supplierId}, '${companyName.replace(/'/g, "\\'")}', ${newStatus})`;
+        targetButton.setAttribute('onclick', newOnclick);
+        
+        console.log('Updated supplier row:', supplierId, 'New status:', newStatus);
+    }
+
+    function updateStats(newStatus) {
+        // Update the stats counters with more robust selectors
+        const statsCards = document.querySelectorAll('.grid .bg-white.border.border-border-soft.rounded-xl.p-6.shadow-sm');
+        let activeStat = null;
+        let inactiveStat = null;
+        
+        statsCards.forEach(card => {
+            if (card.querySelector('.text-green-600')) {
+                activeStat = card.querySelector('.font-display');
+            } else if (card.querySelector('.text-red-600')) {
+                inactiveStat = card.querySelector('.font-display');
+            }
+        });
+        
+        if (activeStat && inactiveStat) {
+            let activeCount = parseInt(activeStat.textContent) || 0;
+            let inactiveCount = parseInt(inactiveStat.textContent) || 0;
+            
+            if (newStatus) {
+                // Supplier was activated
+                activeCount++;
+                inactiveCount = Math.max(0, inactiveCount - 1);
+            } else {
+                // Supplier was deactivated
+                inactiveCount++;
+                activeCount = Math.max(0, activeCount - 1);
+            }
+            
+            activeStat.textContent = activeCount;
+            inactiveStat.textContent = inactiveCount;
+            
+            console.log('Updated stats - Active:', activeCount, 'Inactive:', inactiveCount);
+        } else {
+            console.warn('Could not find stats elements, reloading page...');
+            setTimeout(() => window.location.reload(), 1000);
+        }
     }
 
     function confirmDelete(id, name) {
@@ -647,8 +986,71 @@
         );
     }
 
+    /* ===========================
+       EXPORT FUNCTIONALITY
+       =========================== */
+
+    function toggleExportMenu() {
+        const menu = document.getElementById('exportMenu');
+        menu.classList.toggle('hidden');
+    }
+
+    // Close export menu when clicking outside
+    document.addEventListener('click', function(event) {
+        const menu = document.getElementById('exportMenu');
+        const button = event.target.closest('button');
+        
+        if (!button || !button.onclick?.toString().includes('toggleExportMenu')) {
+            if (!menu.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        }
+    });
+
+    function exportSuppliers(format) {
+        // Hide the menu
+        document.getElementById('exportMenu').classList.add('hidden');
+        
+        // Show loading toast
+        showToast('Generating Export', `Preparing ${format.toUpperCase()} file...`, 'info');
+        
+        // Get current search and filter parameters
+        const params = new URLSearchParams(window.location.search);
+        
+        // Build the export URL
+        const exportUrl = format === 'csv' 
+            ? '{{ route("admin.suppliers.export.csv") }}'
+            : '{{ route("admin.suppliers.export.pdf") }}';
+        
+        // Add current parameters to export URL
+        const fullUrl = exportUrl + (params.toString() ? '?' + params.toString() : '');
+        
+        // Create a temporary form to trigger the download
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = fullUrl;
+        form.style.display = 'none';
+        
+        // Add CSRF token
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        form.appendChild(csrfToken);
+        
+        // Add any additional form fields if needed
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+        
+        // Update toast message
+        setTimeout(() => {
+            showToast('Export Started', `${format.toUpperCase()} export is being generated...`, 'info');
+        }, 1000);
+    }
+
     function deleteSupplier(id) {
-        fetch(`{{ url('admin/suppliers') }}/${id}`, {
+        fetch(`{{ route('admin.suppliers.destroy', ':id') }}`.replace(':id', id), {
             method: 'DELETE',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',

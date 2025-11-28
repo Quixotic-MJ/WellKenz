@@ -319,6 +319,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     .then(data => {
                         if (data.success) {
                             showToast('Success', 'All notifications marked as read');
+                            // Refresh sidebar badge count
+                            if (window.refreshNotificationBadge) {
+                                window.refreshNotificationBadge();
+                            }
                             setTimeout(() => location.reload(), 1000);
                         } else {
                             showToast('Error', data.message, 'error');
@@ -369,6 +373,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             item.querySelector('h3').classList.remove('text-gray-900');
                             markReadUnreadBtn.textContent = 'Mark Read';
                         }
+                        
+                        // Refresh sidebar badge count
+                        if (window.refreshNotificationBadge) {
+                            window.refreshNotificationBadge();
+                        }
+                        
                         showToast('Success', 'Notification updated');
                     }
                 })
@@ -443,6 +453,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 checkboxes.forEach(cb => cb.checked = false);
                 updateBulkBar();
+                
+                // Refresh sidebar badge count
+                if (window.refreshNotificationBadge) {
+                    window.refreshNotificationBadge();
+                }
             }, 500);
         });
     }

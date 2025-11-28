@@ -267,10 +267,12 @@ class NotificationController extends Controller
                         'id' => $notification->id,
                         'title' => $notification->title,
                         'message' => $notification->message,
-                        'created_at' => $notification->created_at->diffForHumans(),
+                        'time_ago' => $notification->created_at->diffForHumans(),
                         'priority' => $notification->priority,
                         'type' => $notification->type,
                         'action_url' => $notification->action_url,
+                        'read_at' => $notification->read_at,
+                        'icon_class' => $this->getIconClass($notification->type, $notification->priority),
                     ];
                 });
                 
@@ -278,10 +280,8 @@ class NotificationController extends Controller
             
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'notifications' => $notifications,
-                    'unread_count' => $unreadCount
-                ]
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
             ]);
             
         } catch (\Exception $e) {
@@ -290,6 +290,32 @@ class NotificationController extends Controller
                 'message' => 'Error fetching header notifications: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get icon class for notification based on type and priority.
+     */
+    private function getIconClass(string $type, string $priority): string
+    {
+        $baseIcon = match($type) {
+            'system' => 'fas fa-cog',
+            'alert' => 'fas fa-exclamation-triangle',
+            'info' => 'fas fa-info-circle',
+            'success' => 'fas fa-check-circle',
+            'warning' => 'fas fa-exclamation-circle',
+            'error' => 'fas fa-times-circle',
+            default => 'fas fa-bell'
+        };
+
+        $colorClass = match($priority) {
+            'urgent' => 'text-red-500',
+            'high' => 'text-orange-500',
+            'medium' => 'text-yellow-500',
+            'low' => 'text-green-500',
+            default => 'text-caramel'
+        };
+
+        return "{$baseIcon} bg-cream-bg {$colorClass}";
     }
     
     /**

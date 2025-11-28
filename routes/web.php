@@ -1,14 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
 use App\Http\Controllers\AuthController;
 
 // --- Import your controllers (Ready for when you move logic to controllers) ---
 use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\InventoryController;
-use App\Http\Controllers\PurchasingController;
-use App\Http\Controllers\SupervisorController;
 
 // Admin namespace controllers
 use App\Http\Controllers\Admin\DashboardController;
@@ -18,11 +14,41 @@ use App\Http\Controllers\Admin\MasterData\ItemController;
 use App\Http\Controllers\Admin\MasterData\CategoryController;
 use App\Http\Controllers\Admin\MasterData\UnitController;
 use App\Http\Controllers\Admin\System\AuditLogController;
-use App\Http\Controllers\Admin\System\SettingController;
 use App\Http\Controllers\Admin\System\NotificationController;
-use App\Http\Controllers\Admin\System\BackupController;
 use App\Http\Controllers\Admin\Partner\SupplierController;
 
+// Inventory namespace controllers
+use App\Http\Controllers\Inventory\GeneralController;
+use App\Http\Controllers\Inventory\Inbound\ReceivingController;
+use App\Http\Controllers\Inventory\Inbound\BatchController; 
+use App\Http\Controllers\Inventory\Inbound\RtvController;
+use App\Http\Controllers\Inventory\Outbound\FulfillmentController;
+use App\Http\Controllers\Inventory\Outbound\PurchaseRequestController;
+use App\Http\Controllers\Inventory\StockManagement\BatchLookupController;
+use App\Http\Controllers\Inventory\Notifications\NotificationController as InventoryNotificationController;
+
+// Purchasing namespace controllers (aliased to avoid conflicts)
+use App\Http\Controllers\Purchasing\DashboardController as PurchasingDashboardController;
+use App\Http\Controllers\Purchasing\PurchaseOrderController as PurchasingPOController;
+use App\Http\Controllers\Purchasing\SupplierController as PurchasingSupplierController;
+use App\Http\Controllers\Purchasing\PriceListController as PurchasingPriceListController;
+use App\Http\Controllers\Purchasing\ReportController as PurchasingReportController;
+use App\Http\Controllers\Purchasing\Notifications\NotificationController as PurchasingNotificationController;
+
+// Employee namespace controllers
+use App\Http\Controllers\Employee\DashboardController as EmployeeDashboardController;
+use App\Http\Controllers\Employee\RequisitionController as EmployeeRequisitionController;
+use App\Http\Controllers\Employee\ProductionController as EmployeeProductionController;
+use App\Http\Controllers\Employee\RecipeController as EmployeeRecipeController;
+use App\Http\Controllers\Employee\Notifications\NotificationController as EmployeeNotificationController;
+// Supervisor namespace controllers (incremental split)
+use App\Http\Controllers\Supervisor\InventoryController as SupervisorInventoryController;
+use App\Http\Controllers\Supervisor\ReportsController as SupervisorReportsController;
+use App\Http\Controllers\Supervisor\SettingsController as SupervisorSettingsController;
+use App\Http\Controllers\Supervisor\DashboardController as SupervisorDashboardController;
+use App\Http\Controllers\Supervisor\ApprovalsController as SupervisorApprovalsController;
+use App\Http\Controllers\Supervisor\Notifications\NotificationController as SupervisorNotificationController;
+use App\Http\Controllers\Supervisor\RequisitionController as SupervisorRequisitionController;
 
 /* ----------------------------------------------------------
    PUBLIC ROUTES (Guests can access)
@@ -55,7 +81,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->name('reset-password');
         Route::post('/{user}/change-password', [UserController::class, 'changePassword'])->name('change-password');
         Route::post('/bulk-operations', [UserController::class, 'bulkOperations'])->name('bulk-operations');
+        Route::get('/data', [UserController::class, 'getUserData'])->name('data');
         Route::get('/search', [UserController::class, 'search'])->name('search');
+        Route::post('/filter', [UserController::class, 'filterUsers'])->name('filter');
+        Route::get('/export', [UserController::class, 'exportUsers'])->name('export');
     });
 
     Route::prefix('roles')->name('roles.')->group(function () {
@@ -70,11 +99,21 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::prefix('items')->name('items.')->group(function () {
         Route::get('/', [ItemController::class, 'index'])->name('index');
         Route::post('/', [ItemController::class, 'store'])->name('store');
-        Route::get('/{item}/edit', [ItemController::class, 'edit'])->name('edit');
-        Route::put('/{item}', [ItemController::class, 'update'])->name('update');
-        Route::delete('/{item}', [ItemController::class, 'destroy'])->name('destroy');
+        Route::get('/{item}/edit', [ItemController::class, 'edit'])->name('edit')
+            ->where('item', '[0-9]+'); // Explicit constraint for numeric IDs
+        Route::put('/{item}', [ItemController::class, 'update'])->name('update')
+            ->where('item', '[0-9]+'); // Explicit constraint for numeric IDs
+        Route::delete('/{item}', [ItemController::class, 'destroy'])->name('destroy')
+            ->where('item', '[0-9]+'); // Explicit constraint for numeric IDs
+        Route::patch('/{item}/deactivate', [ItemController::class, 'deactivate'])->name('deactivate')
+            ->where('item', '[0-9]+'); // Alternative soft delete route
+        Route::patch('/{item}/reactivate', [ItemController::class, 'reactivate'])->name('reactivate')
+            ->where('item', '[0-9]+'); // Reactivate deactivated item
         Route::get('/data', [ItemController::class, 'getItemData'])->name('data');
         Route::get('/search', [ItemController::class, 'search'])->name('search');
+        Route::post('/generate-code', [ItemController::class, 'generateItemCode'])->name('generate-code');
+        Route::get('/export', [ItemController::class, 'export'])->name('export');
+        Route::post('/import', [ItemController::class, 'import'])->name('import');
     });
 
     // Master Data - Categories
@@ -105,12 +144,20 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
         Route::get('/', [SupplierController::class, 'index'])->name('index');
         Route::post('/', [SupplierController::class, 'store'])->name('store');
-        Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit');
-        Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update');
-        Route::patch('/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('toggle-status');
-        Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy');
+        Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit')
+            ->where('supplier', '[0-9]+'); // Explicit constraint for numeric IDs
+        Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update')
+            ->where('supplier', '[0-9]+'); // Explicit constraint for numeric IDs
+        Route::patch('/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])->name('toggle-status')
+            ->where('supplier', '[0-9]+'); // Explicit constraint for numeric IDs
+        Route::delete('/{supplier}', [SupplierController::class, 'destroy'])->name('destroy')
+            ->where('supplier', '[0-9]+'); // Explicit constraint for numeric IDs
         Route::get('/search', [SupplierController::class, 'search'])->name('search');
-        Route::get('/{supplier}', [SupplierController::class, 'show'])->name('show');
+        Route::get('/{supplier}', [SupplierController::class, 'show'])->name('show')
+            ->where('supplier', '[0-9]+'); // Explicit constraint for numeric IDs
+        // Export routes
+        Route::get('/export/csv', [SupplierController::class, 'exportCsv'])->name('export.csv');
+        Route::get('/export/pdf', [SupplierController::class, 'exportPdf'])->name('export.pdf');
     });
 
     // System & Security - Audit Logs
@@ -121,26 +168,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/{auditLog}/export', [AuditLogController::class, 'exportProof'])->name('proof-export');
         Route::get('/tables', [AuditLogController::class, 'getTableNames'])->name('tables');
         Route::get('/actions', [AuditLogController::class, 'getActions'])->name('actions');
-    });
-
-    // System & Security - Settings
-    Route::prefix('settings')->name('settings.')->group(function () {
-        Route::get('/', [SettingController::class, 'index'])->name('index');
-        Route::post('/', [SettingController::class, 'update'])->name('update');
-        Route::get('/health', [SettingController::class, 'getSystemHealth'])->name('health');
-        Route::post('/clear-cache', [SettingController::class, 'clearCache'])->name('clear-cache');
-        Route::post('/optimize', [SettingController::class, 'optimize'])->name('optimize');
-    });
-
-    // System & Security - Backup Management
-    Route::prefix('backups')->name('backups.')->group(function () {
-        Route::get('/', [BackupController::class, 'index'])->name('index');
-        Route::post('/create', [BackupController::class, 'create'])->name('create');
-        Route::get('/download/{filename}', [BackupController::class, 'download'])->name('download');
-        Route::get('/history', [BackupController::class, 'history'])->name('history');
-        Route::post('/restore', [BackupController::class, 'restore'])->name('restore');
-        Route::get('/files', [BackupController::class, 'getBackupFiles'])->name('files');
-        Route::delete('/{filename}', [BackupController::class, 'destroy'])->name('destroy');
     });
 
     // Notifications - Admin System Management
@@ -169,79 +196,96 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supervisor.')->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', [SupervisorController::class, 'home'])->name('dashboard');
+    Route::get('/dashboard', [SupervisorDashboardController::class, 'home'])->name('dashboard');
 
-    // Approvals
-    Route::get('/approvals/requisitions', [SupervisorController::class, 'requisitionApprovals'])->name('approvals.requisitions');
-    Route::get('/approvals/purchase-requests', [SupervisorController::class, 'purchaseRequestApprovals'])->name('approvals.purchase-requests');
+    // Legacy Approvals Routes (deprecated, use new requisition routes below)
+    Route::get('/approvals/requisitions', [SupervisorApprovalsController::class, 'requisitionApprovals'])->name('approvals.requisitions');
+    Route::get('/approvals/purchase-requests', [SupervisorApprovalsController::class, 'purchaseRequestApprovals'])->name('approvals.purchase-requests');
 
-    // Requisition Actions
-    Route::patch('/requisitions/{requisition}/approve', [SupervisorController::class, 'approveRequisition'])->name('requisitions.approve');
-    Route::patch('/requisitions/{requisition}/reject', [SupervisorController::class, 'rejectRequisition'])->name('requisitions.reject');
-    Route::patch('/requisitions/{requisition}/modify', [SupervisorController::class, 'modifyRequisitionQuantity'])->name('requisitions.modify');
-    Route::patch('/requisitions/{requisition}/modify-multi', [SupervisorController::class, 'modifyMultipleRequisitionItems'])->name('requisitions.modify-multi');
-    Route::get('/requisitions/{requisition}/details', [SupervisorController::class, 'getRequisitionDetails'])->name('requisitions.details');
+    // NEW Requisition Approval System
+    Route::prefix('requisitions')->name('requisitions.')->group(function () {
+        // Main requisitions dashboard
+        Route::get('/', [SupervisorRequisitionController::class, 'index'])->name('index');
+        
+        // Requisition actions
+        Route::get('/{requisition}/details', [SupervisorRequisitionController::class, 'getDetails'])->name('details');
+        Route::patch('/{requisition}/approve', [SupervisorRequisitionController::class, 'approve'])->name('approve');
+        Route::patch('/{requisition}/reject', [SupervisorRequisitionController::class, 'reject'])->name('reject');
+        
+        // Bulk operations
+        Route::patch('/bulk-approve', [SupervisorRequisitionController::class, 'bulkApprove'])->name('bulk-approve');
+        
+        // AJAX endpoints for dynamic updates
+        Route::get('/api/filtered', [SupervisorRequisitionController::class, 'getFiltered'])->name('api.filtered');
+        Route::get('/api/refresh', [SupervisorRequisitionController::class, 'refresh'])->name('api.refresh');
+        Route::get('/api/statistics', [SupervisorRequisitionController::class, 'getStatistics'])->name('api.statistics');
+        
+        // Export functionality
+        Route::get('/export', [SupervisorRequisitionController::class, 'export'])->name('export');
+    });
+
+    // Legacy Requisition Actions (deprecated)
+    Route::patch('/requisitions/{requisition}/modify', [SupervisorApprovalsController::class, 'modifyRequisitionQuantity'])->name('requisitions.modify');
+    Route::patch('/requisitions/{requisition}/modify-multi', [SupervisorApprovalsController::class, 'modifyMultipleRequisitionItems'])->name('requisitions.modify-multi');
     
     // Purchase Request Actions
-    Route::patch('/purchase-requests/{purchaseRequest}/approve', [SupervisorController::class, 'approvePurchaseRequest'])->name('purchase-requests.approve');
-    Route::patch('/purchase-requests/{purchaseRequest}/reject', [SupervisorController::class, 'rejectPurchaseRequest'])->name('purchase-requests.reject');
-    Route::get('/purchase-requests/{purchaseRequest}/details', [SupervisorController::class, 'getPurchaseRequestDetails'])->name('purchase-requests.details');
+    Route::patch('/purchase-requests/{purchaseRequest}/approve', [SupervisorApprovalsController::class, 'approvePurchaseRequest'])->name('purchase-requests.approve');
+    Route::patch('/purchase-requests/{purchaseRequest}/reject', [SupervisorApprovalsController::class, 'rejectPurchaseRequest'])->name('purchase-requests.reject');
+    Route::get('/purchase-requests/{purchaseRequest}/details', [SupervisorApprovalsController::class, 'getPurchaseRequestDetails'])->name('purchase-requests.details');
     
     // Bulk Operations
-    Route::patch('/requisitions/bulk-approve', [SupervisorController::class, 'bulkApproveRequisitions'])->name('requisitions.bulk-approve');
-    Route::patch('/purchase-requests/bulk-approve', [SupervisorController::class, 'bulkApprovePurchaseRequests'])->name('purchase-requests.bulk-approve');
+    Route::patch('/requisitions/bulk-approve', [SupervisorApprovalsController::class, 'bulkApproveRequisitions'])->name('requisitions.bulk-approve');
+    Route::patch('/purchase-requests/bulk-approve', [SupervisorApprovalsController::class, 'bulkApprovePurchaseRequests'])->name('purchase-requests.bulk-approve');
     
     // Statistics and Analytics
-    Route::get('/requisitions/statistics', [SupervisorController::class, 'getRequisitionStatistics'])->name('requisitions.statistics');
+    Route::get('/requisitions/statistics', [SupervisorApprovalsController::class, 'getRequisitionStatistics'])->name('requisitions.statistics');
 
     // Notifications
-    Route::get('/notifications', [SupervisorController::class, 'notifications'])->name('notifications');
+    Route::get('/notifications', [SupervisorNotificationController::class, 'index'])->name('notifications');
     
     // Notification management routes - More specific routes first to avoid model binding conflicts
-    Route::get('/notifications/header', [SupervisorController::class, 'getHeaderNotifications'])->name('notifications.header');
-    Route::get('/notifications/unread-count', [SupervisorController::class, 'getUnreadNotificationCount'])->name('notifications.unread_count');
-    Route::post('/notifications/mark-all-read', [SupervisorController::class, 'markAllNotificationsAsRead'])->name('notifications.mark-all-read');
-    Route::post('/notifications/bulk-operations', [SupervisorController::class, 'bulkNotificationOperations'])->name('notifications.bulk-operations');
+    Route::get('/notifications/header', [SupervisorNotificationController::class, 'getHeaderNotifications'])->name('notifications.header');
+    Route::get('/notifications/unread-count', [SupervisorNotificationController::class, 'getUnreadNotificationCount'])->name('notifications.unread_count');
+    Route::post('/notifications/mark-all-read', [SupervisorNotificationController::class, 'markAllNotificationsAsRead'])->name('notifications.mark-all-read');
+    Route::post('/notifications/bulk-operations', [SupervisorNotificationController::class, 'bulkNotificationOperations'])->name('notifications.bulk-operations');
     
     // Routes with model binding - with constraints to prevent conflicts
-    Route::post('/notifications/{notification}/mark-read', [SupervisorController::class, 'markNotificationAsRead'])->name('notifications.mark-read')
+    Route::post('/notifications/{notification}/mark-read', [SupervisorNotificationController::class, 'markNotificationAsRead'])->name('notifications.mark-read')
         ->where('notification', '[0-9]+');
-    Route::post('/notifications/{notification}/mark-unread', [SupervisorController::class, 'markNotificationAsUnread'])->name('notifications.mark-unread')
+    Route::post('/notifications/{notification}/mark-unread', [SupervisorNotificationController::class, 'markNotificationAsUnread'])->name('notifications.mark-unread')
         ->where('notification', '[0-9]+');
-    Route::delete('/notifications/{notification}', [SupervisorController::class, 'deleteNotification'])->name('notifications.destroy')
+    Route::delete('/notifications/{notification}', [SupervisorNotificationController::class, 'deleteNotification'])->name('notifications.destroy')
         ->where('notification', '[0-9]+');
 
     // Inventory Oversight
-    Route::get('/inventory', [SupervisorController::class, 'stockLevel'])->name('inventory.stock-level');
-    Route::get('/inventory/export-csv', [SupervisorController::class, 'exportStockCSV'])->name('inventory.export-stock-csv');
-    Route::get('/inventory/print-report', [SupervisorController::class, 'printStockReport'])->name('inventory.print-stock-report');
-    Route::get('/inventory/history', [SupervisorController::class, 'stockHistory'])->name('inventory.stock-history');
-    Route::get('/inventory/card/{item}', [SupervisorController::class, 'stockCard'])->name('inventory.stock-card');
-    Route::get('/inventory/adjustments', [SupervisorController::class, 'inventoryAdjustments'])->name('inventory.adjustments');
+    Route::get('/inventory', [SupervisorInventoryController::class, 'stockLevel'])->name('inventory.stock-level');
+    Route::get('/inventory/export-csv', [SupervisorInventoryController::class, 'exportStockCSV'])->name('inventory.export-stock-csv');
+    Route::get('/inventory/print-report', [SupervisorInventoryController::class, 'printStockReport'])->name('inventory.print-stock-report');
+    Route::get('/inventory/history', [SupervisorInventoryController::class, 'stockHistory'])->name('inventory.stock-history');
+    Route::get('/inventory/card/{item}', [SupervisorInventoryController::class, 'stockCard'])->name('inventory.stock-card');
+    Route::get('/inventory/adjustments', [SupervisorInventoryController::class, 'inventoryAdjustments'])->name('inventory.adjustments');
     
     // Inventory Adjustments API endpoints
-    Route::get('/inventory/adjustments/items/{item}', [SupervisorController::class, 'getItemDetails'])->name('inventory.adjustments.item-details');
-    Route::post('/inventory/adjustments', [SupervisorController::class, 'createAdjustment'])->name('inventory.adjustments.store');
-    Route::get('/inventory/adjustments/history', [SupervisorController::class, 'getAdjustmentHistory'])->name('inventory.adjustments.history');
+    Route::get('/inventory/adjustments/items/{item}', [SupervisorInventoryController::class, 'getItemDetails'])->name('inventory.adjustments.item-details');
+    Route::post('/inventory/adjustments', [SupervisorInventoryController::class, 'createAdjustment'])->name('inventory.adjustments.store');
+    Route::get('/inventory/adjustments/history', [SupervisorInventoryController::class, 'getAdjustmentHistory'])->name('inventory.adjustments.history');
 
     // Reports
-    Route::get('/reports/expiry', [SupervisorController::class, 'expiryReport'])->name('reports.expiry');
-    
+    Route::get('/reports/expiry', [SupervisorReportsController::class, 'expiryReport'])->name('reports.expiry');
     // Use First List and Alerts
-    Route::get('/reports/print-use-first-list', [SupervisorController::class, 'printUseFirstList'])->name('reports.print_use_first_list');
-    Route::post('/reports/alert-bakers', [SupervisorController::class, 'alertBakers'])->name('reports.alert_bakers');
+    Route::get('/reports/print-use-first-list', [SupervisorReportsController::class, 'printUseFirstList'])->name('reports.print_use_first_list');
+    Route::post('/reports/alert-bakers', [SupervisorReportsController::class, 'alertBakers'])->name('reports.alert_bakers');
 
     // Settings
-    Route::get('/settings/stock-levels', [SupervisorController::class, 'branchSetting'])->name('settings.stock-levels');
-    
+    Route::get('/settings/stock-levels', [SupervisorSettingsController::class, 'branchSetting'])->name('settings.stock-levels');
     // Stock Level Configuration AJAX endpoints
-    Route::post('/settings/stock-levels/update', [SupervisorController::class, 'updateMinimumStockLevel'])->name('settings.stock-levels.update');
-    Route::post('/settings/stock-levels/seasonal-adjustment', [SupervisorController::class, 'applySeasonalAdjustment'])->name('settings.stock-levels.seasonal-adjustment');
-    Route::get('/settings/stock-levels/data', [SupervisorController::class, 'getStockConfigurationData'])->name('settings.stock-levels.data');
+    Route::post('/settings/stock-levels/update', [SupervisorSettingsController::class, 'updateMinimumStockLevel'])->name('settings.stock-levels.update');
+    Route::post('/settings/stock-levels/seasonal-adjustment', [SupervisorSettingsController::class, 'applySeasonalAdjustment'])->name('settings.stock-levels.seasonal-adjustment');
+    Route::get('/settings/stock-levels/data', [SupervisorSettingsController::class, 'getStockConfigurationData'])->name('settings.stock-levels.data');
 
     // AJAX endpoints for dashboard
-    Route::get('/stock-overview', [SupervisorController::class, 'getStockOverview'])->name('stock.overview');
-    Route::get('/production-metrics', [SupervisorController::class, 'getProductionMetrics'])->name('production.metrics');
+    Route::get('/stock-overview', [SupervisorDashboardController::class, 'getStockOverview'])->name('stock.overview');
+    Route::get('/production-metrics', [SupervisorDashboardController::class, 'getProductionMetrics'])->name('production.metrics');
 
 });
 
@@ -251,69 +295,69 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
 Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purchasing.')->group(function () {
     
     // Dashboard
-    Route::get('/dashboard', [PurchasingController::class, 'home'])->name('dashboard');
+    Route::get('/dashboard', [PurchasingDashboardController::class, 'home'])->name('dashboard');
 
     // Purchase Orders
-    Route::get('/po/create', [PurchasingController::class, 'createPurchaseOrder'])->name('po.create');
-    Route::post('/po', [PurchasingController::class, 'storePurchaseOrder'])->name('po.store');
+    Route::get('/po/create', [PurchasingPOController::class, 'createPurchaseOrder'])->name('po.create');
+    Route::post('/po', [PurchasingPOController::class, 'storePurchaseOrder'])->name('po.store');
     
     // Specific routes first - these must come before the generic {purchaseOrder} route
-    Route::get('/po/open', [PurchasingController::class, 'openOrders'])->name('po.open');
-    Route::get('/po/partial', [PurchasingController::class, 'partialOrders'])->name('po.partial');
-    Route::get('/po/history', [PurchasingController::class, 'completedHistory'])->name('po.history');
-    Route::get('/po/drafts', [PurchasingController::class, 'drafts'])->name('po.drafts');
+    Route::get('/po/open', [PurchasingPOController::class, 'openOrders'])->name('po.open');
+    Route::get('/po/partial', [PurchasingPOController::class, 'partialOrders'])->name('po.partial');
+    Route::get('/po/history', [PurchasingReportController::class, 'completedHistory'])->name('po.history');
+    Route::get('/po/drafts', [PurchasingPOController::class, 'drafts'])->name('po.drafts');
     
     // Generic routes with {purchaseOrder} parameter - these must come after specific routes
-    Route::get('/po/{purchaseOrder}', [PurchasingController::class, 'showPurchaseOrder'])->name('po.show');
-    Route::get('/po/{purchaseOrder}/print', [PurchasingController::class, 'printPurchaseOrder'])->name('po.print');
+    Route::get('/po/{purchaseOrder}', [PurchasingPOController::class, 'showPurchaseOrder'])->name('po.show');
+    Route::get('/po/{purchaseOrder}/print', [PurchasingPOController::class, 'printPurchaseOrder'])->name('po.print');
     
     // PO Actions - these must come after the generic route
-    Route::patch('/po/{purchaseOrder}/submit', [PurchasingController::class, 'submitPurchaseOrder'])->name('po.submit');
-    Route::patch('/po/{purchaseOrder}/acknowledge', [PurchasingController::class, 'acknowledgePurchaseOrder'])->name('po.acknowledge');
-    Route::get('/po/{purchaseOrder}/edit', [PurchasingController::class, 'editPurchaseOrder'])->name('po.edit');
-    Route::delete('/po/{purchaseOrder}', [PurchasingController::class, 'destroyPurchaseOrder'])->name('po.destroy');
+    Route::patch('/po/{purchaseOrder}/submit', [PurchasingPOController::class, 'submitPurchaseOrder'])->name('po.submit');
+    Route::patch('/po/{purchaseOrder}/acknowledge', [PurchasingPOController::class, 'acknowledgePurchaseOrder'])->name('po.acknowledge');
+    Route::get('/po/{purchaseOrder}/edit', [PurchasingPOController::class, 'editPurchaseOrder'])->name('po.edit');
+    Route::delete('/po/{purchaseOrder}', [PurchasingPOController::class, 'destroyPurchaseOrder'])->name('po.destroy');
 
     // Suppliers
-    Route::get('/suppliers', [PurchasingController::class, 'suppliers'])->name('suppliers.index');
-    Route::post('/suppliers', [PurchasingController::class, 'storeSupplier'])->name('suppliers.store');
-    Route::put('/suppliers/{supplier}', [PurchasingController::class, 'updateSupplier'])->name('suppliers.update');
-    Route::delete('/suppliers/{supplier}', [PurchasingController::class, 'destroySupplier'])->name('suppliers.destroy');
-    Route::patch('/suppliers/{supplier}/toggle-status', [PurchasingController::class, 'toggleSupplierStatus'])->name('suppliers.toggle-status');
-    Route::get('/suppliers/prices', [PurchasingController::class, 'supplierPriceList'])->name('suppliers.prices');
-    Route::get('/suppliers/prices/export', [PurchasingController::class, 'exportSupplierPriceList'])->name('suppliers.prices.export');
-    Route::get('/suppliers/prices/update', [PurchasingController::class, 'showPriceUpdate'])->name('suppliers.prices.update');
-    Route::get('/suppliers/prices/update/{supplierItem}', [PurchasingController::class, 'showPriceUpdate'])->name('suppliers.prices.update.single');
-    Route::patch('/suppliers/prices/{supplierItem}', [PurchasingController::class, 'updateSupplierItemPrice'])->name('suppliers.prices.update.item');
-    Route::post('/suppliers/prices/bulk-update', [PurchasingController::class, 'bulkUpdateSupplierPrices'])->name('suppliers.prices.bulk-update');
-    Route::get('/suppliers/items-for-edit', [PurchasingController::class, 'getSupplierItemsForEdit'])->name('suppliers.items-for-edit');
+    Route::get('/suppliers', [PurchasingSupplierController::class, 'suppliers'])->name('suppliers.index');
+    Route::post('/suppliers', [PurchasingSupplierController::class, 'storeSupplier'])->name('suppliers.store');
+    Route::put('/suppliers/{supplier}', [PurchasingSupplierController::class, 'updateSupplier'])->name('suppliers.update');
+    Route::delete('/suppliers/{supplier}', [PurchasingSupplierController::class, 'destroySupplier'])->name('suppliers.destroy');
+    Route::patch('/suppliers/{supplier}/toggle-status', [PurchasingSupplierController::class, 'toggleSupplierStatus'])->name('suppliers.toggle-status');
+    Route::get('/suppliers/prices', [PurchasingPriceListController::class, 'supplierPriceList'])->name('suppliers.prices');
+    Route::get('/suppliers/prices/export', [PurchasingPriceListController::class, 'exportSupplierPriceList'])->name('suppliers.prices.export');
+    Route::get('/suppliers/prices/update', [PurchasingPriceListController::class, 'showPriceUpdate'])->name('suppliers.prices.update');
+    Route::get('/suppliers/prices/update/{supplierItem}', [PurchasingPriceListController::class, 'showPriceUpdate'])->name('suppliers.prices.update.single');
+    Route::patch('/suppliers/prices/{supplierItem}', [PurchasingPriceListController::class, 'updateSupplierItemPrice'])->name('suppliers.prices.update.item');
+    Route::post('/suppliers/prices/bulk-update', [PurchasingPriceListController::class, 'bulkUpdateSupplierPrices'])->name('suppliers.prices.bulk-update');
+    Route::get('/suppliers/items-for-edit', [PurchasingPriceListController::class, 'getSupplierItemsForEdit'])->name('suppliers.items-for-edit');
 
     // Reports & Delivery
-    Route::get('/reports/history', [PurchasingController::class, 'purchaseHistory'])->name('reports.history');
-    Route::get('/reports/performance', [PurchasingController::class, 'supplierPerformance'])->name('reports.performance');
-    Route::get('/reports/rtv', [PurchasingController::class, 'rtv'])->name('reports.rtv');
+    Route::get('/reports/history', [PurchasingReportController::class, 'purchaseHistory'])->name('reports.history');
+    Route::get('/reports/performance', [PurchasingReportController::class, 'supplierPerformance'])->name('reports.performance');
+    Route::get('/reports/rtv', [PurchasingReportController::class, 'rtv'])->name('reports.rtv');
 
     // Notifications
-    Route::get('/notifications', [PurchasingController::class, 'notifications'])->name('notifications');
+    Route::get('/notifications', [PurchasingNotificationController::class, 'index'])->name('notifications');
     
     // Notification management routes
-    Route::get('/notifications/stats', [PurchasingController::class, 'getNotificationStats'])->name('notifications.stats');
-    Route::post('/notifications/mark-all-read', [PurchasingController::class, 'markAllNotificationsAsRead'])->name('notifications.mark_all_read');
-    Route::post('/notifications/bulk-operations', [PurchasingController::class, 'bulkNotificationOperations'])->name('notifications.bulk_operations');
+    Route::get('/notifications/stats', [PurchasingNotificationController::class, 'getNotificationStats'])->name('notifications.stats');
+    Route::post('/notifications/mark-all-read', [PurchasingNotificationController::class, 'markAllAsRead'])->name('notifications.mark_all_read');
+    Route::post('/notifications/bulk-operations', [PurchasingNotificationController::class, 'bulkOperations'])->name('notifications.bulk_operations');
     
     // Routes with model binding
-    Route::post('/notifications/{notification}/mark-read', [PurchasingController::class, 'markNotificationAsRead'])->name('notifications.mark_read');
-    Route::post('/notifications/{notification}/mark-unread', [PurchasingController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread');
-    Route::delete('/notifications/{notification}', [PurchasingController::class, 'deleteNotification'])->name('notifications.destroy');
+    Route::post('/notifications/{notification}/mark-read', [PurchasingNotificationController::class, 'markNotificationAsRead'])->name('notifications.mark_read');
+    Route::post('/notifications/{notification}/mark-unread', [PurchasingNotificationController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread');
+    Route::delete('/notifications/{notification}', [PurchasingNotificationController::class, 'destroy'])->name('notifications.destroy');
 
     // API Routes for AJAX functionality
-    Route::get('/api/suppliers/search', [PurchasingController::class, 'searchSuppliers'])->name('api.suppliers.search');
-    Route::get('/api/suppliers/{supplier}', [PurchasingController::class, 'getSupplierDetails'])->name('api.suppliers.details');
-    Route::get('/api/items/search', [PurchasingController::class, 'searchItems'])->name('api.items.search');
-    Route::get('/api/suppliers/{supplier}/items', [PurchasingController::class, 'getSupplierItems'])->name('api.suppliers.items');
-    Route::post('/api/suppliers/{supplier}/items-for-prs', [PurchasingController::class, 'getSupplierItemsForPRs'])->name('api.suppliers.items-for-prs');
-    Route::get('/api/dashboard/metrics', [PurchasingController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
-    Route::get('/api/dashboard/summary', [PurchasingController::class, 'getDashboardSummary'])->name('api.dashboard.summary');
-    Route::get('/api/purchase-requests/{purchaseRequest}', [PurchasingController::class, 'getPurchaseRequestDetails'])->name('api.purchase-requests.details');
+    Route::get('/api/suppliers/search', [PurchasingSupplierController::class, 'searchSuppliers'])->name('api.suppliers.search');
+    Route::get('/api/suppliers/{supplier}', [PurchasingSupplierController::class, 'getSupplierDetails'])->name('api.suppliers.details');
+    Route::get('/api/items/search', [PurchasingPOController::class, 'searchItems'])->name('api.items.search');
+    Route::get('/api/suppliers/{supplier}/items', [PurchasingPriceListController::class, 'getSupplierItems'])->name('api.suppliers.items');
+    Route::post('/api/suppliers/{supplier}/items-for-prs', [PurchasingPOController::class, 'getSupplierItemsForPRs'])->name('api.suppliers.items-for-prs');
+    Route::get('/api/dashboard/metrics', [PurchasingDashboardController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
+    Route::get('/api/dashboard/summary', [PurchasingDashboardController::class, 'getDashboardSummary'])->name('api.dashboard.summary');
+    Route::get('/api/purchase-requests/{purchaseRequest}', [PurchasingPOController::class, 'getPurchaseRequestDetails'])->name('api.purchase-requests.details');
 
 });
 
@@ -322,102 +366,91 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
 // Security: Only users with role 'inventory' can access
 Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('inventory.')->group(function () {
     
-    // Dashboard
-    Route::get('/home', [InventoryController::class, 'home'])->name('dashboard');
+    // Dashboard and General Routes
+    Route::get('/home', [GeneralController::class, 'home'])->name('dashboard');
 
     // Purchase Orders (for viewing/managing POs)
-    Route::get('/purchase-orders', [PurchasingController::class, 'index'])->name('purchase-orders.index');
-    Route::get('/purchase-orders/create', [PurchasingController::class, 'create'])->name('purchase-orders.create');
-    Route::get('/purchase-orders/{id}', [PurchasingController::class, 'show'])->name('purchase-orders.show');
+    Route::get('/purchase-orders', [PurchasingPOController::class, 'openOrders'])->name('purchase-orders.index');
+    Route::get('/purchase-orders/create', [PurchasingPOController::class, 'createPurchaseOrder'])->name('purchase-orders.create');
+    Route::get('/purchase-orders/{purchaseOrder}', [PurchasingPOController::class, 'showPurchaseOrder'])->name('purchase-orders.show');
     
-    // Add the AJAX routes for the home page buttons
-    Route::post('/requisitions/{requisitionId}/start-picking', [InventoryController::class, 'startPicking'])->name('requisitions.start-picking');
-    Route::post('/batches/{batchId}/pick', [InventoryController::class, 'pickBatch'])->name('batches.pick');
+    // FEFO Batch Picking and Requisition Processing
+    Route::post('/requisitions/{requisitionId}/start-picking', [FulfillmentController::class, 'startPicking'])->name('requisitions.start-picking');
+    Route::post('/batches/{batchId}/pick', [FulfillmentController::class, 'pickBatch'])->name('batches.pick');
     
 
-    // Receive Delivery Routes - Enhanced with comprehensive blind count methodology
-    Route::get('/inbound/receive', [InventoryController::class, 'receiveDelivery'])->name('inbound.receive');
-    
-    // Core delivery processing routes
-    Route::get('/purchase-orders/{id}/receive', [InventoryController::class, 'getPurchaseOrder'])->name('purchase-orders.receive');
-    Route::get('/purchase-orders-search', [InventoryController::class, 'searchPurchaseOrder'])->name('purchase-orders.search');
-    Route::post('/receive-delivery/process', [InventoryController::class, 'processDelivery'])->name('receive-delivery.process');
-    
-    // Enhanced delivery validation and statistics
-    Route::post('/receive-delivery/validate', [InventoryController::class, 'validateDeliveryData'])->name('receive-delivery.validate');
-    Route::get('/receive-delivery/statistics', [InventoryController::class, 'getReceivingStatistics'])->name('receive-delivery.statistics');
+    // Inbound Routes - Receiving
+    Route::prefix('inbound')->name('inbound.')->group(function () {
+        // Delivery Receiving Routes
+        Route::get('/receive', [ReceivingController::class, 'receiveDelivery'])->name('receive');
+        Route::get('/purchase-orders/{id}/receive', [ReceivingController::class, 'getPurchaseOrder'])->name('purchase-orders.receive');
+        Route::get('/purchase-orders-search', [ReceivingController::class, 'searchPurchaseOrder'])->name('purchase-orders.search');
+        Route::post('/receive-delivery/process', [ReceivingController::class, 'processDelivery'])->name('receive-delivery.process');
+        Route::post('/receive-delivery/validate', [ReceivingController::class, 'validateDeliveryData'])->name('receive-delivery.validate');
+        Route::get('/receive-delivery/statistics', [ReceivingController::class, 'getReceivingStatistics'])->name('receive-delivery.statistics');
 
-    // Batch Logs Routes
-    Route::get('/inbound/batch-logs', [InventoryController::class, 'batchLogs'])->name('inbound.batch-logs');
-    Route::get('/inbound/batch-logs/{id}/details', [InventoryController::class, 'getBatchDetails'])->name('inbound.batch-logs.details');
-    Route::get('/inbound/batch-logs/{id}/edit', [InventoryController::class, 'editBatch'])->name('inbound.batch-logs.edit');
-    Route::patch('/inbound/batch-logs/{id}/status', [InventoryController::class, 'updateBatchStatus'])->name('inbound.batch-logs.status');
-    Route::post('/inbound/batch-logs/export', [InventoryController::class, 'exportBatchLogs'])->name('inbound.batch-logs.export');
+        // Batch Management Routes
+        Route::get('/batch-logs', [BatchController::class, 'batchLogs'])->name('batch-logs');
+        Route::get('/batch-logs/{id}/details', [BatchController::class, 'getBatchDetails'])->name('batch-logs.details');
+        Route::get('/batch-logs/{id}/edit', [BatchController::class, 'editBatch'])->name('batch-logs.edit');
+        Route::patch('/batch-logs/{id}/status', [BatchController::class, 'updateBatchStatus'])->name('batch-logs.status');
+        Route::post('/batch-logs/export', [BatchController::class, 'exportBatchLogs'])->name('batch-logs.export');
 
-    // Batch Labels Printing Routes (Keep separate)
-    Route::get('/inbound/labels', [InventoryController::class, 'batchLogs'])->name('inbound.labels');
-    Route::get('/inbound/labels/batch/{batchId}', [InventoryController::class, 'getBatchForPrint'])->name('inbound.labels.batch');
-    Route::post('/inbound/labels/print', [InventoryController::class, 'printBatchLabelsProcess'])->name('inbound.labels.print');
+        // Batch Labels Printing Routes
+        Route::get('/labels', [BatchController::class, 'batchLogs'])->name('labels');
+        Route::get('/labels/batch/{batchId}', [BatchController::class, 'getBatchForPrint'])->name('labels.batch');
+        Route::post('/labels/print', [BatchController::class, 'printBatchLabelsProcess'])->name('labels.print');
 
-    // RTV (Return to Vendor) Routes
-    Route::get('/inbound/rtv', [InventoryController::class, 'indexRtv'])->name('inbound.rtv');
-    
-    // AJAX Routes for RTV operations
-    Route::get('/inbound/rtv/items', [InventoryController::class, 'getItemsForRtv'])->name('inbound.rtv.items');
-    Route::get('/inbound/rtv/suppliers', [InventoryController::class, 'getSuppliersForRtv'])->name('inbound.rtv.suppliers');
-    Route::get('/inbound/rtv/purchase-orders', [InventoryController::class, 'getPurchaseOrdersForRtv'])->name('inbound.rtv.purchase-orders');
-    Route::get('/inbound/rtv/categories', [InventoryController::class, 'getCategoriesForRtvBulk'])->name('inbound.rtv.categories');
-    
-    // RTV CRUD Operations
-    Route::post('/inbound/rtv', [InventoryController::class, 'storeRtv'])->name('inbound.rtv.store');
-    Route::get('/inbound/rtv/{id}/details', [InventoryController::class, 'getRtvDetails'])->name('inbound.rtv.details');
-    Route::delete('/inbound/rtv/{id}', [InventoryController::class, 'deleteRtv'])->name('inbound.rtv.delete');
-    Route::get('/inbound/rtv/{id}/print', [InventoryController::class, 'printRtvSlip'])->name('inbound.rtv.print');
-    Route::patch('/inbound/rtv/{id}/status', [InventoryController::class, 'updateRtvStatus'])->name('inbound.rtv.status');
+        // RTV (Return to Vendor) Routes
+        Route::get('/rtv', [RtvController::class, 'indexRtv'])->name('rtv');
+        Route::get('/rtv/items', [RtvController::class, 'getItemsForRtv'])->name('rtv.items');
+        Route::get('/rtv/suppliers', [RtvController::class, 'getSuppliersForRtv'])->name('rtv.suppliers');
+        Route::get('/rtv/purchase-orders', [RtvController::class, 'getPurchaseOrdersForRtv'])->name('rtv.purchase-orders');
+        Route::get('/rtv/categories', [RtvController::class, 'getCategoriesForRtvBulk'])->name('rtv.categories');
+        Route::post('/rtv', [RtvController::class, 'storeRtv'])->name('rtv.store');
+        Route::get('/rtv/{id}/details', [RtvController::class, 'getRtvDetails'])->name('rtv.details');
+        Route::delete('/rtv/{id}', [RtvController::class, 'deleteRtv'])->name('rtv.delete');
+        Route::get('/rtv/{id}/print', [RtvController::class, 'printRtvSlip'])->name('rtv.print');
+        Route::patch('/rtv/{id}/status', [RtvController::class, 'updateRtvStatus'])->name('rtv.status');
+    });
 
     //// Outbound Routes
-    Route::get('/outbound/fulfill', [InventoryController::class, 'fulfillRequests'])->name('outbound.fulfill');
-    Route::post('/outbound/track-picking', [InventoryController::class, 'trackPicking'])->name('outbound.track-picking');
-    Route::post('/outbound/confirm-issuance', [InventoryController::class, 'confirmIssuance'])->name('outbound.confirm-issuance');
+    Route::get('/outbound/fulfill', [FulfillmentController::class, 'fulfillRequests'])->name('outbound.fulfill');
+    Route::post('/outbound/track-picking', [FulfillmentController::class, 'trackPicking'])->name('outbound.track-picking');
+    Route::post('/outbound/confirm-issuance', [FulfillmentController::class, 'confirmIssuance'])->name('outbound.confirm-issuance');
 
     // Purchase Requests - Main interface (catalog + history)
-    Route::get('/outbound/purchase-requests', [InventoryController::class, 'index'])->name('purchase-requests.index');
-    Route::get('/outbound/purchase-requests/create', [InventoryController::class, 'create'])->name('purchase-requests.create');
-    Route::post('/outbound/purchase-requests', [InventoryController::class, 'createPurchaseRequest'])->name('purchase-requests.store');
-    Route::get('/purchase-requests/{id}', [InventoryController::class, 'show'])->name('purchase-requests.show');
-    Route::delete('/purchase-requests/{id}', [InventoryController::class, 'destroy'])->name('purchase-requests.destroy');
+    Route::get('/outbound/purchase-requests', [PurchaseRequestController::class, 'index'])->name('purchase-requests.index');
+    Route::get('/outbound/purchase-requests/create', [PurchaseRequestController::class, 'create'])->name('purchase-requests.create');
+    Route::post('/outbound/purchase-requests', [PurchaseRequestController::class, 'store'])->name('purchase-requests.store');
+    Route::get('/purchase-requests/{id}', [PurchaseRequestController::class, 'show'])->name('purchase-requests.show');
+    Route::delete('/purchase-requests/{id}', [PurchaseRequestController::class, 'destroy'])->name('purchase-requests.destroy');
 
     // API endpoints for purchase requests
-    Route::get('/purchase-requests/items', [InventoryController::class, 'getItems'])->name('purchase-requests.items');
-    Route::get('/purchase-requests/categories', [InventoryController::class, 'getCategories'])->name('purchase-requests.categories');
-    Route::get('/purchase-requests/departments', [InventoryController::class, 'getDepartments'])->name('purchase-requests.departments');
+    Route::get('/purchase-requests/items', [PurchaseRequestController::class, 'getItems'])->name('purchase-requests.items');
+    Route::get('/purchase-requests/categories', [PurchaseRequestController::class, 'getCategories'])->name('purchase-requests.categories');
+    Route::get('/purchase-requests/departments', [PurchaseRequestController::class, 'getDepartments'])->name('purchase-requests.departments');
 
 
 
 
-    // Stock Mgmt
-    Route::get('/stock/count', function () { 
-        return view('Inventory.stock_management.physical_count'); 
-    })->name('stock.count');
+    Route::get('/stock/lookup', [BatchLookupController::class, 'batchLookup'])->name('stock.lookup');
+  
+  // AJAX routes for batch lookup
+  Route::get('/stock/lookup/search', [BatchLookupController::class, 'searchBatches'])->name('stock.lookup.search');
+  Route::get('/stock/lookup/batch/{id}', [BatchLookupController::class, 'getBatchDetails'])->name('stock.lookup.batch');
 
-    Route::get('/stock/lookup', [InventoryController::class, 'batchLookup'])->name('stock.lookup');
-    
-    // AJAX routes for batch lookup
-    Route::get('/stock/lookup/search', [InventoryController::class, 'searchBatches'])->name('stock.lookup.search');
-    Route::get('/stock/lookup/batch/{id}', [InventoryController::class, 'getBatchDetails'])->name('stock.lookup.batch');
-
-    Route::get('/stock/transfer', function () { 
-        return view('Inventory.stock_management.stock_transfer'); 
-    })->name('stock.transfer');
 
     // Notification routes
-    Route::get('/notifications', [InventoryController::class, 'notifications'])->name('notifications');
-    Route::get('/notifications/stats', [InventoryController::class, 'getNotificationStats'])->name('notifications.stats');
-    Route::post('/notifications/mark-all-read', [InventoryController::class, 'markAllNotificationsAsRead'])->name('notifications.mark_all_read');
-    Route::post('/notifications/{notification}/mark-read', [InventoryController::class, 'markNotificationAsRead'])->name('notifications.mark_read');
-    Route::post('/notifications/{notification}/mark-unread', [InventoryController::class, 'markNotificationAsUnread'])->name('notifications.mark_unread');
-    Route::delete('/notifications/{notification}', [InventoryController::class, 'deleteNotification'])->name('notifications.delete');
-    Route::post('/notifications/bulk-operations', [InventoryController::class, 'bulkNotificationOperations'])->name('notifications.bulk_operations');
+    Route::get('/notifications', [InventoryNotificationController::class, 'index'])->name('notifications');
+    Route::get('/notifications/header', [InventoryNotificationController::class, 'getHeaderNotifications'])->name('notifications.header');
+    Route::get('/notifications/unread-count', [InventoryNotificationController::class, 'getUnreadCount'])->name('notifications.unread_count');
+    Route::get('/notifications/stats', [InventoryNotificationController::class, 'getNotificationStats'])->name('notifications.stats');
+    Route::post('/notifications/mark-all-read', [InventoryNotificationController::class, 'markAllAsRead'])->name('notifications.mark_all_read');
+    Route::post('/notifications/{notification}/mark-read', [InventoryNotificationController::class, 'markAsRead'])->name('notifications.mark_read');
+    Route::post('/notifications/{notification}/mark-unread', [InventoryNotificationController::class, 'markAsUnread'])->name('notifications.mark_unread');
+    Route::delete('/notifications/{notification}', [InventoryNotificationController::class, 'destroy'])->name('notifications.delete');
+    Route::post('/notifications/bulk-operations', [InventoryNotificationController::class, 'bulkOperations'])->name('notifications.bulk_operations');
 
 });
 
@@ -431,35 +464,36 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
 Route::middleware(['auth', 'role:employee'])->prefix('employee')->name('employee.')->group(function () {
     
     // Dashboard
-    Route::get('/dashboard', [EmployeeController::class, 'home'])->name('dashboard');
+    Route::get('/dashboard', [EmployeeDashboardController::class, 'home'])->name('dashboard');
 
     // Requisitions
-    Route::get('/requisitions/create', [EmployeeController::class, 'showCreateRequisition'])->name('requisitions.create');
-    Route::post('/requisitions', [EmployeeController::class, 'createRequisition'])->name('requisitions.store');
-    Route::get('/requisitions/history', [EmployeeController::class, 'requisitionHistory'])->name('requisitions.history');
-    Route::get('/requisitions/{requisition}/details', [EmployeeController::class, 'getRequisitionDetails'])->name('requisitions.details');
+    Route::get('/requisitions/create', [EmployeeRequisitionController::class, 'showCreateRequisition'])->name('requisitions.create');
+    Route::post('/requisitions', [EmployeeRequisitionController::class, 'createRequisition'])->name('requisitions.store');
+    Route::get('/requisitions/history', [EmployeeRequisitionController::class, 'requisitionHistory'])->name('requisitions.history');
+    Route::get('/requisitions/{requisition}/details', [EmployeeRequisitionController::class, 'getRequisitionDetails'])->name('requisitions.details');
     
     // Requisition Actions
-    Route::post('/requisitions/{requisition}/confirm-receipt', [EmployeeController::class, 'confirmReceipt'])->name('requisitions.confirm-receipt');
+    Route::post('/requisitions/{requisition}/confirm-receipt', [EmployeeRequisitionController::class, 'confirmReceipt'])->name('requisitions.confirm-receipt');
 
     // Production
-    Route::get('/production/log', [EmployeeController::class, 'productionLog'])->name('production.log');
-    Route::post('/production/log', [EmployeeController::class, 'storeProduction'])->name('production.store');
+    Route::get('/production/log', [EmployeeProductionController::class, 'productionLog'])->name('production.log');
+    Route::post('/production/log', [EmployeeProductionController::class, 'storeProduction'])->name('production.store');
     Route::get('/production/check-reject-support', [EmployeeController::class, 'checkRejectQuantitySupport'])->name('production.check-reject-support');
-    Route::get('/recipes', [EmployeeController::class, 'recipes'])->name('recipes.index');
-    Route::get('/recipes/{recipe}/details', [EmployeeController::class, 'getRecipeDetails'])->name('recipes.details');
-    Route::post('/recipes', [EmployeeController::class, 'createRecipe'])->name('recipes.store');
-    Route::put('/recipes/{recipe}', [EmployeeController::class, 'updateRecipe'])->name('recipes.update');
-    Route::delete('/recipes/{recipe}', [EmployeeController::class, 'deleteRecipe'])->name('recipes.destroy');
+    Route::get('/recipes', [EmployeeRecipeController::class, 'recipes'])->name('recipes.index');
+    Route::get('/recipes/{recipe}/details', [EmployeeRecipeController::class, 'getRecipeDetails'])->name('recipes.details');
+    Route::post('/recipes', [EmployeeRecipeController::class, 'createRecipe'])->name('recipes.store');
+    Route::put('/recipes/{recipe}', [EmployeeRecipeController::class, 'updateRecipe'])->name('recipes.update');
+    Route::delete('/recipes/{recipe}', [EmployeeRecipeController::class, 'deleteRecipe'])->name('recipes.destroy');
 
     // Notifications
-    Route::get('/notifications', [EmployeeController::class, 'notifications'])->name('notifications');
-    Route::get('/notifications/header', [EmployeeController::class, 'getHeaderNotifications'])->name('notifications.header');
-    Route::post('/notifications/{notification}/mark-read', [EmployeeController::class, 'markNotificationAsRead'])->name('notifications.mark-read');
-    Route::post('/notifications/{notification}/mark-unread', [EmployeeController::class, 'markNotificationAsUnread'])->name('notifications.mark-unread');
-    Route::post('/notifications/mark-all-read', [EmployeeController::class, 'markAllNotificationsAsRead'])->name('notifications.mark-all-read');
+    Route::get('/notifications', [EmployeeNotificationController::class, 'index'])->name('notifications');
+    Route::get('/notifications/header', [EmployeeNotificationController::class, 'getHeaderNotifications'])->name('notifications.header');
+    Route::get('/notifications/unread-count', [EmployeeNotificationController::class, 'getUnreadCount'])->name('notifications.unread-count');
+    Route::post('/notifications/{notification}/mark-read', [EmployeeNotificationController::class, 'markNotificationAsRead'])->name('notifications.mark-read');
+    Route::post('/notifications/{notification}/mark-unread', [EmployeeNotificationController::class, 'markNotificationAsUnread'])->name('notifications.mark-unread');
+    Route::post('/notifications/mark-all-read', [EmployeeNotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 
     // AJAX endpoints
-    Route::get('/items/search', [EmployeeController::class, 'getItemsForRequisition'])->name('items.search');
+    Route::get('/items/search', [EmployeeRequisitionController::class, 'getItemsForRequisition'])->name('items.search');
 
 });

@@ -27,14 +27,12 @@
                 <input type="text" 
                     id="searchInput" 
                     class="block w-full pl-11 pr-4 py-2.5 border border-gray-200 rounded-lg bg-cream-bg placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all" 
-                    placeholder="Search categories..."
-                    onkeyup="searchCategories()">
+                    placeholder="Search categories...">
             </div>
             
             <div class="w-full md:w-48 relative">
                 <select id="statusFilter" 
-                        class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer"
-                        onchange="filterCategories()">
+                        class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer">
                     <option value="">All Status</option>
                     <option value="active">Active Only</option>
                     <option value="inactive">Inactive Only</option>
@@ -66,7 +64,7 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-10 w-10 {{ $category->is_active ? 'bg-white border border-border-soft' : 'bg-gray-100' }} rounded-lg flex items-center justify-center {{ $category->is_active ? 'text-chocolate' : 'text-gray-400' }} shadow-sm">
-                                    <i class="{{ getCategoryIcon($category->name) }} text-lg"></i>
+                                    <i class="{{ $category->icon ?? 'fas fa-tag' }} text-lg"></i>
                                 </div>
                                 <div class="ml-4">
                                     <div class="text-sm font-bold text-chocolate category-name">{{ $category->name }}</div>
@@ -325,7 +323,31 @@ document.addEventListener('DOMContentLoaded', function() {
     loadParentCategories();
     setupIconSelection();
     setupToggleListeners();
+    setupPaginationHandlers();
+    
+    // Initialize search and filter functionality
+    initializeSearchAndFilter();
 });
+
+// Initialize search and filter functionality
+function initializeSearchAndFilter() {
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    if (searchInput) {
+        // Remove any existing listeners to prevent duplicates
+        searchInput.removeEventListener('keyup', handleSearch);
+        // Add new listener with debouncing
+        searchInput.addEventListener('keyup', handleSearch);
+    }
+    
+    if (statusFilter) {
+        // Remove any existing listeners to prevent duplicates
+        statusFilter.removeEventListener('change', handleFilter);
+        // Add new listener
+        statusFilter.addEventListener('change', handleFilter);
+    }
+}
 
 // --- Modal Helper Functions ---
 
@@ -514,13 +536,19 @@ function saveCategory() {
             showNotification('Success', data.message || (currentEditId ? 'Category updated successfully.' : 'Category created successfully.'));
             closeCategoryModal();
             
+            // Update UI immediately for better user experience
+            updateCategoryRow(name, icon);
+            
+            // Re-initialize search functionality in case DOM changed
+            setTimeout(() => {
+                initializeSearchAndFilter();
+                applyFilters(); // Refresh the current search/filter state
+            }, 100);
+            
             // Refresh categories in other pages/tabs if they exist
             if (typeof refreshCategories === 'function') {
                 refreshCategories();
             }
-            
-            // Reload page after short delay to show the new category
-            setTimeout(() => window.location.reload(), 1500);
         } else {
             showNotification('Error', data.message || 'Error saving category', true);
             // Show validation errors if any
@@ -552,6 +580,22 @@ function editCategory(categoryId) {
             // Fill in the form fields
             document.getElementById('categoryName').value = category.name || '';
             document.getElementById('categoryDescription').value = category.description || '';
+            
+            // Set the selected icon
+            const selectedIcon = category.icon || 'fas fa-tag';
+            document.getElementById('selectedIcon').value = selectedIcon;
+            
+            // Update icon selection UI
+            const iconButtons = document.querySelectorAll('.icon-option');
+            iconButtons.forEach(btn => {
+                btn.classList.remove('bg-chocolate', 'text-white', 'ring-2', 'ring-offset-2', 'ring-chocolate');
+                btn.classList.add('bg-white', 'border', 'border-gray-200', 'text-gray-400', 'hover:text-caramel', 'hover:border-caramel');
+                
+                if (btn.dataset.icon === selectedIcon) {
+                    btn.classList.remove('bg-white', 'border', 'border-gray-200', 'text-gray-400', 'hover:text-caramel', 'hover:border-caramel');
+                    btn.classList.add('bg-chocolate', 'text-white', 'ring-2', 'ring-offset-2', 'ring-chocolate');
+                }
+            });
             
             // Load parent categories excluding current category
             loadParentCategories(categoryId);
@@ -654,6 +698,12 @@ function executeToggle() {
                 }
             }
             
+            // Re-initialize search functionality in case DOM changed
+            setTimeout(() => {
+                initializeSearchAndFilter();
+                applyFilters(); // Refresh the current search/filter state
+            }, 100);
+            
             // Refresh categories in other pages/tabs to reflect status changes
             if (typeof refreshCategories === 'function') {
                 refreshCategories();
@@ -717,16 +767,22 @@ function executeDelete() {
             const row = document.getElementById(`category-row-${pendingDeleteId}`);
             if(row) row.remove();
             
+            // Re-initialize search functionality in case DOM changed
+            setTimeout(() => {
+                initializeSearchAndFilter();
+                applyFilters(); // Refresh the current search/filter state
+            }, 100);
+            
             // Refresh categories in other pages/tabs to remove deleted category
             if (typeof refreshCategories === 'function') {
                 refreshCategories();
             }
             
             // If no more rows, reload the page to show empty state
-            const tableBody = document.getElementById('categoriesTableBody');
-            if (tableBody && tableBody.children.length === 0) {
-                setTimeout(() => window.location.reload(), 1500);
-            }
+            // const tableBody = document.getElementById('categoriesTableBody');
+            // if (tableBody && tableBody.children.length === 0) {
+            //     setTimeout(() => window.location.reload(), 1500);
+            // }
         } else {
             showNotification('Error', data.message || 'Error deleting category', true);
         }
@@ -741,45 +797,193 @@ function executeDelete() {
     });
 }
 
-// Search & Filter functions
-function searchCategories() {
-    // Mock search - filter table rows
-    const input = document.getElementById('searchInput');
-    const filter = input.value.toUpperCase();
-    const table = document.getElementById("categoriesTableBody");
-    const tr = table.getElementsByTagName("tr");
+// Enhanced Search & Filter functions with server-side integration
+let searchTimeout;
+let currentRequest = null;
 
-    for (let i = 0; i < tr.length; i++) {
-        const tdName = tr[i].querySelector(".category-name");
-        if (tdName) {
-            const txtValue = tdName.textContent || tdName.innerText;
-            if (txtValue.toUpperCase().indexOf(filter) > -1) {
-                tr[i].style.display = "";
-            } else {
-                tr[i].style.display = "none";
-            }
-        }       
+// Unified search and filter handler
+function handleSearch() {
+    // Clear existing timeout
+    clearTimeout(searchTimeout);
+    
+    // Add debouncing to improve performance
+    searchTimeout = setTimeout(() => {
+        applyFilters();
+    }, 300); // 300ms delay
+}
+
+function handleFilter() {
+    // Clear existing timeout
+    clearTimeout(searchTimeout);
+    
+    // Apply filters immediately for filter changes
+    applyFilters();
+}
+
+function applyFilters(page = 1) {
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    
+    if (!searchInput || !statusFilter) {
+        console.error('Search input or status filter not found');
+        return;
     }
+    
+    const searchTerm = searchInput.value.trim();
+    const status = statusFilter.value;
+    
+    // Cancel any pending request
+    if (currentRequest) {
+        currentRequest.abort();
+    }
+    
+    showLoading(true);
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (searchTerm !== '') {
+        params.append('search', searchTerm);
+    }
+    if (status !== '') {
+        params.append('status', status);
+    }
+    params.append('page', page);
+    
+    // Make AJAX request to server
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', `/admin/categories?${params.toString()}`);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    
+    xhr.onload = function() {
+        showLoading(false);
+        currentRequest = null;
+        
+        if (xhr.status === 200) {
+            try {
+                const response = xhr.responseText;
+                // Create a temporary DOM element to parse the response
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = response;
+                
+                // Extract the table body from the response
+                const newTableBody = tempDiv.querySelector('#categoriesTableBody');
+                const newPagination = tempDiv.querySelector('.pagination');
+                
+                if (newTableBody) {
+                    // Update the table body
+                    const currentTableBody = document.getElementById('categoriesTableBody');
+                    currentTableBody.innerHTML = newTableBody.innerHTML;
+                    
+                    // Update pagination if it exists
+                    const currentPaginationContainer = document.querySelector('.bg-white.px-6.py-4.border-t.border-border-soft');
+                    if (currentPaginationContainer && newPagination) {
+                        currentPaginationContainer.innerHTML = newPagination.outerHTML;
+                        
+                        // Re-attach pagination click handlers
+                        setupPaginationHandlers();
+                    } else if (currentPaginationContainer && !newPagination) {
+                        // No pagination in response, remove pagination container
+                        currentPaginationContainer.remove();
+                    }
+                    
+                    // Re-initialize toggle listeners for new rows
+                    setupToggleListeners();
+                    
+                    // Show message if no results
+                    const rows = currentTableBody.querySelectorAll('tr');
+                    const hasData = Array.from(rows).some(row => row.querySelector('.category-name'));
+                    
+                    if (!hasData) {
+                        showNoResultsMessage(searchTerm, status);
+                    }
+                    
+                    // Scroll to top of table
+                    currentTableBody.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } catch (error) {
+                console.error('Error parsing server response:', error);
+                showNotification('Error', 'Error loading search results', true);
+            }
+        } else {
+            showNotification('Error', 'Error loading search results', true);
+        }
+    };
+    
+    xhr.onerror = function() {
+        showLoading(false);
+        currentRequest = null;
+        showNotification('Error', 'Network error occurred', true);
+    };
+    
+    xhr.ontimeout = function() {
+        showLoading(false);
+        currentRequest = null;
+        showNotification('Error', 'Request timeout', true);
+    };
+    
+    currentRequest = xhr;
+    xhr.send();
+}
+
+function showNoResultsMessage(searchTerm, status) {
+    const tableBody = document.getElementById('categoriesTableBody');
+    if (!tableBody) return;
+    
+    // Clear existing content
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="5" class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center justify-center">
+                    <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 border border-border-soft">
+                        <i class="fas fa-search text-chocolate/30 text-2xl"></i>
+                    </div>
+                    <p class="font-display text-lg font-bold text-chocolate">No categories found</p>
+                    <p class="text-sm text-gray-400 mt-1">
+                        ${searchTerm ? `No categories match "${searchTerm}"` : 'No categories match the selected filters'}
+                    </p>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+function setupPaginationHandlers() {
+    const paginationLinks = document.querySelectorAll('.pagination a');
+    paginationLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const url = new URL(this.href);
+            const page = url.searchParams.get('page') || 1;
+            applyFilters(page);
+        });
+    });
+}
+
+// Legacy function names for backward compatibility
+function searchCategories() {
+    handleSearch();
 }
 
 function filterCategories() {
-    const status = document.getElementById('statusFilter').value;
-    const table = document.getElementById("categoriesTableBody");
-    const tr = table.getElementsByTagName("tr");
+    handleFilter();
+}
+
+function updateCategoryRow(categoryName, categoryIcon) {
+    const categoryNameElements = document.querySelectorAll('.category-name');
     
-    for (let i = 0; i < tr.length; i++) {
-        const checkbox = tr[i].querySelector('input.category-toggle');
-        if (checkbox) {
-            const isActive = checkbox.checked;
-            if (status === 'active' && !isActive) {
-                tr[i].style.display = "none";
-            } else if (status === 'inactive' && isActive) {
-                tr[i].style.display = "none";
-            } else {
-                tr[i].style.display = "";
+    // Find the row with matching category name and update it
+    categoryNameElements.forEach(element => {
+        if (element.textContent.trim() === categoryName.trim()) {
+            const row = element.closest('tr');
+            if (row) {
+                // Update the icon
+                const iconElement = row.querySelector('.flex-shrink-0 i');
+                if (iconElement) {
+                    iconElement.className = `${categoryIcon} text-lg`;
+                }
             }
         }
-    }
+    });
 }
 </script>
 @endsection

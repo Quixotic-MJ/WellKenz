@@ -52,7 +52,10 @@ class UserController extends Controller
         // Get role statistics for filters
         $roleStats = $this->userService->getRoleStatistics();
 
-        return view('Admin.user_management.all_user', compact('users', 'roleStats'));
+        // Get current authenticated admin ID to exclude from bulk operations
+        $currentAdminId = auth()->id();
+
+        return view('Admin.user_management.all_user', compact('users', 'roleStats', 'currentAdminId'));
     }
 
     /**
@@ -317,5 +320,164 @@ class UserController extends Controller
         $query = $request->get('q', '');
         $users = $this->userService->searchUsers($query);
         return response()->json($users);
+    }
+
+    /**
+     * Filter users via AJAX for smoother search experience.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function filterUsers(Request $request)
+    {
+        try {
+            $filters = [
+                'search' => $request->get('search'),
+                'role' => $request->get('role'),
+                'status' => $request->get('status')
+            ];
+
+            $perPage = $request->get('per_page', 10);
+            $page = $request->get('page', 1);
+
+            // Get paginated users with filters
+            $users = $this->userService->getPaginatedUsers($filters, $perPage);
+
+            // Format users for JSON response
+            $formattedUsers = $users->map(function ($user) {
+                // Handle last login formatting safely
+                $lastLoginFormatted = 'Never';
+                if ($user->last_login_at) {
+                    $lastLoginFormatted = $user->last_login_at->diffForHumans();
+                }
+                
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'formatted_role' => $user->formatted_role,
+                    'role_color_class' => $user->role_color_class,
+                    'is_active' => $user->is_active,
+                    'formatted_last_login' => $lastLoginFormatted,
+                    'initials' => $user->initials,
+                    'employee_id' => $user->profile?->employee_id,
+                    'profile_photo_path' => $user->profile?->profile_photo_path,
+                    'current_admin_id' => auth()->id(),
+                    'is_current_admin' => $user->id === auth()->id()
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'users' => $formattedUsers,
+                'pagination' => [
+                    'current_page' => $users->currentPage(),
+                    'last_page' => $users->lastPage(),
+                    'per_page' => $users->perPage(),
+                    'total' => $users->total(),
+                    'from' => $users->firstItem(),
+                    'to' => $users->lastItem()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error filtering users: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Export users data to CSV format.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function exportUsers(Request $request)
+    {
+        try {
+            $filters = [
+                'search' => $request->get('search'),
+                'role' => $request->get('role'),
+                'status' => $request->get('status')
+            ];
+
+            // Get all users with applied filters (no pagination for export)
+            $users = $this->userService->getPaginatedUsers($filters, 100000); // Large number to get all results
+            
+            // Prepare CSV data
+            $csvData = [];
+            $csvData[] = [
+                'ID',
+                'Employee ID', 
+                'Full Name',
+                'Email Address',
+                'Role',
+                'Department',
+                'Position',
+                'Phone',
+                'Status',
+                'Last Login',
+                'Created At',
+                'Updated At'
+            ];
+
+            foreach ($users as $user) {
+                // Handle last login formatting for CSV export
+                $lastLoginFormatted = 'Never';
+                if ($user->last_login_at) {
+                    $lastLoginFormatted = $user->last_login_at->diffForHumans();
+                }
+                
+                $csvData[] = [
+                    $user->id,
+                    $user->profile?->employee_id ?? '',
+                    $user->name,
+                    $user->email,
+                    $user->formatted_role,
+                    $user->profile?->department ?? '',
+                    $user->profile?->position ?? '',
+                    $user->profile?->phone ?? '',
+                    $user->is_active ? 'Active' : 'Inactive',
+                    $lastLoginFormatted,
+                    $user->created_at->format('Y-m-d H:i:s'),
+                    $user->updated_at->format('Y-m-d H:i:s')
+                ];
+            }
+
+            // Generate CSV filename with timestamp
+            $filename = 'users_export_' . now()->format('Y-m-d_H-i-s') . '.csv';
+            $filepath = storage_path('app/private/exports/' . $filename);
+            
+            // Ensure exports directory exists
+            $directory = storage_path('app/private/exports');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            // Write CSV file
+            $file = fopen($filepath, 'w');
+            foreach ($csvData as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+
+            return response()->download($filepath, $filename, [
+                'Content-Type' => 'text/csv',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"'
+            ])->deleteFileAfterSend(true);
+
+        } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error exporting users: ' . $e->getMessage()
+                ], 500);
+            }
+            
+            return redirect()->back()->with('error', 'Failed to export users: ' . $e->getMessage());
+        }
     }
 }

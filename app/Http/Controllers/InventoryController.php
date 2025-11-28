@@ -2462,6 +2462,76 @@ class InventoryController extends Controller
     }
 
     /**
+     * Get header notifications for the current user
+     */
+    public function getHeaderNotifications()
+    {
+        try {
+            // Get only the 5 most recent unread notifications for header display
+            $notifications = \App\Models\Notification::forCurrentUser()
+                ->where('is_read', false)
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->map(function ($notification) {
+                    return [
+                        'id' => $notification->id,
+                        'title' => $notification->title,
+                        'message' => $notification->message,
+                        'time_ago' => $notification->getTimeAgoAttribute(),
+                        'action_url' => $notification->action_url,
+                        'icon_class' => $notification->getIconClass(),
+                        'read_at' => $notification->is_read ? now() : null,
+                        'priority' => $notification->priority,
+                        'type' => $notification->type,
+                        'created_at' => $notification->created_at
+                    ];
+                });
+
+            $unreadCount = \App\Models\Notification::unreadCountForCurrentUser();
+
+            return response()->json([
+                'success' => true,
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting header notifications: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load notifications',
+                'notifications' => [],
+                'unread_count' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Get unread notification count for current user
+     */
+    public function getUnreadNotificationCount()
+    {
+        try {
+            $unreadCount = \App\Models\Notification::unreadCountForCurrentUser();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting unread notification count: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'unread_count' => 0
+            ], 500);
+        }
+    }
+
+    /**
      * Bulk operations on notifications
      */
     public function bulkNotificationOperations(Request $request)

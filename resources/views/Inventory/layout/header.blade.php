@@ -162,7 +162,7 @@
             emptyEl.classList.add('hidden');
             listEl.innerHTML = '';
 
-            const response = await fetch('{{ route("admin.notifications.header") }}', {
+            const response = await fetch('{{ route("inventory.notifications.header") }}', {
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
                     'Accept': 'application/json'
@@ -172,8 +172,8 @@
             const data = await response.json();
 
             if (data.success) {
-                const notifications = data.notifications;
-                const unreadCount = data.unread_count;
+                const notifications = data.notifications || [];
+                const unreadCount = data.unread_count || 0;
 
                 // Hide loading
                 loadingEl.classList.add('hidden');
@@ -287,7 +287,7 @@
             }
 
             // Send request to backend
-            await fetch(`{{ route('admin.notifications.mark_read', ['notification' => '__ID__']) }}`.replace('__ID__', notificationId), {
+            await fetch(`{{ route('inventory.notifications.mark_read', ['notification' => '__ID__']) }}`.replace('__ID__', notificationId), {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -307,7 +307,7 @@
     // Mark all notifications as read
     async function markAllAsRead() {
         try {
-            const response = await fetch('{{ route("admin.notifications.mark_all_read") }}', {
+            const response = await fetch('{{ route("inventory.notifications.mark_all_read") }}', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',

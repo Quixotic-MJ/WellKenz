@@ -90,8 +90,10 @@
                 <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('employee.notifications') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Notifications</span>
             </div>
-            {{-- Static Badge as per original code --}}
-            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm">1</span>
+            {{-- Dynamic Badge --}}
+            <span id="notification-badge" class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm" style="display: none;">
+                <span id="notification-count">0</span>
+            </span>
         </a>
 
     </nav>
@@ -104,6 +106,51 @@
         </div>
     </div>
 </aside>
+
+{{-- Notification Badge Script --}}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const badge = document.getElementById('notification-badge');
+    const countElement = document.getElementById('notification-count');
+    
+    // Function to update badge count
+    function updateNotificationBadge() {
+        fetch('{{ route("employee.notifications.unread-count") }}', {
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && typeof data.unread_count === 'number') {
+                const count = data.unread_count;
+                
+                if (count > 0) {
+                    countElement.textContent = count > 99 ? '99+' : count;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching notification count:', error);
+            badge.style.display = 'none';
+        });
+    }
+    
+    // Update badge on page load
+    updateNotificationBadge();
+    
+    // Refresh badge every 30 seconds for real-time updates
+    setInterval(updateNotificationBadge, 30000);
+    
+    // Expose function globally for other scripts to call
+    window.refreshNotificationBadge = updateNotificationBadge;
+});
+</script>
 
 {{-- Custom Scrollbar Style --}}
 <style>

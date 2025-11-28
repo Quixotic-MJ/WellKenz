@@ -105,23 +105,7 @@
             <span class="ml-2">Audit Logs</span>
         </a>
 
-        <a href="{{ Route::has('admin.settings.index') ? route('admin.settings.index') : '#' }}"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('admin.settings*') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-cogs w-6 text-center text-sm {{ request()->routeIs('admin.settings*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Settings</span>
-        </a>
-
-        <a href="{{ Route::has('admin.backups.index') ? route('admin.backups.index') : '#' }}"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('admin.backups*') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-cloud-download-alt w-6 text-center text-sm {{ request()->routeIs('admin.backups*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Backups</span>
-        </a>
+    
 
         <a href="{{ Route::has('admin.notifications.index') ? route('admin.notifications.index') : '#' }}"
            class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
@@ -132,7 +116,9 @@
                 <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('admin.notifications*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Notifications</span>
             </div>
-            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center">3</span>
+            @if(($unreadNotificationsCount ?? 0) > 0)
+                <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center">{{ $unreadNotificationsCount }}</span>
+            @endif
         </a>
 
     </nav>

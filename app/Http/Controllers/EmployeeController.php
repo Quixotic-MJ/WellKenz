@@ -914,6 +914,29 @@ class EmployeeController extends Controller
     }
 
     /**
+     * Get unread notification count for current user.
+     */
+    public function getUnreadNotificationCount()
+    {
+        try {
+            $unreadCount = Notification::unreadCountForCurrentUser();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => $unreadCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting unread notification count: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'unread_count' => 0
+            ], 500);
+        }
+    }
+
+    /**
      * Get header notifications for the current user.
      */
     public function getHeaderNotifications()

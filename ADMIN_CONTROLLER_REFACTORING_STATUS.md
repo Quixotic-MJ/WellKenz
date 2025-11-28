@@ -119,6 +119,44 @@ Route::prefix('users')->name('users.')->group(function () {
 - **Proper service layer separation**
 - **Enhanced functionality and features**
 
+## 🔄 Phase 2 Progress: Inventory & Purchasing
+
+### Inventory Controllers Extracted
+- Inbound: `ReceivingController`, `BatchController`, `RtvController`
+- Outbound: `FulfillmentController`, `PurchaseRequestController`
+- StockManagement: `StockLevelController`
+- Notifications: `Inventory\Notifications\NotificationController`
+
+### Routes Updated (Inventory)
+- Outbound routes now use `Outbound\FulfillmentController` for:
+  - `inventory/outbound/fulfill`
+  - `inventory/outbound/track-picking`
+  - `inventory/outbound/confirm-issuance`
+- Purchase Request routes now use `Outbound\PurchaseRequestController` for:
+  - UI: `inventory/outbound/purchase-requests` (index/create/store)
+  - API: `inventory/purchase-requests/items`, `categories`, `departments`
+- Inventory notifications now use `Inventory\Notifications\NotificationController` (aliased in routes) for:
+  - `inventory/notifications`, `header`, `unread-count`, `stats`
+  - `mark-all-read`, `mark-read`, `mark-unread`, `delete`, `bulk-operations`
+
+### Blade Mappings Verified
+- `Inventory.home`
+- `Inventory.outbound.fullfill_request`
+- `Inventory.outbound.purchase_request`
+- `Inventory.notification`
+- `Inventory.inbound.*` views (RTV, labels, batch logs, receive delivery)
+
+### Legacy Inventory Endpoints — Migrated
+- Batch lookup moved from `InventoryController` to `Inventory\StockManagement\BatchLookupController`.
+- Routes updated:
+  - `GET /inventory/stock/lookup` → `BatchLookupController@batchLookup`
+  - `GET /inventory/stock/lookup/search` → `BatchLookupController@searchBatches`
+  - `GET /inventory/stock/lookup/batch/{id}` → `BatchLookupController@getBatchDetails`
+
+### Purchasing
+- Current routes remain under `PurchasingController` (no change in this commit).
+- Planned split per refactoring plan: `Purchasing/PurchaseOrderController`, `SupplierController`, `PriceListController`, `ReportController`.
+
 ## 🔧 TECHNICAL SPECIFICATIONS
 
 ### Controller Responsibilities

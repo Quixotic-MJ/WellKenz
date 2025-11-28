@@ -146,12 +146,9 @@
                                 </td>
                                 <td class="px-4 py-3 text-right">
                                     @if(!$isQuarantined)
-                                        <button onclick="pickBatch({{ $batch->id }})" 
-                                            class="text-xs font-bold text-white bg-chocolate hover:bg-chocolate-dark px-2 py-1 rounded shadow-sm transition-colors">
-                                            Reserve
-                                        </button>
+                                        <span class="text-gray-400 text-xs"><i class="fas fa-clock"></i> Pending</span>
                                     @else
-                                        <span class="text-gray-400 text-xs"><i class="fas fa-check"></i></span>
+                                        <span class="text-gray-400 text-xs"><i class="fas fa-check"></i> Reserved</span>
                                     @endif
                                 </td>
                             </tr>
@@ -224,10 +221,9 @@
                             <li class="p-3 hover:bg-green-50/30 transition-colors group">
                                 <div class="flex justify-between mb-1">
                                     <span class="text-xs font-mono font-bold text-gray-800">#{{ $req->requisition_number }}</span>
-                                    <button onclick="startPicking({{ $req->id }})" 
-                                        class="text-[10px] bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition shadow-sm">
-                                        Start Pick
-                                    </button>
+                                    <span class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded">
+                                        Ready
+                                    </span>
                                 </div>
                                 <p class="text-xs text-gray-600">
                                     To: <span class="font-bold text-chocolate">{{ $req->department }}</span>
@@ -287,71 +283,201 @@
         </div>
     </div>
 
+    {{-- CUSTOM MODALS --}}
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeConfirmationModal()"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto border border-border-soft transform transition-all">
+                <!-- Header -->
+                <div class="flex items-center justify-between p-6 border-b border-border-soft bg-cream-bg/50 rounded-t-2xl">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-caramel/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-question-circle text-caramel text-lg"></i>
+                        </div>
+                        <h3 id="confirmTitle" class="font-display text-lg font-bold text-chocolate">Confirm Action</h3>
+                    </div>
+                    <button onclick="closeConfirmationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                
+                <!-- Content -->
+                <div class="p-6">
+                    <p id="confirmMessage" class="text-gray-700 leading-relaxed"></p>
+                </div>
+                
+                <!-- Footer -->
+                <div class="flex justify-end space-x-3 p-6 border-t border-border-soft bg-gray-50/50 rounded-b-2xl">
+                    <button onclick="closeConfirmationModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button id="confirmButton" class="px-4 py-2 text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark rounded-lg transition-colors shadow-md">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto border border-border-soft transform transition-all">
+                <!-- Header -->
+                <div class="flex items-center justify-between p-6 border-b border-border-soft bg-cream-bg/50 rounded-t-2xl">
+                    <div class="flex items-center space-x-3">
+                        <div id="notificationIcon" class="w-10 h-10 rounded-xl flex items-center justify-center">
+                            <!-- Icon will be dynamically set -->
+                        </div>
+                        <h3 id="notificationTitle" class="font-display text-lg font-bold text-chocolate">Notification</h3>
+                    </div>
+                    <button onclick="closeNotificationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                
+                <!-- Content -->
+                <div class="p-6">
+                    <p id="notificationMessage" class="text-gray-700 leading-relaxed whitespace-pre-line"></p>
+                </div>
+                
+                <!-- Footer -->
+                <div class="flex justify-end p-6 border-t border-border-soft bg-gray-50/50 rounded-b-2xl">
+                    <button onclick="closeNotificationModal()" class="px-6 py-2 text-sm font-bold text-white bg-caramel hover:bg-caramel-dark rounded-lg transition-colors shadow-md">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-// JavaScript logic preserved
-function startPicking(requisitionId) {
-    if (confirm('Start picking for this requisition?')) {
-        fetch(`/inventory/requisitions/${requisitionId}/start-picking`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert(data.message);
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while starting picking');
-        });
+// Custom Modal Management Functions
+let currentModal = null;
+let confirmCallback = null;
+
+function showConfirmationModal(title, message, callback) {
+    const modal = document.getElementById('confirmationModal');
+    const titleEl = document.getElementById('confirmTitle');
+    const messageEl = document.getElementById('confirmMessage');
+    const buttonEl = document.getElementById('confirmButton');
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    confirmCallback = callback;
+    
+    // Remove any existing listeners
+    const newButton = buttonEl.cloneNode(true);
+    buttonEl.parentNode.replaceChild(newButton, buttonEl);
+    
+    // Add new listener
+    newButton.addEventListener('click', function() {
+        closeConfirmationModal();
+        if (confirmCallback) confirmCallback();
+    });
+    
+    modal.classList.remove('hidden');
+    currentModal = modal;
+    document.body.style.overflow = 'hidden';
+    
+    // Focus management
+    setTimeout(() => {
+        newButton.focus();
+    }, 100);
+    
+    // Add keyboard listener
+    document.addEventListener('keydown', handleModalKeydown);
+}
+
+function closeConfirmationModal() {
+    const modal = document.getElementById('confirmationModal');
+    modal.classList.add('hidden');
+    currentModal = null;
+    document.body.style.overflow = '';
+    confirmCallback = null;
+    document.removeEventListener('keydown', handleModalKeydown);
+}
+
+function showNotificationModal(title, message, type = 'info') {
+    const modal = document.getElementById('notificationModal');
+    const titleEl = document.getElementById('notificationTitle');
+    const messageEl = document.getElementById('notificationMessage');
+    const iconEl = document.getElementById('notificationIcon');
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    // Set icon based on type
+    const iconConfig = {
+        success: { icon: 'fas fa-check-circle', bg: 'bg-green-100', text: 'text-green-600' },
+        error: { icon: 'fas fa-exclamation-circle', bg: 'bg-red-100', text: 'text-red-600' },
+        warning: { icon: 'fas fa-exclamation-triangle', bg: 'bg-amber-100', text: 'text-amber-600' },
+        info: { icon: 'fas fa-info-circle', bg: 'bg-blue-100', text: 'text-blue-600' }
+    };
+    
+    const config = iconConfig[type] || iconConfig.info;
+    iconEl.className = `w-10 h-10 rounded-xl flex items-center justify-center ${config.bg}`;
+    iconEl.innerHTML = `<i class="${config.icon} ${config.text} text-lg"></i>`;
+    
+    modal.classList.remove('hidden');
+    currentModal = modal;
+    document.body.style.overflow = 'hidden';
+    
+    // Focus management
+    const okButton = modal.querySelector('button:last-child');
+    setTimeout(() => {
+        okButton.focus();
+    }, 100);
+    
+    // Add keyboard listener
+    document.addEventListener('keydown', handleModalKeydown);
+}
+
+function closeNotificationModal() {
+    const modal = document.getElementById('notificationModal');
+    modal.classList.add('hidden');
+    currentModal = null;
+    document.body.style.overflow = '';
+    document.removeEventListener('keydown', handleModalKeydown);
+}
+
+function handleModalKeydown(event) {
+    if (!currentModal) return;
+    
+    // Handle ESC key
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        if (currentModal.id === 'confirmationModal') {
+            closeConfirmationModal();
+        } else if (currentModal.id === 'notificationModal') {
+            closeNotificationModal();
+        }
+    }
+    
+    // Handle Enter key on confirmation modal
+    if (event.key === 'Enter' && currentModal.id === 'confirmationModal' && confirmCallback) {
+        event.preventDefault();
+        closeConfirmationModal();
+        confirmCallback();
     }
 }
 
-function pickBatch(batchId) {
-    if (confirm('Reserve this batch for FEFO priority usage?\n\nThis will:\n• Mark batch as FEFO priority\n• Notify production team\n• Create audit trail')) {
-        
-        const button = event.target;
-        const originalText = button.textContent;
-        button.textContent = '...';
-        button.disabled = true;
-        
-        fetch(`/inventory/batches/${batchId}/pick`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                button.textContent = 'Reserved';
-                button.className = "text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-100";
-                alert('✅ ' + data.message + '\n\n📢 Production team notified.');
-                location.reload(); // Reload to update state properly
-            } else {
-                button.textContent = originalText;
-                button.disabled = false;
-                alert('❌ ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            button.textContent = originalText;
-            button.disabled = false;
-            alert('❌ An error occurred while reserving batch');
-        });
+// Add global keyboard listener for closing modals by clicking outside
+document.addEventListener('click', function(event) {
+    if (currentModal && event.target === currentModal.querySelector('.absolute.inset-0')) {
+        if (currentModal.id === 'confirmationModal') {
+            closeConfirmationModal();
+        } else if (currentModal.id === 'notificationModal') {
+            closeNotificationModal();
+        }
     }
-}
+});
+
+// Action button functions removed - buttons are no longer active
 </script>
 
 <style>

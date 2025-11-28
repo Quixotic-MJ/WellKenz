@@ -192,16 +192,49 @@ class SystemSetting extends Model
     private static function getDefaultValue($key)
     {
         $defaults = [
+            // Application
             'app_name' => 'WellKenz',
-            'company_name' => 'WellKenz Bakery',
+            'app_version' => 'v2.4.0',
             'app_timezone' => 'Asia/Manila',
+            
+            // Company Profile
+            'company_name' => 'WellKenz Bakery',
+            'company_logo' => '',
+            'tax_id' => '',
+            'company_address' => '',
+            'contact_email' => 'admin@wellkenz.com',
+            'contact_phone' => '',
+            
+            // Notifications
+            'notif_lowstock' => true,
+            'notif_req' => true,
+            'notif_expiry' => true,
+            'notif_system' => false,
+            
+            // Finance & System
             'currency' => 'PHP',
+            'tax_rate' => 0.12,
             'low_stock_threshold' => 10,
             'default_lead_time' => 3,
             'business_hours_open' => '06:00',
             'business_hours_close' => '20:00',
-            'tax_rate' => 0.12,
             'default_batch_size' => 100,
+            'maintenance_mode' => false,
+            
+            // Legacy
+            'company_phone' => '',
+            'company_email' => '',
+            'business_hours_start' => '08:00',
+            'business_hours_end' => '17:00',
+            'notification_email_enabled' => true,
+            'auto_backup_enabled' => true,
+            'backup_retention_days' => 30,
+            'session_timeout' => 120,
+            'max_login_attempts' => 5,
+            'password_min_length' => 8,
+            
+            // System Info
+            'last_backup_date' => 'Never',
         ];
 
         return $defaults[$key] ?? null;

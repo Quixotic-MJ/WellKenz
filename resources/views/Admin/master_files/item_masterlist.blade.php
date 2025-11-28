@@ -10,9 +10,13 @@
             <p class="text-sm text-gray-500">The central database for all inventory items, unit conversions, and pricing.</p>
         </div>
         <div class="flex flex-wrap items-center gap-3">
-            <button class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-border-soft text-chocolate text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm group">
+            <button onclick="exportItems()" class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-border-soft text-chocolate text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm group">
+                <i class="fas fa-file-export mr-2 opacity-70 group-hover:opacity-100"></i> Export CSV
+            </button>
+            <button onclick="document.getElementById('csvFileInput').click()" class="inline-flex items-center justify-center px-5 py-2.5 bg-white border border-border-soft text-chocolate text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-caramel transition-all shadow-sm group">
                 <i class="fas fa-file-import mr-2 opacity-70 group-hover:opacity-100"></i> Import CSV
             </button>
+            <input type="file" id="csvFileInput" accept=".csv,.txt" style="display: none;" onchange="handleFileUpload(this)">
             <button onclick="document.getElementById('itemModal').classList.remove('hidden')" 
                 class="inline-flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                 <i class="fas fa-plus mr-2"></i> Add New Item
@@ -56,6 +60,17 @@
                         <option value="low" {{ request('stock_status') == 'low' ? 'selected' : '' }}>Low Stock</option>
                         <option value="out" {{ request('stock_status') == 'out' ? 'selected' : '' }}>Out of Stock</option>
                         <option value="good" {{ request('stock_status') == 'good' ? 'selected' : '' }}>Good Stock</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </div>
+                </div>
+
+                <div class="relative w-full md:w-32">
+                    <select id="statusFilter" class="block w-full py-2.5 px-3 border border-gray-200 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm appearance-none cursor-pointer">
+                        <option value="all" {{ request('status', 'all') == 'all' ? 'selected' : '' }}>All Items</option>
+                        <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
+                        <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
                         <i class="fas fa-chevron-down text-xs"></i>
@@ -144,7 +159,16 @@
                                 <button onclick="editItem({{ $item->id }})" class="text-chocolate hover:text-white hover:bg-chocolate p-2 rounded-lg transition-all tooltip" title="Edit">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button onclick="deleteItem({{ $item->id }})" class="text-red-600 hover:text-white hover:bg-red-600 p-2 rounded-lg transition-all tooltip" title="Delete">
+                                @if($item->is_active)
+                                <button onclick="deactivateItem({{ $item->id }}, '{{ $item->name }}')" class="text-amber-600 hover:text-white hover:bg-amber-600 p-2 rounded-lg transition-all tooltip" title="Deactivate">
+                                    <i class="fas fa-pause"></i>
+                                </button>
+                                @else
+                                <button onclick="reactivateItem({{ $item->id }}, '{{ $item->name }}')" class="text-green-600 hover:text-white hover:bg-green-600 p-2 rounded-lg transition-all tooltip" title="Reactivate">
+                                    <i class="fas fa-play"></i>
+                                </button>
+                                @endif
+                                <button onclick="deleteItem({{ $item->id }}, '{{ $item->name }}')" class="text-red-600 hover:text-white hover:bg-red-600 p-2 rounded-lg transition-all tooltip" title="Delete">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </div>
@@ -255,8 +279,9 @@
                                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                             <i class="fas fa-barcode text-gray-400 text-xs"></i>
                                         </div>
-                                        <input type="text" name="item_code" id="itemCode" class="block w-full pl-9 border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm font-mono" placeholder="e.g. ING-001" required>
+                                        <input type="text" name="item_code" id="itemCode" class="block w-full pl-9 border-gray-200 bg-cream-bg rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm font-mono" placeholder="Auto-generated based on category" required>
                                     </div>
+                                    <p class="text-[10px] text-gray-500 mt-1">Code will be auto-generated when you select a category. You can still edit it manually.</p>
                                 </div>
 
                                 <div class="md:col-span-6">
@@ -345,10 +370,214 @@
     </div>
 </div>
 
+{{-- Confirmation Modal for Delete Operations --}}
+<div id="confirmDeleteModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="closeConfirmModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-border-soft">
+            <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-50 border border-red-200 sm:mx-0 sm:h-10 sm:w-10">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-lg"></i>
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                        <h3 class="text-lg leading-6 font-bold text-chocolate font-display" id="confirmDeleteTitle">Confirm Delete</h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500" id="confirmDeleteMessage">Are you sure you want to proceed?</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" id="confirmDeleteBtn" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-red-600 text-base font-bold text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
+                    Delete
+                </button>
+                <button type="button" onclick="closeConfirmModal()" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm transition-all">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- Notification Modal for Success/Error Messages --}}
+<div id="notificationModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="closeNotificationModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full border border-border-soft">
+            <div class="bg-white px-6 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                    <div id="notifIcon" class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10">
+                    </div>
+                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                        <h3 class="text-lg leading-6 font-bold text-chocolate font-display" id="notifTitle">Notification</h3>
+                        <div class="mt-2">
+                            <p class="text-sm text-gray-500" id="notifMessage">Message goes here...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-6 py-3 sm:flex sm:flex-row-reverse border-t border-border-soft">
+                <button type="button" onclick="closeNotificationModal()" class="w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // Global variables
     let isEditing = false;
     let editingItemId = null;
+    let pendingDeleteId = null;
+
+    // --- Modal Functions ---
+    function showNotificationModal(title, message, isError = false) {
+        const modal = document.getElementById('notificationModal');
+        document.getElementById('notifTitle').innerText = title;
+        document.getElementById('notifMessage').innerText = message;
+        
+        const iconContainer = document.getElementById('notifIcon');
+        if (isError) {
+            iconContainer.innerHTML = '<i class="fas fa-times-circle text-red-500 text-3xl"></i>';
+        } else {
+            iconContainer.innerHTML = '<i class="fas fa-check-circle text-green-500 text-3xl"></i>';
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function showDeactivationOption(errorMessage, itemId) {
+        // Update notification modal to offer deactivation option
+        const modal = document.getElementById('notificationModal');
+        document.getElementById('notifTitle').innerText = 'Cannot Delete Item';
+        document.getElementById('notifMessage').innerHTML = `
+            ${errorMessage}<br><br>
+            <strong>Would you like to deactivate this item instead?</strong><br>
+            Deactivating will hide it from active lists while preserving data integrity.
+        `;
+        
+        const iconContainer = document.getElementById('notifIcon');
+        iconContainer.innerHTML = '<i class="fas fa-exclamation-triangle text-amber-500 text-3xl"></i>';
+        
+        // Change close button to offer deactivation
+        const closeButton = modal.querySelector('button[onclick="closeNotificationModal()"]');
+        closeButton.innerHTML = 'Cancel';
+        closeButton.onclick = () => {
+            closeNotificationModal();
+            closeButton.innerHTML = 'Close';
+            closeButton.onclick = closeNotificationModal;
+        };
+        
+        // Add deactivation button if it doesn't exist
+        if (!modal.querySelector('#deactivateButton')) {
+            const deactivationButton = document.createElement('button');
+            deactivationButton.id = 'deactivateButton';
+            deactivationButton.className = 'w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-amber-600 text-base font-bold text-white hover:bg-amber-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all mt-3';
+            deactivationButton.innerHTML = 'Deactivate Item';
+            deactivationButton.onclick = () => executeDeactivation(itemId);
+            
+            const buttonContainer = modal.querySelector('.bg-gray-50');
+            buttonContainer.insertBefore(deactivationButton, buttonContainer.firstChild);
+        }
+        
+        modal.classList.remove('hidden');
+    }
+
+    function executeDeactivation(itemId) {
+        fetch(`/admin/items/${itemId}/deactivate`, {
+            method: 'PATCH',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            closeNotificationModal();
+            if (data.success) {
+                showNotificationModal('Success', data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showNotificationModal('Error', data.message || 'Error deactivating item', true);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            closeNotificationModal();
+            showNotificationModal('Error', 'Error deactivating item', true);
+        });
+    }
+
+    function closeNotificationModal() {
+        document.getElementById('notificationModal').classList.add('hidden');
+    }
+
+    function showConfirmDeleteModal(itemId, itemName) {
+        pendingDeleteId = itemId;
+        document.getElementById('confirmDeleteTitle').innerText = 'Delete Item';
+        document.getElementById('confirmDeleteMessage').innerText = `Are you sure you want to delete "${itemName}"? This action cannot be undone.`;
+        document.getElementById('confirmDeleteBtn').onclick = executeDelete;
+        document.getElementById('confirmDeleteModal').classList.remove('hidden');
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmDeleteModal').classList.add('hidden');
+        // Properly reset to null value, not string "null"
+        pendingDeleteId = null;
+    }
+
+    function executeDelete() {
+        // Enhanced validation to prevent string "null" from being sent
+        if (!pendingDeleteId || pendingDeleteId === 'null' || isNaN(parseInt(pendingDeleteId))) {
+            console.error('Invalid item ID for deletion:', pendingDeleteId);
+            showNotificationModal('Error', 'Invalid item selected for deletion', true);
+            return;
+        }
+        
+        // Convert to integer for safety
+        const itemId = parseInt(pendingDeleteId);
+        if (itemId <= 0) {
+            console.error('Invalid item ID for deletion:', pendingDeleteId);
+            showNotificationModal('Error', 'Invalid item ID', true);
+            return;
+        }
+        
+        closeConfirmModal();
+
+        fetch(`/admin/items/${itemId}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotificationModal('Success', data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                // Check if it's a foreign key constraint error
+                if (data.message && data.message.includes('referenced') || data.message.includes('constraint')) {
+                    // Offer deactivation as alternative
+                    showDeactivationOption(data.message, pendingDeleteId);
+                } else {
+                    showNotificationModal('Error', data.message || 'Error deleting item', true);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotificationModal('Error', 'Error deleting item', true);
+        });
+    }
 
     // Load units when page loads
     document.addEventListener('DOMContentLoaded', function() {
@@ -380,6 +609,7 @@
         // Setup filter functionality
         document.getElementById('categoryFilter').addEventListener('change', immediateFilter);
         document.getElementById('stockFilter').addEventListener('change', immediateFilter);
+        document.getElementById('statusFilter').addEventListener('change', immediateFilter);
 
         // Add clear filters functionality
         const clearFiltersBtn = document.getElementById('clearFiltersBtn');
@@ -388,8 +618,15 @@
                 document.getElementById('searchInput').value = '';
                 document.getElementById('categoryFilter').value = '';
                 document.getElementById('stockFilter').value = '';
+                document.getElementById('statusFilter').value = 'all';
                 filterItems();
             });
+        }
+
+        // Add real-time duplicate checking for item code field
+        const itemCodeInput = document.getElementById('itemCode');
+        if (itemCodeInput) {
+            itemCodeInput.addEventListener('input', debounce(checkItemCodeDuplicate, 1000));
         }
     });
 
@@ -420,9 +657,130 @@
                         option.textContent = category.name;
                         categorySelect.appendChild(option);
                     });
+
+                    // Add event listener for auto-generating item code
+                    categorySelect.addEventListener('change', function() {
+                        if (this.value && !isEditing) {
+                            generateItemCode(this.value);
+                        }
+                    });
                 }
             })
             .catch(error => console.error('Error loading data:', error));
+    }
+
+    // Generate item code based on selected category
+    function generateItemCode(categoryId) {
+        if (!categoryId) {
+            return;
+        }
+
+        const itemCodeInput = document.getElementById('itemCode');
+        if (itemCodeInput && !isEditing) {
+            // Show loading state
+            itemCodeInput.value = 'Generating...';
+            itemCodeInput.style.opacity = '0.6';
+
+            fetch('/admin/items/generate-code', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ category_id: categoryId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    itemCodeInput.value = data.item_code;
+                } else {
+                    itemCodeInput.value = '';
+                    console.error('Error generating item code:', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                itemCodeInput.value = '';
+            })
+            .finally(() => {
+                // Reset loading state
+                itemCodeInput.style.opacity = '1';
+            });
+        }
+    }
+
+    // Check for duplicate item codes in real-time
+    function checkItemCodeDuplicate() {
+        const itemCodeInput = document.getElementById('itemCode');
+        if (!itemCodeInput || !itemCodeInput.value || itemCodeInput.value === 'Generating...') {
+            return;
+        }
+
+        const itemCode = itemCodeInput.value.trim();
+        if (!itemCode || itemCode.length < 3) {
+            // Clear any previous duplicate warnings
+            clearItemCodeWarning();
+            return;
+        }
+
+        // Don't check if we're editing and the code belongs to the current item
+        if (isEditing && itemCode === document.getElementById('itemCode').getAttribute('data-original-code')) {
+            clearItemCodeWarning();
+            return;
+        }
+
+        // Check for duplicates by making a search request
+        fetch(`/admin/items/search?q=${encodeURIComponent(itemCode)}`)
+            .then(response => response.json())
+            .then(items => {
+                if (items.length > 0) {
+                    showItemCodeWarning(itemCode, items[0].name);
+                } else {
+                    clearItemCodeWarning();
+                }
+            })
+            .catch(error => {
+                console.error('Error checking duplicate item code:', error);
+                // Don't show error to user for this background check
+            });
+    }
+
+    // Show warning for duplicate item code
+    function showItemCodeWarning(itemCode, existingItemName) {
+        const itemCodeInput = document.getElementById('itemCode');
+        
+        // Remove existing warning
+        clearItemCodeWarning();
+        
+        // Add warning styling and message
+        itemCodeInput.classList.add('border-red-300', 'focus:border-red-500', 'focus:ring-red-200');
+        itemCodeInput.classList.remove('border-gray-200', 'focus:border-caramel', 'focus:ring-caramel/20');
+        
+        // Add warning text below the input
+        const warningDiv = document.createElement('div');
+        warningDiv.id = 'itemCodeWarning';
+        warningDiv.className = 'text-[10px] text-red-500 mt-1 flex items-center';
+        warningDiv.innerHTML = `
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            Code "${itemCode}" already exists for item "${existingItemName}"
+        `;
+        
+        itemCodeInput.parentNode.appendChild(warningDiv);
+    }
+
+    // Clear item code warning
+    function clearItemCodeWarning() {
+        const itemCodeInput = document.getElementById('itemCode');
+        const warningDiv = document.getElementById('itemCodeWarning');
+        
+        if (itemCodeInput) {
+            itemCodeInput.classList.remove('border-red-300', 'focus:border-red-500', 'focus:ring-red-200');
+            itemCodeInput.classList.add('border-gray-200', 'focus:border-caramel', 'focus:ring-caramel/20');
+        }
+        
+        if (warningDiv) {
+            warningDiv.remove();
+        }
     }
     
     // Refresh categories specifically (called after category creation)
@@ -476,14 +834,22 @@
         const search = document.getElementById('searchInput').value;
         const category = document.getElementById('categoryFilter').value;
         const stockStatus = document.getElementById('stockFilter').value;
+        const status = document.getElementById('statusFilter').value;
         
         const params = new URLSearchParams();
         if (search.trim()) params.append('search', search.trim());
         if (category.trim()) params.append('category', category.trim());
         if (stockStatus.trim()) params.append('stock_status', stockStatus.trim());
+        if (status && status !== 'all') params.append('status', status);
         
         // Redirect with query parameters to trigger server-side filtering
-        window.location.href = `${window.location.pathname}?${params.toString()}`;
+        // Ensure we're on the correct path for admin items
+        let currentPath = window.location.pathname;
+        if (!currentPath.includes('/admin/items')) {
+            // If somehow on wrong path, redirect to correct admin items path
+            currentPath = '/admin/items';
+        }
+        window.location.href = `${currentPath}?${params.toString()}`;
     }
 
     // Debounced search function for better performance
@@ -504,6 +870,7 @@
         const search = document.getElementById('searchInput').value;
         const category = document.getElementById('categoryFilter').value;
         const stockStatus = document.getElementById('stockFilter').value;
+        const status = document.getElementById('statusFilter').value;
         
         // Show loading state
         const tableBody = document.querySelector('tbody');
@@ -521,12 +888,29 @@
         const formData = new FormData(form);
         
         // Validate required fields
-        const required = ['name', 'item_code', 'category_id', 'item_type', 'unit_id'];
+        const required = ['name', 'category_id', 'item_type', 'unit_id'];
+        const missingFields = [];
         for (let field of required) {
             if (!formData.get(field)) {
-                alert(`Please fill in the ${field.replace('_', ' ')} field.`);
-                return;
+                missingFields.push(field.replace('_', ' '));
             }
+        }
+        
+        // Special validation for item_code - either auto-generated or manually entered
+        const itemCode = formData.get('item_code');
+        if (!itemCode || itemCode.trim() === '' || itemCode === 'Generating...') {
+            if (isEditing) {
+                // For editing, item_code should already be filled
+                missingFields.push('SKU / Code');
+            } else {
+                // For new items, suggest waiting for auto-generation
+                missingFields.push('SKU / Code (please select a category for auto-generation)');
+            }
+        }
+        
+        if (missingFields.length > 0) {
+            showNotificationModal('Validation Error', `Please fill in the following required fields: ${missingFields.join(', ')}`, true);
+            return;
         }
         
         // Show loading state
@@ -535,7 +919,13 @@
         saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
         saveButton.disabled = true;
         
-        const url = isEditing ? `/admin/items/${editingItemId}` : '/admin/items';
+        const url = isEditing ? 
+            (editingItemId && editingItemId !== 'null' && !isNaN(parseInt(editingItemId)) ? 
+                `/admin/items/${parseInt(editingItemId)}` : 
+                (showNotificationModal('Error', 'Invalid item ID for editing', true), null)) : 
+            '/admin/items';
+        
+        if (isEditing && !url) return; // Exit if invalid URL for editing
         const method = isEditing ? 'POST' : 'POST'; // Always use POST
         
         // Add CSRF token and method override for editing
@@ -557,28 +947,50 @@
             saveButton.disabled = false;
             
             if (data.success) {
-                // Show success message
-                const successMessage = document.createElement('div');
-                successMessage.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center font-bold animate-pulse';
-                successMessage.innerHTML = `<i class="fas fa-check-circle mr-3"></i>${data.message}`;
-                document.body.appendChild(successMessage);
-                
-                // Remove success message after 3 seconds
-                setTimeout(() => {
-                    if (successMessage.parentNode) {
-                        successMessage.remove();
-                    }
-                }, 3000);
-                
-                // Close modal
+                // Close modal first
                 closeModal();
+                
+                // Show success message via modal
+                showNotificationModal('Success', data.message);
                 
                 // Reload the page to refresh the data
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 1500);
             } else {
-                alert(data.message || 'Error saving item');
+                // Handle duplicate code error specifically
+                if (data.error_type === 'duplicate_code') {
+                    showNotificationModal('Duplicate Item Code', data.message + ' Click "Generate New Code" to create a unique code.', true);
+                    
+                    // Add a "Generate New Code" button to the notification
+                    setTimeout(() => {
+                        const modal = document.getElementById('notificationModal');
+                        const buttonContainer = modal.querySelector('.bg-gray-50');
+                        
+                        // Remove existing generate button if any
+                        const existingBtn = modal.querySelector('#generateNewCodeBtn');
+                        if (existingBtn) {
+                            existingBtn.remove();
+                        }
+                        
+                        // Add generate new code button
+                        const generateBtn = document.createElement('button');
+                        generateBtn.id = 'generateNewCodeBtn';
+                        generateBtn.className = 'w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-chocolate text-base font-bold text-white hover:bg-chocolate-dark focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all mt-3';
+                        generateBtn.innerHTML = '<i class="fas fa-magic mr-2"></i>Generate New Code';
+                        generateBtn.onclick = () => {
+                            const categorySelect = document.getElementById('itemCategory');
+                            if (categorySelect && categorySelect.value) {
+                                generateItemCode(categorySelect.value);
+                                closeNotificationModal();
+                            }
+                        };
+                        
+                        buttonContainer.insertBefore(generateBtn, buttonContainer.firstChild);
+                    }, 100);
+                } else {
+                    showNotificationModal('Error', data.message || 'Error saving item', true);
+                }
             }
         })
         .catch(error => {
@@ -588,13 +1000,28 @@
             saveButton.innerHTML = originalText;
             saveButton.disabled = false;
             
-            alert('Error saving item. Please check the console for details.');
+            showNotificationModal('Error', 'Error saving item. Please check the console for details.', true);
         });
     }
 
     // Edit item
     function editItem(itemId) {
-        fetch(`/admin/items/${itemId}/edit`)
+        // Enhanced validation to prevent string "null" from being used
+        if (!itemId || itemId === 'null' || isNaN(parseInt(itemId))) {
+            console.error('Invalid item ID for editing:', itemId);
+            showNotificationModal('Error', 'Invalid item selected for editing', true);
+            return;
+        }
+        
+        // Convert to integer for safety
+        const validItemId = parseInt(itemId);
+        if (validItemId <= 0) {
+            console.error('Invalid item ID for editing:', itemId);
+            showNotificationModal('Error', 'Invalid item ID', true);
+            return;
+        }
+        
+        fetch(`/admin/items/${validItemId}/edit`)
             .then(response => response.json())
             .then(item => {
                 isEditing = true;
@@ -616,33 +1043,207 @@
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error loading item data');
+                showNotificationModal('Error', 'Error loading item data', true);
             });
     }
 
-    // Delete item
-    function deleteItem(itemId) {
-        if (confirm('Are you sure you want to delete this item?')) {
-            fetch(`/admin/items/${itemId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
+    // Delete item - now uses confirmation modal
+    function deleteItem(itemId, itemName) {
+        showConfirmDeleteModal(itemId, itemName);
+    }
+
+    // Deactivate item - show confirmation modal
+    function deactivateItem(itemId, itemName) {
+        // Update confirmation modal for deactivation
+        document.getElementById('confirmDeleteTitle').innerText = 'Deactivate Item';
+        document.getElementById('confirmDeleteMessage').innerText = `Are you sure you want to deactivate "${itemName}"? The item will be hidden from active lists but all data will be preserved.`;
+        
+        // Update confirm button for deactivation
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        confirmBtn.innerHTML = '<i class="fas fa-pause mr-2"></i>Deactivate';
+        confirmBtn.className = confirmBtn.className.replace('bg-red-600 hover:bg-red-700', 'bg-amber-600 hover:bg-amber-700');
+        confirmBtn.onclick = () => executeDeactivation(itemId);
+        
+        pendingDeleteId = itemId;
+        document.getElementById('confirmDeleteModal').classList.remove('hidden');
+    }
+
+    // Reactivate item
+    function reactivateItem(itemId, itemName) {
+        fetch(`/admin/items/${itemId}/reactivate`, {
+            method: 'PATCH',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotificationModal('Success', data.message);
+                setTimeout(() => {
                     window.location.reload();
-                } else {
-                    alert(data.message || 'Error deleting item');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error deleting item');
-            });
+                }, 1500);
+            } else {
+                showNotificationModal('Error', data.message || 'Error reactivating item', true);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotificationModal('Error', 'Error reactivating item', true);
+        });
+    }
+
+    // Export items to CSV
+    function exportItems() {
+        // Show loading state
+        const exportBtn = document.querySelector('button[onclick="exportItems()"]');
+        const originalText = exportBtn.innerHTML;
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Exporting...';
+        exportBtn.disabled = true;
+
+        // Get current filter parameters
+        const search = document.getElementById('searchInput').value;
+        const category = document.getElementById('categoryFilter').value;
+        const stockStatus = document.getElementById('stockFilter').value;
+        const status = document.getElementById('statusFilter').value;
+
+        // Build URL with current filters
+        const params = new URLSearchParams();
+        if (search.trim()) params.append('search', search.trim());
+        if (category.trim()) params.append('category', category.trim());
+        if (stockStatus.trim()) params.append('stock_status', stockStatus.trim());
+        if (status && status !== 'all') params.append('status', status);
+
+        const url = `/admin/items/export?${params.toString()}`;
+        
+        // Create temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        // Reset button state
+        setTimeout(() => {
+            exportBtn.innerHTML = originalText;
+            exportBtn.disabled = false;
+        }, 2000);
+
+        showNotificationModal('Export Started', 'Your CSV file is being generated and will download automatically.');
+    }
+
+    // Handle CSV file upload
+    function handleFileUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const validTypes = ['text/csv', 'application/vnd.ms-excel', 'text/plain'];
+        const validExtensions = ['.csv', '.txt'];
+        
+        const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        if (!validExtensions.includes(fileExtension)) {
+            showNotificationModal('Invalid File Type', 'Please select a CSV or TXT file.', true);
+            input.value = '';
+            return;
         }
+
+        // Validate file size (10MB max)
+        if (file.size > 10 * 1024 * 1024) {
+            showNotificationModal('File Too Large', 'Please select a file smaller than 10MB.', true);
+            input.value = '';
+            return;
+        }
+
+        // Show confirmation modal
+        const modal = document.getElementById('notificationModal');
+        document.getElementById('notifTitle').innerText = 'Import Items';
+        document.getElementById('notifMessage').innerHTML = `
+            <p>You are about to import items from:</p>
+            <p><strong>${file.name}</strong></p>
+            <p class="text-sm text-gray-600 mt-2">This will add new items to your masterlist. Existing items with the same code will be skipped.</p>
+        `;
+        
+        const iconContainer = document.getElementById('notifIcon');
+        iconContainer.innerHTML = '<i class="fas fa-upload text-blue-500 text-3xl"></i>';
+        
+        // Update button for import
+        const closeButton = modal.querySelector('button[onclick="closeNotificationModal()"]');
+        closeButton.innerHTML = 'Cancel';
+        closeButton.onclick = () => {
+            closeNotificationModal();
+            closeButton.innerHTML = 'Close';
+            closeButton.onclick = closeNotificationModal;
+            input.value = ''; // Clear file input
+        };
+        
+        // Add import button if it doesn't exist
+        if (!modal.querySelector('#importConfirmBtn')) {
+            const importButton = document.createElement('button');
+            importButton.id = 'importConfirmBtn';
+            importButton.className = 'w-full inline-flex justify-center rounded-lg border border-transparent shadow-md px-4 py-2 bg-blue-600 text-base font-bold text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm transition-all mt-3';
+            importButton.innerHTML = '<i class="fas fa-upload mr-2"></i>Import Items';
+            importButton.onclick = () => executeImport(file);
+            
+            const buttonContainer = modal.querySelector('.bg-gray-50');
+            buttonContainer.insertBefore(importButton, buttonContainer.firstChild);
+        }
+        
+        modal.classList.remove('hidden');
+    }
+
+    // Execute CSV import
+    function executeImport(file) {
+        closeNotificationModal();
+
+        // Show loading state
+        const importBtn = document.querySelector('#importConfirmBtn');
+        if (importBtn) {
+            importBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Importing...';
+            importBtn.disabled = true;
+        }
+
+        const formData = new FormData();
+        formData.append('csv_file', file);
+        formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
+
+        fetch('/admin/items/import', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                let message = data.message;
+                if (data.errors && data.errors.length > 0) {
+                    message += '<br><br><strong>Errors:</strong><br>' + data.errors.slice(0, 5).join('<br>');
+                    if (data.errors.length > 5) {
+                        message += `<br>... and ${data.errors.length - 5} more errors`;
+                    }
+                }
+                
+                showNotificationModal('Import Complete', message, data.errors && data.errors.length > 0);
+                
+                if (data.imported > 0) {
+                    // Reload page to show new items
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 3000);
+                }
+            } else {
+                showNotificationModal('Import Failed', data.message, true);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotificationModal('Import Error', 'Error importing items. Please check the console for details.', true);
+        })
+        .finally(() => {
+            // Clear file input
+            document.getElementById('csvFileInput').value = '';
+        });
     }
 
     // Reset form when modal is closed
@@ -654,10 +1255,23 @@
         editingItemId = null;
     }
     
-    // Add event listener for modal close button
+    // Add event listeners for modal close buttons
     document.getElementById('itemModal').addEventListener('click', function(e) {
         if (e.target.classList.contains('bg-gray-900')) {
             closeModal();
+        }
+    });
+
+    // Add event listeners for outside clicks to close modals
+    document.getElementById('confirmDeleteModal').addEventListener('click', function(e) {
+        if (e.target.classList.contains('bg-gray-900')) {
+            closeConfirmModal();
+        }
+    });
+
+    document.getElementById('notificationModal').addEventListener('click', function(e) {
+        if (e.target.classList.contains('bg-gray-900')) {
+            closeNotificationModal();
         }
     });
 </script>

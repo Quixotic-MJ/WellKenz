@@ -175,6 +175,11 @@ class UserService
     public function toggleUserStatus(User $user): User
     {
         try {
+            // Prevent current admin from deactivating themselves
+            if ($user->id === auth()->id()) {
+                throw new Exception('You cannot change your own account status.');
+            }
+
             $user->update(['is_active' => !$user->is_active]);
 
             $this->logAudit('users', $user->id, 'UPDATE', null, [
@@ -190,7 +195,7 @@ class UserService
     }
 
     /**
-     * Delete a user.
+     * Delete a user (soft delete).
      *
      * @param User $user
      * @return bool
@@ -199,10 +204,16 @@ class UserService
     public function deleteUser(User $user): bool
     {
         try {
+            // Prevent current admin from deleting themselves
+            if ($user->id === auth()->id()) {
+                throw new Exception('You cannot delete your own account.');
+            }
+
             DB::beginTransaction();
 
             $this->logAudit('users', $user->id, 'DELETE', $user->toArray(), null);
 
+            // Use soft delete
             $user->delete();
 
             DB::commit();
@@ -212,6 +223,68 @@ class UserService
         } catch (Exception $e) {
             DB::rollback();
             Log::error('Error deleting user: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Permanently delete a user (hard delete).
+     *
+     * @param User $user
+     * @return bool
+     * @throws Exception
+     */
+    public function permanentlyDeleteUser(User $user): bool
+    {
+        try {
+            // Prevent current admin from deleting themselves
+            if ($user->id === auth()->id()) {
+                throw new Exception('You cannot permanently delete your own account.');
+            }
+
+            DB::beginTransaction();
+
+            $this->logAudit('users', $user->id, 'FORCE_DELETE', $user->toArray(), null);
+
+            // Use force delete for permanent removal
+            $user->forceDelete();
+
+            DB::commit();
+
+            return true;
+
+        } catch (Exception $e) {
+            DB::rollback();
+            Log::error('Error permanently deleting user: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Restore a soft deleted user.
+     *
+     * @param User $user
+     * @return User
+     * @throws Exception
+     */
+    public function restoreUser(User $user): User
+    {
+        try {
+            DB::beginTransaction();
+
+            $user->restore();
+
+            $this->logAudit('users', $user->id, 'RESTORE', null, [
+                'restored_at' => now()
+            ]);
+
+            DB::commit();
+
+            return $user->fresh();
+
+        } catch (Exception $e) {
+            DB::rollback();
+            Log::error('Error restoring user: ' . $e->getMessage());
             throw $e;
         }
     }
@@ -329,7 +402,7 @@ class UserService
     }
 
     /**
-     * Perform bulk operations on users.
+     * Perform bulk operations on users (soft delete support).
      *
      * @param array $userIds
      * @param string $operation
@@ -339,6 +412,18 @@ class UserService
     public function bulkUserOperations(array $userIds, string $operation): int
     {
         try {
+            // Get current admin ID to prevent self-operation
+            $currentAdminId = auth()->id();
+            
+            // Filter out current admin from bulk operations for security
+            $filteredUserIds = array_filter($userIds, function($userId) use ($currentAdminId) {
+                return $userId != $currentAdminId;
+            });
+
+            if (empty($filteredUserIds)) {
+                throw new Exception('Cannot perform bulk operations on your own account.');
+            }
+
             DB::beginTransaction();
             
             $affectedCount = 0;
@@ -347,18 +432,32 @@ class UserService
                 case 'activate':
                 case 'deactivate':
                     $isActive = $operation === 'activate';
-                    $affectedCount = User::whereIn('id', $userIds)->update(['is_active' => $isActive]);
+                    $affectedCount = User::whereIn('id', $filteredUserIds)->update(['is_active' => $isActive]);
                     break;
                     
                 case 'delete':
-                    $affectedCount = User::whereIn('id', $userIds)->delete();
+                    // Use soft delete for bulk operations
+                    $affectedCount = User::whereIn('id', $filteredUserIds)->delete();
+                    break;
+                    
+                case 'force_delete':
+                    // Use hard delete for permanent removal
+                    $affectedCount = User::whereIn('id', $filteredUserIds)->forceDelete();
+                    break;
+                    
+                case 'restore':
+                    // Restore soft deleted users
+                    $affectedCount = User::onlyTrashed()->whereIn('id', $filteredUserIds)->restore();
                     break;
             }
             
             // Log the bulk operation
             $this->logAudit('users', null, 'UPDATE', null, [
                 'bulk_operation' => $operation,
-                'affected_users' => $userIds
+                'affected_users' => $filteredUserIds,
+                'original_user_ids' => $userIds,
+                'excluded_current_admin' => $currentAdminId,
+                'affected_count' => $affectedCount
             ]);
             
             DB::commit();
@@ -370,6 +469,16 @@ class UserService
             Log::error('Error performing bulk operation: ' . $e->getMessage());
             throw $e;
         }
+    }
+
+    /**
+     * Get soft deleted users for admin review.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getSoftDeletedUsers()
+    {
+        return User::onlyTrashed()->with('profile')->orderBy('deleted_at', 'desc')->get();
     }
 
     /**

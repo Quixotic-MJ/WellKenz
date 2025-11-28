@@ -258,6 +258,7 @@ class SupervisorController extends Controller
             }
 
             // Update purchase request status
+            $oldStatus = $purchaseRequest->status;
             $updated = $purchaseRequest->update([
                 'status' => 'approved',
                 'approved_by' => Auth::id(),
@@ -280,6 +281,7 @@ class SupervisorController extends Controller
                     'user_id' => Auth::id(),
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
+                    'old_values' => json_encode(['status' => $oldStatus]),
                     'new_values' => json_encode(['status' => 'approved'])
                 ]);
             } catch (\Exception $e) {
@@ -373,7 +375,12 @@ class SupervisorController extends Controller
                 ], 400);
             }
 
+            // Get rejection reason from request
+            $reason = $request->input('reason', 'No reason provided');
+            $comments = $request->input('comments', '');
+            
             // Update purchase request status
+            $oldStatus = $purchaseRequest->status;
             $updated = $purchaseRequest->update([
                 'status' => 'rejected',
                 'approved_by' => Auth::id(),
@@ -396,7 +403,12 @@ class SupervisorController extends Controller
                     'user_id' => Auth::id(),
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
-                    'new_values' => json_encode(['status' => 'rejected'])
+                    'old_values' => json_encode(['status' => $oldStatus]),
+                    'new_values' => json_encode([
+                        'status' => 'rejected',
+                        'reject_reason' => $reason,
+                        'comments' => $comments
+                    ])
                 ]);
             } catch (\Exception $e) {
                 \Log::warning('Failed to create audit log for purchase request rejection: ' . $e->getMessage());
@@ -531,6 +543,7 @@ class SupervisorController extends Controller
                 $purchaseRequest = PurchaseRequest::find($purchaseRequestId);
                 
                 if ($purchaseRequest && $purchaseRequest->status === 'pending') {
+                    $oldStatus = $purchaseRequest->status;
                     $purchaseRequest->update([
                         'status' => 'approved',
                         'approved_by' => Auth::id(),
@@ -545,6 +558,7 @@ class SupervisorController extends Controller
                         'user_id' => Auth::id(),
                         'ip_address' => $request->ip(),
                         'user_agent' => $request->userAgent(),
+                        'old_values' => json_encode(['status' => $oldStatus]),
                         'new_values' => json_encode(['status' => 'approved', 'bulk_approval' => true])
                     ]);
 
@@ -612,6 +626,7 @@ class SupervisorController extends Controller
             }
 
             // Update requisition status
+            $oldStatus = $requisition->status;
             $updated = $requisition->update([
                 'status' => 'approved',
                 'approved_by' => Auth::id(),
@@ -634,6 +649,7 @@ class SupervisorController extends Controller
                     'user_id' => Auth::id(),
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
+                    'old_values' => json_encode(['status' => $oldStatus]),
                     'new_values' => json_encode(['status' => 'approved'])
                 ]);
             } catch (\Exception $e) {
@@ -1057,11 +1073,24 @@ class SupervisorController extends Controller
                 ], 400);
             }
 
+            // Get rejection reason from request
+            $reason = $request->input('reason', 'No reason provided');
+            $comments = $request->input('comments', '');
+            
+            // Combine reason and comments for storage
+            $rejectionNotes = $reason;
+            if (!empty($comments)) {
+                $rejectionNotes .= ' - ' . $comments;
+            }
+            
             // Update requisition status to rejected
+            $oldStatus = $requisition->status;
             $updated = $requisition->update([
                 'status' => 'rejected',
                 'approved_by' => Auth::id(),
-                'approved_at' => Carbon::now()
+                'approved_at' => Carbon::now(),
+                'reject_reason' => $reason,
+                'notes' => $rejectionNotes
             ]);
 
             if (!$updated) {
@@ -1080,7 +1109,12 @@ class SupervisorController extends Controller
                     'user_id' => Auth::id(),
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
-                    'new_values' => json_encode(['status' => 'rejected'])
+                    'old_values' => json_encode(['status' => $oldStatus]),
+                    'new_values' => json_encode([
+                        'status' => 'rejected',
+                        'reject_reason' => $reason,
+                        'comments' => $comments
+                    ])
                 ]);
             } catch (\Exception $e) {
                 // Audit log creation failed, but don't fail the main operation
@@ -3066,6 +3100,8 @@ class SupervisorController extends Controller
                 ->limit(5)
                 ->get();
             
+            $unreadCount = \App\Models\Notification::unreadCountForCurrentUser();
+            
             $formattedNotifications = $notifications->map(function($notification) {
                 return [
                     'id' => $notification->id,
@@ -3075,21 +3111,22 @@ class SupervisorController extends Controller
                     'priority' => $notification->priority,
                     'time_ago' => $notification->getTimeAgoAttribute(),
                     'icon_class' => $notification->getIconClass(),
-                    'action_url' => $notification->action_url
+                    'action_url' => $notification->action_url,
+                    'read_at' => $notification->read_at
                 ];
             });
             
             return response()->json([
                 'success' => true,
                 'notifications' => $formattedNotifications,
-                'count' => $notifications->count()
+                'unread_count' => $unreadCount
             ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching header notifications: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'notifications' => [],
-                'count' => 0
+                'unread_count' => 0
             ]);
         }
     }
@@ -3122,6 +3159,7 @@ class SupervisorController extends Controller
                     }
 
                     if (empty($insufficientItems)) {
+                        $oldStatus = $requisition->status;
                         $requisition->update([
                             'status' => 'approved',
                             'approved_by' => Auth::id(),
@@ -3136,6 +3174,7 @@ class SupervisorController extends Controller
                             'user_id' => Auth::id(),
                             'ip_address' => $request->ip(),
                             'user_agent' => $request->userAgent(),
+                            'old_values' => json_encode(['status' => $oldStatus]),
                             'new_values' => json_encode(['status' => 'approved', 'bulk_approval' => true])
                         ]);
 

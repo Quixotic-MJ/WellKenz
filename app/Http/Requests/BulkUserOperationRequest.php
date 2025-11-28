@@ -24,7 +24,7 @@ class BulkUserOperationRequest extends FormRequest
         return [
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'exists:users,id',
-            'operation' => 'required|in:activate,deactivate,delete'
+            'operation' => 'required|in:activate,deactivate,delete,force_delete,restore'
         ];
     }
 
@@ -41,7 +41,7 @@ class BulkUserOperationRequest extends FormRequest
             'user_ids.min' => 'Please select at least one user.',
             'user_ids.*.exists' => 'One or more selected users do not exist.',
             'operation.required' => 'Please specify an operation to perform.',
-            'operation.in' => 'Invalid operation. Must be activate, deactivate, or delete.',
+            'operation.in' => 'Invalid operation. Must be activate, deactivate, delete, force_delete, or restore.',
         ];
     }
 }

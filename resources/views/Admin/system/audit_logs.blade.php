@@ -271,11 +271,38 @@
 
             </div>
 
-            <div class="bg-white px-6 py-4 border-t border-border-soft flex flex-row-reverse">
+            <div class="bg-white px-6 py-4 border-t border-border-soft flex flex-row-reverse gap-3">
                 <button type="button" onclick="closeDetailModal()" class="inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-5 py-2 bg-white text-sm font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none transition-all">
                     Close
                 </button>
+                <button type="button" onclick="toggleDebugInfo()" id="debugToggleBtn" class="inline-flex justify-center rounded-lg border border-blue-300 shadow-sm px-4 py-2 bg-blue-50 text-sm font-bold text-blue-700 hover:bg-blue-100 hover:text-blue-800 focus:outline-none transition-all">
+                    <i class="fas fa-bug mr-2"></i>Debug Info
+                </button>
             </div>
+        </div>
+    </div>
+</div>
+
+{{-- Debug Panel (Hidden by default) --}}
+<div id="debugPanel" class="hidden fixed bottom-5 right-5 z-[80] max-w-md w-full bg-gray-900 text-white rounded-lg shadow-2xl border border-gray-700 overflow-hidden">
+    <div class="px-4 py-3 bg-gray-800 border-b border-gray-700 flex justify-between items-center">
+        <div class="flex items-center">
+            <i class="fas fa-bug text-yellow-400 mr-2"></i>
+            <span class="text-sm font-bold">Debug Panel</span>
+        </div>
+        <button onclick="toggleDebugInfo()" class="text-gray-400 hover:text-white">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="p-4 max-h-64 overflow-y-auto">
+        <div class="text-xs text-gray-300 space-y-2">
+            <div><strong>Keyboard Shortcuts:</strong></div>
+            <div>• <kbd class="bg-gray-700 px-1 rounded">ESC</kbd> - Close modal</div>
+            <div>• <kbd class="bg-gray-700 px-1 rounded">Ctrl+Shift+D</kbd> - Enable debug mode</div>
+            <div class="mt-3"><strong>Debug Commands:</strong></div>
+            <div>• Call <code class="bg-gray-700 px-1 rounded">debugAuditLogData(log)</code> in console</div>
+            <div>• Use <code class="bg-gray-700 px-1 rounded">window.auditLogDebug</code> for detailed logging</div>
+            <div class="mt-3 text-yellow-400"><i class="fas fa-lightbulb mr-1"></i>Check browser console for detailed audit information</div>
         </div>
     </div>
 </div>
@@ -357,46 +384,139 @@ function exportAuditLogProof(logId) {
 
 /* --- MODAL LOGIC --- */
 
-// Helpers for formatting keys and values
+// Enhanced helpers for formatting keys and values with better error handling
 const formatKey = (key) => {
+    if (!key || typeof key !== 'string') return 'Unknown Field';
     return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 };
 
-const formatValue = (val) => {
-    if (val === true || val === 'true') return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide bg-green-100 text-green-800">Yes</span>';
-    if (val === false || val === 'false') return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide bg-gray-200 text-gray-600">No</span>';
-    if (val === null || val === 'null' || val === '' || val === undefined) return '<span class="text-gray-300 italic">—</span>';
-    if (typeof val === 'object') return formatObjectValue(val);
-    return val;
+const formatValue = (val, context = 'general') => {
+    // Handle different value types with better formatting
+    if (val === true || val === 'true') {
+        return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide bg-green-100 text-green-800 border border-green-200"><i class="fas fa-check mr-1"></i>Yes</span>';
+    }
+    if (val === false || val === 'false') {
+        return '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wide bg-red-100 text-red-800 border border-red-200"><i class="fas fa-times mr-1"></i>No</span>';
+    }
+    if (val === null || val === 'null' || val === '' || val === undefined) {
+        const messages = {
+            'general': '<span class="text-gray-400 italic flex items-center" title="No data recorded"><i class="fas fa-minus-circle mr-1"></i>No data</span>',
+            'old': '<span class="text-gray-400 italic flex items-center" title="No previous value recorded"><i class="fas fa-eraser mr-1"></i>No previous value</span>',
+            'new': '<span class="text-gray-400 italic flex items-center" title="No new value recorded"><i class="fas fa-plus-circle mr-1"></i>No new value</span>',
+            'error': '<span class="text-red-400 italic flex items-center" title="Failed to load data"><i class="fas fa-exclamation-triangle mr-1"></i>Failed to load</span>'
+        };
+        return messages[context] || messages.general;
+    }
+    if (typeof val === 'object') {
+        return formatObjectValue(val);
+    }
+    
+    // Handle special string values
+    if (typeof val === 'string') {
+        // Check for common empty indicators
+        if (val.toLowerCase() === 'null' || val.toLowerCase() === 'undefined' || val.trim() === '') {
+            return '<span class="text-gray-400 italic flex items-center" title="Empty string value"><i class="fas fa-circle mr-1" style="font-size: 4px;"></i>Empty</span>';
+        }
+        
+        // Format common ID patterns
+        if (val.match(/^[a-f0-9-]{36}$/)) { // UUID pattern
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-blue-50 text-blue-700 border border-blue-200" title="UUID: ${val}"><i class="fas fa-fingerprint mr-1"></i>${val.substring(0, 8)}...</span>`;
+        }
+        
+        // Format email addresses
+        if (val.includes('@') && val.includes('.')) {
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono bg-purple-50 text-purple-700 border border-purple-200" title="${val}"><i class="fas fa-envelope mr-1"></i>${val}</span>`;
+        }
+    }
+    
+    return `<span class="font-mono text-sm">${val}</span>`;
 };
 
 const formatObjectValue = (obj) => {
-    if (obj === null || typeof obj !== 'object') return '—';
+    if (obj === null || typeof obj !== 'object') {
+        return '<span class="text-red-400 italic flex items-center" title="Invalid object data"><i class="fas fa-bug mr-1"></i>Invalid object</span>';
+    }
     
     // Check if user profile
     if (obj.id && (obj.employee_id || obj.position || obj.department)) {
         return formatUserProfile(obj);
     }
     
-    const keys = Object.keys(obj);
+    const keys = Object.keys(obj || {});
+    if (keys.length === 0) {
+        return '<span class="text-gray-400 italic flex items-center" title="Empty object"><i class="fas fa-box mr-1"></i>Empty object</span>';
+    }
+    
     if (keys.length <= 3) {
-        return `<div class="space-y-1">${keys.map(key => `
-            <span class="inline-block bg-white border border-border-soft rounded px-2 py-1 mr-1 mb-1 text-xs">
-                <span class="font-bold text-chocolate">${formatKey(key)}:</span> 
-                <span class="text-gray-600">${formatValue(obj[key])}</span>
-            </span>`).join('')}</div>`;
+        return `<div class="space-y-2 bg-gray-50 p-3 rounded-lg border border-gray-200">${keys.map(key => `
+            <div class="flex items-start justify-between">
+                <span class="font-bold text-chocolate text-xs uppercase tracking-wide min-w-0 flex-shrink-0 mr-2">${formatKey(key)}:</span> 
+                <span class="text-gray-700 text-sm break-all">${formatValue(obj[key])}</span>
+            </div>`).join('')}</div>`;
     }
     
     const summary = keys.slice(0, 2).map(key => `<span class="text-xs font-medium text-chocolate">${formatKey(key)}</span>`).join(', ');
-    return `<div class="text-xs text-gray-500 italic">${summary} and ${keys.length - 2} more fields...</div>`;
+    return `<div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+        <div class="flex items-center mb-2">
+            <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+            <span class="text-xs font-bold text-blue-700">Complex Object</span>
+        </div>
+        <div class="text-xs text-blue-600">${summary} and ${keys.length - 2} more fields...</div>
+        <div class="mt-2 text-[10px] text-blue-500 font-mono">Total fields: ${keys.length}</div>
+    </div>`;
 };
 
 const formatUserProfile = (profile) => {
-    // Simplified for brevity in JS, styling matched to theme
-    let html = '<div class="space-y-1">';
-    if(profile.employee_id) html += `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 mr-1 border border-blue-100"><i class="fas fa-id-card mr-1"></i>${profile.employee_id}</span>`;
-    if(profile.position) html += `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 mr-1 border border-green-100"><i class="fas fa-briefcase mr-1"></i>${profile.position}</span>`;
-    html += '</div>';
+    if (!profile || typeof profile !== 'object') {
+        return '<span class="text-red-400 italic flex items-center"><i class="fas fa-user-slash mr-1"></i>Invalid profile data</span>';
+    }
+    
+    let html = '<div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-200">';
+    html += '<div class="flex items-center mb-2"><i class="fas fa-user-shield text-blue-600 mr-2"></i><span class="text-xs font-bold text-blue-700">User Profile</span></div>';
+    html += '<div class="space-y-1">';
+    
+    if(profile.id) {
+        html += `<div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-blue-600">ID:</span>
+            <span class="text-xs font-mono bg-blue-100 px-2 py-1 rounded text-blue-800">#${profile.id}</span>
+        </div>`;
+    }
+    
+    if(profile.employee_id) {
+        html += `<div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-blue-600">Employee ID:</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                <i class="fas fa-id-card mr-1"></i>${profile.employee_id}
+            </span>
+        </div>`;
+    }
+    
+    if(profile.position) {
+        html += `<div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-blue-600">Position:</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                <i class="fas fa-briefcase mr-1"></i>${profile.position}
+            </span>
+        </div>`;
+    }
+    
+    if(profile.department) {
+        html += `<div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-blue-600">Department:</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-50 text-orange-700 border border-orange-200">
+                <i class="fas fa-building mr-1"></i>${profile.department}
+            </span>
+        </div>`;
+    }
+    
+    if(profile.name) {
+        html += `<div class="flex items-center justify-between">
+            <span class="text-xs font-medium text-blue-600">Name:</span>
+            <span class="text-sm font-bold text-blue-800">${profile.name}</span>
+        </div>`;
+    }
+    
+    html += '</div></div>';
     return html;
 };
 
@@ -405,29 +525,81 @@ const ignoredKeys = ['id', 'created_at', 'updated_at', 'deleted_at', 'email_veri
 function openDetailModal(log) {
     const modal = document.getElementById('detailModal');
     
-    document.getElementById('modalId').innerText = log.record_id;
-    document.getElementById('modalTimestamp').innerText = new Date(log.created_at).toLocaleString();
+    // Show loading state
+    document.getElementById('modalId').innerText = log.record_id || 'Unknown';
+    document.getElementById('modalTimestamp').innerText = log.created_at ? new Date(log.created_at).toLocaleString() : 'Unknown';
     document.getElementById('modalActor').innerText = log.user ? `${log.user.name} (${log.user.role})` : 'SYSTEM';
 
     let oldValues = {};
     let newValues = {};
+    let parseErrors = [];
     
-    try { oldValues = typeof log.old_values === 'string' ? JSON.parse(log.old_values) : (log.old_values || {}); } catch(e) {}
-    try { newValues = typeof log.new_values === 'string' ? JSON.parse(log.new_values) : (log.new_values || {}); } catch(e) {}
+    // Enhanced JSON parsing with proper error handling
+    try { 
+        if (log.old_values) {
+            if (typeof log.old_values === 'string') {
+                oldValues = JSON.parse(log.old_values);
+            } else if (typeof log.old_values === 'object') {
+                oldValues = log.old_values;
+            } else {
+                parseErrors.push('Old values: Invalid data type');
+                oldValues = {};
+            }
+        }
+    } catch(e) { 
+        parseErrors.push(`Old values: ${e.message}`);
+        oldValues = {};
+    }
+    
+    try { 
+        if (log.new_values) {
+            if (typeof log.new_values === 'string') {
+                newValues = JSON.parse(log.new_values);
+            } else if (typeof log.new_values === 'object') {
+                newValues = log.new_values;
+            } else {
+                parseErrors.push('New values: Invalid data type');
+                newValues = {};
+            }
+        }
+    } catch(e) { 
+        parseErrors.push(`New values: ${e.message}`);
+        newValues = {};
+    }
 
     const container = document.getElementById('modalContentContainer');
     
+    // Show parse errors if any
+    if (parseErrors.length > 0) {
+        const errorHTML = `
+            <div class="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-exclamation-triangle text-red-500 mr-2"></i>
+                    <span class="text-sm font-bold text-red-700">Data Loading Issues</span>
+                </div>
+                <div class="text-xs text-red-600 space-y-1">
+                    ${parseErrors.map(error => `<div>• ${error}</div>`).join('')}
+                </div>
+                <div class="mt-2 text-xs text-red-500 italic">
+                    Some audit data may not be displayed correctly. Contact your administrator if this persists.
+                </div>
+            </div>
+        `;
+        container.innerHTML = errorHTML;
+    }
+    
+    // Render content based on action type
     if (log.action === 'UPDATE') {
-        container.innerHTML = renderDiffTable(oldValues, newValues);
+        container.innerHTML += renderDiffTable(oldValues, newValues);
     } else if (log.action === 'CREATE') {
-        container.innerHTML = renderAttributeList(newValues, 'New Record Attributes', 'bg-green-50 text-green-800 border-green-200');
+        container.innerHTML += renderAttributeList(newValues, 'New Record Attributes', 'bg-green-50 text-green-800 border-green-200');
     } else if (log.action === 'DELETE') {
-        container.innerHTML = renderAttributeList(oldValues, 'Deleted Record Attributes', 'bg-red-50 text-red-800 border-red-200');
+        container.innerHTML += renderAttributeList(oldValues, 'Deleted Record Attributes', 'bg-red-50 text-red-800 border-red-200');
     } else {
-        if (Object.keys(newValues).length > 0) {
-             container.innerHTML = renderAttributeList(newValues, 'Action Details', 'bg-cream-bg text-chocolate border-border-soft');
+        if (Object.keys(newValues).length > 0 || Object.keys(oldValues).length > 0) {
+             container.innerHTML += renderAttributeList(Object.keys(newValues).length > 0 ? newValues : oldValues, 'Action Details', 'bg-cream-bg text-chocolate border-border-soft');
         } else {
-            container.innerHTML = '<div class="text-sm text-gray-400 italic text-center py-8 border-2 border-dashed border-border-soft rounded-lg">No additional data logged.</div>';
+            container.innerHTML += '<div class="text-center py-8 border-2 border-dashed border-border-soft rounded-lg bg-gray-50"><i class="fas fa-info-circle text-gray-400 text-2xl mb-2"></div><div class="text-sm text-gray-500 italic">No additional data logged for this action.</div><div class="text-xs text-gray-400 mt-1">This is normal for certain system operations.</div></div>';
         }
     }
 
@@ -435,28 +607,42 @@ function openDetailModal(log) {
 }
 
 function renderDiffTable(oldData, newData) {
-    const allKeys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
+    // Validate input data
+    const allKeys = new Set([
+        ...(oldData && typeof oldData === 'object' ? Object.keys(oldData) : []), 
+        ...(newData && typeof newData === 'object' ? Object.keys(newData) : [])
+    ]);
     const filteredKeys = [...allKeys].filter(k => !ignoredKeys.includes(k));
 
     if (filteredKeys.length === 0) {
-        return '<div class="text-sm text-gray-400 italic text-center py-8 border-2 border-dashed border-border-soft rounded-lg">No business data changes detected.</div>';
+        return `
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-info-circle text-yellow-500 text-2xl mb-2"></i>
+                    <div class="text-sm font-bold text-yellow-700">No Business Data Changes Detected</div>
+                    <div class="text-xs text-yellow-600 mt-1">Only system fields (ID, timestamps, etc.) were modified</div>
+                    <div class="text-xs text-yellow-500 mt-2 italic">This is normal for some administrative operations</div>
+                </div>
+            </div>
+        `;
     }
 
     let rows = '';
     filteredKeys.forEach(key => {
-        const oldVal = oldData[key];
-        const newVal = newData[key];
+        const oldVal = oldData && oldData[key] !== undefined ? oldData[key] : null;
+        const newVal = newData && newData[key] !== undefined ? newData[key] : null;
         const isChanged = oldVal != newVal;
-        const bgClass = isChanged ? 'bg-amber-50/50' : '';
+        const bgClass = isChanged ? 'bg-amber-50/50 border-amber-200' : 'bg-gray-50/30 border-gray-100';
         const textClass = isChanged ? 'font-bold text-chocolate' : 'text-gray-500';
+        const icon = isChanged ? '<i class="fas fa-exclamation-circle text-amber-500 ml-2 text-xs" title="Changed"></i>' : '';
 
         rows += `
-            <tr class="${bgClass} hover:bg-cream-bg transition-colors border-b border-gray-100 last:border-0">
-                <td class="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/4">${formatKey(key)}</td>
-                <td class="px-4 py-3 text-sm text-gray-600 w-1/3 break-all font-mono">${formatValue(oldVal)}</td>
+            <tr class="${bgClass} hover:bg-cream-bg transition-colors border-b border-gray-200 last:border-0">
+                <td class="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/4 bg-gray-50/50">${formatKey(key)}</td>
+                <td class="px-4 py-3 text-sm text-gray-600 w-1/3 break-all font-mono">${formatValue(oldVal, 'old')}</td>
                 <td class="px-4 py-3 text-sm ${textClass} w-1/3 break-all font-mono">
-                    ${formatValue(newVal)}
-                    ${isChanged ? '<i class="fas fa-exclamation-circle text-amber-500 ml-2 text-xs" title="Changed"></i>' : ''}
+                    ${formatValue(newVal, 'new')}
+                    ${icon}
                 </td>
             </tr>
         `;
@@ -464,15 +650,19 @@ function renderDiffTable(oldData, newData) {
 
     return `
         <div class="bg-white rounded-lg border border-border-soft shadow-sm overflow-hidden">
-            <div class="bg-cream-bg px-4 py-2 border-b border-border-soft flex justify-between items-center">
-                <span class="text-xs font-bold text-chocolate uppercase tracking-widest">Changes Detected</span>
+            <div class="bg-cream-bg px-4 py-3 border-b border-border-soft flex justify-between items-center">
+                <div class="flex items-center">
+                    <i class="fas fa-exchange-alt text-chocolate mr-2"></i>
+                    <span class="text-sm font-bold text-chocolate">Changes Detected</span>
+                </div>
+                <span class="text-xs text-caramel font-medium">${filteredKeys.length} field${filteredKeys.length !== 1 ? 's' : ''} affected</span>
             </div>
             <table class="min-w-full">
                 <thead>
                     <tr class="bg-gray-50/50 border-b border-border-soft">
                         <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Field</th>
-                        <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Old Value</th>
-                        <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">New Value</th>
+                        <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Previous Value</th>
+                        <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest">Current Value</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
@@ -482,25 +672,51 @@ function renderDiffTable(oldData, newData) {
 }
 
 function renderAttributeList(data, title, headerClass) {
-    const keys = Object.keys(data).filter(k => !ignoredKeys.includes(k));
+    // Validate input data
+    const validData = data && typeof data === 'object' ? data : {};
+    const keys = Object.keys(validData).filter(k => !ignoredKeys.includes(k));
     
-    if (keys.length === 0) return '<div class="text-sm text-gray-400 italic text-center py-4">No details available.</div>';
+    if (keys.length === 0) {
+        return `
+            <div class="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-list-alt text-gray-400 text-2xl mb-2"></i>
+                    <div class="text-sm font-medium text-gray-600">${title}</div>
+                    <div class="text-xs text-gray-500 mt-1">No additional details available</div>
+                    <div class="text-xs text-gray-400 mt-2 italic">This may be normal for system operations</div>
+                </div>
+            </div>
+        `;
+    }
 
-    let rows = keys.map(key => `
-        <tr class="hover:bg-cream-bg transition-colors border-b border-gray-100 last:border-0">
-            <td class="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/3 bg-gray-50/30">
-                ${formatKey(key)}
-            </td>
-            <td class="px-4 py-3 text-sm text-chocolate break-all font-mono">
-                ${formatValue(data[key])}
-            </td>
-        </tr>
-    `).join('');
+    let rows = keys.map(key => {
+        const value = validData[key];
+        return `
+            <tr class="hover:bg-cream-bg transition-colors border-b border-gray-200 last:border-0">
+                <td class="px-4 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/3 bg-gray-50/50">
+                    <div class="flex items-center">
+                        <i class="fas fa-tag text-gray-400 mr-2"></i>
+                        ${formatKey(key)}
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-sm text-chocolate break-all">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">${formatValue(value)}</div>
+                        ${typeof value === 'string' && value.length > 50 ? '<i class="fas fa-expand-alt text-gray-400 ml-2 flex-shrink-0" title="Long text"></i>' : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 
     return `
         <div class="bg-white rounded-lg border border-border-soft shadow-sm overflow-hidden">
-            <div class="px-4 py-2 border-b ${headerClass} flex justify-between items-center">
-                <span class="text-xs font-bold uppercase tracking-widest">${title}</span>
+            <div class="px-4 py-3 border-b ${headerClass} flex justify-between items-center">
+                <div class="flex items-center">
+                    <i class="fas fa-clipboard-list mr-2"></i>
+                    <span class="text-sm font-bold uppercase tracking-widest">${title}</span>
+                </div>
+                <span class="text-xs opacity-75">${keys.length} item${keys.length !== 1 ? 's' : ''}</span>
             </div>
             <table class="min-w-full">
                 <tbody>${rows}</tbody>
@@ -509,12 +725,52 @@ function renderAttributeList(data, title, headerClass) {
     `;
 }
 
+// Debug helper function for troubleshooting
+function debugAuditLogData(log) {
+    const debug = {
+        id: log.id,
+        action: log.action,
+        table_name: log.table_name,
+        record_id: log.record_id,
+        created_at: log.created_at,
+        user: log.user ? { id: log.user.id, name: log.user.name, role: log.user.role } : null,
+        old_values_type: typeof log.old_values,
+        new_values_type: typeof log.new_values,
+        old_values_content: log.old_values,
+        new_values_content: log.new_values,
+        timestamp: new Date().toISOString()
+    };
+    
+    console.group('🔍 Audit Log Debug Info');
+    console.log('Log ID:', debug.id);
+    console.log('Action:', debug.action);
+    console.log('Table:', debug.table_name);
+    console.log('Record ID:', debug.record_id);
+    console.log('User:', debug.user);
+    console.log('Old Values Type:', debug.old_values_type);
+    console.log('New Values Type:', debug.new_values_type);
+    console.log('Old Values Content:', debug.old_values_content);
+    console.log('New Values Content:', debug.new_values_content);
+    console.log('Timestamp:', debug.timestamp);
+    console.groupEnd();
+    
+    return debug;
+}
+
 function closeDetailModal() {
     document.getElementById('detailModal').classList.add('hidden');
 }
 
 document.addEventListener('keydown', function(event) {
-    if (event.key === "Escape") closeDetailModal();
+    if (event.key === "Escape") {
+        closeDetailModal();
+    }
+    // Debug mode: Press Ctrl+Shift+D to enable debug logging
+    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        console.log('🔧 Debug mode enabled for audit logs');
+        window.auditLogDebugEnabled = true;
+        showToast('Debug Mode Enabled', 'Check browser console for detailed audit log information.');
+    }
 });
 
 // Auto-submit triggers
@@ -531,5 +787,56 @@ document.querySelector('input[name="search"]').addEventListener('input', functio
         document.getElementById('auditFilterForm').submit();
     }, 500);
 });
+
+// Enhanced toast notifications with better styling
+function showEnhancedToast(type, title, message) {
+    const toast = document.getElementById('toast');
+    const icon = document.getElementById('toastIcon');
+    const titleEl = document.getElementById('toastTitle');
+    const messageEl = document.getElementById('toastMessage');
+    
+    const icons = {
+        success: 'fa-check-circle text-green-500',
+        error: 'fa-exclamation-circle text-red-500',
+        warning: 'fa-exclamation-triangle text-yellow-500',
+        info: 'fa-info-circle text-blue-500'
+    };
+    
+    icon.className = `fas ${icons[type] || icons.info} text-xl`;
+    titleEl.innerText = title;
+    messageEl.innerText = message;
+    
+    toast.classList.remove('hidden');
+    void toast.offsetWidth; // Force reflow
+    toast.classList.remove('translate-y-2', 'opacity-0');
+    
+    setTimeout(() => hideToast(), 4000);
+}
+
+// Debug function to help troubleshoot issues
+function enableDebugMode() {
+    window.auditLogDebugEnabled = true;
+    showEnhancedToast('info', 'Debug Mode Activated', 'Console logging enabled for audit operations.');
+}
+
+// Debug panel toggle function
+function toggleDebugInfo() {
+    const debugPanel = document.getElementById('debugPanel');
+    const debugBtn = document.getElementById('debugToggleBtn');
+    
+    if (debugPanel.classList.contains('hidden')) {
+        debugPanel.classList.remove('hidden');
+        debugBtn.classList.add('bg-yellow-100', 'text-yellow-800');
+        debugBtn.classList.remove('bg-blue-50', 'text-blue-700');
+    } else {
+        debugPanel.classList.add('hidden');
+        debugBtn.classList.remove('bg-yellow-100', 'text-yellow-800');
+        debugBtn.classList.add('bg-blue-50', 'text-blue-700');
+    }
+}
+
+// Make debug function globally available
+window.auditLogDebug = debugAuditLogData;
+window.enableAuditDebug = enableDebugMode;
 </script>
 @endsection 

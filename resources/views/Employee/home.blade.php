@@ -176,16 +176,7 @@
                     <p class="text-xs text-gray-500 mt-1">Order ingredients & supplies</p>
                 </a>
 
-                <a href="{{ route('employee.production.log') }}" class="group block p-5 bg-white border border-border-soft rounded-xl shadow-sm hover:shadow-md hover:border-caramel transition-all">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-cream-bg rounded-lg flex items-center justify-center text-chocolate group-hover:bg-chocolate group-hover:text-white transition-colors">
-                            <i class="fas fa-clipboard-check text-lg"></i>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-300 group-hover:text-chocolate transition-colors transform group-hover:translate-x-1"></i>
-                    </div>
-                    <h3 class="font-display font-bold text-chocolate">Log Production</h3>
-                    <p class="text-xs text-gray-500 mt-1">Record daily output & waste</p>
-                </a>
+              
             </div>
 
             {{-- 5. RECIPE SHORTCUT --}}

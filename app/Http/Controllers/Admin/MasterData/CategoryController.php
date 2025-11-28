@@ -64,6 +64,7 @@ class CategoryController extends Controller
             'name' => 'required|string|max:255|unique:categories,name',
             'description' => 'nullable|string|max:500',
             'parent_id' => 'nullable|exists:categories,id',
+            'icon' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:20',
         ]);
 
@@ -72,7 +73,8 @@ class CategoryController extends Controller
                 'name' => $request->name,
                 'description' => $request->description,
                 'parent_id' => $request->parent_id,
-                'color' => $request->color,
+                'icon' => $request->icon ?? 'fas fa-tag',
+                'color' => $request->color ?? '#8B4513',
                 'is_active' => true
             ]);
 
@@ -124,6 +126,7 @@ class CategoryController extends Controller
             'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
             'description' => 'nullable|string|max:500',
             'parent_id' => 'nullable|exists:categories,id',
+            'icon' => 'nullable|string|max:100',
             'color' => 'nullable|string|max:20',
         ]);
 
@@ -134,7 +137,8 @@ class CategoryController extends Controller
                 'name' => $request->name,
                 'description' => $request->description,
                 'parent_id' => $request->parent_id,
-                'color' => $request->color,
+                'icon' => $request->icon ?? 'fas fa-tag',
+                'color' => $request->color ?? '#8B4513',
             ]);
 
             // Create audit log
@@ -249,14 +253,22 @@ class CategoryController extends Controller
     /**
      * Get parent categories for dropdown.
      *
+     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\Response
      */
-    public function getParentCategories()
+    public function getParentCategories(Request $request)
     {
-        $categories = Category::where('is_active', true)
-            ->whereNull('parent_id')
-            ->orderBy('name')
-            ->get(['id', 'name']);
+        $excludeId = $request->get('exclude_id');
+        
+        $query = Category::where('is_active', true)
+            ->orderBy('name');
+            
+        // Exclude the current category being edited to prevent circular references
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+        
+        $categories = $query->get(['id', 'name']);
 
         return response()->json($categories);
     }
