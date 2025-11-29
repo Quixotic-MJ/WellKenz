@@ -26,7 +26,7 @@
                 $totalOrders = $purchaseOrders->count();
                 $totalValue = $purchaseOrders->sum('grand_total');
                 $completedOrders = $purchaseOrders->where('status', 'completed')->count();
-                $pendingOrders = $purchaseOrders->whereIn('status', ['draft', 'sent', 'confirmed'])->count();
+                $pendingOrders = $purchaseOrders->whereIn('status', ['sent', 'confirmed'])->count();
             @endphp
 
             {{-- Card 1: Total Orders --}}
@@ -117,7 +117,6 @@
                             id="status"
                             class="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel focus:border-caramel transition-all">
                         <option value="">All Statuses</option>
-                        <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
                         <option value="sent" {{ request('status') == 'sent' ? 'selected' : '' }}>Sent</option>
                         <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
                         <option value="partial" {{ request('status') == 'partial' ? 'selected' : '' }}>Partial</option>
@@ -278,13 +277,12 @@
                                         'confirmed' => 'bg-blue-100 text-blue-800 border-blue-200',
                                         'sent' => 'bg-yellow-100 text-yellow-800 border-yellow-200',
                                         'partial' => 'bg-orange-100 text-orange-800 border-orange-200',
-                                        'cancelled' => 'bg-red-100 text-red-800 border-red-200',
-                                        'draft' => 'bg-gray-100 text-gray-800 border-gray-200'
+                                        'cancelled' => 'bg-red-100 text-red-800 border-red-200'
                                     ];
-                                    $currentClass = $statusClasses[$order->status] ?? $statusClasses['draft'];
+                                    $currentClass = $statusClasses[$order->status] ?? $statusClasses['sent'];
                                 @endphp
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {{ $currentClass }}">
-                                    {{ ucfirst($order->status ?? 'draft') }}
+                                    {{ ucfirst($order->status ?? 'sent') }}
                                 </span>
                                 
                                 @if($order->status === 'partial')
@@ -329,13 +327,6 @@
                                         <i class="fas fa-print"></i>
                                     </a>
 
-                                    @if($order->status === 'draft' && auth()->user()?->hasAnyRole(['purchasing', 'admin']))
-                                        <a href="{{ route('purchasing.po.edit', $order->id) }}" 
-                                           class="p-1.5 text-blue-600 hover:text-white hover:bg-blue-600 rounded-md transition-colors"
-                                           title="Edit PO">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -603,14 +594,13 @@ class PODetailsModal {
 
     getStatusBadge(status) {
         const badges = {
-            'draft': '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded border border-gray-200 uppercase tracking-wide">Draft</span>',
             'sent': '<span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-xs font-medium rounded border border-blue-100 uppercase tracking-wide">Sent</span>',
             'confirmed': '<span class="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs font-medium rounded border border-indigo-100 uppercase tracking-wide">Confirmed</span>',
             'partial': '<span class="px-2 py-0.5 bg-orange-50 text-orange-600 text-xs font-medium rounded border border-orange-100 uppercase tracking-wide">Partial</span>',
             'completed': '<span class="px-2 py-0.5 bg-green-50 text-green-600 text-xs font-medium rounded border border-green-100 uppercase tracking-wide">Completed</span>',
             'cancelled': '<span class="px-2 py-0.5 bg-red-50 text-red-600 text-xs font-medium rounded border border-red-100 uppercase tracking-wide">Cancelled</span>',
         };
-        return badges[status] || badges['draft'];
+        return badges[status] || badges['sent'];
     }
 }
 

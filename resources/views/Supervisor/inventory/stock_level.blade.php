@@ -10,14 +10,18 @@
             <p class="text-sm text-gray-500">Real-time view of current warehouse inventory.</p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{{ route('supervisor.inventory.print-stock-report') }}" 
+            <a href="{{ route('supervisor.inventory.print-stock-report') }}"
                target="_blank"
                class="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-border-soft text-gray-600 text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-chocolate transition-all shadow-sm group">
                 <i class="fas fa-print mr-2 opacity-70 group-hover:opacity-100"></i> Print Report
             </a>
-            <a href="{{ route('supervisor.inventory.export-stock-csv') }}" 
+            <a href="{{ route('supervisor.inventory.export-stock-csv') }}"
                class="inline-flex items-center justify-center px-4 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                 <i class="fas fa-file-csv mr-2"></i> Export CSV
+            </a>
+            <a href="{{ route('supervisor.inventory.export-stock-pdf') . '?' . http_build_query(request()->query()) }}"
+               class="inline-flex items-center justify-center px-4 py-2.5 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                <i class="fas fa-file-pdf mr-2"></i> Export PDF
             </a>
         </div>
     </div>
@@ -79,7 +83,7 @@
 
     {{-- 3. FILTERS --}}
     <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm">
-        <form method="GET" action="{{ route('supervisor.inventory.stock-level') }}" class="flex flex-col lg:flex-row items-center gap-4 w-full">
+        <form id="stock-filter-form" method="GET" action="{{ route('supervisor.inventory.stock-level') }}" class="flex flex-col lg:flex-row items-center gap-4 w-full">
             <div class="relative w-full lg:flex-1 group">
                 <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-1">Search</label>
                 <div class="relative">
@@ -130,12 +134,6 @@
                     </select>
                     <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"><i class="fas fa-chevron-down text-xs"></i></div>
                 </div>
-            </div>
-            
-            <div class="flex gap-2 self-end">
-                <button type="submit" class="px-6 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-sm">
-                    Filter
-                </button>
             </div>
         </form>
     </div>
@@ -248,10 +246,21 @@
                                 <div class="text-xs text-gray-400">{{ $lastMovementSub }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="{{ route('supervisor.inventory.stock-card', $item) }}" 
-                                   class="text-chocolate hover:text-white hover:bg-chocolate border border-border-soft px-3 py-1.5 rounded-lg transition-all inline-flex items-center text-xs font-bold">
-                                    <i class="fas fa-file-alt mr-1.5"></i> View Card
-                                </a>
+                                <div class="flex flex-col gap-1">
+                                    <button onclick="openAdjustmentModal({{ $item->id }}, '{{ addslashes($item->name) }}', '{{ addslashes($item->item_code) }}', {{ $currentStock }}, '{{ $item->unit->symbol ?? '' }}')"
+                                       class="text-blue-600 hover:text-white hover:bg-blue-600 border border-border-soft px-3 py-1.5 rounded-lg transition-all inline-flex items-center text-xs font-bold"
+                                       data-item-id="{{ $item->id }}"
+                                       data-item-name="{{ addslashes($item->name) }}"
+                                       data-item-code="{{ addslashes($item->item_code) }}"
+                                       data-current-stock="{{ $currentStock }}"
+                                       data-unit-symbol="{{ $item->unit->symbol ?? '' }}">
+                                        <i class="fas fa-edit mr-1.5"></i> Adjust Stock
+                                    </button>
+                                    <a href="{{ route('supervisor.inventory.stock-card', $item) }}"
+                                       class="text-chocolate hover:text-white hover:bg-chocolate border border-border-soft px-3 py-1.5 rounded-lg transition-all inline-flex items-center text-xs font-bold">
+                                        <i class="fas fa-file-alt mr-1.5"></i> View Card
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -285,4 +294,461 @@
     </div>
 
 </div>
+
+{{-- ADJUSTMENTS MODAL --}}
+<div id="adjustment-modal" class="fixed inset-0 z-50 hidden overflow-y-auto backdrop-blur-sm transition-opacity" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-chocolate/20 transition-opacity" aria-hidden="true" onclick="closeAdjustmentModal()"></div>
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full border border-border-soft max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="bg-chocolate px-6 py-4 border-b border-chocolate-dark flex items-center justify-between">
+                <h3 class="text-lg font-display font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-edit text-caramel"></i> New Adjustment
+                </h3>
+                <button onclick="closeAdjustmentModal()" class="text-white/70 hover:text-white focus:outline-none transition-colors">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6" id="adjustment-modal-content">
+                <form id="adjustment-form" enctype="multipart/form-data" class="space-y-6">
+                    @csrf 
+                    
+                    <!-- ACTION TYPE -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">1. Action Type</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <!-- Deduction -->
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" name="adjustment_type" value="remove" class="peer sr-only" checked>
+                                <div class="h-full p-3 rounded-xl border border-border-soft bg-cream-bg/50 hover:bg-red-50/50 peer-checked:border-red-500 peer-checked:bg-red-50 peer-checked:ring-1 peer-checked:ring-red-500 transition-all duration-200 text-center flex flex-col items-center justify-center gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-white border border-border-soft text-red-500 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-minus"></i>
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-gray-900">Remove</span>
+                                        <span class="block text-[10px] text-gray-500">Loss / Damage</span>
+                                    </div>
+                                </div>
+                                <div class="absolute top-2 right-2 text-red-600 opacity-0 peer-checked:opacity-100 transition-opacity"><i class="fas fa-check-circle"></i></div>
+                            </label>
+                            
+                            <!-- Addition -->
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" name="adjustment_type" value="add" class="peer sr-only">
+                                <div class="h-full p-3 rounded-xl border border-border-soft bg-cream-bg/50 hover:bg-green-50/50 peer-checked:border-green-500 peer-checked:bg-green-50 peer-checked:ring-1 peer-checked:ring-green-500 transition-all duration-200 text-center flex flex-col items-center justify-center gap-2">
+                                    <div class="w-8 h-8 rounded-full bg-white border border-border-soft text-green-600 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-plus"></i>
+                                    </div>
+                                    <div>
+                                        <span class="block text-sm font-bold text-gray-900">Add Stock</span>
+                                        <span class="block text-[10px] text-gray-500">Return / Found</span>
+                                    </div>
+                                </div>
+                                <div class="absolute top-2 right-2 text-green-600 opacity-0 peer-checked:opacity-100 transition-opacity"><i class="fas fa-check-circle"></i></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- SELECTED ITEM INFO -->
+                    <div class="p-4 bg-cream-bg/30 rounded-xl border border-border-soft space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-3">2. Selected Item</label>
+                            
+                            <!-- Item Info Display -->
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="text-sm font-bold text-chocolate" id="modal-item-name">Loading...</div>
+                                        <div class="text-xs text-gray-500 font-mono mt-0.5" id="modal-item-code">--</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs text-gray-500 font-bold uppercase">Current Stock</div>
+                                        <div class="font-mono font-bold text-chocolate text-sm" id="modal-current-stock-display">--</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden input for item_id -->
+                            <input type="hidden" id="modal-item-id" name="item_id" value="">
+                        </div>
+
+                        <!-- QUANTITY & REASON -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-2">3. Quantity <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <input type="number" step="0.001" min="0.001" 
+                                           class="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm py-2.5 pl-3 pr-12 font-bold" 
+                                           id="modal-quantity" name="quantity" placeholder="0.00" required>
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <input type="text" class="text-[10px] font-bold text-gray-400 bg-transparent border-none text-right w-12 p-0 uppercase" id="modal-unit-display" value="UNIT" disabled>
+                                    </div>
+                                </div>
+                                <p class="text-[10px] text-red-600 mt-1 hidden font-bold flex items-center gap-1" id="modal-qty-error">
+                                    <i class="fas fa-exclamation-circle"></i> Invalid quantity
+                                </p>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-2">4. Reason <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <select class="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm py-2.5 pl-3 pr-8 cursor-pointer bg-white" id="modal-reason-code" name="reason_code" required>
+                                        <option value="" disabled selected>Select reason...</option>
+                                        <optgroup label="Inventory Loss">
+                                            <option value="Spoilage / Expired">Spoilage / Expired</option>
+                                            <option value="Damaged / Broken">Damaged / Broken</option>
+                                            <option value="Spillage (Production)">Spillage</option>
+                                            <option value="Theft / Missing">Theft / Missing</option>
+                                        </optgroup>
+                                        <optgroup label="Inventory Correction">
+                                            <option value="Audit Variance Correction">Audit Variance</option>
+                                            <option value="Found Item">Found Item</option>
+                                        </optgroup>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                                        <i class="fas fa-chevron-down text-xs"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- REMARKS -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">5. Remarks <span class="text-red-500">*</span></label>
+                        <textarea rows="2" class="block w-full border-gray-200 rounded-lg shadow-sm focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm p-3 resize-none" id="modal-remarks" name="remarks" placeholder="Briefly describe what happened..." required></textarea>
+                    </div>
+
+                    <!-- UPLOAD -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Attach Proof (Optional)</label>
+                        <div class="relative group cursor-pointer" id="modal-photo-upload-area">
+                            <div class="flex items-center justify-center w-full px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-xl hover:bg-cream-bg hover:border-caramel transition-all duration-200 bg-gray-50/50">
+                                <input type="file" id="modal-photo" name="photo" class="sr-only" accept="image/*">
+                                <div class="space-y-1 text-center">
+                                    <div class="w-10 h-10 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-2 group-hover:scale-110 transition-transform">
+                                        <i class="fas fa-cloud-upload-alt text-gray-400 text-lg group-hover:text-caramel transition-colors" id="modal-photo-icon"></i>
+                                    </div>
+                                    <div class="text-sm text-gray-600">
+                                        <span class="font-bold text-chocolate hover:underline" id="modal-photo-upload-text">Click to upload</span>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 uppercase">PNG, JPG (Max 5MB)</p>
+                                    <p class="text-xs text-green-600 font-bold bg-green-50 py-1 px-2 rounded-md mt-2 border border-green-100 shadow-sm" id="modal-photo-info" style="display: none;"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-caramel transition-all duration-300 transform active:scale-95 items-center gap-2" id="modal-submit-btn">
+                            <i class="fas fa-save"></i> <span id="modal-submit-text">Submit Adjustment</span>
+                            <span id="modal-submit-loading" style="display: none;" class="flex items-center gap-2">
+                                <i class="fas fa-circle-notch fa-spin"></i> Processing...
+                            </span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('stock-filter-form');
+    const searchInput = document.querySelector('input[name="search"]');
+    let debounceTimer;
+
+    // Function to debounce search input
+    function debounceSubmit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            form.submit();
+        }, 800); // Wait 800ms after user stops typing
+    }
+
+    // Auto-submit on select changes
+    const selects = form.querySelectorAll('select');
+    selects.forEach(select => {
+        select.addEventListener('change', () => {
+            form.submit();
+        });
+    });
+
+    // Auto-submit on search input with debounce
+    if (searchInput) {
+        searchInput.addEventListener('input', debounceSubmit);
+    }
+
+    // Initialize adjustment modal functionality
+    initializeAdjustmentModal();
+});
+
+function initializeAdjustmentModal() {
+    setupModalEventListeners();
+    setupModalPhotoUpload();
+}
+
+function setupModalEventListeners() {
+    const modalForm = document.getElementById('adjustment-form');
+    if (modalForm) {
+        modalForm.addEventListener('submit', handleModalFormSubmit);
+    }
+    
+    const modalQuantity = document.getElementById('modal-quantity');
+    if (modalQuantity) {
+        modalQuantity.addEventListener('input', validateModalQuantity);
+    }
+    
+    const modalRadios = document.querySelectorAll('input[name="adjustment_type"]');
+    modalRadios.forEach(radio => {
+        radio.addEventListener('change', validateModalQuantity);
+    });
+}
+
+function setupModalPhotoUpload() {
+    const uploadArea = document.getElementById('modal-photo-upload-area');
+    const photoInput = document.getElementById('modal-photo');
+    const photoText = document.getElementById('modal-photo-upload-text');
+    const photoInfo = document.getElementById('modal-photo-info');
+    const photoIcon = document.getElementById('modal-photo-icon');
+    
+    if (!uploadArea || !photoInput) return;
+    
+    uploadArea.addEventListener('click', () => photoInput.click());
+    
+    photoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('File size must be less than 5MB', 'error');
+                photoInput.value = '';
+                return;
+            }
+            if (!file.type.match('image.*')) {
+                showNotification('Please select an image file', 'error');
+                photoInput.value = '';
+                return;
+            }
+            
+            photoText.textContent = "Change Photo";
+            photoInfo.textContent = file.name;
+            photoInfo.style.display = 'inline-block';
+            
+            uploadArea.classList.add('border-green-400', 'bg-green-50');
+            uploadArea.classList.remove('border-border-soft', 'bg-cream-bg/50');
+            photoIcon.classList.remove('text-gray-400');
+            photoIcon.classList.add('text-green-500');
+        }
+    });
+}
+
+function updateModalItemDisplay(itemData = null) {
+    const currentStockDisplay = document.getElementById('modal-current-stock-display');
+    const unitDisplay = document.getElementById('modal-unit-display');
+    const itemNameDisplay = document.getElementById('modal-item-name');
+    const itemCodeDisplay = document.getElementById('modal-item-code');
+    const itemIdInput = document.getElementById('modal-item-id');
+    
+    if (!currentStockDisplay || !unitDisplay || !itemNameDisplay || !itemCodeDisplay || !itemIdInput) return;
+    
+    if (itemData) {
+        currentStockDisplay.textContent = parseFloat(itemData.currentStock).toFixed(3) + ' ' + itemData.unitSymbol;
+        unitDisplay.value = itemData.unitSymbol;
+        itemNameDisplay.textContent = itemData.itemName;
+        itemCodeDisplay.textContent = itemData.itemCode;
+        itemIdInput.value = itemData.itemId;
+        
+        validateModalQuantity();
+    } else {
+        currentStockDisplay.textContent = '--';
+        unitDisplay.value = 'UNIT';
+        itemNameDisplay.textContent = 'Loading...';
+        itemCodeDisplay.textContent = '--';
+        itemIdInput.value = '';
+    }
+}
+
+function validateModalQuantity() {
+    const quantityInput = document.getElementById('modal-quantity');
+    const qtyError = document.getElementById('modal-qty-error');
+    const adjustmentType = document.querySelector('input[name="adjustment_type"]:checked')?.value;
+    const itemIdInput = document.getElementById('modal-item-id');
+    
+    if (!quantityInput || !qtyError || !adjustmentType || !itemIdInput) return;
+    
+    quantityInput.classList.remove('border-red-500', 'focus:border-red-500', 'focus:ring-red-500', 'bg-red-50');
+    qtyError.style.display = 'none';
+    
+    if (itemIdInput.value && adjustmentType === 'remove') {
+        // Get current stock from the displayed value
+        const currentStockText = document.getElementById('modal-current-stock-display').textContent;
+        const currentStock = parseFloat(currentStockText) || 0;
+        const quantity = parseFloat(quantityInput.value) || 0;
+        
+        if (quantity > currentStock) {
+            quantityInput.setCustomValidity('Cannot exceed stock');
+            quantityInput.classList.add('border-red-500', 'focus:border-red-500', 'focus:ring-red-500', 'bg-red-50');
+            qtyError.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i> Exceeds current stock (${currentStock})`;
+            qtyError.style.display = 'flex';
+            return false;
+        }
+    }
+    quantityInput.setCustomValidity('');
+    return true;
+}
+
+function openAdjustmentModal(itemId, itemName, itemCode, currentStock, unitSymbol) {
+    const modal = document.getElementById('adjustment-modal');
+    if (!modal) return;
+    
+    // Reset form
+    const form = document.getElementById('adjustment-form');
+    if (form) {
+        form.reset();
+    }
+    
+    // Clear any previous errors
+    const qtyError = document.getElementById('modal-qty-error');
+    if (qtyError) {
+        qtyError.style.display = 'none';
+    }
+    
+    // Clear photo upload state
+    const uploadArea = document.getElementById('modal-photo-upload-area');
+    const photoInput = document.getElementById('modal-photo');
+    const photoText = document.getElementById('modal-photo-upload-text');
+    const photoInfo = document.getElementById('modal-photo-info');
+    const photoIcon = document.getElementById('modal-photo-icon');
+    
+    if (uploadArea && photoInput && photoText && photoInfo && photoIcon) {
+        photoInput.value = '';
+        photoText.textContent = 'Click to upload';
+        photoInfo.style.display = 'none';
+        uploadArea.classList.remove('border-green-400', 'bg-green-50');
+        uploadArea.classList.add('border-border-soft', 'bg-cream-bg/50');
+        photoIcon.classList.remove('text-green-500');
+        photoIcon.classList.add('text-gray-400');
+    }
+    
+    // Populate item information
+    const itemData = {
+        itemId: itemId,
+        itemName: itemName,
+        itemCode: itemCode,
+        currentStock: currentStock,
+        unitSymbol: unitSymbol
+    };
+    
+    updateModalItemDisplay(itemData);
+    
+    // Show modal
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+}
+
+function closeAdjustmentModal() {
+    const modal = document.getElementById('adjustment-modal');
+    if (!modal) return;
+    
+    // Reset item display
+    updateModalItemDisplay();
+    
+    modal.classList.add('hidden');
+    document.body.style.overflow = ''; // Restore scrolling
+}
+
+async function handleModalFormSubmit(e) {
+    e.preventDefault();
+    
+    if(!validateModalQuantity()) {
+        showNotification('Please fix errors before submitting.', 'error');
+        const quantityInput = document.getElementById('modal-quantity');
+        if (quantityInput) {
+            quantityInput.classList.add('animate-pulse');
+            setTimeout(() => quantityInput.classList.remove('animate-pulse'), 500);
+        }
+        return;
+    }
+    
+    const submitBtn = document.getElementById('modal-submit-btn');
+    const submitText = document.getElementById('modal-submit-text');
+    const submitLoading = document.getElementById('modal-submit-loading');
+    
+    if (!submitBtn || !submitText || !submitLoading) return;
+    
+    submitBtn.disabled = true;
+    submitText.style.display = 'none';
+    submitLoading.style.display = 'flex';
+    
+    try {
+        const formData = new FormData(e.target);
+        const response = await fetch("{{ route('supervisor.inventory.adjustments.store') }}", { 
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+                'Accept': 'application/json'
+            },
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok && result.success) {
+            showNotification('Adjustment recorded successfully!', 'success');
+            closeAdjustmentModal();
+            
+            // Refresh the page after a short delay to show updated stock levels
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            let msg = result.message || 'Failed to create adjustment';
+            if(result.errors) {
+                msg = Object.values(result.errors).flat().join('\n');
+            }
+            showNotification(msg, 'error');
+            submitBtn.disabled = false;
+            submitText.style.display = 'inline';
+            submitLoading.style.display = 'none';
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Network error occurred. Please check your connection.', 'error');
+        submitBtn.disabled = false;
+        submitText.style.display = 'inline';
+        submitLoading.style.display = 'none';
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const existing = document.getElementById('toast-notification');
+    if(existing) existing.remove();
+
+    const notification = document.createElement('div');
+    notification.id = 'toast-notification';
+    notification.className = `fixed top-5 right-5 z-[60] px-6 py-4 rounded-xl shadow-2xl text-white font-medium slide-in flex items-center gap-4 border border-white/10 backdrop-blur-md ${
+        type === 'success' ? 'bg-gray-900' : 
+        type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+    }`;
+    
+    const icon = type === 'success' ? '<i class="fas fa-check-circle text-green-400 text-xl"></i>' : 
+                 type === 'error' ? '<i class="fas fa-times-circle text-white text-xl"></i>' : 
+                 '<i class="fas fa-info-circle text-xl"></i>';
+                  
+    notification.innerHTML = `${icon} <div><p class="font-bold text-sm uppercase tracking-wider mb-0.5">${type}</p><p class="text-sm opacity-90">${message}</p></div>`;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.transform = 'translateX(100%)';
+        notification.style.opacity = '0';
+        notification.style.transition = 'all 0.5s ease-in-out';
+        setTimeout(() => notification.remove(), 500);
+    }, 4000);
+}
+</script>
 @endsection

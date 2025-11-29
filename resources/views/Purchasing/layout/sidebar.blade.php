@@ -25,9 +25,9 @@
            id="menu-purchasing-dashboard"
            class="group flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-6
            {{ request()->routeIs('purchasing.dashboard') 
-              ? 'bg-caramel text-white shadow-md shadow-caramel/20' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white' }}">
-            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('purchasing.dashboard') ? 'text-white' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('purchasing.dashboard') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Procurement Hub</span>
         </a>
 
@@ -47,16 +47,17 @@
             <span class="ml-2">Create PO</span>
         </a>
 
-        {{-- Drafts --}}
-        <a href="{{ Route::has('purchasing.po.drafts') ? route('purchasing.po.drafts') : '#' }}"
-           id="menu-purchasing-po-drafts"
+        {{-- Bulk Configure PO --}}
+        <a href="{{ Route::has('purchasing.po.bulk-configure') ? route('purchasing.po.bulk-configure') : '#' }}"
+           id="menu-purchasing-po-bulk-configure"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('purchasing.po.drafts') 
+           {{ request()->routeIs('purchasing.po.bulk-configure') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-edit w-6 text-center text-sm {{ request()->routeIs('purchasing.po.drafts') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Drafts</span>
+            <i class="fas fa-cogs w-6 text-center text-sm {{ request()->routeIs('purchasing.po.bulk-configure') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Bulk Configure PO</span>
         </a>
+
 
         {{-- Open Orders --}}
         <a href="{{ Route::has('purchasing.po.open') ? route('purchasing.po.open') : '#' }}"
@@ -143,11 +144,11 @@
         <a href="{{ Route::has('purchasing.notifications') ? route('purchasing.notifications') : '#' }}"
            id="menu-purchasing-notifications"
            class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('purchasing.notifications') 
+           {{ request()->routeIs('purchasing.notifications*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
             <div class="flex items-center">
-                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('purchasing.notifications') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('purchasing.notifications*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Notifications</span>
             </div>
             @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)

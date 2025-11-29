@@ -5,6 +5,7 @@ namespace App\View\Composers;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Requisition;
+use App\Models\PurchaseRequest;
 use App\Models\Notification;
 
 class SupervisorBadgeComposer
@@ -13,6 +14,7 @@ class SupervisorBadgeComposer
     {
         $badgeCounts = [
             'pending_requisitions' => 0,
+            'pending_purchase_requests' => 0,
             'unread_notifications' => 0
         ];
 
@@ -23,7 +25,10 @@ class SupervisorBadgeComposer
                 if ($user && $user->exists) {
                     // Get pending requisitions count for supervisor
                     $badgeCounts['pending_requisitions'] = Requisition::where('status', 'pending')->count();
-                    
+
+                    // Get pending purchase requests count for supervisor
+                    $badgeCounts['pending_purchase_requests'] = PurchaseRequest::where('status', 'pending')->count();
+
                     // Get unread notifications count for current user
                     $badgeCounts['unread_notifications'] = Notification::unreadCountForCurrentUser();
                 }

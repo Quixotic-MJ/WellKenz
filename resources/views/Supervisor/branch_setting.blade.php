@@ -74,86 +74,24 @@
         </div>
     </div>
 
-    {{-- 3. SEASONAL BUFFER WIDGET --}}
-    <div class="bg-white border border-border-soft rounded-2xl p-6 shadow-sm relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-blue-50/50 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-        
-        <div class="relative z-10">
-            <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-                <div class="p-2 bg-blue-50 text-blue-600 rounded-lg inline-flex w-fit">
-                    <i class="fas fa-magic text-lg"></i>
-                </div>
-                <div>
-                    <h3 class="text-lg font-display font-bold text-chocolate">Seasonal Buffer Tool</h3>
-                    <p class="text-xs text-gray-500">Automatically increase thresholds for high-demand periods.</p>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end bg-cream-bg/50 p-5 rounded-xl border border-border-soft">
-                <div class="md:col-span-4">
-                    <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-2">Category Target</label>
-                    <div class="relative">
-                        <select id="seasonalCategory" class="block w-full pl-3 pr-10 py-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer">
-                            <option value="">Select Category...</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->id }}">{{ $category->name }}</option>
-                            @endforeach
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="md:col-span-3">
-                    <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-2">Settings to Update</label>
-                    <div class="relative">
-                        <select id="adjustmentType" class="block w-full pl-3 pr-10 py-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer">
-                            <option value="both">Min Level & Reorder Point</option>
-                            <option value="min_stock_level">Minimum Level Only</option>
-                            <option value="reorder_point">Reorder Point Only</option>
-                        </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                            <i class="fas fa-chevron-down text-xs"></i>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-chocolate uppercase tracking-wide mb-2">Increase By (%)</label>
-                    <div class="relative">
-                        <input type="number" id="adjustmentPercentage" class="block w-full pl-3 pr-8 py-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="20" min="1" max="500">
-                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <span class="text-gray-400 text-xs font-bold">%</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="md:col-span-3">
-                    <button id="applyAdjustment" class="w-full py-2.5 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center justify-center gap-2">
-                        <i class="fas fa-bolt text-xs"></i> Apply Changes
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+
 
     {{-- 4. MAIN CONTENT --}}
     <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
         
         <!-- Filters Toolbar -->
-        <div class="p-5 border-b border-border-soft bg-white grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+        <form id="filtersForm" method="GET" action="{{ route('supervisor.settings.stock-levels') }}" class="p-5 border-b border-border-soft bg-white grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
             <div class="md:col-span-5 relative group">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <i class="fas fa-search text-gray-400 group-focus-within:text-caramel transition-colors"></i>
                 </div>
-                <input type="text" id="searchInput" 
+                <input type="text" id="searchInput" name="search"
                        class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 bg-cream-bg rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all placeholder-gray-400" 
                        placeholder="Search items by name or SKU..." value="{{ request('search') }}">
             </div>
             
             <div class="md:col-span-3 relative">
-                <select id="categoryFilter" class="block w-full pl-3 pr-10 py-2.5 border border-gray-200 bg-cream-bg rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all appearance-none cursor-pointer">
+                <select id="categoryFilter" name="category" class="block w-full pl-3 pr-10 py-2.5 border border-gray-200 bg-cream-bg rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all appearance-none cursor-pointer">
                     <option value="">All Categories</option>
                     @foreach($categories as $category)
                         <option value="{{ $category->id }}" {{ request('category') == $category->id ? 'selected' : '' }}>{{ $category->name }}</option>
@@ -165,7 +103,7 @@
             </div>
             
             <div class="md:col-span-3 relative">
-                <select id="statusFilter" class="block w-full pl-3 pr-10 py-2.5 border border-gray-200 bg-cream-bg rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all appearance-none cursor-pointer">
+                <select id="statusFilter" name="status" class="block w-full pl-3 pr-10 py-2.5 border border-gray-200 bg-cream-bg rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all appearance-none cursor-pointer">
                     <option value="">All Status Levels</option>
                     <option value="healthy" {{ request('status') == 'healthy' ? 'selected' : '' }}>Healthy Stock</option>
                     <option value="low" {{ request('status') == 'low' ? 'selected' : '' }}>Low Stock</option>
@@ -177,11 +115,11 @@
             </div>
             
             <div class="md:col-span-1 flex justify-end">
-                <button onclick="applyFilters()" class="w-full h-full bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-chocolate transition-colors shadow-sm flex items-center justify-center" title="Refresh Results">
+                <button type="submit" class="w-full h-full bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 hover:text-chocolate transition-colors shadow-sm flex items-center justify-center" title="Refresh Results">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>
-        </div>
+        </form>
 
         <!-- Data Table -->
         <div class="overflow-x-auto">
@@ -344,165 +282,267 @@
         <div class="animate-spin rounded-full h-10 w-10 border-[3px] border-border-soft border-t-chocolate mb-4"></div>
         <span class="text-chocolate font-bold text-sm uppercase tracking-widest">Processing...</span>
     </div>
-</div>
+ </div>
 
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 $(document).ready(function() {
+    console.log('📄 Document ready - Branch Settings App Starting...');
+    
+    // Debug jQuery and DOM
+    console.log('🔍 jQuery loaded:', typeof $ !== 'undefined');
+    console.log('🔍 Document loaded:', $(document).length);
+    console.log('🔍 Save button exists:', $('#saveAllChanges').length);
+    console.log('🔍 Toast element exists:', $('#toast').length);
+    console.log('🔍 Loading modal exists:', $('#loadingModal').length);
+    
     let pendingChanges = new Map();
 
+    // --- Initialize original values ---
+    const inputCount = $('.stock-level-input').length;
+    console.log(`🔍 Found ${inputCount} stock level input fields`);
+    
+    if (inputCount === 0) {
+        console.error('❌ No stock level input fields found! This might be a DOM loading issue.');
+        return;
+    }
+    
+    $('.stock-level-input').each(function() {
+        const $input = $(this);
+        const originalValue = parseFloat($input.attr('value')) || 0;
+        $input.attr('data-original-value', originalValue);
+        console.log('✅ Initialized item', $input.data('item-id'), 'field', $input.data('field'), 'with value', originalValue);
+    });
+
     // --- Change Tracking ---
-    $('.stock-level-input').on('input', function() {
-        $(this).addClass('bg-amber-50 border-amber-300 text-amber-800');
+    $('.stock-level-input').on('input change', function() {
+        const $input = $(this);
+        const itemId = $input.data('item-id');
+        const field = $input.data('field');
+        const value = parseFloat($input.val()) || 0;
+        const originalValue = parseFloat($input.data('original-value')) || $input.attr('data-original-value') || 0;
         
-        const itemId = $(this).data('item-id');
-        const field = $(this).data('field');
-        const value = parseFloat($(this).val()) || 0;
+        // Update the original value attribute for future reference
+        if (!$input.data('original-value')) {
+            $input.attr('data-original-value', originalValue);
+        }
+        
+        console.log('Input changed:', { itemId, field, value, originalValue });
         
         if (!pendingChanges.has(itemId)) {
             pendingChanges.set(itemId, {});
         }
-        pendingChanges.get(itemId)[field] = value;
+        
+        // Only track changes if the value is actually different from original
+        if (Math.abs(value - originalValue) > 0.001) {
+            pendingChanges.get(itemId)[field] = value;
+            $input.addClass('bg-amber-50 border-amber-300 text-amber-800');
+            console.log('Change tracked for item', itemId, field, ':', value);
+        } else {
+            // Remove the field from pending changes if it matches original
+            if (pendingChanges.get(itemId)[field] !== undefined) {
+                delete pendingChanges.get(itemId)[field];
+                $input.removeClass('bg-amber-50 border-amber-300 text-amber-800');
+                console.log('Change removed for item', itemId, field);
+            }
+        }
+        
+        // Clean up empty items from pendingChanges
+        const itemChanges = pendingChanges.get(itemId);
+        if (Object.keys(itemChanges).length === 0) {
+            pendingChanges.delete(itemId);
+            console.log('Removed item', itemId, 'from pending changes (no changes)');
+        }
+        
+        console.log('Total pending changes:', pendingChanges.size);
     });
 
     // --- Save Action ---
-    $('#saveAllChanges').on('click', function() {
+    $('#saveAllChanges').on('click', function(e) {
+        e.preventDefault();
+        console.log('🔘 Save button clicked. Pending changes:', pendingChanges.size);
+        
         if (pendingChanges.size === 0) {
+            console.log('⚠️ No changes to save');
             showToast('No changes to save.', 'warning');
             return;
         }
-        updateAllItems();
+        
+        // Debug: Log all pending changes
+        console.log('📋 Pending changes:', Object.fromEntries(pendingChanges));
+        pendingChanges.forEach((changes, itemId) => {
+            console.log(`📝 Item ${itemId}:`, changes);
+        });
+        
+        // Disable the button to prevent double-clicks
+        const $button = $(this);
+        console.log('🔒 Disabling button...');
+        $button.prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+        
+        console.log('🚀 Starting updateAllItems()...');
+        updateAllItems().finally(() => {
+            console.log('✅ Update completed, re-enabling button...');
+            // Re-enable the button after update completes
+            $button.prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+        });
     });
 
     // --- Filters ---
+    const $filtersForm = $('#filtersForm');
     let searchTimeout;
     $('#searchInput').on('input', function() {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(applyFilters, 500);
+        searchTimeout = setTimeout(submitFilters, 500);
     });
-    $('#categoryFilter, #statusFilter').on('change', applyFilters);
+    $('#searchInput').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            submitFilters();
+        }
+    });
+    $('#categoryFilter, #statusFilter').on('change', submitFilters);
 
-    // --- Seasonal Tool ---
-    $('#applyAdjustment').on('click', applySeasonalAdjustment);
+
 
     // --- Functions ---
 
-    function updateAllItems() {
+   // Make the function async to allow 'await'
+    async function updateAllItems() {
+        console.log('🚀 Starting sequential update for', pendingChanges.size, 'items');
+        console.log('🔄 Converting Map to array for iteration...');
+        
         showLoading(true);
         
-        const promises = [];
+        // Disable button visually
+        const $btn = $('#saveAllChanges');
+        console.log('🔒 Disabling save button...');
+        $btn.addClass('opacity-50 cursor-not-allowed').prop('disabled', true);
+
+        let successCount = 0;
+        let failCount = 0;
         
-        pendingChanges.forEach((changes, itemId) => {
-            // Create base data object
-            const updateData = {
-                item_id: itemId,
-                _token: '{{ csrf_token() }}'
-            };
+        console.log('🔄 Starting iteration through pending changes...');
+        // Convert Map to array to iterate cleanly
+        // We use a restricted loop to send requests ONE BY ONE
+        for (const [itemId, changes] of pendingChanges) {
+            console.log(`🔄 Processing item ${itemId}:`, changes);
             
-            // Explicitly check and add each field if it exists in changes
-            if (changes.hasOwnProperty('min_stock_level')) {
-                updateData.min_stock_level = changes.min_stock_level;
-            }
-            if (changes.hasOwnProperty('reorder_point')) {
-                updateData.reorder_point = changes.reorder_point;
-            }
-            if (changes.hasOwnProperty('max_stock_level')) {
-                updateData.max_stock_level = changes.max_stock_level;
-            }
-            
-            // Push the AJAX request to the promises array
-            promises.push(
-                $.ajax({
+            try {
+                // 1. Prepare Data
+                const updateData = {
+                    item_id: itemId,
+                    _token: '{{ csrf_token() }}',
+                    ...changes // Spread the changes (min_stock_level, etc.)
+                };
+                
+                console.log(`📤 Sending AJAX request for item ${itemId}...`, updateData);
+
+                // 2. Send Request and AWAIT the result (Pauses loop until done)
+                const response = await $.ajax({
                     url: '{{ route("supervisor.settings.stock-levels.update") }}',
                     method: 'POST',
                     data: updateData
-                })
-            );
-        });
+                });
+                
+                console.log(`✅ Item ${itemId} updated successfully! Response:`, response);
 
-        Promise.all(promises)
-            .then(() => {
-                showToast('All stock levels updated successfully!');
-                setTimeout(() => location.reload(), 800);
-            })
-            .catch(() => {
-                showToast('Some updates failed. Please check inputs.', 'error');
-                showLoading(false);
-            });
-    }
+                // 3. On Success: Update UI
+                successCount++;
+                console.log(`🎉 Item ${itemId} updated successfully`);
+                
+                // Update the "original value" on the inputs so they don't look "changed" anymore
+                Object.keys(changes).forEach(field => {
+                    const $input = $(`.stock-level-input[data-item-id="${itemId}"][data-field="${field}"]`);
+                    console.log(`🎨 Updating input visual state for item ${itemId}, field ${field}...`);
+                    // Update both .data and .attr to be safe
+                    $input.data('original-value', changes[field]); 
+                    $input.attr('data-original-value', changes[field]);
+                    $input.removeClass('bg-amber-50 border-amber-300 text-amber-800');
+                });
+                
+                // Remove from pending map
+                pendingChanges.delete(itemId);
+                console.log(`🗑️ Removed item ${itemId} from pending changes`);
 
-    function applySeasonalAdjustment() {
-        const categoryId = $('#seasonalCategory').val();
-        const adjustmentPercentage = parseFloat($('#adjustmentPercentage').val());
-        const adjustmentType = $('#adjustmentType').val();
-
-        if (!categoryId) { showToast('Select a category first.', 'warning'); return; }
-        if (!adjustmentPercentage || adjustmentPercentage <= 0) { 
-            showToast('Enter a valid percentage (1-500).', 'warning'); 
-            $('#adjustmentPercentage').focus();
-            return; 
-        }
-        if (adjustmentPercentage > 500) {
-            showToast('Percentage cannot exceed 500%.', 'warning');
-            $('#adjustmentPercentage').focus();
-            return;
-        }
-
-        showLoading(true);
-        $.ajax({
-            url: '{{ route("supervisor.settings.stock-levels.seasonal-adjustment") }}',
-            method: 'POST',
-            data: {
-                category_id: categoryId,
-                adjustment_percentage: adjustmentPercentage,
-                adjustment_type: adjustmentType,
-                _token: '{{ csrf_token() }}'
-            },
-            success: function(res) {
-                if(res.success) {
-                    const message = res.data ? 
-                        `Seasonal adjustment applied to ${res.data.updated_count} items in ${res.data.category_name}!` : 
-                        'Seasonal adjustment applied!';
-                    showToast(message);
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    showToast(res.error || 'Failed to apply adjustment', 'error');
-                    showLoading(false);
-                }
-            },
-            error: function(xhr, status, error) {
-                let errorMessage = 'Failed to apply adjustment.';
-                if (xhr.responseJSON && xhr.responseJSON.error) {
-                    errorMessage = xhr.responseJSON.error;
-                }
-                showToast(errorMessage, 'error');
-                showLoading(false);
+            } catch (error) {
+                failCount++;
+                console.error(`❌ Failed to update item ${itemId}:`, error);
+                // We leave it in 'pendingChanges' and keep the amber color 
+                // so the user knows it failed and can try again.
             }
-        });
+        }
+
+        // 4. Final Cleanup
+        console.log('🧹 Final cleanup...');
+        showLoading(false);
+        $btn.removeClass('opacity-50 cursor-not-allowed').prop('disabled', false);
+
+        console.log('📊 Final results:', { successCount, failCount });
+        
+        if (failCount === 0 && successCount > 0) {
+            console.log('🎊 Showing success toast...');
+            showToast('All items updated successfully!');
+            // Optional: Reload to ensure fresh data, or just stay on page
+            // setTimeout(() => location.reload(), 1000); 
+        } else if (successCount > 0 && failCount > 0) {
+            console.log('⚠️ Showing partial success toast...');
+            showToast(`${successCount} saved, but ${failCount} failed. Check console.`, 'warning');
+        } else if (failCount > 0) {
+            console.log('❌ Showing error toast...');
+            showToast('Update failed. Please check values and try again.', 'error');
+        } else {
+            console.log('ℹ️ Showing no changes toast...');
+            showToast('No changes were saved.');
+        }
+        
+        console.log('🏁 updateAllItems() completed!');
     }
 
-    function applyFilters() {
-        const search = $('#searchInput').val();
-        const category = $('#categoryFilter').val();
-        const status = $('#statusFilter').val();
-        const params = new URLSearchParams();
-        if(search) params.set('search', search);
-        if(category) params.set('category', category);
-        if(status) params.set('status', status);
-        window.location.href = `{{ route('supervisor.settings.stock-levels') }}?${params.toString()}`;
+
+
+    function submitFilters() {
+        if ($filtersForm.length) {
+            $filtersForm.submit();
+        } else {
+            window.location.href = "{{ route('supervisor.settings.stock-levels') }}";
+        }
     }
 
     function showLoading(show) {
+        console.log('🎭 showLoading called with:', show);
         const el = $('#loadingModal');
-        show ? el.removeClass('hidden').addClass('flex') : el.addClass('hidden').removeClass('flex');
+        if (el.length === 0) {
+            console.error('❌ Loading modal element not found!');
+            return;
+        }
+        
+        if (show) {
+            console.log('📱 Showing loading modal...');
+            el.removeClass('hidden').addClass('flex');
+        } else {
+            console.log('📱 Hiding loading modal...');
+            el.addClass('hidden').removeClass('flex');
+        }
     }
 
     function showToast(msg, type = 'success') {
+        console.log('🍞 showToast called with:', { msg, type });
         const toast = $('#toast');
         const icon = toast.find('i');
         
+        if (toast.length === 0) {
+            console.error('❌ Toast element not found!');
+            return;
+        }
+        
+        if (icon.length === 0) {
+            console.error('❌ Toast icon element not found!');
+            return;
+        }
+        
+        console.log('📝 Setting toast message:', msg);
         $('#toastMessage').text(msg);
         
         icon.attr('class', ''); // reset
@@ -510,12 +550,57 @@ $(document).ready(function() {
         else if(type === 'error') icon.addClass('fas fa-times-circle text-red-400');
         else icon.addClass('fas fa-exclamation-circle text-yellow-400');
 
+        console.log('🍞 Showing toast...');
         toast.removeClass('hidden translate-y-full opacity-0');
         setTimeout(() => {
+            console.log('🍞 Hiding toast...');
             toast.addClass('translate-y-full opacity-0');
             setTimeout(() => toast.addClass('hidden'), 300);
         }, 3000);
     }
+    
+    // --- Debug Functions (accessible from console) ---
+    window.debugStockSettings = function() {
+        console.log('=== Stock Settings Debug Info ===');
+        console.log('Pending changes:', pendingChanges.size);
+        pendingChanges.forEach((changes, itemId) => {
+            console.log(`Item ${itemId}:`, changes);
+        });
+        
+        console.log('Input fields with data attributes:');
+        $('.stock-level-input').each(function() {
+            const $input = $(this);
+            console.log({
+                itemId: $input.data('item-id'),
+                field: $input.data('field'),
+                value: $input.val(),
+                originalValue: $input.data('original-value') || $input.attr('data-original-value'),
+                hasChanges: $input.hasClass('bg-amber-50')
+            });
+        });
+        
+        console.log('CSRF Token:', '{{ csrf_token() }}');
+        console.log('Update route:', '{{ route("supervisor.settings.stock-levels.update") }}');
+        
+        return {
+            pendingChanges: Object.fromEntries(pendingChanges),
+            inputCount: $('.stock-level-input').length,
+            csrfToken: '{{ csrf_token() }}',
+            updateRoute: '{{ route("supervisor.settings.stock-levels.update") }}'
+        };
+    };
+    
+    // Clear all pending changes (for testing)
+    window.clearPendingChanges = function() {
+        pendingChanges.clear();
+        $('.stock-level-input').each(function() {
+            const $input = $(this);
+            const originalValue = parseFloat($input.attr('value')) || 0;
+            $input.attr('data-original-value', originalValue);
+            $input.removeClass('bg-amber-50 border-amber-300 text-amber-800');
+        });
+        console.log('All pending changes cleared');
+    };
 });
 </script>
-@endsection
+@endpush

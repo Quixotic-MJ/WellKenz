@@ -19,12 +19,6 @@
         </div>
         
         <div class="flex flex-wrap items-center gap-3">
-            @if($purchaseOrder->status === 'draft')
-                <button onclick="deleteOrder({{ $purchaseOrder->id }})" 
-                        class="inline-flex items-center justify-center px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 text-sm font-bold rounded-lg hover:bg-red-100 transition-all shadow-sm">
-                    <i class="fas fa-trash mr-2"></i> Delete Draft
-                </button>
-            @endif
             
             <a href="{{ route('purchasing.po.print', $purchaseOrder->id) }}" target="_blank"
                class="inline-flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
@@ -59,14 +53,13 @@
                     <h3 class="font-display text-lg font-bold text-chocolate">Order Information</h3>
                     @php
                         $statusColors = [
-                            'draft' => 'bg-gray-100 text-gray-600 border-gray-200',
                             'sent' => 'bg-blue-50 text-blue-700 border-blue-100',
                             'confirmed' => 'bg-yellow-50 text-yellow-700 border-yellow-100',
                             'partial' => 'bg-orange-50 text-orange-700 border-orange-100',
                             'completed' => 'bg-green-50 text-green-700 border-green-100',
                             'cancelled' => 'bg-red-50 text-red-700 border-red-100',
                         ];
-                        $statusClass = $statusColors[$purchaseOrder->status] ?? 'bg-gray-100 text-gray-600 border-gray-200';
+                        $statusClass = $statusColors[$purchaseOrder->status] ?? 'bg-blue-50 text-blue-700 border-blue-100';
                     @endphp
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border {{ $statusClass }}">
                         <span class="w-1.5 h-1.5 rounded-full bg-current mr-2"></span>
@@ -481,8 +474,8 @@ function showConfirmationModal(title, message, iconType, onConfirm) {
 
 function deleteOrder(orderId) {
     showConfirmationModal(
-        'Delete Draft Order',
-        'Are you sure you want to delete this draft purchase order? This action cannot be undone.',
+        'Delete Purchase Order',
+        'Are you sure you want to delete this purchase order? This action cannot be undone.',
         'delete',
         () => {
             submitForm(`{{ route('purchasing.po.destroy', '__ID__') }}`.replace('__ID__', orderId), 'DELETE');

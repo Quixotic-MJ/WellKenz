@@ -320,7 +320,7 @@
                                         <button onclick="PRManager.viewDetails({{ $pr->id }})" class="text-chocolate hover:text-caramel p-1.5 hover:bg-cream-bg rounded transition-colors" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        @if($pr->status === 'pending' || $pr->status === 'draft')
+                                        @if($pr->status === 'pending')
                                             <button onclick="PRManager.cancelPR({{ $pr->id }})" class="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded transition-colors" title="Delete">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -429,45 +429,88 @@ const PRManager = {
     
     // (Pasting the full block below for completeness within the response constraints)
     setupListeners() {
+        // History filters
         if (this.els.history.statusFilter) this.els.history.statusFilter.addEventListener('change', () => this.filterHistory());
         if (this.els.history.departmentFilter) this.els.history.departmentFilter.addEventListener('change', () => this.filterHistory());
-        if (this.els.history.searchInput) this.els.els.history.searchInput.addEventListener('input', this.debounce(() => this.filterHistory(), 300));
+        if (this.els.history.searchInput) this.els.history.searchInput.addEventListener('input', this.debounce(() => this.filterHistory(), 300));
         
-        ['categoryFilter', 'stockFilter', 'priceFilter', 'searchInput'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.addEventListener(id === 'searchInput' ? 'input' : 'change', () => this.filterCatalog());
-        });
+        // Catalog filters
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const stockFilter = document.getElementById('stockFilter');
+        const priceFilter = document.getElementById('priceFilter');
+        
+        if (searchInput) searchInput.addEventListener('input', this.debounce(() => this.filterCatalog(), 300));
+        if (categoryFilter) categoryFilter.addEventListener('change', () => this.filterCatalog());
+        if (stockFilter) stockFilter.addEventListener('change', () => this.filterCatalog());
+        if (priceFilter) priceFilter.addEventListener('change', () => this.filterCatalog());
     },
 
     filterCatalog() {
-        const cat = document.getElementById('categoryFilter').value;
-        const stock = document.getElementById('stockFilter').value;
-        const price = document.getElementById('priceFilter').value;
-        const search = document.getElementById('searchInput').value.toLowerCase().trim();
+        // Get filter values
+        const cat = document.getElementById('categoryFilter')?.value || 'all';
+        const stock = document.getElementById('stockFilter')?.value || 'all';
+        const price = document.getElementById('priceFilter')?.value || 'all';
+        const search = document.getElementById('searchInput')?.value?.toLowerCase()?.trim() || '';
+        
+        // Get all items
         const items = document.querySelectorAll('[data-item-id]');
         let visibleCount = 0;
 
+        console.log('Filtering with:', { cat, stock, price, search }); // Debug log
+
         items.forEach(card => {
+            // Get item data attributes
             const itemCat = card.dataset.categoryId;
             const itemStock = card.dataset.stockStatus;
-            const itemPrice = parseFloat(card.dataset.price);
-            const itemName = card.dataset.name;
-            const itemCode = card.dataset.code;
-            const itemDesc = card.dataset.description;
+            const itemPrice = parseFloat(card.dataset.price) || 0;
+            const itemName = card.dataset.name || '';
+            const itemCode = card.dataset.code || '';
+            const itemDesc = card.dataset.description || '';
             
+            // Apply filters
             let show = true;
-            if (cat !== 'all' && itemCat !== cat) show = false;
-            if (stock !== 'all' && itemStock !== stock) show = false;
-            if (price !== 'all' && !this.matchesPriceFilter(itemPrice, price)) show = false;
-            if (search && !itemName.includes(search) && !itemCode.includes(search) && !itemDesc.includes(search)) show = false;
             
-            if (show) { card.style.display = 'flex'; visibleCount++; } 
-            else { card.style.display = 'none'; }
+            // Category filter
+            if (cat !== 'all' && String(itemCat) !== String(cat)) {
+                show = false;
+            }
+            
+            // Stock filter
+            if (stock !== 'all' && String(itemStock) !== String(stock)) {
+                show = false;
+            }
+            
+            // Price filter
+            if (price !== 'all' && !this.matchesPriceFilter(itemPrice, price)) {
+                show = false;
+            }
+            
+            // Search filter
+            if (search) {
+                const searchFields = [itemName, itemCode, itemDesc].join(' ').toLowerCase();
+                if (!searchFields.includes(search)) {
+                    show = false;
+                }
+            }
+            
+            // Show/hide item
+            if (show) { 
+                card.style.display = 'flex'; 
+                visibleCount++;
+            } else { 
+                card.style.display = 'none'; 
+            }
         });
 
+        // Show/hide no items message
         const noMsg = document.getElementById('noItemsMessage');
-        if (visibleCount === 0) noMsg.classList.remove('hidden');
-        else noMsg.classList.add('hidden');
+        if (noMsg) {
+            if (visibleCount === 0) noMsg.classList.remove('hidden');
+            else noMsg.classList.add('hidden');
+        }
+        
+        console.log(`Showing ${visibleCount} of ${items.length} items`); // Debug log
     },
     
     matchesPriceFilter(price, filter) {
@@ -676,6 +719,63 @@ const PRManager = {
             });
     },
     
+    filterHistory() {
+        const statusFilter = this.els.history.statusFilter?.value || 'all';
+        const deptFilter = this.els.history.departmentFilter?.value || 'all';
+        const search = this.els.history.searchInput?.value?.toLowerCase()?.trim() || '';
+        
+        const rows = this.els.history.tableBody?.querySelectorAll('tr');
+        if (!rows) return;
+        
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            // Skip the "no data" row
+            if (row.children.length === 1 && row.children[0].colSpan === 7) {
+                return;
+            }
+            
+            let show = true;
+            
+            // Get row data
+            const prNumber = row.querySelector('td:first-child')?.textContent?.toLowerCase() || '';
+            const dept = row.querySelector('td:nth-child(3)')?.textContent?.toLowerCase() || '';
+            const status = row.querySelector('td:nth-child(6) span')?.textContent?.toLowerCase() || '';
+            
+            // Apply filters
+            if (statusFilter !== 'all' && !status.includes(statusFilter)) {
+                show = false;
+            }
+            
+            if (deptFilter !== 'all' && !dept.includes(deptFilter.toLowerCase())) {
+                show = false;
+            }
+            
+            if (search && !prNumber.includes(search) && !dept.includes(search)) {
+                show = false;
+            }
+            
+            // Show/hide row
+            if (show) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Handle "no data" row
+        const noDataRow = this.els.history.tableBody?.querySelector('tr td[colspan="7"]');
+        if (noDataRow) {
+            const parent = noDataRow.parentElement;
+            if (visibleCount === 0) {
+                parent.style.display = '';
+            } else {
+                parent.style.display = 'none';
+            }
+        }
+    },
+    
     refreshData() { location.reload(); },
     openHistory() { this.openModal('history'); },
     closeHistory() { this.closeModal('history'); },
@@ -721,7 +821,12 @@ function hideToast() {
     setTimeout(() => toast.classList.add('hidden'), 300);
 }
 
-document.addEventListener('DOMContentLoaded', () => { PRManager.init(); });
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => PRManager.init());
+} else {
+    PRManager.init();
+}
 </script>
 
 <style>

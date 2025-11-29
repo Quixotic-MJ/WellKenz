@@ -539,34 +539,4 @@ class ReceivingController extends Controller
         }
     }
 
-    // Delegating methods to preserve existing routes while refactoring
-    public function receiveDelivery()
-    {
-        return app(\App\Http\Controllers\InventoryController::class)->receiveDelivery();
-    }
-
-    public function getPurchaseOrder($id)
-    {
-        return app(\App\Http\Controllers\InventoryController::class)->getPurchaseOrder($id);
-    }
-
-    public function searchPurchaseOrder(Request $request)
-    {
-        return app(\App\Http\Controllers\InventoryController::class)->searchPurchaseOrder($request);
-    }
-
-    public function processDelivery(Request $request)
-    {
-        return app(\App\Http\Controllers\InventoryController::class)->processDelivery($request);
-    }
-
-    public function validateDeliveryData(Request $request)
-    {
-        return app(\App\Http\Controllers\InventoryController::class)->validateDeliveryData($request);
-    }
-
-    public function getReceivingStatistics()
-    {
-        return app(\App\Http\Controllers\InventoryController::class)->getReceivingStatistics();
-    }
 }

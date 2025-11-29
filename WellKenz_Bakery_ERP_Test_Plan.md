@@ -105,41 +105,38 @@ This comprehensive test plan covers all modules and functionality of the WellKen
 ### 3.1 Approval Workflow Tests
 
 #### Requisition Approvals:
-- [ ] View pending requisitions
-- [ ] Approve requisition
-- [ ] Reject requisition with reason
-- [ ] Modify requisition quantities
-- [ ] Bulk approve multiple requisitions
-- [ ] View requisition statistics
+- [/] View pending requisitions
+- [/] Approve requisition
+- [/] Reject requisition with reason
+- [/] Modify requisition quantities
+- [/] Bulk approve multiple requisitions
+- [/] View requisition statistics
 
 #### Purchase Request Approvals:
-- [ ] View pending purchase requests
-- [ ] Approve purchase request
-- [ ] Reject purchase request
-- [ ] View request details
-- [ ] Bulk approve purchase requests
+- [/] View pending purchase requests
+- [/] Approve purchase request
+- [/] Reject purchase request
+- [/] View request details
+- [/] Bulk approve purchase requests
 
 ### 3.2 Inventory Oversight Tests
-- [ ] View stock levels across all items
-- [ ] Export stock reports to CSV
-- [ ] Generate stock reports for printing
-- [ ] View stock movement history
-- [ ] Generate stock cards for specific items
-- [ ] Create inventory adjustments
-- [ ] View adjustment history
-- [ ] Approve/reject inventory adjustments
+- [/] View stock levels across all items
+- [/] Export stock reports to CSV
+- [/] Generate stock reports for printing
+- [/] View stock movement history
+- [/] Generate stock cards for specific items
+- [/] Create inventory adjustments
+- [/] View adjustment history
 
 ### 3.3 Report Generation Tests
-- [ ] Generate expiry date reports
-- [ ] Create "Use First" lists
-- [ ] Alert bakers about expiring items
-- [ ] Export reports in different formats
+- [/] Generate expiry date reports
+- [] Create "Use First" lists
+- [/] Alert bakers about expiring items
+- [] Export reports in different formats
 
 ### 3.4 Settings Tests
 - [ ] Configure minimum stock levels
-- [ ] Apply seasonal stock adjustments
 - [ ] View stock configuration data
-- [ ] Update branch-specific settings
 
 ---
 
@@ -148,27 +145,25 @@ This comprehensive test plan covers all modules and functionality of the WellKen
 ### 4.1 Purchase Order Management Tests
 
 #### PO Creation:
-- [ ] Create new purchase order
-- [ ] Create PO from scratch
-- [ ] Create PO from purchase request
-- [ ] Add multiple items to PO
-- [ ] Calculate totals correctly
+- [] Create new purchase order
+- [] Create PO from scratch
+- [] Create PO from purchase request
+- [] Add multiple items to PO
+- [] Calculate totals correctly
 
 #### PO Lifecycle:
-- [ ] Save as draft
-- [ ] Submit PO for approval
-- [ ] Acknowledge PO receipt
-- [ ] Mark PO as partial/complete
-- [ ] Print PO documents
+- [] Create and submit PO directly
+- [] Acknowledge PO receipt
+- [] Mark PO as partial/complete
+- [] Print PO documents
 
 #### PO Views:
-- [ ] View open orders
-- [ ] View partial orders
-- [ ] View draft orders
-- [ ] View completed history
+- [] View open orders
+- [] View partial orders
+- [] View completed history
 
 ### 4.2 Supplier Management Tests
-- [ ] View supplier list
+- [] View supplier list
 - [ ] Create/update suppliers
 - [ ] Toggle supplier status
 - [ ] Manage supplier price lists

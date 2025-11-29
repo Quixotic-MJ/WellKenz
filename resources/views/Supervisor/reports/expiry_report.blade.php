@@ -10,9 +10,9 @@
             <p class="text-sm text-gray-500">Track expiring batches to minimize waste and prioritize usage.</p>
         </div>
         <div class="flex items-center gap-3">
-            <a href="{{ route('supervisor.reports.print_use_first_list') }}" target="_blank" 
+            <a href="{{ route('supervisor.reports.export_use_first_list_pdf') }}" 
                class="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-border-soft text-gray-600 text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-chocolate transition-all shadow-sm group">
-                <i class="fas fa-file-pdf mr-2 opacity-70 group-hover:opacity-100 text-red-500"></i> Print "Use First" List
+                <i class="fas fa-file-pdf mr-2 opacity-70 group-hover:opacity-100 text-red-500"></i> Download "Use First" PDF
             </a>
             <button onclick="alertBakers()" 
                     id="alertBtn"
@@ -229,7 +229,7 @@
                                         Use Now
                                     </button>
                                 @else
-                                    <button class="text-gray-400 hover:text-chocolate hover:bg-cream-bg p-2 rounded-lg transition-all" title="View Details">
+                                    <button onclick="viewBatchDetails({{ $batch->id }})" class="text-gray-400 hover:text-chocolate hover:bg-cream-bg p-2 rounded-lg transition-all" title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 @endif
@@ -276,7 +276,253 @@
 
 </div>
 
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-96 lg:w-1/3 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900" id="confirmTitle">Confirm Action</h3>
+                <button onclick="closeConfirmModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="mt-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-amber-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-gray-700" id="confirmMessage">Are you sure you want to proceed?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                <button onclick="closeConfirmModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="confirmAction()" id="confirmButton" class="px-4 py-2 bg-chocolate text-white rounded-lg hover:bg-chocolate-dark transition-colors">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Modal -->
+<div id="notificationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-96 lg:w-1/3 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900" id="notificationTitle">Notification</h3>
+                <button onclick="closeNotificationModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="mt-4">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0" id="notificationIcon">
+                        <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-gray-700" id="notificationMessage">Message</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end pt-4 border-t border-gray-200">
+                <button onclick="closeNotificationModal()" class="px-4 py-2 bg-chocolate text-white rounded-lg hover:bg-chocolate-dark transition-colors">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Batch Details Modal -->
+<div id="batchDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+                <h3 class="text-lg font-bold text-gray-900" id="modalTitle">Batch Details</h3>
+                <button onclick="closeBatchDetailsModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="mt-4" id="modalContent">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                    <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                    <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end pt-4 border-t border-gray-200">
+                <button onclick="closeBatchDetailsModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+// Batch Details Modal Functions
+function viewBatchDetails(batchId) {
+    const modal = document.getElementById('batchDetailsModal');
+    const modalContent = document.getElementById('modalContent');
+
+    // Show modal with loading state
+    modal.classList.remove('hidden');
+    modalContent.innerHTML = `
+        <div class="animate-pulse">
+            <div class="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+            <div class="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+            <div class="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+    `;
+
+    // Fetch batch details
+    fetch(`{{ url('supervisor/reports/batch') }}/${batchId}/details`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const batch = data.data;
+            modalContent.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Basic Information -->
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-3">Basic Information</h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Batch Number:</span>
+                                <span class="font-medium">${batch.batch_number}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Item:</span>
+                                <span class="font-medium">${batch.item.name} (${batch.item.item_code})</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Supplier:</span>
+                                <span class="font-medium">${batch.supplier.name}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Status:</span>
+                                <span class="font-medium capitalize">${batch.status}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quantity & Value -->
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-3">Quantity & Value</h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Quantity:</span>
+                                <span class="font-medium">${batch.quantity} ${batch.item.unit_symbol}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Unit Cost:</span>
+                                <span class="font-medium">₱${batch.unit_cost}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Total Value:</span>
+                                <span class="font-medium text-chocolate">₱${batch.total_value}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dates -->
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-3">Dates</h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Manufacturing:</span>
+                                <span class="font-medium">${batch.manufacturing_date}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Expiry:</span>
+                                <span class="font-medium ${batch.is_expired ? 'text-red-600' : ''}">${batch.expiry_date}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Days Until Expiry:</span>
+                                <span class="font-medium ${batch.days_until_expiry <= 7 ? 'text-red-600' : ''}">${batch.days_until_expiry} days</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Info -->
+                    <div>
+                        <h4 class="font-bold text-gray-900 mb-3">Additional Information</h4>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Location:</span>
+                                <span class="font-medium">${batch.location}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Priority:</span>
+                                <span class="font-medium ${batch.priority_class}">${batch.priority}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Created:</span>
+                                <span class="font-medium">${batch.created_at}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                ${batch.notes ? `
+                    <div class="mt-6 pt-4 border-t border-gray-200">
+                        <h4 class="font-bold text-gray-900 mb-2">Notes</h4>
+                        <p class="text-gray-700">${batch.notes}</p>
+                    </div>
+                ` : ''}
+            `;
+        } else {
+            modalContent.innerHTML = `
+                <div class="text-center py-8">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-4"></i>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Error Loading Details</h3>
+                    <p class="text-gray-600">${data.message || 'Unable to load batch details. Please try again.'}</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        modalContent.innerHTML = `
+            <div class="text-center py-8">
+                <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-4"></i>
+                <h3 class="text-lg font-bold text-gray-900 mb-2">Connection Error</h3>
+                <p class="text-gray-600">Unable to connect to the server. Please check your connection and try again.</p>
+            </div>
+        `;
+    });
+}
+
+function closeBatchDetailsModal() {
+    const modal = document.getElementById('batchDetailsModal');
+    modal.classList.add('hidden');
+}
+
 function updateFilter(filter) {
     const url = new URL(window.location);
     url.searchParams.set('filter', filter);
@@ -284,10 +530,20 @@ function updateFilter(filter) {
 }
 
 // Alert Bakers functionality
+let alertCallback = null;
+
 function alertBakers() {
-    if (!confirm('Send expiry alerts to all bakers? This will notify them about items expiring soon.')) {
-        return;
-    }
+    showConfirmModal(
+        'Send Alerts',
+        'Send expiry alerts to all bakers? This will notify them about items expiring soon.',
+        'Send Alerts',
+        function() {
+            proceedWithAlerts();
+        }
+    );
+}
+
+function proceedWithAlerts() {
     
     const button = document.getElementById('alertBtn');
     const originalHTML = button.innerHTML;
@@ -305,14 +561,14 @@ function alertBakers() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(data.message);
+            showNotificationModal('Success', data.message, 'success');
         } else {
-            alert('Error: ' + data.message);
+            showNotificationModal('Error', 'Error: ' + data.message, 'error');
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('An error occurred while sending alerts. Please try again.');
+        showNotificationModal('Connection Error', 'An error occurred while sending alerts. Please try again.', 'error');
     })
     .finally(() => {
         button.disabled = false;
@@ -333,6 +589,92 @@ setInterval(function() {
         window.location.reload();
     }
 }, 60000);
+
+// Modal Control Functions
+function showConfirmModal(title, message, confirmText, callback) {
+    const modal = document.getElementById('confirmModal');
+    const titleElement = document.getElementById('confirmTitle');
+    const messageElement = document.getElementById('confirmMessage');
+    const confirmButton = document.getElementById('confirmButton');
+    
+    titleElement.textContent = title;
+    messageElement.textContent = message;
+    confirmButton.textContent = confirmText;
+    alertCallback = callback;
+    
+    modal.classList.remove('hidden');
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    modal.classList.add('hidden');
+    alertCallback = null;
+}
+
+function confirmAction() {
+    if (alertCallback) {
+        alertCallback();
+    }
+    closeConfirmModal();
+}
+
+function showNotificationModal(title, message, type = 'info') {
+    const modal = document.getElementById('notificationModal');
+    const titleElement = document.getElementById('notificationTitle');
+    const messageElement = document.getElementById('notificationMessage');
+    const iconElement = document.getElementById('notificationIcon');
+    
+    titleElement.textContent = title;
+    messageElement.textContent = message;
+    
+    // Update icon based on type
+    let iconClass = 'fas fa-info-circle text-blue-500 text-xl';
+    if (type === 'success') {
+        iconClass = 'fas fa-check-circle text-green-500 text-xl';
+    } else if (type === 'error') {
+        iconClass = 'fas fa-exclamation-circle text-red-500 text-xl';
+    } else if (type === 'warning') {
+        iconClass = 'fas fa-exclamation-triangle text-amber-500 text-xl';
+    }
+    
+    iconElement.innerHTML = `<i class="${iconClass}"></i>`;
+    
+    modal.classList.remove('hidden');
+}
+
+function closeNotificationModal() {
+    const modal = document.getElementById('notificationModal');
+    modal.classList.add('hidden');
+}
+
+// Modal Keyboard and Backdrop Support
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        // Close any open modals
+        closeConfirmModal();
+        closeNotificationModal();
+        closeBatchDetailsModal();
+    }
+});
+
+// Close modals when clicking outside
+document.getElementById('confirmModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeConfirmModal();
+    }
+});
+
+document.getElementById('notificationModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeNotificationModal();
+    }
+});
+
+document.getElementById('batchDetailsModal').addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeBatchDetailsModal();
+    }
+});
 
 // CSRF Token for AJAX
 const meta = document.createElement('meta');

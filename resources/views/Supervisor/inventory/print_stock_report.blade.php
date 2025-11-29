@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Level Report - WellKenz Bakery</title>
     
-    {{-- Load Fonts --}}
+    {{-- Load Fonts (local fallback for PDF stability) --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-    
-    {{-- Font Awesome for Icons --}}
+
+    {{-- Font Awesome for Icons (local fallback) --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
@@ -24,18 +24,18 @@
         }
 
         @page {
-            margin: 10mm;
+            margin: 15mm 10mm 15mm 10mm;
             size: A4 portrait;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            font-size: 10pt;
-            line-height: 1.5;
+            font-size: 9pt;
+            line-height: 1.4;
             color: var(--text-main);
             background-color: white;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
 
         /* Typography */
@@ -55,16 +55,16 @@
             justify-content: space-between;
             align-items: flex-end;
             border-bottom: 2px solid var(--chocolate);
-            padding-bottom: 15px;
-            margin-bottom: 25px;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
         }
 
-        .brand-section h1 { font-size: 24pt; line-height: 1; }
-        .brand-section p { color: var(--caramel); font-weight: bold; font-size: 9pt; letter-spacing: 2px; margin-top: 5px; text-transform: uppercase; }
+        .brand-section h1 { font-size: 20pt; line-height: 1; }
+        .brand-section p { color: var(--caramel); font-weight: bold; font-size: 8pt; letter-spacing: 1px; margin-top: 3px; text-transform: uppercase; }
 
         .report-info { text-align: right; }
-        .report-info h2 { font-size: 16pt; margin-bottom: 5px; }
-        .report-info p { font-size: 9pt; color: var(--text-light); }
+        .report-info h2 { font-size: 14pt; margin-bottom: 3px; }
+        .report-info p { font-size: 8pt; color: var(--text-light); }
 
         /* Metrics */
         .metrics-grid {
@@ -92,7 +92,8 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            font-size: 8pt;
         }
 
         th {
@@ -100,17 +101,19 @@
             color: white;
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 8pt;
-            letter-spacing: 0.5px;
-            padding: 10px 8px;
+            font-size: 7pt;
+            letter-spacing: 0.3px;
+            padding: 6px 4px;
             text-align: left;
+            -webkit-print-color-adjust: exact;
         }
 
         td {
             border-bottom: 1px solid var(--border);
-            padding: 8px;
-            font-size: 9pt;
+            padding: 5px 4px;
+            font-size: 8pt;
             vertical-align: middle;
+            line-height: 1.3;
         }
 
         tr:nth-child(even) { background-color: rgba(250, 247, 243, 0.5); }

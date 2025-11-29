@@ -1,6 +1,6 @@
 @extends('Purchasing.layout.app')
 
-@section('title', 'Unified Purchase Order Creation')
+@section('title', 'Create Purchase Order')
 
 @section('content')
 <div class="max-w-7xl mx-auto space-y-8 font-sans text-gray-600 pb-24">
@@ -8,13 +8,14 @@
     {{-- 1. HEADER --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Create Purchase Orders</h1>
-            <p class="text-sm text-gray-500">Select approved requests and create purchase orders individually or in bulk.</p>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Create Purchase Order</h1>
+            <p class="text-sm text-gray-500">Select approved requests and convert them into official purchase orders.</p>
         </div>
         <div class="flex items-center gap-3">
+
             <a href="{{ route('purchasing.dashboard') }}" 
                class="inline-flex items-center px-4 py-2 bg-white border border-border-soft text-gray-600 text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-chocolate transition-all shadow-sm group">
-                <i class="fas fa-home mr-2 opacity-70 group-hover:opacity-100"></i> Dashboard
+                <i class="fas fa-arrow-left mr-2 opacity-70 group-hover:opacity-100"></i> Dashboard
             </a>
         </div>
     </div>
@@ -34,77 +35,23 @@
         </div>
     @endif
 
-    @if(session('warning'))
-        <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center gap-3 shadow-sm animate-fade-in-down">
-            <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
-            <span class="text-sm font-bold text-yellow-800">{{ session('warning') }}</span>
-        </div>
-    @endif
-
-    {{-- 3. MODE SELECTOR --}}
-    <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border-soft bg-cream-bg">
-            <h3 class="font-display text-lg font-bold text-chocolate">Choose Creation Mode</h3>
-            <p class="text-xs text-gray-500 mt-0.5">Select how you want to create purchase orders from the selected requests.</p>
-        </div>
-        <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="mode-option cursor-pointer border-2 border-gray-200 rounded-xl p-6 hover:border-chocolate transition-all" data-mode="single">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-chocolate/10 rounded-full flex items-center justify-center mr-4">
-                            <i class="fas fa-file-invoice-dollar text-chocolate text-xl"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-chocolate text-lg">Single PO Creation</h4>
-                            <p class="text-sm text-gray-500">Detailed configuration for one supplier</p>
-                        </div>
-                    </div>
-                    <ul class="text-sm text-gray-600 space-y-2">
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Item-by-item quantity and price configuration</li>
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Manual supplier selection</li>
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Detailed order specifications</li>
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Flexible item adjustment</li>
-                    </ul>
-                </div>
-                
-                <div class="mode-option cursor-pointer border-2 border-gray-200 rounded-xl p-6 hover:border-chocolate transition-all" data-mode="bulk">
-                    <div class="flex items-center mb-4">
-                        <div class="w-12 h-12 bg-chocolate/10 rounded-full flex items-center justify-center mr-4">
-                            <i class="fas fa-layer-group text-chocolate text-xl"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-chocolate text-lg">Bulk PO Creation</h4>
-                            <p class="text-sm text-gray-500">Automatic grouping for multiple suppliers</p>
-                        </div>
-                    </div>
-                    <ul class="text-sm text-gray-600 space-y-2">
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Automatic supplier assignment</li>
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Multiple PO creation in one process</li>
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Quick delivery date and terms configuration</li>
-                        <li><i class="fas fa-check text-green-500 mr-2"></i> Efficient bulk processing</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {{-- STEP 1: PURCHASE REQUEST SELECTION --}}
     <div id="pr-selection-section" class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden transition-all duration-300">
         
         {{-- Header Bar --}}
         <div class="px-6 py-4 border-b border-border-soft bg-cream-bg flex items-center justify-between">
             <div>
-                <h3 class="font-display text-lg font-bold text-chocolate">1. Select Purchase Requests</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Choose approved purchase requests to convert into purchase orders.</p>
+                <h3 class="font-display text-lg font-bold text-chocolate">1. Select Requests</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Choose approved purchase requests to consolidate.</p>
             </div>
             <div class="flex items-center gap-4">
                 <div class="text-xs font-medium text-gray-500 bg-white border border-border-soft px-3 py-1.5 rounded-lg shadow-sm">
                     <span id="selected-pr-count" class="font-bold text-chocolate text-sm">0</span> selected
                 </div>
                 <button type="button" 
-                        id="proceed-analysis-btn"
+                        id="proceed-supplier-btn"
                         disabled
-                        onclick="purchaseOrderManager.proceedToAnalysis()"
+                        onclick="purchaseOrderManager.proceedToGrouping()"
                         class="inline-flex items-center px-5 py-2 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
                     Analyze & Group <i class="fas fa-sitemap ml-2"></i>
                 </button>
@@ -212,8 +159,10 @@
                             <td class="px-6 py-4 whitespace-nowrap text-center">
                                 @php
                                     $totalItems = $request->purchaseRequestItems->count() ?? 0;
-                                    $orderedItems = 0;
+                                    $orderedItems = 0; // This would need to be calculated from backend
                                     
+                                    // For now, show as "Available" since we can't calculate ordered items easily in view
+                                    // In a real implementation, you'd pass this data from controller
                                     $statusClass = 'bg-green-50 text-green-700 border-green-100';
                                     $statusText = 'Available';
                                     $statusIcon = 'fa-check-circle';
@@ -258,18 +207,18 @@
         </div>
     </div>
 
-    {{-- STEP 2: SUPPLIER GROUPING ANALYSIS --}}
+    {{-- STEP 2A: SUPPLIER BUCKET REVIEW --}}
     <div id="supplier-grouping-section" class="hidden bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden transition-all duration-300">
         
         {{-- Header Bar --}}
         <div class="px-6 py-4 border-b border-border-soft bg-cream-bg flex items-center justify-between flex-wrap gap-4">
             <div>
-                <h3 class="font-display text-lg font-bold text-chocolate">2. Supplier Analysis & Grouping</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Review automatic supplier assignments and prepare for configuration.</p>
+                <h3 class="font-display text-lg font-bold text-chocolate">2. Automatic Supplier Buckets</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Review how items were auto-assigned per supplier. Move items if needed, then load a bucket to configure pricing.</p>
             </div>
             <div class="flex items-center gap-3">
                 <div class="text-xs font-medium text-gray-500 bg-white border border-border-soft px-3 py-1.5 rounded-lg shadow-sm">
-                    <span id="bucket-count" class="font-bold text-chocolate text-sm">0</span> suppliers
+                    <span id="bucket-count" class="font-bold text-chocolate text-sm">0</span> buckets
                 </div>
                 <div class="text-xs font-medium text-gray-500 bg-white border border-border-soft px-3 py-1.5 rounded-lg shadow-sm">
                     <span id="bucket-item-count" class="font-bold text-chocolate text-sm">0</span> items
@@ -277,29 +226,9 @@
             </div>
         </div>
 
-        {{-- Navigation Buttons --}}
-        <div class="px-6 py-3 border-b border-border-soft bg-gray-50 flex justify-between items-center">
-            <button type="button" onclick="purchaseOrderManager.returnToPRSelection()" 
-                    class="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                <i class="fas fa-arrow-left mr-2"></i> Back to Selection
-            </button>
-            
-            <div id="mode-specific-actions" class="flex gap-3">
-                {{-- These buttons will be shown/hidden based on selected mode --}}
-                <button type="button" id="single-mode-btn" onclick="purchaseOrderManager.enterSingleMode()" 
-                        class="hidden px-6 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-all flex items-center">
-                    <i class="fas fa-file-invoice-dollar mr-2"></i> Configure Single PO
-                </button>
-                <button type="button" id="bulk-mode-btn" onclick="purchaseOrderManager.enterBulkMode()" 
-                        class="hidden px-6 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-all flex items-center">
-                    <i class="fas fa-layer-group mr-2"></i> Configure Bulk POs
-                </button>
-            </div>
-        </div>
-
         {{-- Bucket Cards --}}
         <div id="bucket-cards-container" class="p-6 space-y-6">
-            <div class="text-center py-12 text-gray-400 italic">Run the analysis to view supplier groupings.</div>
+            <div class="text-center py-12 text-gray-400 italic">Run the analysis to view supplier buckets.</div>
         </div>
 
         {{-- Unassigned Items --}}
@@ -315,22 +244,26 @@
         </div>
     </div>
 
-    {{-- STEP 3: SINGLE PO CONFIGURATION --}}
-    <div id="single-configuration-section" class="hidden bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden transition-all duration-300">
-        <form action="{{ route('purchasing.po.store') }}" method="POST" id="single-po-form">
+    {{-- STEP 2: CONFIGURE ORDER (Shopping Cart Style) --}}
+    <div id="supplier-section" class="hidden bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden transition-all duration-300">
+        <form action="{{ route('purchasing.po.store') }}" method="POST" id="purchase-order-form">
             @csrf
-            <input type="hidden" name="selected_pr_ids" id="single-selected-pr-ids">
+            <input type="hidden" name="selected_pr_ids" id="selected-pr-ids">
             
             {{-- Header --}}
             <div class="px-6 py-4 border-b border-border-soft bg-cream-bg flex items-center justify-between">
                 <div>
-                    <h3 class="font-display text-lg font-bold text-chocolate">3. Single PO Configuration</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Configure items, quantities, and pricing for a single purchase order.</p>
+                    <h3 class="font-display text-lg font-bold text-chocolate">2. Configure Order</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Select a supplier and check the items you wish to order from them.</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button type="button" onclick="purchaseOrderManager.returnToBucketReview()" 
                             class="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                        <i class="fas fa-layer-group mr-2"></i> Back to Buckets
+                        <i class="fas fa-layer-group mr-2"></i> Buckets
+                    </button>
+                    <button type="button" onclick="purchaseOrderManager.resetToPRSelection()" 
+                            class="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i> Select PRs
                     </button>
                 </div>
             </div>
@@ -340,9 +273,10 @@
                 {{-- Form Grid --}}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                        <label for="single_supplier_id" class="block text-sm font-bold text-chocolate mb-2">Supplier *</label>
+                        <label for="supplier_id" class="block text-sm font-bold text-chocolate mb-2">Supplier *</label>
                         <div class="relative">
-                            <select name="supplier_id" id="single_supplier_id" required onchange="purchaseOrderManager.handleSupplierChange(this.value)"
+                            {{-- Added onchange handler to load suggested prices --}}
+                            <select name="supplier_id" id="supplier_id" required onchange="purchaseOrderManager.handleSupplierChange(this.value)"
                                     class="w-full pl-4 pr-10 py-3 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all text-sm appearance-none cursor-pointer shadow-sm">
                                 <option value="">Select Supplier...</option>
                                 @foreach($suppliers ?? [] as $supplier)
@@ -356,14 +290,14 @@
                     </div>
 
                     <div>
-                        <label for="single_expected_delivery_date" class="block text-sm font-bold text-chocolate mb-2">Delivery Date *</label>
+                        <label for="expected_delivery_date" class="block text-sm font-bold text-chocolate mb-2">Delivery Date *</label>
                         <input type="date" name="expected_delivery_date" required 
                                value="{{ old('expected_delivery_date', date('Y-m-d', strtotime('+7 days'))) }}"
                                class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all text-sm shadow-sm">
                     </div>
 
                     <div>
-                        <label for="single_payment_terms" class="block text-sm font-bold text-chocolate mb-2">Payment Terms</label>
+                        <label for="payment_terms" class="block text-sm font-bold text-chocolate mb-2">Payment Terms</label>
                         <input type="number" name="payment_terms" value="30"
                                class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all text-sm shadow-sm">
                     </div>
@@ -374,7 +308,7 @@
                     <div class="bg-gray-50 px-4 py-3 border-b border-border-soft flex justify-between items-center">
                         <h4 class="font-bold text-gray-800 text-sm">Select Items to Order</h4>
                         <div class="text-xs text-gray-500">
-                            <span id="single-selected-items-counter" class="font-bold text-chocolate">0</span> items selected
+                            <span id="selected-items-counter" class="font-bold text-chocolate">0</span> items selected for this PO
                         </div>
                     </div>
                     
@@ -393,13 +327,13 @@
                                     <th class="px-4 py-3 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Total</th>
                                 </tr>
                             </thead>
-                            <tbody id="single-po-items-table" class="bg-white divide-y divide-gray-50">
+                            <tbody id="po-items-table" class="bg-white divide-y divide-gray-50">
                                 {{-- JS will populate this --}}
                             </tbody>
                             <tfoot class="bg-gray-50">
                                 <tr>
                                     <td colspan="6" class="px-4 py-3 text-right text-sm font-bold text-gray-600">Grand Total:</td>
-                                    <td class="px-4 py-3 text-right text-sm font-bold text-chocolate" id="single-grand-total-display">₱0.00</td>
+                                    <td class="px-4 py-3 text-right text-sm font-bold text-chocolate" id="grand-total-display">₱0.00</td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -416,6 +350,7 @@
                          <input type="text" name="notes" class="w-full text-sm border-gray-200 rounded-lg focus:ring-1 focus:ring-chocolate" placeholder="Internal notes...">
                     </div>
                     <div class="flex items-end gap-3">
+
                         <button type="button" onclick="purchaseOrderManager.openConfirmationModal('create')" 
                                 class="px-6 py-2.5 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-all">
                             Create & Send PO
@@ -423,53 +358,31 @@
                     </div>
                 </div>
             </div>
-        </form>
-    </div>
-
-    {{-- STEP 3: BULK PO CONFIGURATION --}}
-    <div id="bulk-configuration-section" class="hidden bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden transition-all duration-300">
-
-        <form action="{{ route('purchasing.po.bulk-create') }}" method="POST" id="bulk-po-form">
-            @csrf
-            <input type="hidden" name="selected_pr_ids" id="bulk-selected-pr-ids">
-
-            {{-- Header --}}
-            <div class="px-6 py-4 border-b border-border-soft bg-cream-bg flex items-center justify-between flex-wrap gap-4">
-                <div>
-                    <h3 class="font-display text-lg font-bold text-chocolate">3. Bulk PO Configuration</h3>
-                    <p class="text-xs text-gray-500 mt-0.5">Configure delivery dates and payment terms for each supplier bucket.</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <div class="text-xs font-medium text-gray-500 bg-white border border-border-soft px-3 py-1.5 rounded-lg shadow-sm">
-                        <span id="bulk-config-count" class="font-bold text-chocolate text-sm">0</span> suppliers
+            
+            {{-- Confirmation Modal --}}
+            <div id="confirmation-modal" class="hidden fixed inset-0 z-[60] bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-border-soft p-6 transform transition-all animate-fade-in-down">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mx-auto mb-4 text-chocolate text-2xl border border-chocolate/20">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <h3 class="font-display text-xl font-bold text-gray-900 mb-2">Confirm Purchase Order</h3>
+                        <p class="text-sm text-gray-500">You are about to create a PO for <span id="modal-item-count" class="font-bold text-chocolate">0</span> items.</p>
+                        <p class="text-sm text-gray-500 mt-1">Total Amount: <span id="modal-total-amount" class="font-bold text-chocolate">₱0.00</span></p>
                     </div>
-                    <div class="text-xs font-medium text-gray-500 bg-white border border-border-soft px-3 py-1.5 rounded-lg shadow-sm">
-                        <span id="bulk-total-pos" class="font-bold text-chocolate text-sm">0</span> POs
+                    <div class="flex gap-3">
+                        <button type="button" onclick="document.getElementById('confirmation-modal').classList.add('hidden')" 
+                                class="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50">
+                            Cancel
+                        </button>
+                        <button type="button" onclick="submitPurchaseOrderForm()" 
+                                class="flex-1 px-4 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md">
+                            Confirm & Process
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {{-- Navigation --}}
-            <div class="px-6 py-3 border-b border-border-soft bg-gray-50 flex justify-between items-center">
-                <button type="button" onclick="purchaseOrderManager.returnToBucketReview()" 
-                        class="px-4 py-2 text-sm font-bold text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
-                    <i class="fas fa-arrow-left mr-2"></i> Back to Buckets
-                </button>
-            </div>
-
-            {{-- Configuration Cards --}}
-            <div id="bulk-config-cards-container" class="p-6 space-y-6">
-                <div class="text-center py-12 text-gray-400 italic">Run the analysis to view supplier configurations.</div>
-            </div>
-
-            {{-- Action Buttons --}}
-            <div class="px-6 py-4 border-t border-border-soft bg-gray-50 flex justify-between items-center">
-                <div></div>
-                <button type="button" onclick="purchaseOrderManager.openBulkConfirmationModal()"
-                        class="px-6 py-3 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-all flex items-center gap-2">
-                    <i class="fas fa-paper-plane"></i> Create All Purchase Orders
-                </button>
-            </div>
         </form>
     </div>
 
@@ -491,104 +404,34 @@
     </div>
 </div>
 
-{{-- SINGLE PO CONFIRMATION MODAL --}}
-<div id="confirmation-modal" class="hidden fixed inset-0 z-[60] bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-border-soft p-6 transform transition-all animate-fade-in-down">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mx-auto mb-4 text-chocolate text-2xl border border-chocolate/20">
-                <i class="fas fa-file-invoice-dollar"></i>
-            </div>
-            <h3 class="font-display text-xl font-bold text-gray-900 mb-2">Confirm Purchase Order</h3>
-            <p class="text-sm text-gray-500">You are about to create a PO for <span id="modal-item-count" class="font-bold text-chocolate">0</span> items.</p>
-            <p class="text-sm text-gray-500 mt-1">Total Amount: <span id="modal-total-amount" class="font-bold text-chocolate">₱0.00</span></p>
-        </div>
-        <div class="flex gap-3">
-            <button type="button" onclick="document.getElementById('confirmation-modal').classList.add('hidden')" 
-                    class="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50">
-                Cancel
-            </button>
-            <button type="button" onclick="submitPurchaseOrderForm()" 
-                    class="flex-1 px-4 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md">
-                Confirm & Process
-            </button>
-        </div>
-    </div>
-</div>
-
-{{-- BULK CONFIRMATION MODAL --}}
-<div id="bulk-confirmation-modal" class="hidden fixed inset-0 z-[60] bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg border border-border-soft p-6 transform transition-all animate-fade-in-down">
-        <div class="text-center mb-6">
-            <div class="w-16 h-16 bg-chocolate/10 rounded-full flex items-center justify-center mx-auto mb-4 text-chocolate text-2xl border border-chocolate/20">
-                <i class="fas fa-layer-group"></i>
-            </div>
-            <h3 class="font-display text-xl font-bold text-chocolate mb-2">Confirm Bulk Purchase Orders</h3>
-            <p class="text-sm text-gray-500">You are about to create <span id="bulk-modal-po-count" class="font-bold text-chocolate">0</span> purchase orders for <span id="bulk-modal-supplier-count" class="font-bold text-chocolate">0</span> suppliers.</p>
-            <div class="mt-4 p-4 bg-cream-bg rounded-lg">
-                <p class="text-sm text-gray-600">Total Items: <span id="bulk-modal-total-items" class="font-bold text-chocolate">0</span></p>
-                <p class="text-sm text-gray-600">Total Value: <span id="bulk-modal-total-value" class="font-bold text-chocolate">₱0.00</span></p>
-            </div>
-        </div>
-        <div class="flex gap-3">
-            <button type="button" onclick="document.getElementById('bulk-confirmation-modal').classList.add('hidden')"
-                    class="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50">
-                Cancel
-            </button>
-            <button type="button" onclick="submitBulkPOForm()"
-                    class="flex-1 px-4 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md">
-                Create All POs
-            </button>
-        </div>
-    </div>
-</div>
-
 <script>
 const GROUP_PR_ITEMS_URL = "{{ url('/purchasing/api/group-pr-items') }}";
 const GET_PR_ITEMS_URL = "{{ url('/purchasing/api/get-pr-items') }}";
 const SUPPLIER_ITEMS_BASE_URL = "{{ url('/purchasing/api/suppliers') }}";
 
-class UnifiedPurchaseOrderManager {
+class PurchaseOrderManager {
     constructor() {
         this.selectedPRs = [];
-        this.currentMode = null; // 'single' or 'bulk'
-        this.bucketData = [];
-        this.currentBucket = null;
-        this.lockedSupplierId = null;
-        
-        // Single mode properties
-        this.items = [];
-        this.baseItems = [];
+        this.items = []; // Store items currently rendered (legacy table)
+        this.baseItems = []; // Store unfiltered items fetched from PRs
         this.supplierAlertEl = document.getElementById('supplier-filter-alert');
-        
-        // Bulk mode properties
-        this.bulkConfigData = [];
-        
         this.bucketCardsContainer = document.getElementById('bucket-cards-container');
         this.bucketSection = document.getElementById('supplier-grouping-section');
-        this.singleSection = document.getElementById('single-configuration-section');
-        this.bulkSection = document.getElementById('bulk-configuration-section');
+        this.configurationSection = document.getElementById('supplier-section');
         this.unassignedContainer = document.getElementById('unassigned-items-container');
         this.unassignedList = document.getElementById('unassigned-items-list');
-        
         this.bucketStats = {
             buckets: document.getElementById('bucket-count'),
             items: document.getElementById('bucket-item-count'),
             unassigned: document.getElementById('unassigned-count')
         };
-        
+        this.bucketData = [];
+        this.currentBucket = null;
+        this.lockedSupplierId = null;
         this.init();
     }
 
     init() {
-        // Mode selector
-        document.querySelectorAll('.mode-option').forEach(option => {
-            option.addEventListener('click', (e) => {
-                const mode = option.dataset.mode;
-                this.selectMode(mode);
-            });
-        });
-
-        // PR Selection handlers
         document.getElementById('select-all-prs')?.addEventListener('change', this.handleSelectAll.bind(this));
         document.querySelectorAll('.pr-checkbox').forEach(checkbox => {
             checkbox.addEventListener('change', this.updatePRSelectionUI.bind(this));
@@ -600,23 +443,7 @@ class UnifiedPurchaseOrderManager {
         document.getElementById('pr-priority-filter')?.addEventListener('change', this.filterPRs.bind(this));
     }
 
-    selectMode(mode) {
-        // Remove active state from all options
-        document.querySelectorAll('.mode-option').forEach(option => {
-            option.classList.remove('border-chocolate', 'bg-chocolate/5');
-            option.classList.add('border-gray-200');
-        });
-
-        // Add active state to selected option
-        const selectedOption = document.querySelector(`[data-mode="${mode}"]`);
-        selectedOption.classList.remove('border-gray-200');
-        selectedOption.classList.add('border-chocolate', 'bg-chocolate/5');
-
-        this.currentMode = mode;
-        console.log(`Mode selected: ${mode}`);
-    }
-
-    // --- PR Selection Logic ---
+    // --- STEP 1: PR Selection Logic ---
     
     handleSelectAll(e) {
        document.querySelectorAll('.pr-checkbox:not(:disabled)').forEach(checkbox => {
@@ -630,7 +457,7 @@ class UnifiedPurchaseOrderManager {
         const count = checkboxes.length;
         
         document.getElementById('selected-pr-count').textContent = count;
-        document.getElementById('proceed-analysis-btn').disabled = count === 0;
+        document.getElementById('proceed-supplier-btn').disabled = count === 0;
 
         // Update Master Checkbox state
         const selectAll = document.getElementById('select-all-prs');
@@ -664,19 +491,16 @@ class UnifiedPurchaseOrderManager {
             }
         });
         
+        // Debug logging to help track PR visibility
         console.log(`PR Filter: Showing ${visibleCount} of ${document.querySelectorAll('.pr-row').length} PRs`);
     }
 
-    // --- Analysis and Grouping ---
+    // --- STEP 2: Automatic Grouping + Configuration ---
 
-    proceedToAnalysis() {
-        if (!this.currentMode) {
-            alert('Please select a creation mode first.');
-            return;
-        }
-
+    proceedToGrouping() {
         const checkboxes = document.querySelectorAll('.pr-checkbox:checked');
         this.selectedPRs = Array.from(checkboxes).map(cb => cb.value);
+        document.getElementById('selected-pr-ids').value = this.selectedPRs.join(',');
 
         if (this.selectedPRs.length === 0) {
             alert('Please select at least one purchase request.');
@@ -685,29 +509,42 @@ class UnifiedPurchaseOrderManager {
 
         document.getElementById('pr-selection-section').classList.add('hidden');
         this.bucketSection.classList.remove('hidden');
-        this.singleSection.classList.add('hidden');
-        this.bulkSection.classList.add('hidden');
+        this.configurationSection.classList.add('hidden');
 
         this.loadSupplierBuckets();
     }
 
-    returnToPRSelection() {
-        this.bucketSection.classList.add('hidden');
-        this.singleSection.classList.add('hidden');
-        this.bulkSection.classList.add('hidden');
+    resetToPRSelection() {
+        document.getElementById('supplier-section').classList.add('hidden');
+        document.getElementById('supplier-grouping-section').classList.add('hidden');
         document.getElementById('pr-selection-section').classList.remove('hidden');
 
-        // Reset all data
-        this.resetAll();
+        // Reset selections
+        this.items = [];
+        this.selectedPRs = [];
+        this.baseItems = [];
+        document.getElementById('po-items-table').innerHTML = '';
+        
+        // Clear PR checkboxes and reset UI
+        document.querySelectorAll('.pr-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        this.updatePRSelectionUI();
+        
+        // Refresh the page to get updated PR data (including new partial order statuses)
+        // This ensures PRs with remaining items after partial PO creation are properly shown
+        window.location.reload();
+        this.unlockSupplierSelect();
     }
 
     returnToBucketReview() {
-        this.singleSection.classList.add('hidden');
-        this.bulkSection.classList.add('hidden');
+        this.configurationSection.classList.add('hidden');
         this.bucketSection.classList.remove('hidden');
-
-        // Reset mode-specific data
-        this.resetModeData();
+        this.currentBucket = null;
+        this.items = [];
+        document.getElementById('po-items-table').innerHTML = '';
+        this.updateSupplierAlert();
+        this.unlockSupplierSelect();
     }
 
     loadSupplierBuckets() {
@@ -729,50 +566,11 @@ class UnifiedPurchaseOrderManager {
             this.bucketStats.buckets.textContent = this.bucketData.length;
             const totalItems = this.bucketData.reduce((sum, bucket) => sum + (bucket.totals?.item_count || 0), 0);
             this.bucketStats.items.textContent = totalItems;
-
-            // Show appropriate mode button
-            this.showModeButtons();
         })
         .catch(error => {
             console.error(error);
             this.bucketCardsContainer.innerHTML = '<div class="text-center py-12 text-red-500">Failed to analyze suppliers. Please try again.</div>';
         });
-    }
-
-    showModeButtons() {
-        // Hide all mode buttons first
-        document.getElementById('single-mode-btn').classList.add('hidden');
-        document.getElementById('bulk-mode-btn').classList.add('hidden');
-
-        // Show button for selected mode
-        if (this.currentMode === 'single') {
-            document.getElementById('single-mode-btn').classList.remove('hidden');
-        } else if (this.currentMode === 'bulk') {
-            document.getElementById('bulk-mode-btn').classList.remove('hidden');
-        }
-    }
-
-    enterSingleMode() {
-        this.bucketSection.classList.add('hidden');
-        this.singleSection.classList.remove('hidden');
-        this.bulkSection.classList.add('hidden');
-        
-        // Load the first bucket for single mode configuration
-        if (this.bucketData.length > 0) {
-            this.loadSingleBucket(0);
-        }
-    }
-
-    enterBulkMode() {
-        this.bucketSection.classList.add('hidden');
-        this.singleSection.classList.add('hidden');
-        this.bulkSection.classList.remove('hidden');
-        
-        if (this.bulkConfigData.length === 0) {
-            this.bulkConfigData = [...this.bucketData];
-            this.renderBulkConfigCards();
-            this.updateBulkStats();
-        }
     }
 
     renderBuckets() {
@@ -816,6 +614,8 @@ class UnifiedPurchaseOrderManager {
                 `;
             }).join('');
 
+            const buttonDisabled = bucket.items.length === 0 ? 'disabled opacity-50 cursor-not-allowed' : '';
+
             card.innerHTML = `
                 <div class="px-6 py-4 bg-gray-50 flex items-center justify-between">
                     <div>
@@ -830,6 +630,9 @@ class UnifiedPurchaseOrderManager {
                     </div>
                 </div>
                 ${itemsHtml || '<div class="p-4 text-center text-sm text-gray-400">No items assigned to this supplier.</div>'}
+                <div class="px-6 py-4 bg-gray-50 flex items-center justify-end gap-3 border-t border-border-soft">
+                    <button type="button" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-bold text-gray-700 hover:bg-white ${buttonDisabled}" ${buttonDisabled ? 'disabled' : ''} onclick="purchaseOrderManager.loadBucket(${index})">Configure & Create PO</button>
+                </div>
             `;
 
             this.bucketCardsContainer.appendChild(card);
@@ -908,9 +711,7 @@ class UnifiedPurchaseOrderManager {
         bucket.totals.item_count = bucket.items.length;
     }
 
-    // --- SINGLE MODE FUNCTIONALITY ---
-
-    loadSingleBucket(index) {
+    loadBucket(index) {
         const bucket = this.bucketData[index];
         if (!bucket || bucket.items.length === 0) {
             alert('This supplier bucket has no items.');
@@ -930,15 +731,14 @@ class UnifiedPurchaseOrderManager {
 
         this.items = [...this.baseItems];
         this.renderItems();
-        
-        // Set form values
-        document.getElementById('single-selected-pr-ids').value = this.selectedPRs.join(',');
-        document.getElementById('single_supplier_id').value = bucket.supplier.id;
-        document.getElementById('single_supplier_id').disabled = true;
+        this.lockSupplierSelect(bucket.supplier.id);
+        this.updateSupplierAlert('Supplier is fixed based on bucket selection. To change, go back to the bucket view.', 'info');
+        this.bucketSection.classList.add('hidden');
+        this.configurationSection.classList.remove('hidden');
     }
 
     renderItems() {
-        const tbody = document.getElementById('single-po-items-table');
+        const tbody = document.getElementById('po-items-table');
         tbody.innerHTML = '';
 
         if (this.items.length === 0) {
@@ -952,6 +752,7 @@ class UnifiedPurchaseOrderManager {
             const prBadgeLabel = item.pr_label || (item.pr_number ? `#${item.pr_number}` : 'Multiple PRs');
             const prId = item.pr_id ?? (item.source_prs?.[0]?.pr_id ?? '');
             
+            // Generate row HTML
             tr.innerHTML = `
                 <td class="px-4 py-3 text-center">
                     <input type="checkbox" name="items[${index}][selected]" value="1" checked
@@ -1025,7 +826,7 @@ class UnifiedPurchaseOrderManager {
 
     calculateTotals() {
         let grandTotal = 0;
-        document.querySelectorAll('#single-po-items-table tr').forEach(row => {
+        document.querySelectorAll('#po-items-table tr').forEach(row => {
             const checkbox = row.querySelector('.item-checkbox');
             if (checkbox && checkbox.checked) {
                 const qty = parseFloat(row.querySelector('.qty-input').value) || 0;
@@ -1038,108 +839,115 @@ class UnifiedPurchaseOrderManager {
                 if(row.querySelector('.row-total')) row.querySelector('.row-total').textContent = '₱0.00';
             }
         });
-        document.getElementById('single-grand-total-display').textContent = '₱' + grandTotal.toLocaleString('en-PH', {minimumFractionDigits: 2});
+        document.getElementById('grand-total-display').textContent = '₱' + grandTotal.toLocaleString('en-PH', {minimumFractionDigits: 2});
     }
 
     updateSelectedCounter() {
         const count = document.querySelectorAll('.item-checkbox:checked').length;
-        document.getElementById('single-selected-items-counter').textContent = count;
+        document.getElementById('selected-items-counter').textContent = count;
     }
 
     handleSupplierChange(supplierId) {
-        // For single mode, supplier change logic would go here
-        // This could reload items based on supplier selection
-    }
+        const supplierSelect = document.getElementById('supplier_id');
 
-    // --- BULK MODE FUNCTIONALITY ---
-
-    renderBulkConfigCards() {
-        if (this.bulkConfigData.length === 0) {
-            document.getElementById('bulk-config-cards-container').innerHTML = '<div class="text-center py-12 text-gray-400 italic">No supplier buckets were generated.</div>';
+        if (this.lockedSupplierId) {
+            if (supplierId !== this.lockedSupplierId && supplierSelect) {
+                supplierSelect.value = this.lockedSupplierId;
+            }
+            this.updateSupplierAlert('Supplier is fixed based on bucket selection. To change, go back to the bucket view.', 'info');
             return;
         }
 
-        const container = document.getElementById('bulk-config-cards-container');
-        container.innerHTML = '';
+        if (!supplierId) {
+            this.items = [...this.baseItems];
+            this.updateSupplierAlert();
+            this.renderItems();
+            return;
+        }
 
-        this.bulkConfigData.forEach((bucket, index) => {
-            const card = document.createElement('div');
-            card.className = 'border border-border-soft rounded-xl shadow-sm overflow-hidden';
-            card.dataset.bucketIndex = index;
+        if (this.selectedPRs.length === 0) {
+            alert('Please select at least one purchase request first.');
+            if (supplierSelect) {
+                supplierSelect.value = '';
+            }
+            return;
+        }
 
-            const itemsList = bucket.items.map(item => `
-                <div class="flex justify-between items-center py-2 px-4 bg-gray-50 border-b border-gray-100 last:border-0">
-                    <div>
-                        <span class="font-semibold text-gray-800 text-sm">${item.item_name}</span>
-                        <span class="text-xs text-gray-500 ml-2">${item.item_code}</span>
-                    </div>
-                    <div class="text-right">
-                        <span class="text-sm font-bold text-chocolate">Qty: ${parseFloat(item.qty_remaining).toFixed(2)}</span>
-                        <span class="text-xs text-gray-500 block">₱${parseFloat(item.suggested_price).toFixed(2)}</span>
-                    </div>
-                </div>
-            `).join('');
+        this.updateSupplierAlert('', 'info');
+    }
 
-            card.innerHTML = `
-                <div class="px-6 py-4 bg-gray-50 flex items-center justify-between">
-                    <div>
-                        <div class="text-xs font-semibold text-gray-500">Supplier</div>
-                        <div class="text-lg font-display font-bold text-chocolate">${bucket.supplier.name}</div>
-                        <div class="text-xs text-gray-500">${bucket.supplier.supplier_code || 'No code'}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-xs text-gray-500">Total Items</div>
-                        <div class="text-xl font-bold text-chocolate">${bucket.totals.item_count || 0}</div>
-                        <div class="text-xs text-gray-500">₱${(bucket.totals.estimated_amount || 0).toLocaleString('en-PH', {minimumFractionDigits: 2})}</div>
-                    </div>
-                </div>
+    normalizeSupplierItems(items) {
+        return items.map(item => {
+            const ordered = parseFloat(item.quantity_ordered_so_far ?? 0);
+            const remaining = parseFloat(item.remaining_quantity ?? 0);
+            const totalRequested = ordered + remaining;
+            const prLabel = Array.isArray(item.source_prs) && item.source_prs.length
+                ? item.source_prs.join(', ')
+                : 'Multiple PRs';
 
-                <div class="p-6 space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-bold text-chocolate mb-2">Expected Delivery Date *</label>
-                            <input type="date" name="bulk_config[${index}][expected_delivery_date]"
-                                   value="${new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}"
-                                   required
-                                   class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all text-sm shadow-sm">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-chocolate mb-2">Payment Terms (days)</label>
-                            <input type="number" name="bulk_config[${index}][payment_terms]"
-                                   value="30"
-                                   min="0"
-                                   class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel transition-all text-sm shadow-sm">
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-chocolate mb-2">Notes</label>
-                        <textarea name="bulk_config[${index}][notes]" rows="2"
-                                  placeholder="Internal notes for this supplier..."
-                                  class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel resize-none text-sm transition-all placeholder-gray-400 shadow-sm"></textarea>
-                    </div>
-
-                    <input type="hidden" name="bulk_config[${index}][supplier_id]" value="${bucket.supplier.id}">
-
-                    <div class="border-t border-gray-100 pt-4">
-                        <h5 class="font-bold text-chocolate text-sm mb-3">Items for this Supplier</h5>
-                        <div class="max-h-40 overflow-y-auto space-y-1">
-                            ${itemsList}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.appendChild(card);
+            return {
+                item_id: item.item_id,
+                item_name: item.item_name,
+                item_code: item.item_code,
+                qty_requested: parseFloat(totalRequested.toFixed(3)),
+                qty_remaining: parseFloat(remaining.toFixed(3)),
+                suggested_price: parseFloat(item.unit_price ?? 0),
+                pr_label: prLabel
+            };
         });
     }
 
-    updateBulkStats() {
-        const supplierCount = this.bulkConfigData.length;
-        const totalItems = this.bulkConfigData.reduce((sum, bucket) => sum + (bucket.totals?.item_count || 0), 0);
+    updateSupplierAlert(message = '', type = 'info') {
+        if (!this.supplierAlertEl) {
+            return;
+        }
 
-        document.getElementById('bulk-config-count').textContent = supplierCount;
-        document.getElementById('bulk-total-pos').textContent = supplierCount;
-        document.getElementById('bulk-selected-pr-ids').value = this.selectedPRs.join(',');
+        if (!message) {
+            this.supplierAlertEl.classList.add('hidden');
+            this.supplierAlertEl.textContent = '';
+            this.supplierAlertEl.classList.remove('text-red-800');
+            this.supplierAlertEl.classList.add('text-yellow-800');
+            return;
+        }
+
+        this.supplierAlertEl.textContent = message;
+        this.supplierAlertEl.classList.remove('hidden');
+        if (type === 'error') {
+            this.supplierAlertEl.classList.add('text-red-800');
+            this.supplierAlertEl.classList.remove('text-yellow-800');
+        } else {
+            this.supplierAlertEl.classList.remove('text-red-800');
+            this.supplierAlertEl.classList.add('text-yellow-800');
+        }
+    }
+
+    lockSupplierSelect(supplierId) {
+        const supplierSelect = document.getElementById('supplier_id');
+        if (!supplierSelect) {
+            return;
+        }
+
+        this.lockedSupplierId = supplierId ? supplierId.toString() : null;
+        supplierSelect.value = this.lockedSupplierId || '';
+        if (this.lockedSupplierId) {
+            supplierSelect.dataset.locked = 'true';
+            supplierSelect.classList.add('cursor-not-allowed', 'bg-gray-100');
+            supplierSelect.title = 'Supplier is locked to this bucket. Go back to change it.';
+        }
+    }
+
+    unlockSupplierSelect() {
+        const supplierSelect = document.getElementById('supplier_id');
+        this.lockedSupplierId = null;
+        if (!supplierSelect) {
+            return;
+        }
+
+        supplierSelect.removeAttribute('data-locked');
+        supplierSelect.classList.remove('cursor-not-allowed', 'bg-gray-100');
+        supplierSelect.removeAttribute('title');
+        supplierSelect.disabled = false;
+        supplierSelect.value = '';
     }
 
     openConfirmationModal(type) {
@@ -1149,66 +957,42 @@ class UnifiedPurchaseOrderManager {
             return;
         }
 
-        const grandTotal = document.getElementById('single-grand-total-display').textContent;
+        const grandTotal = document.getElementById('grand-total-display').textContent;
         document.getElementById('modal-item-count').textContent = selectedCount;
         document.getElementById('modal-total-amount').textContent = grandTotal;
+        document.getElementById('final-save-option').value = type;
         
         document.getElementById('confirmation-modal').classList.remove('hidden');
     }
-
-    openBulkConfirmationModal() {
-        const supplierCount = this.bulkConfigData.length;
-        const totalItems = this.bulkConfigData.reduce((sum, bucket) => sum + (bucket.totals?.item_count || 0), 0);
-        const totalValue = this.bulkConfigData.reduce((sum, bucket) => sum + (bucket.totals?.estimated_amount || 0), 0);
-
-        document.getElementById('bulk-modal-po-count').textContent = supplierCount;
-        document.getElementById('bulk-modal-supplier-count').textContent = supplierCount;
-        document.getElementById('bulk-modal-total-items').textContent = totalItems;
-        document.getElementById('bulk-modal-total-value').textContent = '₱' + totalValue.toLocaleString('en-PH', {minimumFractionDigits: 2});
-
-        document.getElementById('bulk-confirmation-modal').classList.remove('hidden');
-    }
-
-    // --- UTILITY METHODS ---
-
-    resetAll() {
-        this.selectedPRs = [];
-        this.currentMode = null;
-        this.bucketData = [];
-        this.currentBucket = null;
-        this.lockedSupplierId = null;
-        this.items = [];
-        this.baseItems = [];
-        this.bulkConfigData = [];
-
-        // Reset checkboxes
-        document.querySelectorAll('.pr-checkbox').forEach(checkbox => {
-            checkbox.checked = false;
-        });
-        this.updatePRSelectionUI();
-
-        // Reset mode selector
-        document.querySelectorAll('.mode-option').forEach(option => {
-            option.classList.remove('border-chocolate', 'bg-chocolate/5');
-            option.classList.add('border-gray-200');
-        });
-    }
-
-    resetModeData() {
-        if (this.currentMode === 'single') {
-            this.items = [];
-            this.baseItems = [];
-            document.getElementById('single-po-items-table').innerHTML = '';
-            document.getElementById('single_supplier_id').disabled = false;
-            document.getElementById('single_supplier_id').value = '';
-        } else if (this.currentMode === 'bulk') {
-            this.bulkConfigData = [];
-            document.getElementById('bulk-config-cards-container').innerHTML = '';
-        }
+    
+    /**
+     * Enhanced method to return to PR selection with fresh data
+     * This ensures that PRs with remaining items after partial PO creation are properly displayed
+     */
+    returnToPRSelectionWithRefresh() {
+        // Show loading state
+        const prSelectionSection = document.getElementById('pr-selection-section');
+        const originalContent = prSelectionSection.innerHTML;
+        prSelectionSection.innerHTML = `
+            <div class="p-12 text-center">
+                <i class="fas fa-spinner fa-spin text-chocolate text-2xl"></i>
+                <div class="mt-2 text-gray-500">Refreshing purchase requests...</div>
+            </div>
+        `;
+        
+        // Reset all sections
+        document.getElementById('supplier-section').classList.add('hidden');
+        document.getElementById('supplier-grouping-section').classList.add('hidden');
+        
+        // Refresh the page to get updated PR data
+        // This ensures that PRs with remaining items after partial PO creation are properly shown
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
     }
 }
 
-// Simple Modal Logic for PR Details
+// Simple Modal Logic for PR Details (Preserved from original)
 class PRDetailsModal {
     constructor() {
         this.modal = document.getElementById('pr-details-modal');
@@ -1227,9 +1011,12 @@ class PRDetailsModal {
     close() { this.modal.classList.add('hidden'); }
     
     displayPRDetails(prData) {
+        // Improve PR details display
         const items = prData.purchaseRequestItems || [];
         
+        // Format items list with detailed information
         const itemsHtml = items.map(i => {
+            // Handle both legacy and new data structures
             const itemName = i.item_name || i.item?.name || 'Unknown Item';
             const itemCode = i.item_code || i.item?.item_code || 'N/A';
             const categoryName = i.category_name || i.item?.category?.name || 'No Category';
@@ -1258,6 +1045,7 @@ class PRDetailsModal {
             `;
         }).join('');
         
+        // Format PR header information
         const prInfoHtml = `
             <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg mb-6">
                 <div>
@@ -1279,6 +1067,7 @@ class PRDetailsModal {
             </div>
         `;
         
+        // Construct the complete HTML
         this.content.innerHTML = `
             <div class="space-y-4">
                 ${prInfoHtml}
@@ -1296,16 +1085,93 @@ class PRDetailsModal {
     }
 }
 
+// Initializers
+let purchaseOrderManager;
+let prDetailsModal;
+
+document.addEventListener('DOMContentLoaded', function() {
+    purchaseOrderManager = new PurchaseOrderManager();
+    prDetailsModal = new PRDetailsModal();
+    
+    // Check if we need to refresh the page due to recent PO creation
+    checkForRefreshNeeded();
+});
+
+/**
+ * Check if the page needs to be refreshed due to recent PO creation
+ * This ensures that PRs with consumed items are properly hidden
+ */
+function checkForRefreshNeeded() {
+    // Check for the refresh_needed flag in the session
+    const urlParams = new URLSearchParams(window.location.search);
+    const refreshNeeded = urlParams.get('refresh_needed') || sessionStorage.getItem('po_creation_refresh');
+    
+    if (refreshNeeded === 'true') {
+        // Show a brief loading indicator
+        const loadingHtml = `
+            <div class="fixed inset-0 z-50 bg-chocolate/20 backdrop-blur-sm flex items-center justify-center">
+                <div class="bg-white rounded-xl shadow-2xl p-6 transform transition-all">
+                    <div class="text-center">
+                        <i class="fas fa-spinner fa-spin text-chocolate text-2xl mb-4"></i>
+                        <p class="text-gray-700 font-semibold">Refreshing Purchase Requests...</p>
+                        <p class="text-sm text-gray-500 mt-1">Updating status to show current availability</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add loading overlay
+        document.body.insertAdjacentHTML('beforeend', loadingHtml);
+        
+        // Clear the refresh flag
+        sessionStorage.removeItem('po_creation_refresh');
+        urlParams.delete('refresh_needed');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, '', newUrl);
+        
+        // Refresh after a brief delay to show the loading state
+        setTimeout(() => {
+            window.location.reload();
+        }, 1500);
+    }
+}
+
 // Global functions for inline onclicks
 function viewPRDetails(id) { prDetailsModal.open(id); }
 function closePRDetailsModal() { prDetailsModal.close(); }
 
+// Form submission handler with debugging
 function submitPurchaseOrderForm() {
-    const form = document.getElementById('single-po-form');
-    const selectedItems = document.querySelectorAll('.item-checkbox:checked');
-    const selectedPRIds = document.getElementById('single-selected-pr-ids').value;
-    const supplierId = document.getElementById('single_supplier_id').value;
+    console.log('=== PO FORM SUBMISSION DEBUG ===');
     
+    const form = document.getElementById('purchase-order-form');
+    const selectedItems = document.querySelectorAll('.item-checkbox:checked');
+    const selectedPRIds = document.getElementById('selected-pr-ids').value;
+    const supplierId = document.getElementById('supplier_id').value;
+    const saveOption = document.getElementById('final-save-option').value;
+    
+    console.log('Form element:', form);
+    console.log('Selected items count:', selectedItems.length);
+    console.log('Selected PR IDs:', selectedPRIds);
+    console.log('Supplier ID:', supplierId);
+    console.log('Save option:', saveOption);
+    
+    // Debug: Check each selected item's data
+    selectedItems.forEach((checkbox, index) => {
+        const row = checkbox.closest('tr');
+        const qtyInput = row.querySelector('.qty-input');
+        const priceInput = row.querySelector('.price-input');
+        const itemId = row.querySelector('input[name*="[item_id]"]').value;
+        
+        console.log(`Item ${index + 1}:`, {
+            itemId: itemId,
+            quantity: qtyInput ? qtyInput.value : 'N/A',
+            price: priceInput ? priceInput.value : 'N/A',
+            selected: checkbox.checked
+        });
+    });
+    
+    // Validation checks
     if (!supplierId) {
         alert('Please select a supplier.');
         return false;
@@ -1316,54 +1182,45 @@ function submitPurchaseOrderForm() {
         return false;
     }
     
-    document.getElementById('confirmation-modal').classList.add('hidden');
-    form.submit();
-    return true;
-}
-
-function submitBulkPOForm() {
-    const form = document.getElementById('bulk-po-form');
-    const configCards = document.querySelectorAll('[data-bucket-index]');
-    let hasValidConfig = true;
-
-    configCards.forEach(card => {
-        const deliveryDate = card.querySelector('input[name*="[expected_delivery_date]"]');
-        if (deliveryDate && !deliveryDate.value) {
-            hasValidConfig = false;
-            deliveryDate.focus();
+    // Check if any selected items have invalid quantities or prices
+    let hasInvalidItems = false;
+    selectedItems.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const qtyInput = row.querySelector('.qty-input');
+        const priceInput = row.querySelector('.price-input');
+        
+        if (qtyInput && parseFloat(qtyInput.value) <= 0) {
+            alert('Selected items must have valid quantities greater than 0.');
+            hasInvalidItems = true;
+        }
+        
+        if (priceInput && parseFloat(priceInput.value) <= 0) {
+            alert('Selected items must have valid prices greater than 0.');
+            hasInvalidItems = true;
         }
     });
-
-    if (!hasValidConfig) {
-        alert('Please fill in all required delivery dates.');
+    
+    if (hasInvalidItems) {
         return false;
     }
-
-    document.getElementById('bulk-confirmation-modal').classList.add('hidden');
+    
+    console.log('Form submission passed all validation checks');
+    
+    // Hide modal and submit form
+    document.getElementById('confirmation-modal').classList.add('hidden');
+    
+    console.log('Submitting form...');
     form.submit();
+    
     return true;
 }
-
-// Initialize
-let purchaseOrderManager;
-let prDetailsModal;
-
-document.addEventListener('DOMContentLoaded', function() {
-    purchaseOrderManager = new UnifiedPurchaseOrderManager();
-    prDetailsModal = new PRDetailsModal();
-});
 
 </script>
 
 <style>
-.custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e8dfd4; border-radius: 20px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #c48d3f; }
-
-.mode-option.active {
-    border-color: #c48d3f;
-    background-color: rgba(196, 141, 63, 0.05);
-}
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e8dfd4; border-radius: 20px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #c48d3f; }
 </style>
 @endsection

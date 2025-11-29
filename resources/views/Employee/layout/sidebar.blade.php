@@ -25,9 +25,9 @@
            id="menu-employee-dashboard"
            class="group flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-6
            {{ request()->routeIs('employee.dashboard') 
-              ? 'bg-caramel text-white shadow-md shadow-caramel/20' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white' }}">
-            <i class="fas fa-home w-6 text-center text-sm {{ request()->routeIs('employee.dashboard') ? 'text-white' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-home w-6 text-center text-sm {{ request()->routeIs('employee.dashboard') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">My Hub</span>
         </a>
 
@@ -40,10 +40,10 @@
         <a href="{{ Route::has('employee.requisitions.create') ? route('employee.requisitions.create') : '#' }}"
            id="menu-employee-requisitions-create"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('employee.requisitions.create') 
+           {{ request()->routeIs('employee.requisitions*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-shopping-basket w-6 text-center text-sm {{ request()->routeIs('employee.requisitions.create') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-shopping-basket w-6 text-center text-sm {{ request()->routeIs('employee.requisitions*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">New Request</span>
         </a>
 
@@ -51,10 +51,10 @@
         <a href="{{ Route::has('employee.requisitions.history') ? route('employee.requisitions.history') : '#' }}"
            id="menu-employee-requisitions-history"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('employee.requisitions.history') 
+           {{ request()->routeIs('employee.requisitions*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-history w-6 text-center text-sm {{ request()->routeIs('employee.requisitions.history') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-history w-6 text-center text-sm {{ request()->routeIs('employee.requisitions*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">My History</span>
         </a>
 
@@ -83,11 +83,11 @@
         <a href="{{ Route::has('employee.notifications') ? route('employee.notifications') : '#' }}"
            id="menu-employee-notifications"
            class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('employee.notifications') 
+           {{ request()->routeIs('employee.notifications*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
             <div class="flex items-center">
-                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('employee.notifications') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('employee.notifications*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Notifications</span>
             </div>
             {{-- Dynamic Badge --}}

@@ -25,9 +25,9 @@
            id="menu-supervisor-dashboard"
            class="group flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-6
            {{ request()->routeIs('supervisor.dashboard') 
-              ? 'bg-caramel text-white shadow-md shadow-caramel/20' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white' }}">
-            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('supervisor.dashboard') ? 'text-white' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('supervisor.dashboard') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Manager Home</span>
         </a>
 
@@ -40,11 +40,11 @@
         <a href="{{ Route::has('supervisor.approvals.requisitions') ? route('supervisor.approvals.requisitions') : '#' }}"
            id="menu-supervisor-approvals-requisitions"
            class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('supervisor.approvals.requisitions') 
+           {{ request()->routeIs('supervisor.requisitions*') || request()->routeIs('supervisor.approvals.requisitions') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
             <div class="flex items-center">
-                <i class="fas fa-clipboard-check w-6 text-center text-sm {{ request()->routeIs('supervisor.approvals.requisitions') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <i class="fas fa-clipboard-check w-6 text-center text-sm {{ request()->routeIs('supervisor.requisitions*') || request()->routeIs('supervisor.approvals.requisitions') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Requisitions</span>
             </div>
             @if(isset($badgeCounts['pending_requisitions']) && $badgeCounts['pending_requisitions'] > 0)
@@ -57,12 +57,19 @@
         {{-- Purchase Requests --}}
         <a href="{{ Route::has('supervisor.approvals.purchase-requests') ? route('supervisor.approvals.purchase-requests') : '#' }}"
            id="menu-supervisor-approvals-purchase-requests"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('supervisor.approvals.purchase-requests') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+           class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('supervisor.approvals.purchase-requests')
+              ? 'bg-white/10 text-white border-l-2 border-caramel'
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-shopping-basket w-6 text-center text-sm {{ request()->routeIs('supervisor.approvals.purchase-requests') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Purchase Requests</span>
+           <div class="flex items-center">
+               <i class="fas fa-shopping-basket w-6 text-center text-sm {{ request()->routeIs('supervisor.approvals.purchase-requests') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+               <span class="ml-2">Purchase Requests</span>
+           </div>
+           @if(isset($badgeCounts['pending_purchase_requests']) && $badgeCounts['pending_purchase_requests'] > 0)
+           <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm">
+               {{ $badgeCounts['pending_purchase_requests'] }}
+           </span>
+           @endif
         </a>
 
         {{-- SECTION: INVENTORY OVERSIGHT --}}
@@ -81,27 +88,7 @@
             <span class="ml-2">Stock Levels</span>
         </a>
 
-        {{-- Stock Card/History --}}
-        <a href="{{ Route::has('supervisor.inventory.stock-history') ? route('supervisor.inventory.stock-history') : '#' }}"
-           id="menu-supervisor-inventory-stock-history"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('supervisor.inventory.stock-history') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-history w-6 text-center text-sm {{ request()->routeIs('supervisor.inventory.stock-history') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Stock History</span>
-        </a>
 
-        {{-- Adjustments --}}
-        <a href="{{ Route::has('supervisor.inventory.adjustments') ? route('supervisor.inventory.adjustments') : '#' }}"
-           id="menu-supervisor-inventory-adjustments"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('supervisor.inventory.adjustments') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-file-invoice-dollar w-6 text-center text-sm {{ request()->routeIs('supervisor.inventory.adjustments') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Adjustments</span>
-        </a>
 
         {{-- SECTION: REPORTS & SETTINGS --}}
         <div class="px-3 pt-6 pb-2">
@@ -139,11 +126,11 @@
         <a href="{{ Route::has('supervisor.notifications') ? route('supervisor.notifications') : '#' }}"
            id="menu-supervisor-notifications"
            class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('supervisor.notifications') 
+           {{ request()->routeIs('supervisor.notifications*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
             <div class="flex items-center">
-                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('supervisor.notifications') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('supervisor.notifications*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Notifications</span>
             </div>
             @if(isset($badgeCounts['unread_notifications']) && $badgeCounts['unread_notifications'] > 0)

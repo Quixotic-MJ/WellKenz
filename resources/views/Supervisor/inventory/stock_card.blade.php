@@ -203,8 +203,11 @@
                 <tbody class="bg-white divide-y divide-gray-100" id="transactionTableBody">
                     @forelse($movements as $movement)
                         @php
-                            $isStockIn = $movement->quantity >= 0;
                             $isAdjustment = in_array($movement->movement_type, ['adjustment', 'waste', 'expired', 'return']);
+                            
+                            // Only classify as stock in/out if it's NOT an adjustment
+                            $isStockIn = !$isAdjustment && $movement->quantity >= 0;
+                            $isStockOut = !$isAdjustment && $movement->quantity < 0;
                             
                             $rowClass = 'hover:bg-cream-bg/50 transition-colors group';
                             if ($isAdjustment) {
@@ -238,7 +241,7 @@
                         @endphp
 
                         <tr class="{{ $rowClass }} transaction-row" 
-                            data-movement-type="{{ $isStockIn ? 'in' : 'out' }}"
+                            data-movement-type="{{ $isAdjustment ? 'adjustment' : ($isStockIn ? 'in' : 'out') }}"
                             data-is-adjustment="{{ $isAdjustment ? '1' : '0' }}">
                             
                             <td class="px-6 py-4 whitespace-nowrap">
@@ -349,7 +352,7 @@ function filterTransactions(filterType) {
             case 'all': showRow = true; break;
             case 'in': showRow = movementType === 'in'; break;
             case 'out': showRow = movementType === 'out'; break;
-            case 'adjustment': showRow = isAdjustment; break;
+            case 'adjustment': showRow = movementType === 'adjustment'; break;
         }
         
         row.style.display = showRow ? '' : 'none';

@@ -4,7 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 
 // --- Import your controllers (Ready for when you move logic to controllers) ---
-use App\Http\Controllers\EmployeeController;
 
 // Admin namespace controllers
 use App\Http\Controllers\Admin\DashboardController;
@@ -260,10 +259,11 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
     // Inventory Oversight
     Route::get('/inventory', [SupervisorInventoryController::class, 'stockLevel'])->name('inventory.stock-level');
     Route::get('/inventory/export-csv', [SupervisorInventoryController::class, 'exportStockCSV'])->name('inventory.export-stock-csv');
+    Route::get('/inventory/export-pdf', [SupervisorInventoryController::class, 'exportStockPDF'])->name('inventory.export-stock-pdf');
     Route::get('/inventory/print-report', [SupervisorInventoryController::class, 'printStockReport'])->name('inventory.print-stock-report');
     Route::get('/inventory/history', [SupervisorInventoryController::class, 'stockHistory'])->name('inventory.stock-history');
     Route::get('/inventory/card/{item}', [SupervisorInventoryController::class, 'stockCard'])->name('inventory.stock-card');
-    Route::get('/inventory/adjustments', [SupervisorInventoryController::class, 'inventoryAdjustments'])->name('inventory.adjustments');
+
     
     // Inventory Adjustments API endpoints
     Route::get('/inventory/adjustments/items/{item}', [SupervisorInventoryController::class, 'getItemDetails'])->name('inventory.adjustments.item-details');
@@ -272,8 +272,10 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
 
     // Reports
     Route::get('/reports/expiry', [SupervisorReportsController::class, 'expiryReport'])->name('reports.expiry');
+    Route::get('/reports/batch/{batchId}/details', [SupervisorReportsController::class, 'getBatchDetails'])->name('reports.batch.details');
     // Use First List and Alerts
     Route::get('/reports/print-use-first-list', [SupervisorReportsController::class, 'printUseFirstList'])->name('reports.print_use_first_list');
+    Route::get('/reports/export-use-first-list-pdf', [SupervisorReportsController::class, 'exportUseFirstListPDF'])->name('reports.export_use_first_list_pdf');
     Route::post('/reports/alert-bakers', [SupervisorReportsController::class, 'alertBakers'])->name('reports.alert_bakers');
 
     // Settings
@@ -300,16 +302,19 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     // Purchase Orders
     Route::get('/po/create', [PurchasingPOController::class, 'createPurchaseOrder'])->name('po.create');
     Route::post('/po', [PurchasingPOController::class, 'storePurchaseOrder'])->name('po.store');
+    Route::get('/po/bulk-configure', [PurchasingPOController::class, 'bulkConfigure'])->name('po.bulk-configure');
+    Route::post('/po/bulk-create', [PurchasingPOController::class, 'bulkCreatePurchaseOrders'])->name('po.bulk-create');
     
     // Specific routes first - these must come before the generic {purchaseOrder} route
     Route::get('/po/open', [PurchasingPOController::class, 'openOrders'])->name('po.open');
     Route::get('/po/partial', [PurchasingPOController::class, 'partialOrders'])->name('po.partial');
     Route::get('/po/history', [PurchasingReportController::class, 'completedHistory'])->name('po.history');
-    Route::get('/po/drafts', [PurchasingPOController::class, 'drafts'])->name('po.drafts');
+
     
     // Generic routes with {purchaseOrder} parameter - these must come after specific routes
     Route::get('/po/{purchaseOrder}', [PurchasingPOController::class, 'showPurchaseOrder'])->name('po.show');
     Route::get('/po/{purchaseOrder}/print', [PurchasingPOController::class, 'printPurchaseOrder'])->name('po.print');
+    Route::get('/po/{purchaseOrder}/pdf', [PurchasingPOController::class, 'downloadPDF'])->name('po.pdf');
     
     // PO Actions - these must come after the generic route
     Route::patch('/po/{purchaseOrder}/submit', [PurchasingPOController::class, 'submitPurchaseOrder'])->name('po.submit');
@@ -340,6 +345,7 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     Route::get('/notifications', [PurchasingNotificationController::class, 'index'])->name('notifications');
     
     // Notification management routes
+    Route::get('/notifications/header', [PurchasingNotificationController::class, 'getHeaderNotifications'])->name('notifications.header');
     Route::get('/notifications/stats', [PurchasingNotificationController::class, 'getNotificationStats'])->name('notifications.stats');
     Route::post('/notifications/mark-all-read', [PurchasingNotificationController::class, 'markAllAsRead'])->name('notifications.mark_all_read');
     Route::post('/notifications/bulk-operations', [PurchasingNotificationController::class, 'bulkOperations'])->name('notifications.bulk_operations');
@@ -355,6 +361,9 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     Route::get('/api/items/search', [PurchasingPOController::class, 'searchItems'])->name('api.items.search');
     Route::get('/api/suppliers/{supplier}/items', [PurchasingPriceListController::class, 'getSupplierItems'])->name('api.suppliers.items');
     Route::post('/api/suppliers/{supplier}/items-for-prs', [PurchasingPOController::class, 'getSupplierItemsForPRs'])->name('api.suppliers.items-for-prs');
+    Route::post('/api/items-for-prs', [PurchasingPOController::class, 'getItemsForPRs'])->name('api.items-for-prs');
+    Route::post('/api/group-pr-items', [PurchasingPOController::class, 'groupPurchaseRequestItems'])->name('api.group-pr-items');
+    Route::post('/api/get-pr-items', [PurchasingPOController::class, 'getPurchaseRequestItems'])->name('api.get-pr-items');
     Route::get('/api/dashboard/metrics', [PurchasingDashboardController::class, 'getDashboardMetrics'])->name('api.dashboard.metrics');
     Route::get('/api/dashboard/summary', [PurchasingDashboardController::class, 'getDashboardSummary'])->name('api.dashboard.summary');
     Route::get('/api/purchase-requests/{purchaseRequest}', [PurchasingPOController::class, 'getPurchaseRequestDetails'])->name('api.purchase-requests.details');
@@ -478,7 +487,6 @@ Route::middleware(['auth', 'role:employee'])->prefix('employee')->name('employee
     // Production
     Route::get('/production/log', [EmployeeProductionController::class, 'productionLog'])->name('production.log');
     Route::post('/production/log', [EmployeeProductionController::class, 'storeProduction'])->name('production.store');
-    Route::get('/production/check-reject-support', [EmployeeController::class, 'checkRejectQuantitySupport'])->name('production.check-reject-support');
     Route::get('/recipes', [EmployeeRecipeController::class, 'recipes'])->name('recipes.index');
     Route::get('/recipes/{recipe}/details', [EmployeeRecipeController::class, 'getRecipeDetails'])->name('recipes.details');
     Route::post('/recipes', [EmployeeRecipeController::class, 'createRecipe'])->name('recipes.store');

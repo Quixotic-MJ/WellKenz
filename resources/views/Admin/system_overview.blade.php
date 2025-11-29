@@ -138,11 +138,7 @@
                 </a>
             </div>
 
-            <div class="grid grid-cols-3 gap-4 text-center mb-6">
-                <div class="p-4 bg-cream-bg rounded-lg border border-border-soft">
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Draft</p>
-                    <p class="font-display text-2xl text-chocolate mt-1">{{ $purchaseOrders['draft'] }}</p>
-                </div>
+            <div class="grid grid-cols-2 gap-4 text-center mb-6">
                 <div class="p-4 bg-cream-bg rounded-lg border border-border-soft">
                     <p class="text-[10px] font-bold text-caramel uppercase tracking-wider">Ordered</p>
                     <p class="font-display text-2xl text-chocolate mt-1">{{ $purchaseOrders['ordered'] }}</p>

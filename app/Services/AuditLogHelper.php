@@ -22,7 +22,7 @@ class AuditLogHelper
      */
     public static function log(
         string $tableName,
-        int $recordId,
+        ?int $recordId,
         string $action,
         ?array $oldValues = null,
         ?array $newValues = null,
@@ -104,7 +104,7 @@ class AuditLogHelper
      */
     public static function logAction(
         string $tableName,
-        int $recordId,
+        ?int $recordId,
         string $action,
         ?array $values = null,
         ?Request $request = null,

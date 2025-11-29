@@ -46,7 +46,6 @@ class DashboardController extends Controller
             'today_orders' => PurchaseOrder::whereDate('order_date', $today)->count(),
             'week_orders' => PurchaseOrder::whereDate('order_date', '>=', $thisWeek)->count(),
             'month_orders' => PurchaseOrder::whereDate('order_date', '>=', $thisMonth)->count(),
-            'pending_approvals' => PurchaseOrder::where('status', 'draft')->count(),
             'awaiting_delivery' => PurchaseOrder::whereIn('status', ['sent', 'confirmed'])->count(),
             'low_stock_alerts' => $this->getLowStockItems()->count(),
             'overdue_orders' => $this->getOverdueDeliveries()->count(),

@@ -25,9 +25,9 @@
            id="menu-inventory-dashboard"
            class="group flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-6
            {{ request()->routeIs('inventory.dashboard') 
-              ? 'bg-caramel text-white shadow-md shadow-caramel/20' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white' }}">
-            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('inventory.dashboard') ? 'text-white' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('inventory.dashboard') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Warehouse Home</span>
         </a>
 
@@ -40,10 +40,10 @@
         <a href="{{ Route::has('inventory.inbound.receive') ? route('inventory.inbound.receive') : '#' }}"
            id="menu-inventory-inbound-receive"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.inbound.receive') 
+           {{ request()->routeIs('inventory.inbound.*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-truck-loading w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.receive') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-truck-loading w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Receive Delivery</span>
         </a>
 
@@ -51,10 +51,10 @@
         <a href="{{ Route::has('inventory.inbound.labels') ? route('inventory.inbound.labels') : '#' }}"
            id="menu-inventory-inbound-labels"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.inbound.labels') 
+           {{ request()->routeIs('inventory.inbound.*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-qrcode w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.labels') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-qrcode w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Batch Records</span>
         </a>
 
@@ -62,10 +62,10 @@
         <a href="{{ Route::has('inventory.inbound.rtv') ? route('inventory.inbound.rtv') : '#' }}"
            id="menu-inventory-inbound-rtv"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.inbound.rtv') 
+           {{ request()->routeIs('inventory.inbound.*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-undo-alt w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.rtv') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-undo-alt w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Log Returns (RTV)</span>
         </a>
 
@@ -78,11 +78,11 @@
         <a href="{{ Route::has('inventory.outbound.fulfill') ? route('inventory.outbound.fulfill') : '#' }}"
            id="menu-inventory-outbound-fulfill"
            class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.outbound.fulfill') 
+           {{ request()->routeIs('inventory.outbound.*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
             <div class="flex items-center">
-                <i class="fas fa-dolly w-6 text-center text-sm {{ request()->routeIs('inventory.outbound.fulfill') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <i class="fas fa-dolly w-6 text-center text-sm {{ request()->routeIs('inventory.outbound.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Fulfill Requests</span>
             </div>
             {{-- Dynamic count badge --}}
@@ -97,11 +97,11 @@
         <a href="{{ Route::has('inventory.purchase-requests.create') ? route('inventory.purchase-requests.create') : '#' }}"
            id="menu-inventory-purchase-requests-create"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.purchase-requests.create') 
+           {{ request()->routeIs('inventory.purchase-requests.*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-cart-plus w-6 text-center text-sm {{ request()->routeIs('inventory.purchase-requests.create') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Create PR</span>
+            <i class="fas fa-cart-plus w-6 text-center text-sm {{ request()->routeIs('inventory.purchase-requests.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Create Purchase Request</span>
         </a>
 
         {{-- SECTION: STOCK MANAGEMENT --}}
@@ -113,10 +113,10 @@
         <a href="{{ Route::has('inventory.stock.lookup') ? route('inventory.stock.lookup') : '#' }}"
            id="menu-inventory-stock-lookup"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.stock.lookup') 
+           {{ request()->routeIs('inventory.stock.*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-search-location w-6 text-center text-sm {{ request()->routeIs('inventory.stock.lookup') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-search-location w-6 text-center text-sm {{ request()->routeIs('inventory.stock.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Batch Lookup</span>
         </a>
 
@@ -129,11 +129,11 @@
         <a href="{{ Route::has('inventory.notifications') ? route('inventory.notifications') : '#' }}"
            id="menu-inventory-notifications"
            class="group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.notifications') 
+           {{ request()->routeIs('inventory.notifications*') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
             <div class="flex items-center">
-                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('inventory.notifications') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+                <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('inventory.notifications*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Notifications</span>
             </div>
             @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)

@@ -19,12 +19,16 @@ class PurchaseRequest extends Model
         'total_estimated_cost',
         'approved_by',
         'approved_at',
+        'rejected_by',
+        'rejected_at',
+        'reject_reason',
         'notes'
     ];
 
     protected $casts = [
         'request_date' => 'date',
         'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
         'total_estimated_cost' => 'decimal:2',
     ];
 
@@ -37,6 +41,11 @@ class PurchaseRequest extends Model
     public function approvedBy()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function rejectedBy()
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 
     public function purchaseRequestItems()

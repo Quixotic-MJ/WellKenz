@@ -285,52 +285,7 @@
         @endif
     </div>
 
-    {{-- 4. STATS SUMMARY --}}
-    @if($openOrders->count() > 0)
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div class="bg-white p-4 rounded-xl border border-border-soft shadow-sm flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-chocolate/10 flex items-center justify-center text-chocolate">
-                    <i class="fas fa-file-invoice"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Open</p>
-                    <p class="text-lg font-bold text-gray-900">{{ $openOrders->total() }}</p>
-                </div>
-            </div>
-            
-            <div class="bg-white p-4 rounded-xl border border-border-soft shadow-sm flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center text-green-600">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Total Value</p>
-                    <p class="text-lg font-bold text-gray-900">₱{{ number_format($openOrders->sum('grand_total'), 0) }}</p>
-                </div>
-            </div>
-
-            <div class="bg-white p-4 rounded-xl border border-border-soft shadow-sm flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center text-red-600">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Overdue</p>
-                    <p class="text-lg font-bold text-gray-900">{{ $openOrders->filter(fn($order) => $order->is_overdue)->count() }}</p>
-                </div>
-            </div>
-
-            <div class="bg-white p-4 rounded-xl border border-border-soft shadow-sm flex items-center gap-3">
-                <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div>
-                    <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Due Soon</p>
-                    <p class="text-lg font-bold text-gray-900">
-                        {{ $openOrders->filter(fn($order) => $order->expected_delivery_date && $order->expected_delivery_date->isAfter(now()) && $order->expected_delivery_date->diffInDays() <= 3)->count() }}
-                    </p>
-                </div>
-            </div>
-        </div>
-    @endif
+   
 
 </div>
 

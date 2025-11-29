@@ -92,19 +92,11 @@ class AuditLoggingMiddleware
             'SupplierController@destroySupplier' => 'suppliers',
             'SupplierController@toggleSupplierStatus' => 'suppliers',
             
-            // Purchasing
-            'PurchasingController@updateSupplierItemPrice' => 'supplier_items',
-            'PurchasingController@bulkUpdateSupplierPrices' => 'supplier_items',
-            
             // User Management
             'UserController@store' => 'users',
             'UserController@update' => 'users',
             'UserController@destroy' => 'users',
             'UserController@toggleStatus' => 'users',
-            
-            // Inventory Operations
-            'InventoryController@receiveDelivery' => 'purchase_orders',
-            'InventoryController@markAsReceived' => 'purchase_orders',
         ];
 
         $key = class_basename($controllerClass) . '@' . $methodName;

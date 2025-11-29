@@ -251,27 +251,7 @@
             </div>
         </div>
 
-        <!-- Summary Cards -->
-        <div class="summary-grid">
-            <div class="card critical">
-                <i class="fas fa-exclamation-circle card-icon"></i>
-                <div class="card-number">{{ $criticalCount }}</div>
-                <div class="card-label">Critical Batches</div>
-                <div class="card-sub">Expires ≤ 48 Hours</div>
-            </div>
-            <div class="card warning">
-                <i class="fas fa-clock card-icon"></i>
-                <div class="card-number">{{ $warningCount }}</div>
-                <div class="card-label">Warning Batches</div>
-                <div class="card-sub">Expires ≤ 7 Days</div>
-            </div>
-            <div class="card total">
-                <i class="fas fa-boxes card-icon"></i>
-                <div class="card-number">{{ $totalCount }}</div>
-                <div class="card-label">Total Tracked</div>
-                <div class="card-sub">Value: ₱{{ number_format($totalValue, 2) }}</div>
-            </div>
-        </div>
+     
 
         <!-- Instructions -->
         <div class="alert-box">

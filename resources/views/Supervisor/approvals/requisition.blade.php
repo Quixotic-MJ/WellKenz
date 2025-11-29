@@ -16,12 +16,32 @@
                 <div class="flex items-center gap-3">
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
                         <span class="w-2 h-2 rounded-full bg-amber-500 mr-2 animate-pulse"></span>
-                        {{ $pendingCount ?? 0 }} Pending
+                        {{ $statistics['pending'] ?? 0 }} Pending
                     </span>
                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
                         <i class="fas fa-check-circle mr-2"></i>
-                        {{ $approvedToday ?? 0 }} Approved Today
+                        {{ $statistics['approved_today'] ?? 0 }} Approved Today
                     </span>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
+                        <i class="fas fa-calendar-week mr-2"></i>
+                        {{ $statistics['total_approved_this_week'] ?? 0 }} This Week
+                    </span>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+                        <i class="fas fa-times-circle mr-2"></i>
+                        {{ $statistics['total_rejected_this_week'] ?? 0 }} Rejected
+                    </span>
+                    @if(($statistics['high_stock_usage'] ?? 0) > 0)
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            {{ $statistics['high_stock_usage'] ?? 0 }} High Usage
+                        </span>
+                    @endif
+                    @if(($statistics['critical_items'] ?? 0) > 0)
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200 animate-pulse">
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                            {{ $statistics['critical_items'] ?? 0 }} Critical
+                        </span>
+                    @endif
                 </div>
                 <div class="text-right">
                     <p class="text-sm font-bold text-gray-900">{{ now()->format('M d, Y') }}</p>
@@ -66,16 +86,32 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t border-border-soft gap-4">
-                <label class="flex items-center gap-3 cursor-pointer group">
-                    <input type="checkbox" id="highStockFilter" name="high_stock" value="1" 
-                           class="rounded border-gray-300 text-chocolate focus:ring-caramel w-4 h-4 transition-all cursor-pointer"
-                           {{ request('high_stock') ? 'checked' : '' }}>
-                    <span class="text-sm text-gray-600 font-medium group-hover:text-chocolate transition-colors">Show High Stock Usage Only (>80%)</span>
-                </label>
-                
-                <button type="button" onclick="refreshData()" class="w-full sm:w-auto px-5 py-2 bg-chocolate text-white hover:bg-chocolate-dark rounded-lg shadow-md transition-all text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transform active:scale-95">
-                    <i class="fas fa-sync-alt"></i> Refresh Data
-                </button>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="highStockFilter" name="high_stock" value="1"
+                               class="rounded border-gray-300 text-chocolate focus:ring-caramel w-4 h-4 transition-all cursor-pointer"
+                               {{ request('high_stock') ? 'checked' : '' }}>
+                        <span class="text-sm text-gray-600 font-medium group-hover:text-chocolate transition-colors">Show High Stock Usage Only (>80%)</span>
+                    </label>
+
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="selectAllCheckbox"
+                               class="rounded border-gray-300 text-chocolate focus:ring-caramel w-4 h-4 transition-all cursor-pointer">
+                        <span class="text-sm text-gray-600 font-medium group-hover:text-chocolate transition-colors">Select All Pending</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" id="bulkApproveBtn" onclick="RequisitionManager.bulkApproveSelected()"
+                            class="px-5 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg shadow-md transition-all text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                        <i class="fas fa-check-double"></i> Bulk Approve
+                    </button>
+
+                    <button type="button" onclick="refreshData()" class="w-full sm:w-auto px-5 py-2 bg-chocolate text-white hover:bg-chocolate-dark rounded-lg shadow-md transition-all text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transform active:scale-95">
+                        <i class="fas fa-sync-alt"></i> Refresh Data
+                    </button>
+                </div>
             </div>
         </form>
     </div>
@@ -107,6 +143,15 @@
                     
                     {{-- Status Badges --}}
                     <div class="absolute top-4 right-4 flex gap-2">
+                        @if($requisition->status === 'pending')
+                            <label class="flex items-center gap-2 {{ !$hasSufficientStock ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer group' }}">
+                                <input type="checkbox" class="requisition-checkbox rounded border-gray-300 text-chocolate focus:ring-caramel w-4 h-4 {{ !$hasSufficientStock ? 'cursor-not-allowed' : 'cursor-pointer' }}"
+                                       value="{{ $requisition->id }}"
+                                       data-requisition-id="{{ $requisition->id }}"
+                                       {{ !$hasSufficientStock ? 'disabled' : '' }}>
+                                <span class="text-xs {{ !$hasSufficientStock ? 'text-gray-400' : 'text-gray-600 group-hover:text-chocolate' }} font-medium transition-colors">Select</span>
+                            </label>
+                        @endif
                         @if($hasHighRequest && !$hasSufficientStock)
                             <span class="px-2.5 py-1 bg-red-50 text-red-700 text-[10px] font-bold rounded-full border border-red-100 uppercase tracking-wide">High Usage</span>
                         @endif
@@ -425,10 +470,13 @@ window.RequisitionManager = {
     init() {
         // Setup modal event listeners
         this.setupModalListeners();
-        
+
         // Setup filter functionality
         this.setupFilters();
-        
+
+        // Setup bulk selection functionality
+        this.setupBulkSelection();
+
         // Setup CSRF token
         this.csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     },
@@ -821,10 +869,14 @@ window.RequisitionManager = {
                 this.showToast('Success', data.message || 'Requisition modified successfully', 'success');
                 this.closeModifyModal();
                 
-                // Refresh the page after a short delay
+                // Refresh statistics and requisitions
+                this.refreshStatistics();
+                this.refreshRequisitions();
+
+                // Show success message after a short delay
                 setTimeout(() => {
-                    location.reload();
-                }, 1500);
+                    this.showToast('Success', data.message || 'Requisitions approved successfully', 'success');
+                }, 500);
             } else {
                 this.showToast('Error', data.error || 'Failed to modify requisition', 'error');
             }
@@ -1149,13 +1201,232 @@ window.RequisitionManager = {
         });
     },
     
+    // Setup bulk selection functionality
+    setupBulkSelection() {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+
+        // Select All checkbox event listener
+        selectAllCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            // Only select checkboxes that are not disabled (sufficient stock)
+            const enabledCheckboxes = document.querySelectorAll('.requisition-checkbox:not([disabled])');
+
+            enabledCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+
+            this.updateBulkApproveButton();
+        });
+
+        // Individual checkbox event listeners (using event delegation)
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('requisition-checkbox')) {
+                this.updateSelectAllCheckbox();
+                this.updateBulkApproveButton();
+            }
+        });
+
+        // Initial state
+        this.updateBulkApproveButton();
+    },
+
+    // Update Select All checkbox state
+    updateSelectAllCheckbox() {
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        const enabledCheckboxes = document.querySelectorAll('.requisition-checkbox:not([disabled])');
+        const checkedEnabledBoxes = document.querySelectorAll('.requisition-checkbox:not([disabled]):checked');
+
+        if (enabledCheckboxes.length === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+            return;
+        }
+
+        if (checkedEnabledBoxes.length === 0) {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = false;
+        } else if (checkedEnabledBoxes.length === enabledCheckboxes.length) {
+            selectAllCheckbox.checked = true;
+            selectAllCheckbox.indeterminate = false;
+        } else {
+            selectAllCheckbox.checked = false;
+            selectAllCheckbox.indeterminate = true;
+        }
+    },
+
+    // Update Bulk Approve button state
+    updateBulkApproveButton() {
+        const bulkApproveBtn = document.getElementById('bulkApproveBtn');
+        const checkedBoxes = document.querySelectorAll('.requisition-checkbox:checked');
+
+        bulkApproveBtn.disabled = checkedBoxes.length === 0;
+    },
+
+    // Get selected requisition IDs
+    getSelectedRequisitionIds() {
+        const checkedBoxes = document.querySelectorAll('.requisition-checkbox:checked');
+        return Array.from(checkedBoxes).map(checkbox => parseInt(checkbox.value));
+    },
+
+    // Bulk approve selected requisitions
+    bulkApproveSelected() {
+        const selectedIds = this.getSelectedRequisitionIds();
+
+        if (selectedIds.length === 0) {
+            this.showToast('Warning', 'Please select at least one requisition to approve', 'error');
+            return;
+        }
+
+        this.showConfirmModal(
+            'Confirm Bulk Approval',
+            `Are you sure you want to approve ${selectedIds.length} requisition${selectedIds.length > 1 ? 's' : ''}?`,
+            () => this.performBulkApprove(selectedIds),
+            'fa-check-double'
+        );
+    },
+
+    // Perform bulk approve API call
+    performBulkApprove(requisitionIds) {
+        this.showLoadingState();
+
+        fetch('/supervisor/requisitions/bulk-approve', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': this.csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                requisition_ids: requisitionIds
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.showToast('Success', data.message || 'Requisitions approved successfully', 'success');
+
+                // Clear selections
+                document.querySelectorAll('.requisition-checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                document.getElementById('selectAllCheckbox').checked = false;
+                this.updateBulkApproveButton();
+
+                // Refresh the page after a short delay
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                this.showToast('Error', data.error || 'Failed to bulk approve requisitions', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error bulk approving requisitions:', error);
+            this.showToast('Error', 'Failed to bulk approve requisitions', 'error');
+        })
+        .finally(() => {
+            this.hideLoadingState();
+        });
+    },
+
+    // Refresh statistics from server
+    refreshStatistics() {
+        fetch('/supervisor/requisitions/api/statistics', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': this.csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.updateStatisticsDisplay(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing statistics:', error);
+        });
+    },
+
+    // Update statistics display in the UI
+    updateStatisticsDisplay(statistics) {
+        // Update pending count
+        const pendingBadge = document.querySelector('.bg-amber-100.text-amber-800');
+        if (pendingBadge) {
+            const pendingText = pendingBadge.querySelector('span:last-child');
+            if (pendingText) {
+                pendingText.textContent = `${statistics.pending ?? 0} Pending`;
+            }
+        }
+
+        // Update approved today
+        const approvedBadge = document.querySelector('.bg-blue-100.text-blue-800');
+        if (approvedBadge) {
+            const approvedText = approvedBadge.querySelector('span:last-child');
+            if (approvedText) {
+                approvedText.textContent = `${statistics.approved_today ?? 0} Approved Today`;
+            }
+        }
+
+        // Update approved this week
+        const weekBadge = document.querySelector('.bg-green-100.text-green-800');
+        if (weekBadge) {
+            const weekText = weekBadge.querySelector('span:last-child');
+            if (weekText) {
+                weekText.textContent = `${statistics.total_approved_this_week ?? 0} This Week`;
+            }
+        }
+
+        // Update rejected this week
+        const rejectedBadge = document.querySelector('.bg-red-100.text-red-800');
+        if (rejectedBadge) {
+            const rejectedText = rejectedBadge.querySelector('span:last-child');
+            if (rejectedText) {
+                rejectedText.textContent = `${statistics.total_rejected_this_week ?? 0} Rejected`;
+            }
+        }
+    },
+
+    // Refresh requisitions list
+    refreshRequisitions() {
+        const search = document.getElementById('searchInput').value;
+        const status = document.getElementById('statusFilter').value;
+        const highStock = document.getElementById('highStockFilter').checked;
+
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (status) params.append('status', status);
+        if (highStock) params.append('high_stock', '1');
+
+        const url = `/supervisor/requisitions/api/filtered?${params.toString()}`;
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': this.csrfToken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.updateRequisitionsDisplay(data.data.requisitions);
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing requisitions:', error);
+        });
+    },
+
     // Filter functionality
     setupFilters() {
         // Status filter change - submit form immediately
         document.getElementById('statusFilter').addEventListener('change', function() {
             document.getElementById('filterForm').submit();
         });
-        
+
         // Search input with debounce - submit form after delay
         let searchTimeout;
         document.getElementById('searchInput').addEventListener('input', function() {
@@ -1164,7 +1435,7 @@ window.RequisitionManager = {
                 document.getElementById('filterForm').submit();
             }, 800);
         });
-        
+
         // High stock filter - submit form immediately
         document.getElementById('highStockFilter').addEventListener('change', function() {
             document.getElementById('filterForm').submit();

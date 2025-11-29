@@ -48,7 +48,7 @@ Specifically, the system aims to:
 
 2. **Generate comprehensive transactions in terms of:**
    - **Purchase Request Workflow** – creation, approval, and tracking of material requests with estimated costs, priority levels, and multi-level approval processes
-   - **Purchase Order Processing** – complete lifecycle from draft creation to supplier communication, delivery tracking, and completion
+   - **Purchase Order Processing** – complete lifecycle from creation to supplier communication, delivery tracking, and completion
    - **Inventory Stock Transactions** – comprehensive stock-in and stock-out activities, stock adjustments, inter-location transfers, waste tracking, and return-to-vendor processes
    - **Production Order Management** – detailed planning, execution tracking, material consumption recording, and completion documentation
    - **Requisition Processing** – complete workflow from creation to fulfillment with real-time status tracking and automated notifications

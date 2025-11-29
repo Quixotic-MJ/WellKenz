@@ -89,7 +89,7 @@
                     
                     <div class="px-5 py-3 border-t border-gray-100 bg-gray-50 text-[10px] text-gray-500 text-center" id="notificationSummary"></div>
 
-                    <a href="{{ route('employee.notifications') }}" class="block p-4 text-center text-xs font-bold text-white bg-chocolate hover:bg-chocolate-dark transition-all uppercase tracking-widest">
+                    <a href="{{ route('purchasing.notifications') }}" class="block p-4 text-center text-xs font-bold text-white bg-chocolate hover:bg-chocolate-dark transition-all uppercase tracking-widest">
                         View All Activity
                     </a>
                 </div>
@@ -175,7 +175,7 @@
             emptyEl.classList.add('hidden');
             listEl.innerHTML = '';
 
-            const response = await fetch('{{ route("employee.notifications.header") }}', {
+            const response = await fetch('{{ route("purchasing.notifications.header") }}', {
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
                     'Accept': 'application/json'
@@ -301,7 +301,7 @@
             }
 
             // Send request to backend
-            await fetch(`{{ route('employee.notifications.mark-read', ['notification' => '__ID__']) }}`.replace('__ID__', notificationId), {
+            await fetch(`{{ route('purchasing.notifications.mark_read', ['notification' => '__ID__']) }}`.replace('__ID__', notificationId), {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -321,7 +321,7 @@
     // Mark all notifications as read
     async function markAllAsRead() {
         try {
-            const response = await fetch('{{ route("employee.notifications.mark-all-read") }}', {
+            const response = await fetch('{{ route("purchasing.notifications.mark_all_read") }}', {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}',
