@@ -539,4 +539,470 @@ class ReceivingController extends Controller
         }
     }
 
+    /**
+     * Display the delivery receiving page
+     */
+    public function receiveDelivery()
+    {
+        try {
+            // Get purchase orders ready for delivery
+            $purchaseOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
+                ->whereIn('status', ['confirmed', 'partial'])
+                ->where('expected_delivery_date', '>=', now()->subDays(30)) // Show orders from last 30 days
+                ->orderBy('expected_delivery_date', 'asc')
+                ->get();
+
+            return view('Inventory.inbound.receive_delivery', compact('purchaseOrders'));
+
+        } catch (\Exception $e) {
+            Log::error('Error loading receive delivery page: ' . $e->getMessage());
+            return redirect()->route('inventory.dashboard')->with('error', 'Unable to load delivery receiving page.');
+        }
+    }
+
+    /**
+     * Get purchase order details for delivery receiving
+     */
+    public function getPurchaseOrder(PurchaseOrder $purchaseOrder)
+    {
+        try {
+            // Ensure the purchase order can be received
+            if (!in_array($purchaseOrder->status, ['confirmed', 'partial'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Purchase order is not ready for delivery receiving.'
+                ], 400);
+            }
+
+            $purchaseOrder->load([
+                'supplier',
+                'purchaseOrderItems' => function($query) {
+                    $query->with(['item.unit']);
+                }
+            ]);
+
+            // Calculate remaining quantities for each item
+            $items = $purchaseOrder->purchaseOrderItems->map(function ($poItem) {
+                $quantityReceived = $poItem->quantity_received ?? 0;
+                $quantityRemaining = $poItem->quantity - $quantityReceived;
+                
+                return [
+                    'id' => $poItem->id,
+                    'item_id' => $poItem->item_id,
+                    'item_name' => $poItem->item->name,
+                    'sku' => $poItem->item->sku ?? 'N/A',
+                    'unit_symbol' => $poItem->item->unit->symbol ?? '',
+                    'quantity_ordered' => $poItem->quantity,
+                    'quantity_received' => $quantityReceived,
+                    'quantity_remaining' => $quantityRemaining,
+                    'unit_cost' => $poItem->unit_cost,
+                    'is_perishable' => $poItem->item->is_perishable ?? false,
+                    'can_receive' => $quantityRemaining > 0
+                ];
+            })->filter(function ($item) {
+                return $item['can_receive'];
+            })->values();
+
+            if ($items->isEmpty()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'All items in this purchase order have been fully received.'
+                ], 400);
+            }
+
+            $data = [
+                'id' => $purchaseOrder->id,
+                'po_number' => $purchaseOrder->po_number,
+                'supplier_name' => $purchaseOrder->supplier->name,
+                'order_date' => $purchaseOrder->order_date,
+                'expected_delivery_date' => $purchaseOrder->expected_delivery_date,
+                'status' => $purchaseOrder->status,
+                'items' => $items
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $data
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting purchase order for delivery: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load purchase order details.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Search purchase orders for delivery receiving
+     */
+    public function searchPurchaseOrder(Request $request)
+    {
+        try {
+            $query = $request->get('q', '');
+            $status = $request->get('status', ['sent', 'confirmed']);
+
+            if (empty($query)) {
+                return response()->json([
+                    'success' => true,
+                    'data' => []
+                ]);
+            }
+
+            $purchaseOrders = PurchaseOrder::with(['supplier'])
+                ->whereIn('status', is_array($status) ? $status : [$status])
+                ->where(function ($q) use ($query) {
+                    $q->where('po_number', 'ilike', "%{$query}%")
+                      ->orWhereHas('supplier', function ($sq) use ($query) {
+                          $sq->where('name', 'ilike', "%{$query}%");
+                      });
+                })
+                ->orderBy('expected_delivery_date', 'asc')
+                ->limit(20)
+                ->get()
+                ->map(function ($po) {
+                    return [
+                        'id' => $po->id,
+                        'po_number' => $po->po_number,
+                        'supplier_name' => $po->supplier->name,
+                        'expected_delivery_date' => $po->expected_delivery_date,
+                        'status' => $po->status,
+                        'text' => $po->po_number . ' - ' . $po->supplier->name . 
+                                 ' (Expected: ' . Carbon::parse($po->expected_delivery_date)->format('M d, Y') . ')'
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'data' => $purchaseOrders
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error searching purchase orders: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Search failed.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Process received delivery
+     */
+    public function processDelivery(Request $request)
+    {
+        try {
+            $request->validate([
+                'purchase_order_id' => 'required|exists:purchase_orders,id',
+                'items' => 'required|array',
+                'items.*' => 'required|array'
+            ]);
+
+            $purchaseOrder = PurchaseOrder::findOrFail($request->purchase_order_id);
+            
+            // Check if PO can receive delivery
+            if (!in_array($purchaseOrder->status, ['sent', 'confirmed', 'partial'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Purchase order cannot receive delivery in its current status.'
+                ], 400);
+            }
+
+            $processedItems = 0;
+            $totalQuantity = 0;
+            $batchesCreated = 0;
+            $itemsData = $request->items;
+
+            DB::beginTransaction();
+
+            try {
+                foreach ($itemsData as $itemId => $itemData) {
+                    $quantityReceived = floatval($itemData['quantity_received'] ?? 0);
+                    
+                    if ($quantityReceived <= 0) {
+                        continue; // Skip items with no quantity
+                    }
+
+                    $purchaseOrderItem = PurchaseOrderItem::findOrFail($itemData['purchase_order_item_id']);
+                    
+                    // Validate quantity doesn't exceed remaining
+                    $quantityRemaining = $purchaseOrderItem->quantity - ($purchaseOrderItem->quantity_received ?? 0);
+                    if ($quantityReceived > $quantityRemaining) {
+                        throw new \Exception("Quantity received for {$purchaseOrderItem->item->name} cannot exceed remaining amount ({$quantityRemaining}).");
+                    }
+
+                    // Create batch record
+                    $batch = Batch::create([
+                        'batch_number' => $itemData['batch_number'],
+                        'item_id' => $purchaseOrderItem->item_id,
+                        'supplier_id' => $purchaseOrder->supplier_id,
+                        'purchase_order_id' => $purchaseOrder->id,
+                        'quantity' => $quantityReceived,
+                        'unit_cost' => $purchaseOrderItem->unit_cost,
+                        'received_date' => now(),
+                        'expiry_date' => $itemData['expiry_date'] ?? null,
+                        'condition' => $itemData['condition'] ?? 'good',
+                        'receiving_notes' => $itemData['receiving_notes'] ?? null,
+                        'damage_description' => $itemData['damage_description'] ?? null,
+                        'status' => 'active',
+                        'created_by' => Auth::id()
+                    ]);
+
+                    // Update current stock
+                    $currentStock = CurrentStock::firstOrNew(['item_id' => $purchaseOrderItem->item_id]);
+                    $currentStock->current_quantity += $quantityReceived;
+                    
+                    // Update average cost (simple method - could be enhanced)
+                    if ($currentStock->current_quantity > 0) {
+                        $totalValue = ($currentStock->current_quantity - $quantityReceived) * ($currentStock->average_cost ?? 0) + 
+                                     $quantityReceived * $purchaseOrderItem->unit_cost;
+                        $currentStock->average_cost = $totalValue / $currentStock->current_quantity;
+                    } else {
+                        $currentStock->average_cost = $purchaseOrderItem->unit_cost;
+                    }
+                    
+                    $currentStock->save();
+
+                    // Create stock movement record
+                    StockMovement::create([
+                        'item_id' => $purchaseOrderItem->item_id,
+                        'batch_id' => $batch->id,
+                        'movement_type' => 'receiving',
+                        'quantity' => $quantityReceived,
+                        'unit_cost' => $purchaseOrderItem->unit_cost,
+                        'reference_type' => 'purchase_order',
+                        'reference_id' => $purchaseOrder->id,
+                        'notes' => 'Received from PO: ' . $purchaseOrder->po_number,
+                        'user_id' => Auth::id()
+                    ]);
+
+                    // Update purchase order item received quantity
+                    $purchaseOrderItem->quantity_received = ($purchaseOrderItem->quantity_received ?? 0) + $quantityReceived;
+                    $purchaseOrderItem->save();
+
+                    $processedItems++;
+                    $totalQuantity += $quantityReceived;
+                    $batchesCreated++;
+                }
+
+                // Check if PO is fully received
+                $allItems = $purchaseOrder->purchaseOrderItems;
+                $isFullyReceived = true;
+                
+                foreach ($allItems as $item) {
+                    $received = $item->quantity_received ?? 0;
+                    if ($received < $item->quantity) {
+                        $isFullyReceived = false;
+                        break;
+                    }
+                }
+
+                // Update PO status
+                if ($isFullyReceived) {
+                    $purchaseOrder->status = 'received';
+                } else {
+                    $purchaseOrder->status = 'partial';
+                }
+                $purchaseOrder->save();
+
+                DB::commit();
+
+                // Log the receiving activity
+                Log::info('Delivery processed successfully', [
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'po_number' => $purchaseOrder->po_number,
+                    'items_processed' => $processedItems,
+                    'total_quantity' => $totalQuantity,
+                    'batches_created' => $batchesCreated,
+                    'user_id' => Auth::id(),
+                    'user_name' => Auth::user()->name
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Successfully processed {$processedItems} items with total quantity of {$totalQuantity}. {$batchesCreated} batches created.",
+                    'data' => [
+                        'items_processed' => $processedItems,
+                        'total_quantity' => $totalQuantity,
+                        'batches_created' => $batchesCreated,
+                        'po_status' => $purchaseOrder->status
+                    ]
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollback();
+                throw $e;
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error processing delivery: ' . $e->getMessage(), [
+                'purchase_order_id' => $request->purchase_order_id,
+                'items_data' => $request->items,
+                'user_id' => Auth::id()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process delivery: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Validate delivery data before processing
+     */
+    public function validateDeliveryData(Request $request)
+    {
+        try {
+            $request->validate([
+                'purchase_order_id' => 'required|exists:purchase_orders,id',
+                'items' => 'required|array'
+            ]);
+
+            $errors = [];
+            $warnings = [];
+
+            $purchaseOrder = PurchaseOrder::findOrFail($request->purchase_order_id);
+            $itemsData = $request->items;
+
+            foreach ($itemsData as $itemId => $itemData) {
+                $quantityReceived = floatval($itemData['quantity_received'] ?? 0);
+                
+                if ($quantityReceived <= 0) {
+                    continue;
+                }
+
+                $purchaseOrderItem = PurchaseOrderItem::findOrFail($itemData['purchase_order_item_id']);
+                $quantityRemaining = $purchaseOrderItem->quantity - ($purchaseOrderItem->quantity_received ?? 0);
+                
+                if ($quantityReceived > $quantityRemaining) {
+                    $errors[] = "Quantity for {$purchaseOrderItem->item->name} exceeds remaining amount ({$quantityRemaining})";
+                }
+
+                // Check for missing batch number
+                if (empty($itemData['batch_number'])) {
+                    $errors[] = "Batch number is required for {$purchaseOrderItem->item->name}";
+                }
+
+                // Check for expiry date on perishable items
+                if ($purchaseOrderItem->item->is_perishable && empty($itemData['expiry_date'])) {
+                    $errors[] = "Expiry date is required for perishable item: {$purchaseOrderItem->item->name}";
+                }
+
+                // Check for damage description when condition is not 'good'
+                $condition = $itemData['condition'] ?? 'good';
+                if ($condition !== 'good' && empty($itemData['damage_description'])) {
+                    $errors[] = "Damage description is required for {$purchaseOrderItem->item->name} when condition is not 'good'";
+                }
+
+                // Warning for expiry dates in the past
+                if (!empty($itemData['expiry_date'])) {
+                    $expiryDate = Carbon::parse($itemData['expiry_date']);
+                    if ($expiryDate->isPast()) {
+                        $errors[] = "Expiry date for {$purchaseOrderItem->item->name} cannot be in the past";
+                    }
+                }
+            }
+
+            if (empty($itemsData) || collect($itemsData)->every(fn($item) => floatval($item['quantity_received'] ?? 0) <= 0)) {
+                $errors[] = "At least one item must have a quantity greater than zero";
+            }
+
+            return response()->json([
+                'success' => empty($errors),
+                'errors' => $errors,
+                'warnings' => $warnings
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error validating delivery data: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'errors' => ['Validation failed due to system error'],
+                'warnings' => []
+            ], 500);
+        }
+    }
+
+    /**
+     * Get receiving statistics for dashboard
+     */
+    public function getReceivingStatistics()
+    {
+        try {
+            $today = now()->startOfDay();
+            
+            // Today's receiving statistics
+            $todayDeliveries = Batch::whereDate('received_date', $today)
+                ->distinct('purchase_order_id')
+                ->count('purchase_order_id');
+            
+            $todayItemsReceived = Batch::whereDate('received_date', $today)
+                ->sum('quantity');
+            
+            $todayBatchesCreated = Batch::whereDate('received_date', $today)
+                ->count();
+
+            // Weekly statistics
+            $weekStart = now()->startOfWeek();
+            $weekDeliveries = Batch::where('received_date', '>=', $weekStart)
+                ->distinct('purchase_order_id')
+                ->count('purchase_order_id');
+            
+            $weekItemsReceived = Batch::where('received_date', '>=', $weekStart)
+                ->sum('quantity');
+
+            // Pending deliveries
+            $pendingDeliveries = PurchaseOrder::whereIn('status', ['sent', 'confirmed'])
+                ->where('expected_delivery_date', '<=', now()->addDays(7))
+                ->count();
+
+            // Partial deliveries needing attention
+            $partialDeliveries = PurchaseOrder::where('status', 'partial')
+                ->where('expected_delivery_date', '>=', now()->subDays(30))
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'today' => [
+                        'deliveries' => $todayDeliveries,
+                        'items_received' => round($todayItemsReceived, 3),
+                        'batches_created' => $todayBatchesCreated
+                    ],
+                    'week' => [
+                        'deliveries' => $weekDeliveries,
+                        'items_received' => round($weekItemsReceived, 3)
+                    ],
+                    'pending' => [
+                        'deliveries' => $pendingDeliveries,
+                        'partial_deliveries' => $partialDeliveries
+                    ]
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error getting receiving statistics: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'data' => [
+                    'today' => [
+                        'deliveries' => 0,
+                        'items_received' => 0,
+                        'batches_created' => 0
+                    ],
+                    'week' => [
+                        'deliveries' => 0,
+                        'items_received' => 0
+                    ],
+                    'pending' => [
+                        'deliveries' => 0,
+                        'partial_deliveries' => 0
+                    ]
+                ]
+            ]);
+        }
+    }
+
 }
