@@ -136,11 +136,6 @@
                         <div class="text-2xl font-bold text-chocolate" id="summaryValue">₱0.00</div>
                     </div>
                 </div>
-
-                <button type="button" onclick="document.getElementById('receiveDeliveryForm').dispatchEvent(new Event('submit'))" 
-                        class="w-full mt-6 py-3 bg-chocolate text-white font-bold rounded-xl shadow-md hover:bg-chocolate-dark transition-all flex justify-center items-center gap-2">
-                    Confirm Receipt <i class="fas fa-chevron-right text-xs"></i>
-                </button>
             </div>
         </div>
     </div>

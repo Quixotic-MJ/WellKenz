@@ -1623,252 +1623,252 @@ INSERT INTO recipe_ingredients (recipe_id, item_id, quantity_required, unit_id) 
 (9, 57, 2.000, 10);
 
 
--- -- Insert comprehensive purchase requests with diverse statuses - EXPANDED FOR TESTING
--- INSERT INTO purchase_requests (pr_number, request_date, requested_by, department, priority, status, total_estimated_cost, approved_by, approved_at, rejected_by, rejected_at, reject_reason, notes) VALUES
--- -- Approved requests
--- ('PR-001', '2024-01-18', 2, 'Inventory', 'high', 'approved', 5000.00, 1, '2024-01-18 14:30:00', NULL, NULL, NULL, 'Critical flour restock'),
--- ('PR-003', '2024-01-20', 2, 'Inventory', 'normal', 'approved', 8500.00, 1, '2024-01-20 10:30:00', NULL, NULL, NULL, 'Monthly chocolate order'),
--- ('PR-005', '2024-01-21', 2, 'Inventory', 'high', 'approved', 12500.00, 1, '2024-01-21 09:15:00', NULL, NULL, NULL, 'Bulk flour purchase'),
--- ('PR-007', '2024-01-22', 2, 'Inventory', 'urgent', 'approved', 6800.00, 1, '2024-01-22 08:45:00', NULL, NULL, NULL, 'Emergency dairy products'),
--- ('PR-009', '2024-01-23', 2, 'Inventory', 'high', 'approved', 9200.00, 1, '2024-01-23 11:20:00', NULL, NULL, NULL, 'Sugar and sweeteners'),
--- ('PR-011', '2024-01-24', 2, 'Inventory', 'normal', 'approved', 7500.00, 1, '2024-01-24 10:00:00', NULL, NULL, NULL, 'Nuts and dried fruits'),
+-- Insert comprehensive purchase requests with diverse statuses - EXPANDED FOR TESTING
+INSERT INTO purchase_requests (pr_number, request_date, requested_by, department, priority, status, total_estimated_cost, approved_by, approved_at, rejected_by, rejected_at, reject_reason, notes) VALUES
+-- Approved requests
+('PR-001', '2024-01-18', 2, 'Inventory', 'high', 'approved', 5000.00, 1, '2024-01-18 14:30:00', NULL, NULL, NULL, 'Critical flour restock'),
+('PR-003', '2024-01-20', 2, 'Inventory', 'normal', 'approved', 8500.00, 1, '2024-01-20 10:30:00', NULL, NULL, NULL, 'Monthly chocolate order'),
+('PR-005', '2024-01-21', 2, 'Inventory', 'high', 'approved', 12500.00, 1, '2024-01-21 09:15:00', NULL, NULL, NULL, 'Bulk flour purchase'),
+('PR-007', '2024-01-22', 2, 'Inventory', 'urgent', 'approved', 6800.00, 1, '2024-01-22 08:45:00', NULL, NULL, NULL, 'Emergency dairy products'),
+('PR-009', '2024-01-23', 2, 'Inventory', 'high', 'approved', 9200.00, 1, '2024-01-23 11:20:00', NULL, NULL, NULL, 'Sugar and sweeteners'),
+('PR-011', '2024-01-24', 2, 'Inventory', 'normal', 'approved', 7500.00, 1, '2024-01-24 10:00:00', NULL, NULL, NULL, 'Nuts and dried fruits'),
 
--- -- Pending requests
--- ('PR-002', '2024-01-19', 2, 'Inventory', 'normal', 'pending', 2500.00, NULL, NULL, NULL, NULL, NULL, 'Waiting for approval'),
--- ('PR-004', '2024-01-20', 2, 'Inventory', 'low', 'pending', 3200.00, NULL, NULL, NULL, NULL, NULL, 'Low priority items'),
--- ('PR-006', '2024-01-21', 2, 'Inventory', 'normal', 'pending', 4800.00, NULL, NULL, NULL, NULL, NULL, 'Flavor extracts'),
--- ('PR-008', '2024-01-22', 2, 'Inventory', 'normal', 'pending', 2200.00, NULL, NULL, NULL, NULL, NULL, 'Decoration supplies'),
--- ('PR-010', '2024-01-23', 2, 'Inventory', 'low', 'pending', 1800.00, NULL, NULL, NULL, NULL, NULL, 'Yeast and leavening'),
--- ('PR-012', '2024-01-24', 2, 'Inventory', 'normal', 'pending', 2900.00, NULL, NULL, NULL, NULL, NULL, 'Salt and seasonings'),
--- ('PR-013', '2024-01-25', 2, 'Inventory', 'normal', 'pending', 4200.00, NULL, NULL, NULL, NULL, NULL, 'Packaging materials'),
--- ('PR-014', '2024-01-26', 2, 'Inventory', 'high', 'pending', 15600.00, NULL, NULL, NULL, NULL, NULL, 'Premium ingredients'),
+-- Pending requests
+('PR-002', '2024-01-19', 2, 'Inventory', 'normal', 'pending', 2500.00, NULL, NULL, NULL, NULL, NULL, 'Waiting for approval'),
+('PR-004', '2024-01-20', 2, 'Inventory', 'low', 'pending', 3200.00, NULL, NULL, NULL, NULL, NULL, 'Low priority items'),
+('PR-006', '2024-01-21', 2, 'Inventory', 'normal', 'pending', 4800.00, NULL, NULL, NULL, NULL, NULL, 'Flavor extracts'),
+('PR-008', '2024-01-22', 2, 'Inventory', 'normal', 'pending', 2200.00, NULL, NULL, NULL, NULL, NULL, 'Decoration supplies'),
+('PR-010', '2024-01-23', 2, 'Inventory', 'low', 'pending', 1800.00, NULL, NULL, NULL, NULL, NULL, 'Yeast and leavening'),
+('PR-012', '2024-01-24', 2, 'Inventory', 'normal', 'pending', 2900.00, NULL, NULL, NULL, NULL, NULL, 'Salt and seasonings'),
+('PR-013', '2024-01-25', 2, 'Inventory', 'normal', 'pending', 4200.00, NULL, NULL, NULL, NULL, NULL, 'Packaging materials'),
+('PR-014', '2024-01-26', 2, 'Inventory', 'high', 'pending', 15600.00, NULL, NULL, NULL, NULL, NULL, 'Premium ingredients'),
 
--- -- Rejected requests (for edge case testing)
--- ('PR-015', '2024-01-20', 2, 'Inventory', 'normal', 'rejected', 8500.00, NULL, NULL, 1, '2024-01-21 14:30:00', 'Budget constraints this month', 'Over budget allocation'),
--- ('PR-016', '2024-01-22', 2, 'Inventory', 'low', 'rejected', 1200.00, NULL, NULL, 1, '2024-01-23 09:15:00', 'Available from existing stock', 'Not needed currently'),
--- ('PR-017', '2024-01-24', 2, 'Inventory', 'normal', 'rejected', 3500.00, NULL, NULL, 1, '2024-01-25 11:20:00', 'Supplier quality issues', 'Supplier blacklisted'),
--- ('PR-018', '2024-01-25', 2, 'Inventory', 'high', 'rejected', 18500.00, NULL, NULL, 1, '2024-01-26 08:45:00', 'Requires executive approval', 'Amount too high for department'),
+-- Rejected requests (for edge case testing)
+('PR-015', '2024-01-20', 2, 'Inventory', 'normal', 'rejected', 8500.00, NULL, NULL, 1, '2024-01-21 14:30:00', 'Budget constraints this month', 'Over budget allocation'),
+('PR-016', '2024-01-22', 2, 'Inventory', 'low', 'rejected', 1200.00, NULL, NULL, 1, '2024-01-23 09:15:00', 'Available from existing stock', 'Not needed currently'),
+('PR-017', '2024-01-24', 2, 'Inventory', 'normal', 'rejected', 3500.00, NULL, NULL, 1, '2024-01-25 11:20:00', 'Supplier quality issues', 'Supplier blacklisted'),
+('PR-018', '2024-01-25', 2, 'Inventory', 'high', 'rejected', 18500.00, NULL, NULL, 1, '2024-01-26 08:45:00', 'Requires executive approval', 'Amount too high for department'),
 
--- -- Draft requests
--- ('PR-019', '2024-01-26', 2, 'Inventory', 'normal', 'draft', 0.00, NULL, NULL, NULL, NULL, NULL, 'Still being prepared'),
--- ('PR-020', '2024-01-27', 2, 'Inventory', 'low', 'draft', 0.00, NULL, NULL, NULL, NULL, NULL, 'Draft under review'),
+-- Draft requests
+('PR-019', '2024-01-26', 2, 'Inventory', 'normal', 'draft', 0.00, NULL, NULL, NULL, NULL, NULL, 'Still being prepared'),
+('PR-020', '2024-01-27', 2, 'Inventory', 'low', 'draft', 0.00, NULL, NULL, NULL, NULL, NULL, 'Draft under review'),
 
--- -- Converted to Purchase Orders
--- ('PR-021', '2024-01-15', 2, 'Inventory', 'normal', 'converted', 5600.00, 1, '2024-01-16 10:30:00', NULL, NULL, NULL, 'Converted to PO-013'),
--- ('PR-022', '2024-01-16', 2, 'Inventory', 'high', 'converted', 9800.00, 1, '2024-01-17 09:15:00', NULL, NULL, NULL, 'Converted to PO-014'),
+-- Converted to Purchase Orders
+('PR-021', '2024-01-15', 2, 'Inventory', 'normal', 'converted', 5600.00, 1, '2024-01-16 10:30:00', NULL, NULL, NULL, 'Converted to PO-013'),
+('PR-022', '2024-01-16', 2, 'Inventory', 'high', 'converted', 9800.00, 1, '2024-01-17 09:15:00', NULL, NULL, NULL, 'Converted to PO-014'),
 
--- -- Requests from different departments
--- ('PR-023', '2024-01-25', 5, 'Production', 'urgent', 'approved', 3200.00, 4, '2024-01-25 16:30:00', NULL, NULL, NULL, 'Production emergency supplies'),
--- ('PR-024', '2024-01-26', 7, 'Pastry', 'high', 'pending', 4800.00, NULL, NULL, NULL, NULL, NULL, 'Special order ingredients'),
--- ('PR-025', '2024-01-27', 8, 'Store', 'normal', 'approved', 2100.00, 4, '2024-01-27 14:20:00', NULL, NULL, NULL, 'Display and packaging'),
+-- Requests from different departments
+('PR-023', '2024-01-25', 5, 'Production', 'urgent', 'approved', 3200.00, 4, '2024-01-25 16:30:00', NULL, NULL, NULL, 'Production emergency supplies'),
+('PR-024', '2024-01-26', 7, 'Pastry', 'high', 'pending', 4800.00, NULL, NULL, NULL, NULL, NULL, 'Special order ingredients'),
+('PR-025', '2024-01-27', 8, 'Store', 'normal', 'approved', 2100.00, 4, '2024-01-27 14:20:00', NULL, NULL, NULL, 'Display and packaging'),
 
--- -- Large value requests
--- ('PR-026', '2024-01-20', 2, 'Inventory', 'normal', 'approved', 25000.00, 1, '2024-01-21 13:45:00', NULL, NULL, NULL, 'Quarterly bulk purchase'),
--- ('PR-027', '2024-01-24', 2, 'Inventory', 'high', 'pending', 35000.00, NULL, NULL, NULL, NULL, NULL, 'Annual contract renewal');
+-- Large value requests
+('PR-026', '2024-01-20', 2, 'Inventory', 'normal', 'approved', 25000.00, 1, '2024-01-21 13:45:00', NULL, NULL, NULL, 'Quarterly bulk purchase'),
+('PR-027', '2024-01-24', 2, 'Inventory', 'high', 'pending', 35000.00, NULL, NULL, NULL, NULL, NULL, 'Annual contract renewal');
 
--- -- Insert sample purchase request items
--- INSERT INTO purchase_request_items (purchase_request_id, item_id, quantity_requested, unit_price_estimate, total_estimated_cost) VALUES
--- (1, 1, 100.000, 45.00, 4500.00),
--- (1, 2, 50.000, 52.00, 2600.00),
--- (2, 11, 30.000, 65.00, 1950.00),
--- (3, 51, 20.000, 280.00, 5600.00),
--- (3, 52, 10.000, 320.00, 3200.00),
--- (4, 63, 5.000, 480.00, 2400.00),
--- (4, 64, 4.000, 420.00, 1680.00),
--- (5, 1, 200.000, 45.00, 9000.00),
--- (5, 2, 80.000, 52.00, 4160.00),
--- (6, 71, 4.000, 850.00, 3400.00),
--- (6, 72, 2.000, 780.00, 1560.00),
--- (7, 11, 50.000, 65.00, 3250.00),
--- (7, 12, 15.000, 320.00, 4800.00),
--- (8, 79, 10.000, 120.00, 1200.00),
--- (8, 80, 8.000, 110.00, 880.00),
--- (9, 19, 100.000, 55.00, 5500.00),
--- (9, 20, 40.000, 65.00, 2600.00),
--- (10, 87, 40.000, 45.00, 1800.00),
--- (10, 88, 20.000, 50.00, 1000.00);
+-- Insert sample purchase request items
+INSERT INTO purchase_request_items (purchase_request_id, item_id, quantity_requested, unit_price_estimate, total_estimated_cost) VALUES
+(1, 1, 100.000, 45.00, 4500.00),
+(1, 2, 50.000, 52.00, 2600.00),
+(2, 11, 30.000, 65.00, 1950.00),
+(3, 51, 20.000, 280.00, 5600.00),
+(3, 52, 10.000, 320.00, 3200.00),
+(4, 63, 5.000, 480.00, 2400.00),
+(4, 64, 4.000, 420.00, 1680.00),
+(5, 1, 200.000, 45.00, 9000.00),
+(5, 2, 80.000, 52.00, 4160.00),
+(6, 71, 4.000, 850.00, 3400.00),
+(6, 72, 2.000, 780.00, 1560.00),
+(7, 11, 50.000, 65.00, 3250.00),
+(7, 12, 15.000, 320.00, 4800.00),
+(8, 79, 10.000, 120.00, 1200.00),
+(8, 80, 8.000, 110.00, 880.00),
+(9, 19, 100.000, 55.00, 5500.00),
+(9, 20, 40.000, 65.00, 2600.00),
+(10, 87, 40.000, 45.00, 1800.00),
+(10, 88, 20.000, 50.00, 1000.00);
 
--- -- Additional purchase request items so all PRs have remaining quantities
--- INSERT INTO purchase_request_items (purchase_request_id, item_id, quantity_requested, unit_price_estimate, total_estimated_cost) VALUES
--- (11, 87, 60.000, 45.00, 2700.00),
--- (11, 88, 25.000, 50.00, 1250.00),
--- (12, 93, 80.000, 15.00, 1200.00),
--- (12, 94, 30.000, 25.00, 750.00),
--- (12, 95, 15.000, 45.00, 675.00),
--- (13, 107, 400.000, 0.25, 100.00),
--- (13, 109, 40.000, 150.00, 6000.00),
--- (14, 102, 5.000, 850.00, 4250.00),
--- (14, 103, 3.000, 1200.00, 3600.00),
--- (15, 64, 6.000, 420.00, 2520.00),
--- (15, 71, 2.000, 800.00, 1600.00),
--- (16, 79, 15.000, 120.00, 1800.00),
--- (16, 80, 10.000, 110.00, 1100.00),
--- (17, 51, 12.000, 280.00, 3360.00),
--- (17, 94, 5.000, 25.00, 125.00),
--- (18, 1, 150.000, 45.00, 6750.00),
--- (18, 87, 60.000, 45.00, 2700.00),
--- (19, 63, 8.000, 480.00, 3840.00),
--- (19, 67, 6.000, 180.00, 1080.00),
--- (20, 1, 50.000, 45.00, 2250.00),
--- (20, 19, 20.000, 55.00, 1100.00),
--- (21, 4, 30.000, 62.00, 1860.00),
--- (21, 5, 18.000, 72.00, 1296.00),
--- (22, 19, 120.000, 55.00, 6600.00),
--- (22, 20, 60.000, 65.00, 3900.00),
--- (23, 11, 25.000, 65.00, 1625.00),
--- (23, 12, 8.000, 320.00, 2560.00),
--- (24, 55, 6.000, 350.00, 2100.00),
--- (24, 79, 12.000, 120.00, 1440.00),
--- (25, 107, 300.000, 0.25, 75.00),
--- (25, 115, 20.000, 680.00, 13600.00),
--- (26, 1, 400.000, 45.00, 18000.00),
--- (26, 2, 200.000, 52.00, 10400.00),
--- (27, 52, 25.000, 320.00, 8000.00),
--- (27, 63, 10.000, 480.00, 4800.00);
+-- Additional purchase request items so all PRs have remaining quantities
+INSERT INTO purchase_request_items (purchase_request_id, item_id, quantity_requested, unit_price_estimate, total_estimated_cost) VALUES
+(11, 87, 60.000, 45.00, 2700.00),
+(11, 88, 25.000, 50.00, 1250.00),
+(12, 93, 80.000, 15.00, 1200.00),
+(12, 94, 30.000, 25.00, 750.00),
+(12, 95, 15.000, 45.00, 675.00),
+(13, 107, 400.000, 0.25, 100.00),
+(13, 109, 40.000, 150.00, 6000.00),
+(14, 102, 5.000, 850.00, 4250.00),
+(14, 103, 3.000, 1200.00, 3600.00),
+(15, 64, 6.000, 420.00, 2520.00),
+(15, 71, 2.000, 800.00, 1600.00),
+(16, 79, 15.000, 120.00, 1800.00),
+(16, 80, 10.000, 110.00, 1100.00),
+(17, 51, 12.000, 280.00, 3360.00),
+(17, 94, 5.000, 25.00, 125.00),
+(18, 1, 150.000, 45.00, 6750.00),
+(18, 87, 60.000, 45.00, 2700.00),
+(19, 63, 8.000, 480.00, 3840.00),
+(19, 67, 6.000, 180.00, 1080.00),
+(20, 1, 50.000, 45.00, 2250.00),
+(20, 19, 20.000, 55.00, 1100.00),
+(21, 4, 30.000, 62.00, 1860.00),
+(21, 5, 18.000, 72.00, 1296.00),
+(22, 19, 120.000, 55.00, 6600.00),
+(22, 20, 60.000, 65.00, 3900.00),
+(23, 11, 25.000, 65.00, 1625.00),
+(23, 12, 8.000, 320.00, 2560.00),
+(24, 55, 6.000, 350.00, 2100.00),
+(24, 79, 12.000, 120.00, 1440.00),
+(25, 107, 300.000, 0.25, 75.00),
+(25, 115, 20.000, 680.00, 13600.00),
+(26, 1, 400.000, 45.00, 18000.00),
+(26, 2, 200.000, 52.00, 10400.00),
+(27, 52, 25.000, 320.00, 8000.00),
+(27, 63, 10.000, 480.00, 4800.00);
 
--- -- Insert comprehensive purchase orders with diverse statuses - EXPANDED FOR TESTING
--- INSERT INTO purchase_orders (po_number, supplier_id, order_date, expected_delivery_date, actual_delivery_date, status, total_amount, tax_amount, discount_amount, grand_total, payment_terms, notes, created_by, approved_by, acknowledged_by, acknowledged_at) VALUES
--- -- Completed orders
--- ('PO-001', 1, '2024-01-18', '2024-01-20', '2024-01-20', 'completed', 7100.00, 852.00, 0.00, 7952.00, 30, 'Flour delivery completed', 3, 1, 1, '2024-01-18 15:30:00'),
--- ('PO-003', 11, '2024-01-20', '2024-01-23', '2024-01-23', 'completed', 8800.00, 1056.00, 200.00, 9656.00, 30, 'Chocolate products delivered', 3, 1, 1, '2024-01-20 14:15:00'),
--- ('PO-007', 2, '2024-01-22', '2024-01-24', '2024-01-24', 'completed', 8050.00, 966.00, 0.00, 9016.00, 45, 'Dairy products full delivery', 3, 1, 2, '2024-01-22 16:45:00'),
+-- Insert comprehensive purchase orders with diverse statuses - EXPANDED FOR TESTING
+INSERT INTO purchase_orders (po_number, supplier_id, order_date, expected_delivery_date, actual_delivery_date, status, total_amount, tax_amount, discount_amount, grand_total, payment_terms, notes, created_by, approved_by, acknowledged_by, acknowledged_at) VALUES
+-- Completed orders
+('PO-001', 1, '2024-01-18', '2024-01-20', '2024-01-20', 'completed', 7100.00, 852.00, 0.00, 7952.00, 30, 'Flour delivery completed', 3, 1, 1, '2024-01-18 15:30:00'),
+('PO-003', 11, '2024-01-20', '2024-01-23', '2024-01-23', 'completed', 8800.00, 1056.00, 200.00, 9656.00, 30, 'Chocolate products delivered', 3, 1, 1, '2024-01-20 14:15:00'),
+('PO-007', 2, '2024-01-22', '2024-01-24', '2024-01-24', 'completed', 8050.00, 966.00, 0.00, 9016.00, 45, 'Dairy products full delivery', 3, 1, 2, '2024-01-22 16:45:00'),
 
--- -- Confirmed orders (sent to supplier)
--- ('PO-002', 2, '2024-01-19', '2024-01-21', NULL, 'confirmed', 1950.00, 234.00, 0.00, 2184.00, 45, 'Awaiting delivery confirmation', 3, 1, 2, '2024-01-19 11:20:00'),
--- ('PO-005', 1, '2024-01-21', '2024-01-24', NULL, 'confirmed', 13160.00, 1579.20, 500.00, 14239.20, 30, 'Bulk flour order - confirmed', 3, 1, 1, '2024-01-21 13:45:00'),
--- ('PO-009', 3, '2024-01-23', '2024-01-26', NULL, 'confirmed', 8100.00, 972.00, 0.00, 9072.00, 30, 'Sugar order confirmed', 3, 1, 3, '2024-01-23 10:30:00'),
--- ('PO-011', 4, '2024-01-24', '2024-01-27', NULL, 'confirmed', 6200.00, 744.00, 0.00, 6944.00, 60, 'Organic grains order', 3, 1, 4, '2024-01-24 14:20:00'),
+-- Confirmed orders (sent to supplier)
+('PO-002', 2, '2024-01-19', '2024-01-21', NULL, 'confirmed', 1950.00, 234.00, 0.00, 2184.00, 45, 'Awaiting delivery confirmation', 3, 1, 2, '2024-01-19 11:20:00'),
+('PO-005', 1, '2024-01-21', '2024-01-24', NULL, 'confirmed', 13160.00, 1579.20, 500.00, 14239.20, 30, 'Bulk flour order - confirmed', 3, 1, 1, '2024-01-21 13:45:00'),
+('PO-009', 3, '2024-01-23', '2024-01-26', NULL, 'confirmed', 8100.00, 972.00, 0.00, 9072.00, 30, 'Sugar order confirmed', 3, 1, 3, '2024-01-23 10:30:00'),
+('PO-011', 4, '2024-01-24', '2024-01-27', NULL, 'confirmed', 6200.00, 744.00, 0.00, 6944.00, 60, 'Organic grains order', 3, 1, 4, '2024-01-24 14:20:00'),
 
--- -- Sent orders (acknowledged by supplier)
--- ('PO-004', 13, '2024-01-20', '2024-01-25', NULL, 'sent', 4080.00, 489.60, 0.00, 4569.60, 45, 'Nuts order sent', 3, 1, 13, '2024-01-21 09:15:00'),
--- ('PO-006', 14, '2024-01-21', '2024-01-24', NULL, 'sent', 4960.00, 595.20, 0.00, 5555.20, 30, 'Flavor extracts sent', 3, 1, 14, '2024-01-22 08:30:00'),
--- ('PO-008', 15, '2024-01-22', '2024-01-25', NULL, 'sent', 2080.00, 249.60, 0.00, 2329.60, 30, 'Decorations sent', 3, 1, 15, '2024-01-22 17:45:00'),
--- ('PO-010', 16, '2024-01-23', '2024-01-26', NULL, 'sent', 2800.00, 336.00, 0.00, 3136.00, 30, 'Yeast products sent', 3, 1, 16, '2024-01-23 15:20:00'),
--- ('PO-012', 17, '2024-01-24', '2024-01-27', NULL, 'sent', 1500.00, 180.00, 0.00, 1680.00, 30, 'Seasonings sent', 3, 1, 17, '2024-01-24 12:10:00'),
+-- Sent orders (acknowledged by supplier)
+('PO-004', 13, '2024-01-20', '2024-01-25', NULL, 'sent', 4080.00, 489.60, 0.00, 4569.60, 45, 'Nuts order sent', 3, 1, 13, '2024-01-21 09:15:00'),
+('PO-006', 14, '2024-01-21', '2024-01-24', NULL, 'sent', 4960.00, 595.20, 0.00, 5555.20, 30, 'Flavor extracts sent', 3, 1, 14, '2024-01-22 08:30:00'),
+('PO-008', 15, '2024-01-22', '2024-01-25', NULL, 'sent', 2080.00, 249.60, 0.00, 2329.60, 30, 'Decorations sent', 3, 1, 15, '2024-01-22 17:45:00'),
+('PO-010', 16, '2024-01-23', '2024-01-26', NULL, 'sent', 2800.00, 336.00, 0.00, 3136.00, 30, 'Yeast products sent', 3, 1, 16, '2024-01-23 15:20:00'),
+('PO-012', 17, '2024-01-24', '2024-01-27', NULL, 'sent', 1500.00, 180.00, 0.00, 1680.00, 30, 'Seasonings sent', 3, 1, 17, '2024-01-24 12:10:00'),
 
--- -- Partial delivery orders
--- ('PO-013', 5, '2024-01-15', '2024-01-18', '2024-01-19', 'partial', 15600.00, 1872.00, 300.00, 17172.00, 30, 'Partial delivery - 60% received', 3, 1, 5, '2024-01-15 14:45:00'),
--- ('PO-014', 19, '2024-01-16', '2024-01-20', '2024-01-21', 'partial', 9800.00, 1176.00, 0.00, 10976.00, 30, 'Beverage items partial delivery', 3, 1, 19, '2024-01-16 11:30:00'),
+-- Partial delivery orders
+('PO-013', 5, '2024-01-15', '2024-01-18', '2024-01-19', 'partial', 15600.00, 1872.00, 300.00, 17172.00, 30, 'Partial delivery - 60% received', 3, 1, 5, '2024-01-15 14:45:00'),
+('PO-014', 19, '2024-01-16', '2024-01-20', '2024-01-21', 'partial', 9800.00, 1176.00, 0.00, 10976.00, 30, 'Beverage items partial delivery', 3, 1, 19, '2024-01-16 11:30:00'),
 
--- -- Draft orders
--- ('PO-015', 20, '2024-01-25', NULL, NULL, 'draft', 0.00, 0.00, 0.00, 0.00, 45, 'Draft order - not approved', 3, NULL, NULL, NULL),
--- ('PO-016', 9, '2024-01-26', NULL, NULL, 'draft', 0.00, 0.00, 0.00, 0.00, 60, 'Packaging order draft', 3, NULL, NULL, NULL),
+-- Draft orders
+('PO-015', 20, '2024-01-25', NULL, NULL, 'draft', 0.00, 0.00, 0.00, 0.00, 45, 'Draft order - not approved', 3, NULL, NULL, NULL),
+('PO-016', 9, '2024-01-26', NULL, NULL, 'draft', 0.00, 0.00, 0.00, 0.00, 60, 'Packaging order draft', 3, NULL, NULL, NULL),
 
--- -- Cancelled orders (for edge case testing)
--- ('PO-017', 25, '2024-01-10', '2024-01-15', NULL, 'cancelled', 8500.00, 1020.00, 0.00, 9520.00, 30, 'Supplier blacklisted - cancelled', 3, 1, 25, '2024-01-11 16:20:00'),
--- ('PO-018', 21, '2024-01-12', '2024-01-17', NULL, 'cancelled', 3200.00, 384.00, 0.00, 3584.00, 15, 'Budget constraints - cancelled', 3, 1, 21, '2024-01-13 10:45:00'),
+-- Cancelled orders (for edge case testing)
+('PO-017', 25, '2024-01-10', '2024-01-15', NULL, 'cancelled', 8500.00, 1020.00, 0.00, 9520.00, 30, 'Supplier blacklisted - cancelled', 3, 1, 25, '2024-01-11 16:20:00'),
+('PO-018', 21, '2024-01-12', '2024-01-17', NULL, 'cancelled', 3200.00, 384.00, 0.00, 3584.00, 15, 'Budget constraints - cancelled', 3, 1, 21, '2024-01-13 10:45:00'),
 
--- -- Large value orders
--- ('PO-019', 22, '2024-01-18', '2024-02-18', NULL, 'sent', 45000.00, 5400.00, 2000.00, 48400.00, 90, 'Premium imports contract', 3, 1, 22, '2024-01-19 09:30:00'),
--- ('PO-020', 28, '2024-01-22', '2024-03-22', NULL, 'confirmed', 125000.00, 15000.00, 5000.00, 135000.00, 120, 'International contract', 3, 1, 28, '2024-01-23 14:15:00'),
+-- Large value orders
+('PO-019', 22, '2024-01-18', '2024-02-18', NULL, 'sent', 45000.00, 5400.00, 2000.00, 48400.00, 90, 'Premium imports contract', 3, 1, 22, '2024-01-19 09:30:00'),
+('PO-020', 28, '2024-01-22', '2024-03-22', NULL, 'confirmed', 125000.00, 15000.00, 5000.00, 135000.00, 120, 'International contract', 3, 1, 28, '2024-01-23 14:15:00'),
 
--- -- Emergency/Rush orders
--- ('PO-021', 24, '2024-01-23', '2024-01-24', NULL, 'sent', 6800.00, 816.00, 0.00, 7616.00, 7, 'RUSH ORDER - emergency supplies', 3, 1, 24, '2024-01-23 08:15:00'),
--- ('PO-022', 24, '2024-01-26', '2024-01-27', NULL, 'confirmed', 4200.00, 504.00, 0.00, 4704.00, 7, 'Second emergency order', 3, 1, 24, '2024-01-26 11:30:00'),
+-- Emergency/Rush orders
+('PO-021', 24, '2024-01-23', '2024-01-24', NULL, 'sent', 6800.00, 816.00, 0.00, 7616.00, 7, 'RUSH ORDER - emergency supplies', 3, 1, 24, '2024-01-23 08:15:00'),
+('PO-022', 24, '2024-01-26', '2024-01-27', NULL, 'confirmed', 4200.00, 504.00, 0.00, 4704.00, 7, 'Second emergency order', 3, 1, 24, '2024-01-26 11:30:00'),
 
--- -- Orders from different suppliers for testing
--- ('PO-023', 26, '2024-01-24', '2024-01-31', NULL, 'sent', 2800.00, 336.00, 0.00, 3136.00, 30, 'New supplier first order', 3, 1, 26, '2024-01-24 15:45:00'),
--- ('PO-024', 27, '2024-01-25', '2024-04-25', NULL, 'confirmed', 15000.00, 1800.00, 500.00, 16300.00, 60, 'Seasonal fruit contract', 3, 1, 27, '2024-01-25 13:20:00'),
--- ('PO-025', 29, '2024-01-26', '2024-01-31', NULL, 'sent', 1200.00, 144.00, 0.00, 1344.00, 15, 'Small local business order', 3, 1, 29, '2024-01-26 16:10:00'),
--- ('PO-026', 30, '2024-01-27', '2024-02-10', NULL, 'confirmed', 35000.00, 4200.00, 1000.00, 38200.00, 45, 'High volume order', 3, 1, 30, '2024-01-27 10:45:00'),
--- ('PO-027', 31, '2024-01-28', '2024-02-05', NULL, 'confirmed', 18500.00, 2220.00, 0.00, 20720.00, 30, 'Specialty ingredients', 3, 1, 30, '2024-01-28 14:30:00'),
--- ('PO-028', 32, '2024-01-28', '2024-03-15', NULL, 'sent', 85000.00, 10200.00, 2000.00, 93200.00, 30, 'Equipment purchase', 3, 1, 29, '2024-01-28 11:15:00');
+-- Orders from different suppliers for testing
+('PO-023', 26, '2024-01-24', '2024-01-31', NULL, 'sent', 2800.00, 336.00, 0.00, 3136.00, 30, 'New supplier first order', 3, 1, 26, '2024-01-24 15:45:00'),
+('PO-024', 27, '2024-01-25', '2024-04-25', NULL, 'confirmed', 15000.00, 1800.00, 500.00, 16300.00, 60, 'Seasonal fruit contract', 3, 1, 27, '2024-01-25 13:20:00'),
+('PO-025', 29, '2024-01-26', '2024-01-31', NULL, 'sent', 1200.00, 144.00, 0.00, 1344.00, 15, 'Small local business order', 3, 1, 29, '2024-01-26 16:10:00'),
+('PO-026', 30, '2024-01-27', '2024-02-10', NULL, 'confirmed', 35000.00, 4200.00, 1000.00, 38200.00, 45, 'High volume order', 3, 1, 30, '2024-01-27 10:45:00'),
+('PO-027', 31, '2024-01-28', '2024-02-05', NULL, 'confirmed', 18500.00, 2220.00, 0.00, 20720.00, 30, 'Specialty ingredients', 3, 1, 30, '2024-01-28 14:30:00'),
+('PO-028', 32, '2024-01-28', '2024-03-15', NULL, 'sent', 85000.00, 10200.00, 2000.00, 93200.00, 30, 'Equipment purchase', 3, 1, 29, '2024-01-28 11:15:00');
 
--- -- Insert sample purchase order items
--- INSERT INTO purchase_order_items (purchase_order_id, item_id, quantity_ordered, unit_price, total_price) VALUES
--- (1, 1, 100.000, 45.00, 4500.00),
--- (1, 2, 50.000, 52.00, 2600.00),
--- (2, 11, 30.000, 65.00, 1950.00),
--- (3, 51, 20.000, 280.00, 5600.00),
--- (3, 52, 10.000, 320.00, 3200.00),
--- (4, 63, 5.000, 480.00, 2400.00),
--- (4, 64, 4.000, 420.00, 1680.00),
--- (5, 1, 200.000, 45.00, 9000.00),
--- (5, 2, 80.000, 52.00, 4160.00),
--- (6, 71, 4.000, 850.00, 3400.00),
--- (6, 72, 2.000, 780.00, 1560.00),
--- (7, 11, 50.000, 65.00, 3250.00),
--- (7, 12, 15.000, 320.00, 4800.00),
--- (8, 79, 10.000, 120.00, 1200.00),
--- (8, 80, 8.000, 110.00, 880.00),
--- (9, 19, 100.000, 55.00, 5500.00),
--- (9, 20, 40.000, 65.00, 2600.00),
--- (10, 87, 40.000, 45.00, 1800.00),
--- (10, 88, 20.000, 50.00, 1000.00);
+-- Insert sample purchase order items
+INSERT INTO purchase_order_items (purchase_order_id, item_id, quantity_ordered, unit_price, total_price) VALUES
+(1, 1, 100.000, 45.00, 4500.00),
+(1, 2, 50.000, 52.00, 2600.00),
+(2, 11, 30.000, 65.00, 1950.00),
+(3, 51, 20.000, 280.00, 5600.00),
+(3, 52, 10.000, 320.00, 3200.00),
+(4, 63, 5.000, 480.00, 2400.00),
+(4, 64, 4.000, 420.00, 1680.00),
+(5, 1, 200.000, 45.00, 9000.00),
+(5, 2, 80.000, 52.00, 4160.00),
+(6, 71, 4.000, 850.00, 3400.00),
+(6, 72, 2.000, 780.00, 1560.00),
+(7, 11, 50.000, 65.00, 3250.00),
+(7, 12, 15.000, 320.00, 4800.00),
+(8, 79, 10.000, 120.00, 1200.00),
+(8, 80, 8.000, 110.00, 880.00),
+(9, 19, 100.000, 55.00, 5500.00),
+(9, 20, 40.000, 65.00, 2600.00),
+(10, 87, 40.000, 45.00, 1800.00),
+(10, 88, 20.000, 50.00, 1000.00);
 
 
 
--- -- Insert sample requisitions
--- INSERT INTO requisitions (requisition_number, request_date, requested_by, department, purpose, status, total_estimated_value, approved_by, approved_at) VALUES
--- ('REQ-001', '2024-01-19', 5, 'Production', 'Daily baking supplies', 'approved', 1850.00, 4, '2024-01-19 14:30:00'),
--- ('REQ-002', '2024-01-19', 7, 'Pastry', 'Special order ingredients', 'pending', 1800.00, NULL, NULL),
--- ('REQ-003', '2024-01-20', 5, 'Production', 'Bread production supplies', 'approved', 1850.00, 4, '2024-01-20 14:30:00'),
--- ('REQ-004', '2024-01-20', 7, 'Pastry', 'Cake decoration materials', 'approved', 3200.00, 4, '2024-01-20 15:15:00'),
--- ('REQ-005', '2024-01-21', 5, 'Production', 'Daily baking ingredients', 'approved', 2200.00, 4, '2024-01-21 09:45:00'),
--- ('REQ-006', '2024-01-21', 7, 'Pastry', 'Special order ingredients', 'pending', 1800.00, NULL, NULL),
--- ('REQ-007', '2024-01-22', 5, 'Production', 'Bread flour and yeast', 'approved', 1500.00, 4, '2024-01-22 10:30:00'),
--- ('REQ-008', '2024-01-22', 7, 'Pastry', 'Chocolate supplies', 'approved', 2800.00, 4, '2024-01-22 11:20:00'),
--- ('REQ-009', '2024-01-23', 5, 'Production', 'Weekly supplies', 'approved', 1950.00, 4, '2024-01-23 08:15:00'),
--- ('REQ-010', '2024-01-23', 7, 'Pastry', 'Fruit toppings', 'pending', 1200.00, NULL, NULL),
--- ('REQ-011', '2024-01-24', 5, 'Production', 'Emergency supplies', 'approved', 850.00, 4, '2024-01-24 13:45:00'),
--- ('REQ-012', '2024-01-24', 7, 'Pastry', 'Nuts and dried fruits', 'approved', 2100.00, 4, '2024-01-24 14:30:00');
+-- Insert sample requisitions
+INSERT INTO requisitions (requisition_number, request_date, requested_by, department, purpose, status, total_estimated_value, approved_by, approved_at) VALUES
+('REQ-001', '2024-01-19', 5, 'Production', 'Daily baking supplies', 'approved', 1850.00, 4, '2024-01-19 14:30:00'),
+('REQ-002', '2024-01-19', 7, 'Pastry', 'Special order ingredients', 'pending', 1800.00, NULL, NULL),
+('REQ-003', '2024-01-20', 5, 'Production', 'Bread production supplies', 'approved', 1850.00, 4, '2024-01-20 14:30:00'),
+('REQ-004', '2024-01-20', 7, 'Pastry', 'Cake decoration materials', 'approved', 3200.00, 4, '2024-01-20 15:15:00'),
+('REQ-005', '2024-01-21', 5, 'Production', 'Daily baking ingredients', 'approved', 2200.00, 4, '2024-01-21 09:45:00'),
+('REQ-006', '2024-01-21', 7, 'Pastry', 'Special order ingredients', 'pending', 1800.00, NULL, NULL),
+('REQ-007', '2024-01-22', 5, 'Production', 'Bread flour and yeast', 'approved', 1500.00, 4, '2024-01-22 10:30:00'),
+('REQ-008', '2024-01-22', 7, 'Pastry', 'Chocolate supplies', 'approved', 2800.00, 4, '2024-01-22 11:20:00'),
+('REQ-009', '2024-01-23', 5, 'Production', 'Weekly supplies', 'approved', 1950.00, 4, '2024-01-23 08:15:00'),
+('REQ-010', '2024-01-23', 7, 'Pastry', 'Fruit toppings', 'pending', 1200.00, NULL, NULL),
+('REQ-011', '2024-01-24', 5, 'Production', 'Emergency supplies', 'approved', 850.00, 4, '2024-01-24 13:45:00'),
+('REQ-012', '2024-01-24', 7, 'Pastry', 'Nuts and dried fruits', 'approved', 2100.00, 4, '2024-01-24 14:30:00');
 
--- -- Insert sample requisition items
--- INSERT INTO requisition_items (requisition_id, item_id, quantity_requested, unit_cost_estimate, total_estimated_value) VALUES
--- (1, 1, 25.000, 45.00, 1125.00),
--- (1, 19, 5.000, 55.00, 275.00),
--- (1, 12, 2.000, 320.00, 640.00),
--- (2, 23, 3.000, 200.00, 600.00),
--- (2, 24, 2.000, 350.00, 700.00),
--- (3, 1, 30.000, 45.00, 1350.00),
--- (3, 87, 10.000, 45.00, 450.00),
--- (3, 93, 2.000, 15.00, 30.00),
--- (4, 51, 5.000, 280.00, 1400.00),
--- (4, 79, 10.000, 120.00, 1200.00),
--- (4, 71, 1.000, 850.00, 850.00),
--- (5, 2, 25.000, 52.00, 1300.00),
--- (5, 19, 8.000, 55.00, 440.00),
--- (5, 12, 2.000, 320.00, 640.00),
--- (6, 52, 4.000, 320.00, 1280.00),
--- (6, 63, 1.000, 480.00, 480.00),
--- (7, 1, 20.000, 45.00, 900.00),
--- (7, 87, 12.000, 45.00, 540.00),
--- (8, 51, 6.000, 280.00, 1680.00),
--- (8, 52, 3.000, 320.00, 960.00),
--- (9, 11, 10.000, 65.00, 650.00),
--- (9, 12, 4.000, 320.00, 1280.00),
--- (10, 23, 4.000, 200.00, 800.00),
--- (10, 24, 2.000, 350.00, 700.00),
--- (11, 87, 15.000, 45.00, 675.00),
--- (11, 93, 3.000, 15.00, 45.00),
--- (12, 63, 3.000, 480.00, 1440.00),
--- (12, 64, 2.000, 420.00, 840.00);
+-- Insert sample requisition items
+INSERT INTO requisition_items (requisition_id, item_id, quantity_requested, unit_cost_estimate, total_estimated_value) VALUES
+(1, 1, 25.000, 45.00, 1125.00),
+(1, 19, 5.000, 55.00, 275.00),
+(1, 12, 2.000, 320.00, 640.00),
+(2, 23, 3.000, 200.00, 600.00),
+(2, 24, 2.000, 350.00, 700.00),
+(3, 1, 30.000, 45.00, 1350.00),
+(3, 87, 10.000, 45.00, 450.00),
+(3, 93, 2.000, 15.00, 30.00),
+(4, 51, 5.000, 280.00, 1400.00),
+(4, 79, 10.000, 120.00, 1200.00),
+(4, 71, 1.000, 850.00, 850.00),
+(5, 2, 25.000, 52.00, 1300.00),
+(5, 19, 8.000, 55.00, 440.00),
+(5, 12, 2.000, 320.00, 640.00),
+(6, 52, 4.000, 320.00, 1280.00),
+(6, 63, 1.000, 480.00, 480.00),
+(7, 1, 20.000, 45.00, 900.00),
+(7, 87, 12.000, 45.00, 540.00),
+(8, 51, 6.000, 280.00, 1680.00),
+(8, 52, 3.000, 320.00, 960.00),
+(9, 11, 10.000, 65.00, 650.00),
+(9, 12, 4.000, 320.00, 1280.00),
+(10, 23, 4.000, 200.00, 800.00),
+(10, 24, 2.000, 350.00, 700.00),
+(11, 87, 15.000, 45.00, 675.00),
+(11, 93, 3.000, 15.00, 45.00),
+(12, 63, 3.000, 480.00, 1440.00),
+(12, 64, 2.000, 420.00, 840.00);
 
--- -- Insert RTV transactions
--- INSERT INTO rtv_transactions (rtv_number, purchase_order_id, supplier_id, return_date, status, total_value, created_by) VALUES
--- ('RTV-001', 1, 1, '2024-01-19', 'completed', 2250.00, 2),
--- ('RTV-002', 2, 2, '2024-01-20', 'pending', 650.00, 2),
--- ('RTV-003', 3, 11, '2024-01-21', 'completed', 840.00, 2),
--- ('RTV-004', 5, 1, '2024-01-22', 'pending', 1800.00, 2),
--- ('RTV-005', 7, 2, '2024-01-23', 'completed', 975.00, 2),
--- ('RTV-006', 9, 3, '2024-01-24', 'pending', 1100.00, 2),
--- ('RTV-007', 11, 4, '2024-01-25', 'completed', 620.00, 2),
--- ('RTV-008', 12, 17, '2024-01-26', 'pending', 300.00, 2),
--- ('RTV-009', 8, 15, '2024-01-27', 'completed', 440.00, 2),
--- ('RTV-010', 10, 16, '2024-01-28', 'pending', 700.00, 2);
+-- Insert RTV transactions
+INSERT INTO rtv_transactions (rtv_number, purchase_order_id, supplier_id, return_date, status, total_value, created_by) VALUES
+('RTV-001', 1, 1, '2024-01-19', 'completed', 2250.00, 2),
+('RTV-002', 2, 2, '2024-01-20', 'pending', 650.00, 2),
+('RTV-003', 3, 11, '2024-01-21', 'completed', 840.00, 2),
+('RTV-004', 5, 1, '2024-01-22', 'pending', 1800.00, 2),
+('RTV-005', 7, 2, '2024-01-23', 'completed', 975.00, 2),
+('RTV-006', 9, 3, '2024-01-24', 'pending', 1100.00, 2),
+('RTV-007', 11, 4, '2024-01-25', 'completed', 620.00, 2),
+('RTV-008', 12, 17, '2024-01-26', 'pending', 300.00, 2),
+('RTV-009', 8, 15, '2024-01-27', 'completed', 440.00, 2),
+('RTV-010', 10, 16, '2024-01-28', 'pending', 700.00, 2);
 
--- -- Insert RTV items
--- INSERT INTO rtv_items (rtv_id, item_id, quantity_returned, unit_cost, reason) VALUES
--- (1, 1, 50.000, 45.00, 'Damaged during transportation'),
--- (2, 11, 10.000, 65.00, 'Expired upon delivery'),
--- (3, 51, 3.000, 280.00, 'Wrong product delivered'),
--- (4, 2, 30.000, 52.00, 'Quality issues'),
--- (5, 12, 3.000, 325.00, 'Packaging damaged'),
--- (6, 19, 20.000, 55.00, 'Customer return'),
--- (7, 4, 10.000, 62.00, 'Not to specification'),
--- (8, 93, 20.000, 15.00, 'Wrong type ordered'),
--- (9, 80, 4.000, 110.00, 'Color mismatch'),
--- (10, 88, 14.000, 50.00, 'Supplier error');
+-- Insert RTV items
+INSERT INTO rtv_items (rtv_id, item_id, quantity_returned, unit_cost, reason) VALUES
+(1, 1, 50.000, 45.00, 'Damaged during transportation'),
+(2, 11, 10.000, 65.00, 'Expired upon delivery'),
+(3, 51, 3.000, 280.00, 'Wrong product delivered'),
+(4, 2, 30.000, 52.00, 'Quality issues'),
+(5, 12, 3.000, 325.00, 'Packaging damaged'),
+(6, 19, 20.000, 55.00, 'Customer return'),
+(7, 4, 10.000, 62.00, 'Not to specification'),
+(8, 93, 20.000, 15.00, 'Wrong type ordered'),
+(9, 80, 4.000, 110.00, 'Color mismatch'),
+(10, 88, 14.000, 50.00, 'Supplier error');
 
 -- Insert sample notifications
 INSERT INTO notifications (user_id, title, message, type, priority, is_read, created_at) VALUES

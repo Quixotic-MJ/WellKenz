@@ -30,7 +30,6 @@
                         <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Supplier / PO</th>
                         <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Reason</th>
                         <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Total Value</th>
-                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100">
@@ -51,11 +50,6 @@
                         </td>
                         <td class="px-6 py-4 text-right font-mono text-sm font-bold text-red-600">
                             ₱{{ number_format($rtv->total_value, 2) }}
-                        </td>
-                        <td class="px-6 py-4 text-center">
-                            <span class="px-2 py-1 rounded-full text-xs font-bold uppercase {{ $rtv->status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
-                                {{ $rtv->status }}
-                            </span>
                         </td>
                     </tr>
                     @empty
