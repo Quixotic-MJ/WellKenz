@@ -33,6 +33,7 @@ DROP TABLE IF EXISTS rtv_transactions CASCADE;
 DROP TABLE IF EXISTS rtv_items CASCADE;
 DROP TABLE IF EXISTS system_settings CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP FUNCTION IF EXISTS update_current_stock CASCADE;
 
 -- ============================================================================
 -- USERS TABLE (Core Authentication)
@@ -580,25 +581,25 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create function to update current stock automatically
-CREATE OR REPLACE FUNCTION update_current_stock()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Insert or update current stock for the item
-    INSERT INTO current_stock (item_id, current_quantity, average_cost, last_updated)
-    VALUES (NEW.item_id, NEW.quantity, NEW.unit_cost, CURRENT_TIMESTAMP)
-    ON CONFLICT (item_id) DO UPDATE
-    SET 
-        current_quantity = current_stock.current_quantity + NEW.quantity,
-        average_cost = CASE 
-            WHEN NEW.unit_cost > 0 THEN NEW.unit_cost 
-            ELSE current_stock.average_cost 
-        END,
-        last_updated = CURRENT_TIMESTAMP;
+-- -- Create function to update current stock automatically
+-- CREATE OR REPLACE FUNCTION update_current_stock()
+-- RETURNS TRIGGER AS $$
+-- BEGIN
+--     -- Insert or update current stock for the item
+--     INSERT INTO current_stock (item_id, current_quantity, average_cost, last_updated)
+--     VALUES (NEW.item_id, NEW.quantity, NEW.unit_cost, CURRENT_TIMESTAMP)
+--     ON CONFLICT (item_id) DO UPDATE
+--     SET 
+--         current_quantity = current_stock.current_quantity + NEW.quantity,
+--         average_cost = CASE 
+--             WHEN NEW.unit_cost > 0 THEN NEW.unit_cost 
+--             ELSE current_stock.average_cost 
+--         END,
+--         last_updated = CURRENT_TIMESTAMP;
     
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+--     RETURN NEW;
+-- END;
+-- $$ language 'plpgsql';
 
 -- Create function to calculate totals for purchase requests/orders
 CREATE OR REPLACE FUNCTION calculate_request_totals()
@@ -666,10 +667,10 @@ CREATE TRIGGER update_requisitions_updated_at BEFORE UPDATE ON requisitions FOR 
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create trigger to automatically update current stock
-CREATE TRIGGER update_stock_movement_trigger
-    AFTER INSERT ON stock_movements
-    FOR EACH ROW
-    EXECUTE FUNCTION update_current_stock();
+-- CREATE TRIGGER update_stock_movement_trigger
+--     AFTER INSERT ON stock_movements
+--     FOR EACH ROW
+--     EXECUTE FUNCTION update_current_stock();
 
 -- Create triggers for automatic total calculations
 CREATE TRIGGER calculate_pr_item_totals
