@@ -438,6 +438,7 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
 
     //// Outbound Routes
     Route::get('/outbound/fulfill', [FulfillmentController::class, 'fulfillRequests'])->name('outbound.fulfill');
+    Route::get('/outbound/requisitions/{requisition}/details', [FulfillmentController::class, 'getRequisitionDetails'])->name('outbound.requisition.details');
     Route::post('/outbound/track-picking', [FulfillmentController::class, 'trackPicking'])->name('outbound.track-picking');
     Route::post('/outbound/confirm-issuance', [FulfillmentController::class, 'confirmIssuance'])->name('outbound.confirm-issuance');
 

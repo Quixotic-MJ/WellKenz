@@ -1,587 +1,824 @@
 @extends('Inventory.layout.app')
 
 @section('content')
-<div class="space-y-8 font-sans text-gray-600">
+<div class="space-y-6 font-sans text-gray-600">
 
-    {{-- 1. HEADER --}}
-    <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    {{-- 1. HEADER (Simplified) --}}
+    <div class="flex items-center justify-between">
         <div>
-            <h1 class="font-display text-3xl font-bold text-chocolate mb-2">Fulfill Requests</h1>
-            <p class="text-sm text-gray-500">Process approved kitchen requisitions and issue stock.</p>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Fulfill Requests</h1>
+            <p class="text-sm text-gray-500">Pick and issue stock for approved requisitions.</p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-            @php
-                $readyToPickCount = $requisitions->where('status', 'approved')->count();
-                $pendingCount = $requisitions->where('status', 'pending')->count();
-                $fulfilledCount = $requisitions->where('status', 'fulfilled')->count();
-            @endphp
-            <div class="bg-green-50 border border-green-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
-                <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                <span class="text-xs font-bold text-green-800">{{ $readyToPickCount }} Ready to Pick</span>
-            </div>
-            <div class="bg-amber-50 border border-amber-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
-                <div class="w-2 h-2 rounded-full bg-amber-500"></div>
-                <span class="text-xs font-bold text-amber-800">{{ $pendingCount }} Pending</span>
-            </div>
-            <div class="bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm">
-                <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                <span class="text-xs font-bold text-blue-800">{{ $fulfilledCount }} Fulfilled</span>
-            </div>
+        <div class="flex gap-2">
+            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-lg text-xs font-bold">
+                {{ $requisitions->where('status', 'approved')->count() }} Ready
+            </span>
+            <span class="px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold">
+                {{ $requisitions->where('status', 'pending')->count() }} Pending
+            </span>
         </div>
     </div>
 
-    {{-- 2. WORKFLOW GUIDE --}}
-    <div class="bg-white border border-border-soft rounded-xl p-6 shadow-sm relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-1 h-full bg-chocolate"></div>
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-chocolate text-white flex items-center justify-center font-bold text-sm shadow-md">1</div>
-                    <span class="text-sm font-bold text-gray-700">Review Requisitions</span>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-caramel text-white flex items-center justify-center font-bold text-sm shadow-md">2</div>
-                    <span class="text-sm font-bold text-gray-700">Process via Modal</span>
-                </div>
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 rounded-full bg-cream-bg text-chocolate border border-chocolate flex items-center justify-center font-bold text-sm shadow-md">3</div>
-                    <span class="text-sm font-bold text-gray-700">Confirm Issuance</span>
-                </div>
-            </div>
-            <div class="text-xs font-bold text-caramel bg-cream-bg px-3 py-1.5 rounded-lg border border-border-soft flex items-center self-start md:self-center">
-                <i class="fas fa-info-circle mr-2"></i> Click "Issue Items" to process each requisition
-            </div>
-        </div>
-    </div>
-
-    {{-- 3. REQUESTS QUEUE TABLE --}}
+    {{-- 2. THE QUEUE (Clean Table) --}}
     <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden">
         
-        {{-- Hidden data store for modals --}}
+        {{-- Data Store for JS --}}
         <script type="application/json" id="requisitionData">
-            {!! json_encode($requisitions->map(function($requisition) {
+            {!! json_encode($requisitions->map(function($req) {
                 return [
-                    'id' => $requisition->id,
-                    'number' => $requisition->requisition_number,
-                    'requestedBy' => $requisition->requestedBy->name ?? 'Unknown User',
-                    'department' => $requisition->department ?? 'General',
-                    'purpose' => $requisition->purpose,
-                    'requestDate' => $requisition->request_date,
-                    'items' => $requisition->requisitionItems->map(function($requisitionItem) {
-                        $item = $requisitionItem->item;
-                        $availableBatches = \App\Models\Batch::where('item_id', $item->id)
-                            ->whereIn('status', ['active', 'quarantine'])
+                    'id' => $req->id,
+                    'number' => $req->requisition_number,
+                    'requester' => $req->requestedBy->name ?? 'Unknown',
+                    'department' => $req->department ?? 'General',
+                    'items' => $req->requisitionItems->map(function($item) {
+                        // Get batches ordered by FEFO (First Expire First Out)
+                        $batches = \App\Models\Batch::where('item_id', $item->item_id)
+                            ->where('status', 'active')
                             ->where('quantity', '>', 0)
                             ->orderBy('expiry_date', 'asc')
-                            ->get();
-                        
-                        $batchIndex = 0;
-                        return [
-                            'id' => $requisitionItem->id,
-                            'name' => $item->name,
-                            'sku' => $item->item_code,
-                            'requestedQty' => number_format($requisitionItem->quantity_requested, 2) . ' ' . ($item->unit->symbol ?? 'pcs'),
-                            'unit' => $item->unit->symbol ?? 'pcs',
-                            'availableBatches' => $availableBatches->map(function($batch) use ($item, &$batchIndex) {
-                                $isFefo = $batchIndex === 0;
-                                $batchIndex++;
+                            ->get()
+                            ->map(function($b) {
                                 return [
-                                    'id' => $batch->id,
-                                    'number' => $batch->batch_number,
-                                    'expiry' => $batch->expiry_date,
-                                    'location' => $batch->location ?? 'Main',
-                                    'available' => number_format($batch->quantity, 2),
-                                    'isFEFO' => $isFefo
+                                    'id' => $b->id,
+                                    'number' => $b->batch_number,
+                                    'qty' => $b->quantity,
+                                    'expiry' => $b->expiry_date,
+                                    'location' => $b->location ?? 'Main Stock'
                                 ];
-                            })->values()
+                            });
+                        
+                        return [
+                            'id' => $item->id,
+                            'name' => $item->item->name,
+                            'requested' => $item->quantity_requested,
+                            'unit' => $item->item->unit->symbol ?? 'pcs',
+                            'batches' => $batches
                         ];
-                    })->values()
+                    })
                 ];
-            })->values()) !!}
+            })) !!}
         </script>
 
-        <div class="px-6 py-5 border-b border-border-soft bg-cream-bg flex justify-between items-center">
-            <div>
-                <h2 class="font-display text-lg font-bold text-chocolate">Requisition Queue</h2>
-                <p class="text-xs text-gray-500 mt-0.5">Manage and fulfill pending requests.</p>
-            </div>
-        </div>
-
-        @if($requisitions->isNotEmpty())
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-border-soft">
-                    <thead class="bg-white">
-                        <tr>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Req #</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Requester</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display hidden md:table-cell">Department</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display">Items</th>
-                            <th class="px-6 py-4 text-left text-xs font-bold text-caramel uppercase tracking-widest font-display hidden lg:table-cell">Due Date</th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-caramel uppercase tracking-widest font-display">Status</th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-caramel uppercase tracking-widest font-display">Progress</th>
-                            <th class="px-6 py-4 text-center text-xs font-bold text-caramel uppercase tracking-widest font-display">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-border-soft">
-                        @foreach($requisitions as $index => $requisition)
-                            @php
-                                $itemCount = $requisition->requisitionItems->count();
-                                $isApproved = $requisition->status === 'approved';
-                                $isPending = $requisition->status === 'pending';
-                                $isFulfilled = $requisition->status === 'fulfilled';
-                                
-                                // Calculate progress
-                                $pickedCount = 0;
-                                foreach($requisition->requisitionItems as $item) {
-                                    if(session("picking.{$item->id}")) {
-                                        $pickedCount++;
-                                    }
-                                }
-                                $progressPercentage = $itemCount > 0 ? ($pickedCount / $itemCount) * 100 : 0;
-                                
-                                // Check available stock
-                                $hasAvailableStock = false;
-                                foreach($requisition->requisitionItems as $requisitionItem) {
-                                    $availableBatches = \App\Models\Batch::where('item_id', $requisitionItem->item->id)
-                                        ->whereIn('status', ['active', 'quarantine'])
-                                        ->where('quantity', '>', 0)
-                                        ->count();
-                                    if($availableBatches > 0) {
-                                        $hasAvailableStock = true;
-                                        break;
-                                    }
-                                }
-                            @endphp
-                            <tr class="hover:bg-cream-bg transition-colors cursor-pointer requisition-row group" 
-                                data-requisition-id="{{ $requisition->id }}"
-                                data-expand-url="{{ route('inventory.outbound.fulfill', ['expand' => $requisition->id]) }}">
-                                
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="font-mono font-bold text-chocolate text-sm bg-chocolate/5 px-2 py-1 rounded border border-chocolate/10">
-                                        #{{ $requisition->requisition_number }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-bold text-gray-900">{{ $requisition->requestedBy->name ?? 'Unknown' }}</div>
-                                    <div class="text-xs text-gray-500">{{ $requisition->requestedBy->department ?? 'General' }}</div>
-                                </td>
-                                <td class="px-6 py-4 hidden md:table-cell">
-                                    <div class="text-sm text-gray-800">{{ $requisition->department ?? 'General' }}</div>
-                                    <div class="text-xs text-gray-500 truncate max-w-[150px]">{{ Str::limit($requisition->purpose, 25) }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-bold text-gray-900">{{ $itemCount }}</div>
-                                    <div class="text-xs text-gray-500">{{ $pickedCount }}/{{ $itemCount }} Picked</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap hidden lg:table-cell text-sm text-gray-600">
-                                    {{ \Carbon\Carbon::parse($requisition->request_date)->format('M d, D') }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    @if($isApproved)
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-800 border border-green-200">
-                                            Ready
-                                        </span>
-                                    @elseif($isPending)
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-200">
-                                            Pending
-                                        </span>
-                                    @elseif($isFulfilled)
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-blue-100 text-blue-800 border border-blue-200">
-                                            Done
-                                        </span>
-                                    @else
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-gray-100 text-gray-600 border border-gray-200">
-                                            {{ ucfirst($requisition->status) }}
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap align-middle">
-                                    <div class="flex items-center gap-2">
-                                        <div class="flex-1 w-24 bg-gray-200 rounded-full h-1.5">
-                                            <div class="h-1.5 rounded-full transition-all duration-500 {{ $progressPercentage == 100 ? 'bg-green-500' : 'bg-caramel' }}" 
-                                                 style="width: {{ $progressPercentage }}%"></div>
-                                        </div>
-                                        <span class="text-xs text-gray-500 font-mono">{{ round($progressPercentage) }}%</span>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-center">
-                                    @if($isApproved && $hasAvailableStock && $progressPercentage < 100)
-                                        <button class="issue-items-btn px-3 py-1.5 bg-chocolate text-white text-xs font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-sm hover:shadow-md transform active:scale-95"
-                                                data-requisition-id="{{ $requisition->id }}"
-                                                onclick="event.stopPropagation();">
-                                            <i class="fas fa-clipboard-list mr-1"></i> Issue Items
-                                        </button>
-                                    @elseif($progressPercentage == 100)
-                                        <span class="text-green-600 text-lg"><i class="fas fa-check-circle"></i></span>
-                                    @elseif($isPending)
-                                        <span class="text-amber-500 text-lg" title="Waiting for Approval"><i class="fas fa-hourglass-half"></i></span>
-                                    @elseif(!$hasAvailableStock)
-                                        <span class="text-red-500 text-xs font-bold uppercase border border-red-200 bg-red-50 px-2 py-1 rounded">No Stock</span>
-                                    @else
-                                        <span class="text-gray-300 text-lg">&mdash;</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @else
-            <div class="p-12 text-center flex flex-col items-center">
-                <div class="w-16 h-16 bg-cream-bg rounded-full flex items-center justify-center mb-4 border border-border-soft">
-                    <i class="fas fa-inbox text-chocolate/30 text-3xl"></i>
-                </div>
-                <h3 class="font-display text-lg font-bold text-chocolate mb-1">No Requisitions Found</h3>
-                <p class="text-sm text-gray-500">There are currently no requisitions to fulfill.</p>
-            </div>
-        @endif
+        <table class="min-w-full divide-y divide-border-soft">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Requisition</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Requester</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Items</th>
+                    <th class="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100">
+                @forelse($requisitions as $req)
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-6 py-4">
+                            <span class="font-mono text-chocolate font-bold">#{{ $req->requisition_number }}</span>
+                            <div class="text-xs text-gray-500 mt-0.5">{{ $req->request_date->format('M d, Y') }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-bold text-gray-900">{{ $req->requestedBy->name ?? 'Unknown' }}</div>
+                            <div class="text-xs text-gray-500">{{ $req->department }}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="text-sm text-gray-600">{{ $req->requisitionItems->count() }} items</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            @if($req->status === 'approved')
+                                <span class="px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full uppercase">Ready to Pick</span>
+                            @elseif($req->status === 'fulfilled')
+                                <span class="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full uppercase">Fulfilled</span>
+                            @else
+                                <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full uppercase">{{ ucfirst($req->status) }}</span>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            @if($req->status === 'approved')
+                                <button onclick="openPickList({{ $req->id }})" 
+                                        class="px-4 py-2 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark shadow-sm transition-all">
+                                    Fulfill Now
+                                </button>
+                            @else
+                                <button onclick="viewRequisitionDetails({{ $req->id }})" 
+                                        class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-200 transition-all border border-gray-300">
+                                    View
+                                </button>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="p-8 text-center text-gray-400">No requests found.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
-
 </div>
 
-{{-- MODAL FOR ISSUE ITEMS --}}
-<div id="issueItemsModal" class="fixed inset-0 bg-chocolate/20 backdrop-blur-sm overflow-y-auto h-full w-full hidden z-50 transition-opacity duration-300 opacity-0">
-    <div class="relative top-10 mx-auto p-0 border border-border-soft w-11/12 max-w-4xl shadow-2xl rounded-xl bg-white max-h-[90vh] flex flex-col">
+{{-- 3. THE "DIGITAL PICK TICKET" MODAL --}}
+<div id="pickModal" class="fixed inset-0 z-50 hidden bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl border border-border-soft flex flex-col max-h-[90vh]">
         
-        {{-- Modal Header --}}
-        <div class="flex items-center justify-between px-6 py-4 border-b border-border-soft bg-chocolate rounded-t-xl">
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-border-soft bg-cream-bg flex justify-between items-center">
             <div>
-                <h3 class="text-xl font-display font-bold text-white" id="modalTitle">Process Requisition</h3>
-                <p class="text-xs text-white/70 mt-0.5" id="modalSubtitle">Select batches and verify items physically</p>
+                <h3 class="font-display text-lg font-bold text-chocolate">Digital Pick Ticket</h3>
+                <p class="text-xs text-gray-500" id="modalSubtitle">Review auto-allocated items</p>
             </div>
-            <button id="closeModal" class="text-white/70 hover:text-white transition-colors p-1">
-                <i class="fas fa-times text-xl"></i>
+            <button onclick="closePickModal()" class="text-gray-400 hover:text-chocolate"><i class="fas fa-times text-xl"></i></button>
+        </div>
+
+        {{-- Content: The Pick List --}}
+        <div class="p-6 overflow-y-auto custom-scrollbar flex-1" id="pickListContent">
+            </div>
+
+        {{-- Footer --}}
+        <div class="px-6 py-4 border-t border-border-soft bg-gray-50 flex justify-between items-center">
+            <div class="text-xs text-gray-500">
+                * Items are auto-allocated by First-Expiring-First-Out (FEFO)
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closePickModal()" class="px-4 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-100 text-sm">Cancel</button>
+                <button onclick="confirmFulfillment()" id="confirmIssueBtn" class="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-md transition-all text-sm flex items-center gap-2">
+                    <i class="fas fa-check"></i> Confirm & Issue
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- 4. CONFIRMATION MODAL --}}
+<div id="confirmModal" class="fixed inset-0 z-50 hidden bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="handleBackdropClick(event, 'confirmModal')">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-border-soft modal-enter" onclick="event.stopPropagation()">
+        
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-border-soft bg-amber-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-amber-600"></i>
+            </div>
+            <div>
+                <h3 class="font-display text-lg font-bold text-amber-800">Confirm Fulfillment</h3>
+                <p class="text-xs text-amber-600">Please review and confirm the details</p>
+            </div>
+        </div>
+
+        {{-- Content --}}
+        <div class="p-6" id="confirmModalContent">
+            {{-- Dynamic content will be inserted here --}}
+        </div>
+
+        {{-- Footer --}}
+        <div class="px-6 py-4 border-t border-border-soft bg-gray-50 flex justify-end gap-3">
+            <button onclick="closeConfirmModal()" class="px-4 py-2 bg-white border border-gray-300 text-gray-600 font-bold rounded-lg hover:bg-gray-100 text-sm">
+                Cancel
+            </button>
+            <button onclick="confirmAction()" id="confirmModalBtn" class="px-6 py-2 bg-amber-600 text-white font-bold rounded-lg hover:bg-amber-700 shadow-md transition-all text-sm flex items-center gap-2">
+                <i class="fas fa-check"></i> Confirm
             </button>
         </div>
+    </div>
+</div>
 
-        {{-- Modal Content (Scrollable) --}}
-        <div class="p-6 overflow-y-auto custom-scrollbar flex-1 bg-gray-50" id="modalContent">
-            {{-- Dynamic content will be loaded here --}}
+{{-- 5. SUCCESS MODAL --}}
+<div id="successModal" class="fixed inset-0 z-50 hidden bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="handleBackdropClick(event, 'successModal')">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-border-soft modal-enter" onclick="event.stopPropagation()">
+        
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-border-soft bg-green-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-600"></i>
+            </div>
+            <div>
+                <h3 class="font-display text-lg font-bold text-green-800">Success!</h3>
+                <p class="text-xs text-green-600">Operation completed successfully</p>
+            </div>
         </div>
 
-        {{-- Modal Footer --}}
-        <div class="flex justify-between items-center px-6 py-4 border-t border-border-soft bg-white rounded-b-xl">
-            <div class="text-xs font-bold text-gray-500 uppercase tracking-wide" id="modalProgress">
-                Processing 0 of 0 items
+        {{-- Content --}}
+        <div class="p-6" id="successModalContent">
+            {{-- Dynamic content will be inserted here --}}
+        </div>
+
+        {{-- Footer --}}
+        <div class="px-6 py-4 border-t border-border-soft bg-gray-50 flex justify-end">
+            <button onclick="closeSuccessModal()" class="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 shadow-md transition-all text-sm flex items-center gap-2">
+                <i class="fas fa-check"></i> OK
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- 6. ERROR MODAL --}}
+<div id="errorModal" class="fixed inset-0 z-50 hidden bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="handleBackdropClick(event, 'errorModal')">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-border-soft modal-enter" onclick="event.stopPropagation()">
+        
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-border-soft bg-red-50 flex items-center gap-3">
+            <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-exclamation-circle text-red-600"></i>
             </div>
-            <div class="flex space-x-3">
-                <button id="cancelModal" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-50 transition-colors">
-                    Cancel
-                </button>
-                <button id="confirmModal" class="px-6 py-2.5 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-none flex items-center" disabled>
-                    <i class="fas fa-check mr-2"></i> Confirm Issuance
-                </button>
+            <div>
+                <h3 class="font-display text-lg font-bold text-red-800">Error</h3>
+                <p class="text-xs text-red-600">An error occurred during the operation</p>
             </div>
+        </div>
+
+        {{-- Content --}}
+        <div class="p-6" id="errorModalContent">
+            {{-- Dynamic content will be inserted here --}}
+        </div>
+
+        {{-- Footer --}}
+        <div class="px-6 py-4 border-t border-border-soft bg-gray-50 flex justify-end">
+            <button onclick="closeErrorModal()" class="px-6 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md transition-all text-sm flex items-center gap-2">
+                <i class="fas fa-times"></i> Close
+            </button>
+        </div>
+    </div>
+</div>
+
+{{-- 7. REQUISITION DETAILS MODAL --}}
+<div id="requisitionDetailsModal" class="fixed inset-0 z-50 hidden bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4" onclick="handleBackdropClick(event, 'requisitionDetailsModal')">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl border border-border-soft modal-enter flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+        
+        {{-- Header --}}
+        <div class="px-6 py-4 border-b border-border-soft bg-chocolate flex justify-between items-center">
+            <div>
+                <h3 class="font-display text-lg font-bold text-white">Requisition Details</h3>
+                <p class="text-xs text-white/70" id="detailModalSubtitle">View requisition information</p>
+            </div>
+            <button onclick="closeRequisitionDetailsModal()" class="text-white/70 hover:text-white"><i class="fas fa-times text-xl"></i></button>
+        </div>
+
+        {{-- Content: Details --}}
+        <div class="p-6 overflow-y-auto custom-scrollbar flex-1" id="requisitionDetailsContent">
+            {{-- Loading state --}}
+            <div id="detailsLoading" class="flex flex-col items-center justify-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-[3px] border-border-soft border-t-chocolate"></div>
+                <span class="mt-3 text-sm font-bold text-chocolate">Loading details...</span>
+            </div>
+            
+            {{-- Details content --}}
+            <div id="detailsContent" class="hidden space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-cream-bg p-3 rounded-lg border border-border-soft">
+                        <p class="text-[10px] font-bold text-chocolate uppercase tracking-widest">Requisition ID</p>
+                        <p class="text-sm font-mono font-bold text-chocolate mt-0.5" id="detailRequisitionNumber">-</p>
+                    </div>
+                    <div class="bg-cream-bg p-3 rounded-lg border border-border-soft">
+                        <p class="text-[10px] font-bold text-chocolate uppercase tracking-widest">Status</p>
+                        <div class="mt-0.5" id="detailStatus">-</div>
+                    </div>
+                    <div class="bg-cream-bg p-3 rounded-lg border border-border-soft">
+                        <p class="text-[10px] font-bold text-chocolate uppercase tracking-widest">Date Submitted</p>
+                        <p class="text-sm font-medium text-gray-700 mt-0.5" id="detailDate">-</p>
+                    </div>
+                    <div class="bg-cream-bg p-3 rounded-lg border border-border-soft">
+                        <p class="text-[10px] font-bold text-chocolate uppercase tracking-widest">Department</p>
+                        <p class="text-sm font-medium text-gray-700 mt-0.5" id="detailDepartment">-</p>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-bold text-chocolate uppercase tracking-wide mb-2 flex items-center">
+                        <i class="fas fa-user mr-1.5 text-chocolate"></i> Requested By
+                    </p>
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100 text-sm text-gray-700" id="detailRequester">
+                        -
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-bold text-chocolate uppercase tracking-wide mb-3 flex items-center">
+                        <i class="fas fa-list mr-1.5 text-chocolate"></i> Items Requested
+                    </p>
+                    <div class="border border-border-soft rounded-lg overflow-hidden">
+                        <table class="min-w-full divide-y divide-border-soft">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
+                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Quantity</th>
+                                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Unit</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-100" id="detailItemsTable">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Footer --}}
+        <div class="px-6 py-4 border-t border-border-soft bg-gray-50 flex justify-end">
+            <button onclick="closeRequisitionDetailsModal()" class="px-6 py-2 bg-gray-600 text-white font-bold rounded-lg hover:bg-gray-700 shadow-md transition-all text-sm flex items-center gap-2">
+                <i class="fas fa-times"></i> Close
+            </button>
         </div>
     </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let currentRequisitionId = null;
+    let currentReqId = null;
+    let pendingConfirmAction = null;
 
-    // Row click handler for expanding details
-    document.querySelectorAll('.requisition-row').forEach(row => {
-        row.addEventListener('click', function(e) {
-            if (e.target.closest('.issue-items-btn')) return;
-            const expandUrl = this.dataset.expandUrl;
-            window.location.href = expandUrl;
-        });
-    });
-
-    // Issue Items button handler
-    document.querySelectorAll('.issue-items-btn').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.stopPropagation();
-            currentRequisitionId = this.dataset.requisitionId;
-            openIssueModal();
-        });
-    });
-
-    // Modal controls
-    document.getElementById('closeModal').addEventListener('click', closeIssueModal);
-    document.getElementById('cancelModal').addEventListener('click', closeIssueModal);
-    document.getElementById('confirmModal').addEventListener('click', confirmIssuance);
-
-    function openIssueModal() {
-        const modal = document.getElementById('issueItemsModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalSubtitle = document.getElementById('modalSubtitle');
+    function openPickList(id) {
+        currentReqId = id;
+        const data = JSON.parse(document.getElementById('requisitionData').textContent);
+        const req = data.find(r => r.id === id);
         
-        modalTitle.textContent = 'Process Requisition';
-        modalSubtitle.textContent = 'Select batches and verify items physically';
+        if(!req) return;
+
+        document.getElementById('modalSubtitle').textContent = `Fulfilling Requisition #${req.number} for ${req.requester}`;
+        const container = document.getElementById('pickListContent');
         
-        loadRequisitionData(currentRequisitionId);
+        let html = '<div class="space-y-4">';
         
-        modal.classList.remove('hidden');
-        // Trigger reflow for animation
-        void modal.offsetWidth;
-        modal.classList.remove('opacity-0');
-    }
+        req.items.forEach(item => {
+            // --- AUTO-ALLOCATION LOGIC (The "Smart" Part) ---
+            let remainingNeeded = item.requested;
+            let allocationHtml = '';
+            let isShortage = false;
 
-    function closeIssueModal() {
-        const modal = document.getElementById('issueItemsModal');
-        modal.classList.add('opacity-0');
-        setTimeout(() => {
-            modal.classList.add('hidden');
-        }, 300);
-    }
+            if (item.batches.length === 0) {
+                allocationHtml = `<div class="text-red-500 text-xs font-bold bg-red-50 p-2 rounded border border-red-100"><i class="fas fa-times-circle mr-1"></i> Out of Stock</div>`;
+                isShortage = true;
+            } else {
+                item.batches.forEach(batch => {
+                    if (remainingNeeded <= 0) return; // Filled
 
-    function loadRequisitionData(requisitionId) {
-        const requisitionData = getRequisitionDataFromPage(requisitionId);
-        const modalContent = document.getElementById('modalContent');
-        modalContent.innerHTML = createModalContent(requisitionData);
-        addModalEventListeners(requisitionData);
-        updateProgress();
-    }
+                    let take = Math.min(remainingNeeded, batch.qty);
+                    remainingNeeded -= take;
 
-    function getRequisitionDataFromPage(requisitionId) {
-        const dataStore = document.getElementById('requisitionData');
-        if (!dataStore) {
-            console.error('Requisition data store not found');
-            return null;
-        }
-        try {
-            const allRequisitionData = JSON.parse(dataStore.textContent);
-            const requisitionData = allRequisitionData.find(req => req.id == requisitionId);
-            if (!requisitionData) {
-                console.error(`Requisition ${requisitionId} not found in data`);
-                return null;
+                    // The "Simple" Row
+                    allocationHtml += `
+                        <div class="flex justify-between items-center text-sm p-2 bg-blue-50/50 rounded border border-blue-100 mb-1">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-map-marker-alt text-blue-400"></i>
+                                <div>
+                                    <span class="font-mono font-bold text-blue-800">${batch.number}</span>
+                                    <span class="text-xs text-gray-500 ml-2">Loc: ${batch.location}</span>
+                                </div>
+                            </div>
+                            <div class="font-bold text-chocolate">
+                                Pick: ${take} ${item.unit}
+                                <input type="hidden" name="items[${item.id}][batches][${batch.id}]" value="${take}">
+                            </div>
+                        </div>
+                    `;
+                });
             }
-            return requisitionData;
-        } catch (error) {
-            console.error('Error parsing requisition data:', error);
-            return null;
-        }
-    }
 
-    function createModalContent(data) {
-        let content = `
-            <div class="space-y-6">
-                {{-- Requisition Summary Card --}}
-                <div class="bg-white p-5 rounded-xl border border-border-soft shadow-sm">
-                    <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-100">
-                        <h4 class="font-display font-bold text-chocolate text-lg">Requisition Summary</h4>
-                        <span class="font-mono font-bold text-gray-400 text-xs bg-gray-100 px-2 py-1 rounded">#${data.number}</span>
+            if (remainingNeeded > 0 && !isShortage) {
+                allocationHtml += `<div class="text-orange-600 text-xs font-bold mt-1"><i class="fas fa-exclamation-triangle"></i> Insufficient Stock (Missing ${remainingNeeded})</div>`;
+            }
+
+            // Render Item Block
+            html += `
+                <div class="bg-white border border-border-soft rounded-lg p-4 shadow-sm">
+                    <div class="flex justify-between mb-2">
+                        <h4 class="font-bold text-gray-800">${item.name}</h4>
+                        <span class="text-xs font-bold bg-gray-100 text-gray-600 px-2 py-1 rounded">Req: ${item.requested} ${item.unit}</span>
                     </div>
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                        <div>
-                            <span class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Requested By</span>
-                            <span class="font-medium text-gray-800">${data.requestedBy}</span>
-                        </div>
-                        <div>
-                            <span class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Department</span>
-                            <span class="font-medium text-gray-800">${data.department}</span>
-                        </div>
-                        <div>
-                            <span class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Date</span>
-                            <span class="font-medium text-gray-800">${formatDate(data.requestDate)}</span>
-                        </div>
-                        <div>
-                            <span class="block text-xs font-bold text-gray-400 uppercase tracking-wide">Purpose</span>
-                            <span class="font-medium text-gray-800 truncate block" title="${data.purpose}">${data.purpose}</span>
-                        </div>
+                    <div class="pl-2 border-l-2 border-blue-200">
+                        ${allocationHtml}
                     </div>
-                </div>
-
-                {{-- Items Processing --}}
-                <div>
-                    <h4 class="font-bold text-chocolate text-lg mb-4 flex items-center">
-                        <i class="fas fa-boxes mr-2"></i> Items to Process
-                    </h4>
-                    <div class="space-y-4" id="itemsContainer">
-        `;
-
-        data.items.forEach((item, index) => {
-            const hasBatches = item.availableBatches.length > 0;
-            
-            content += `
-                <div class="bg-white border border-border-soft rounded-xl p-4 shadow-sm item-container transition-shadow hover:shadow-md" data-item-id="${item.id}">
-                    <div class="flex items-start justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-cream-bg flex items-center justify-center text-caramel border border-border-soft">
-                                <i class="fas fa-box"></i>
-                            </div>
-                            <div>
-                                <h5 class="font-bold text-gray-900 text-sm">${item.name}</h5>
-                                <div class="flex items-center gap-2 mt-0.5">
-                                    <span class="text-xs text-gray-500 font-mono">${item.sku}</span>
-                                    <span class="text-xs font-bold text-chocolate bg-chocolate/10 px-2 py-0.5 rounded">Qty: ${item.requestedQty}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            ${hasBatches ? 
-                                '<span class="inline-flex items-center px-2.5 py-0.5 text-xs font-bold bg-green-100 text-green-800 rounded-full border border-green-200"><i class="fas fa-check mr-1"></i> Stock Available</span>' : 
-                                '<span class="inline-flex items-center px-2.5 py-0.5 text-xs font-bold bg-red-100 text-red-800 rounded-full border border-red-200"><i class="fas fa-times mr-1"></i> Out of Stock</span>'
-                            }
-                        </div>
-                    </div>
-
-                    ${hasBatches ? `
-                        <div class="bg-gray-50 rounded-lg p-3 border border-gray-200 mb-3">
-                            <div class="flex items-center justify-between mb-2">
-                                <label class="text-xs font-bold text-gray-600 uppercase tracking-wide">Suggested Batch (FEFO)</label>
-                                <div class="text-xs font-bold" id="stock-summary-${item.id}">Calculating...</div>
-                            </div>
-                            <div class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
-                                ${item.availableBatches.map((batch, batchIndex) => `
-                                    <div class="flex items-center justify-between p-2 bg-white border ${batch.isFEFO ? 'border-green-300 ring-1 ring-green-100' : 'border-gray-200'} rounded hover:border-caramel transition-colors">
-                                        <div class="flex items-center gap-3 flex-1">
-                                            <input type="checkbox" 
-                                                class="batch-checkbox w-4 h-4 text-chocolate border-gray-300 rounded focus:ring-caramel cursor-pointer" 
-                                                data-batch-id="${batch.id}"
-                                                data-item-id="${item.id}"
-                                                data-max-qty="${batch.available}"
-                                                ${batch.isFEFO ? 'checked' : ''}>
-                                            <div class="flex flex-col">
-                                                <span class="text-xs font-mono font-bold text-gray-800">
-                                                    ${batch.number} ${batch.isFEFO ? '<span class="text-green-600 ml-1 text-[10px]">★ FEFO</span>' : ''}
-                                                </span>
-                                                <span class="text-[10px] text-gray-500">Exp: ${formatDate(batch.expiry)} • Loc: ${batch.location}</span>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-[10px] text-gray-400">Avail: ${batch.available}</span>
-                                            <input type="number" 
-                                                class="batch-qty-input w-20 text-xs border-gray-300 rounded focus:ring-caramel focus:border-caramel text-right font-bold" 
-                                                placeholder="Qty"
-                                                min="0"
-                                                max="${batch.available}"
-                                                step="0.01"
-                                                ${!batch.isFEFO ? 'disabled' : ''}>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            
-                            ${calculateShortage(item) ? `
-                                <div class="mt-3 p-2 bg-orange-50 border border-orange-200 rounded flex items-start gap-2 text-xs">
-                                    <i class="fas fa-exclamation-triangle text-orange-500 mt-0.5"></i>
-                                    <span class="text-orange-800 font-medium">
-                                        <strong>Shortage Alert:</strong> ${calculateShortage(item)} will be backordered automatically.
-                                    </span>
-                                </div>
-                            ` : ''}
-                        </div>
-
-                        <div class="flex items-center gap-2 pt-2 border-t border-gray-100">
-                            <input type="checkbox" id="verify-${item.id}" class="verification-checkbox w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer" data-item-id="${item.id}">
-                            <label for="verify-${item.id}" class="text-xs font-bold text-gray-700 cursor-pointer select-none">
-                                I have physically verified and picked these items.
-                            </label>
-                        </div>
-                    ` : `
-                        <div class="p-3 bg-red-50 rounded border border-red-100 flex items-center justify-center text-xs font-bold text-red-600">
-                            <i class="fas fa-ban mr-2"></i> Item will be fully backordered
-                        </div>
-                    `}
+                    <input type="hidden" name="items[${item.id}][requested]" value="${item.requested}">
                 </div>
             `;
         });
 
-        content += `
-                </div>
-                
-                {{-- Summary Box --}}
-                <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl mt-6" id="fulfillmentSummary">
-                    <div class="flex items-center justify-between mb-3">
-                        <h4 class="font-bold text-blue-900 text-sm flex items-center"><i class="fas fa-clipboard-check mr-2"></i> Fulfillment Summary</h4>
-                        <div class="text-xs font-bold text-blue-700" id="summaryStats">0 of 0 items verified</div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-white p-3 rounded-lg border border-blue-100 shadow-sm text-center">
-                            <div class="text-xs text-gray-500 uppercase font-bold">Will Issue</div>
-                            <div class="text-xl font-bold text-green-600" id="willIssue">0</div>
-                        </div>
-                        <div class="bg-white p-3 rounded-lg border border-blue-100 shadow-sm text-center">
-                            <div class="text-xs text-gray-500 uppercase font-bold">Backorder</div>
-                            <div class="text-xl font-bold text-orange-600" id="willBackorder">0</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        return content;
+        html += '</div>';
+        container.innerHTML = html;
+        
+        document.getElementById('pickModal').classList.remove('hidden');
     }
 
-    // --- Event Handlers (Same Logic, New Selectors) ---
-    function addModalEventListeners(data) {
-        data.items.forEach(item => {
-            updateStockSummary(item.id, item);
-        });
-
-        document.querySelectorAll('.batch-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                const quantityInput = this.closest('.flex').querySelector('.batch-qty-input');
-                if (this.checked) {
-                    quantityInput.disabled = false;
-                    if (this.dataset.maxQty) quantityInput.value = this.dataset.maxQty;
-                } else {
-                    quantityInput.disabled = true;
-                    quantityInput.value = '';
-                }
-                updateProgress();
-            });
-        });
-
-        document.querySelectorAll('.batch-qty-input').forEach(input => {
-            input.addEventListener('input', function() {
-                const maxQty = parseFloat(this.max);
-                const currentValue = parseFloat(this.value) || 0;
-                if (currentValue > maxQty) this.value = maxQty;
-                updateProgress();
-            });
-        });
-
-        document.querySelectorAll('.verification-checkbox').forEach(checkbox => {
-            checkbox.addEventListener('change', updateProgress);
-        });
+    function closePickModal() {
+        document.getElementById('pickModal').classList.add('hidden');
     }
 
-    function updateProgress() {
-        const totalItems = document.querySelectorAll('.item-container').length;
-        const processedItems = document.querySelectorAll('.verification-checkbox:checked').length;
+    // Modal control functions
+    function showConfirmModal(message, onConfirm) {
+        const modal = document.getElementById('confirmModal');
+        const content = document.getElementById('confirmModalContent');
+        const btn = document.getElementById('confirmModalBtn');
         
-        const progressText = document.getElementById('modalProgress');
-        progressText.textContent = `Processing ${processedItems} of ${totalItems} items`;
-        progressText.className = processedItems === totalItems ? "text-xs font-bold text-green-600 uppercase tracking-wide" : "text-xs font-bold text-gray-500 uppercase tracking-wide";
+        content.innerHTML = `<div class="text-gray-700 whitespace-pre-line">${message}</div>`;
+        pendingConfirmAction = onConfirm;
+        modal.classList.remove('hidden');
         
-        updateFulfillmentSummary();
-        
-        const confirmButton = document.getElementById('confirmModal');
-        confirmButton.disabled = processedItems !== totalItems;
-        if (!confirmButton.disabled) {
-            confirmButton.classList.remove('bg-gray-400');
-            confirmButton.classList.add('bg-green-600', 'hover:bg-green-700', 'shadow-md');
-        } else {
-            confirmButton.classList.add('bg-gray-400');
-            confirmButton.classList.remove('bg-green-600', 'hover:bg-green-700', 'shadow-md');
+        // Focus management and keyboard support
+        btn.focus();
+        document.addEventListener('keydown', handleModalKeydown);
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').classList.add('hidden');
+        pendingConfirmAction = null;
+        document.removeEventListener('keydown', handleModalKeydown);
+    }
+
+    function confirmAction() {
+        if (pendingConfirmAction) {
+            pendingConfirmAction();
+            closeConfirmModal();
         }
     }
 
-    // ... (Rest of your calculation logic: updateFulfillmentSummary, calculateIssuanceSummary, processPartialIssuance, processIssuance - ALL PRESERVED) ...
-    // I am omitting the redundant calculation functions here to save space, but in your actual file, PASTE THEM BACK EXACTLY AS THEY WERE in your provided code.
-    // The structure above supports them perfectly.
+    function showSuccessModal(title, message) {
+        const modal = document.getElementById('successModal');
+        const content = document.getElementById('successModalContent');
+        
+        content.innerHTML = `
+            <div class="text-center">
+                <div class="text-gray-700 whitespace-pre-line">${message}</div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        
+        // Auto close after 3 seconds for success messages
+        setTimeout(() => {
+            closeSuccessModal();
+            window.location.reload();
+        }, 3000);
+        
+        document.addEventListener('keydown', handleModalKeydown);
+    }
 
-    // Helper Placeholders (Paste your original logic here)
-    function updateFulfillmentSummary() { /* ... Original Logic ... */ }
-    function calculateIssuanceSummary() { /* ... Original Logic ... */ }
-    function formatDate(dateString) { /* ... Original Logic ... */ }
-    function calculateShortage(item) { /* ... Original Logic ... */ }
-    function updateStockSummary(itemId, item) { /* ... Original Logic ... */ }
-    function confirmIssuance() { /* ... Original Logic ... */ }
-    function processPartialIssuance(summary) { /* ... Original Logic ... */ }
-    function processIssuance(requestData) { /* ... Original Logic ... */ }
+    function closeSuccessModal() {
+        document.getElementById('successModal').classList.add('hidden');
+        document.removeEventListener('keydown', handleModalKeydown);
+    }
 
-});
+    function showErrorModal(title, message) {
+        const modal = document.getElementById('errorModal');
+        const content = document.getElementById('errorModalContent');
+        
+        content.innerHTML = `
+            <div class="text-center">
+                <div class="text-gray-700 whitespace-pre-line">${message}</div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        document.addEventListener('keydown', handleModalKeydown);
+    }
+
+    function closeErrorModal() {
+        document.getElementById('errorModal').classList.add('hidden');
+        document.removeEventListener('keydown', handleModalKeydown);
+    }
+
+    // Global keyboard handler for all modals
+    function handleModalKeydown(event) {
+        if (event.key === 'Escape') {
+            // Close any open modal
+            if (!document.getElementById('confirmModal').classList.contains('hidden')) {
+                closeConfirmModal();
+            } else if (!document.getElementById('successModal').classList.contains('hidden')) {
+                closeSuccessModal();
+            } else if (!document.getElementById('errorModal').classList.contains('hidden')) {
+                closeErrorModal();
+            }
+        } else if (event.key === 'Enter') {
+            // Handle Enter key for confirm modal
+            if (!document.getElementById('confirmModal').classList.contains('hidden')) {
+                event.preventDefault();
+                confirmAction();
+            }
+        }
+    }
+
+    // Handle click outside modal to close
+    function handleBackdropClick(event, modalId) {
+        if (event.target.id === modalId) {
+            if (modalId === 'confirmModal') {
+                closeConfirmModal();
+            } else if (modalId === 'successModal') {
+                closeSuccessModal();
+            } else if (modalId === 'errorModal') {
+                closeErrorModal();
+            } else if (modalId === 'requisitionDetailsModal') {
+                closeRequisitionDetailsModal();
+            }
+        }
+    }
+
+    // Requisition Details Functions
+    function viewRequisitionDetails(requisitionId) {
+        const modal = document.getElementById('requisitionDetailsModal');
+        const loading = document.getElementById('detailsLoading');
+        const content = document.getElementById('detailsContent');
+        
+        // Show modal and loading state
+        modal.classList.remove('hidden');
+        loading.classList.remove('hidden');
+        content.classList.add('hidden');
+        
+        // Fetch requisition details via AJAX
+        fetch(`/inventory/outbound/requisitions/${requisitionId}/details`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    populateRequisitionDetails(data.requisition);
+                } else {
+                    showErrorModal('Error', 'Failed to load requisition details.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showErrorModal('Error', 'Error loading requisition details.');
+            })
+            .finally(() => {
+                loading.classList.add('hidden');
+                content.classList.remove('hidden');
+            });
+    }
+
+    function closeRequisitionDetailsModal() {
+        document.getElementById('requisitionDetailsModal').classList.add('hidden');
+    }
+
+    function populateRequisitionDetails(requisition) {
+        // Format status with badge
+        const statusConfig = {
+            'pending': { label: 'Pending', class: 'bg-amber-100 text-amber-800' },
+            'approved': { label: 'Approved', class: 'bg-green-100 text-green-800' },
+            'rejected': { label: 'Rejected', class: 'bg-red-100 text-red-800' },
+            'fulfilled': { label: 'Fulfilled', class: 'bg-gray-100 text-gray-600' }
+        };
+        
+        const status = statusConfig[requisition.status] || statusConfig['pending'];
+        
+        // Update subtitle
+        document.getElementById('detailModalSubtitle').textContent = `Requisition #${requisition.requisition_number} for ${requisition.requestedBy?.name || 'Unknown'}`;
+        
+        // Populate header info
+        document.getElementById('detailRequisitionNumber').textContent = `#${requisition.requisition_number}`;
+        document.getElementById('detailStatus').innerHTML = `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${status.class}">
+            ${status.label}
+        </span>`;
+        
+        const dateObj = new Date(requisition.request_date);
+        document.getElementById('detailDate').textContent = dateObj.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+        
+        document.getElementById('detailDepartment').textContent = requisition.department || 'N/A';
+        document.getElementById('detailRequester').innerHTML = `
+            <div class="font-bold text-gray-800">${requisition.requestedBy?.name || 'Unknown'}</div>
+            <div class="text-xs text-gray-500 mt-1">${requisition.department || 'General Department'}</div>
+        `;
+        
+        // Populate items table
+        const itemsTable = document.getElementById('detailItemsTable');
+        itemsTable.innerHTML = '';
+        
+        if (requisition.requisitionItems && requisition.requisitionItems.length > 0) {
+            requisition.requisitionItems.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-50 transition-colors";
+                row.innerHTML = `
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <div class="text-sm font-bold text-gray-800">${item.item?.name || 'Unknown Item'}</div>
+                        <div class="text-xs text-gray-400 font-mono mt-0.5">${item.item?.item_code || 'N/A'}</div>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                        <span class="font-bold">${parseFloat(item.quantity_requested)}</span>
+                    </td>
+                    <td class="px-4 py-3 whitespace-nowrap text-right text-sm text-gray-600">
+                        ${item.item?.unit?.symbol || 'pcs'}
+                    </td>
+                `;
+                itemsTable.appendChild(row);
+            });
+        } else {
+            itemsTable.innerHTML = '<tr><td colspan="3" class="px-4 py-8 text-center text-gray-500 italic">No items found</td></tr>';
+        }
+    }
+
+    async function confirmFulfillment() {
+        try {
+            // Show loading state
+            const confirmBtn = document.getElementById('confirmIssueBtn');
+            const originalBtnText = confirmBtn.innerHTML;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            confirmBtn.classList.add('opacity-75');
+            confirmBtn.disabled = true;
+
+            // Collect form data from hidden inputs
+            const formData = new FormData();
+            formData.append('requisition_id', currentReqId);
+
+            // Parse the hidden inputs to collect multi-batch selections
+            const hiddenInputs = document.querySelectorAll('input[name^="items["]');
+            const multiBatchSelections = {};
+            const processedItems = [];
+            const shortages = [];
+            const itemRequestedQty = {};
+
+            hiddenInputs.forEach(input => {
+                const match = input.name.match(/items\[(\d+)\]\[batches\]\[(\d+)\]/);
+                if (match) {
+                    const itemId = parseInt(match[1]);
+                    const batchId = parseInt(match[2]);
+                    const quantity = parseFloat(input.value);
+
+                    if (!multiBatchSelections[itemId]) {
+                        multiBatchSelections[itemId] = [];
+                    }
+                    multiBatchSelections[itemId].push({
+                        batch_id: batchId,
+                        quantity: quantity
+                    });
+
+                    // Track processed items
+                    if (!processedItems.includes(itemId)) {
+                        processedItems.push(itemId);
+                    }
+
+                    // Calculate requested quantities for shortage detection
+                    const requestedElement = document.querySelector(`input[name="items[${itemId}][requested]"]`);
+                    if (requestedElement) {
+                        itemRequestedQty[itemId] = parseFloat(requestedElement.value);
+                    }
+                }
+            });
+
+            // Detect shortages and calculate total allocated per item
+            for (const [itemId, batches] of Object.entries(multiBatchSelections)) {
+                const totalAllocated = batches.reduce((sum, batch) => sum + batch.quantity, 0);
+                const requestedQty = itemRequestedQty[itemId] || 0;
+
+                if (totalAllocated < requestedQty) {
+                    shortages.push({
+                        itemId: parseInt(itemId),
+                        requestedQty: requestedQty,
+                        shortageQty: requestedQty - totalAllocated
+                    });
+                }
+            }
+
+            console.log('Shortage analysis:', shortages);
+
+            // Validate that we have selections to process
+            if (Object.keys(multiBatchSelections).length === 0) {
+                throw new Error('No items selected for fulfillment. Please allocate stock from available batches.');
+            }
+
+            // Determine if this will be a partial fulfillment
+            const isPartialFulfillment = shortages.length > 0;
+
+            // Add processed data to form - send as individual batch entries
+            for (const [itemId, batches] of Object.entries(multiBatchSelections)) {
+                batches.forEach((batch, index) => {
+                    formData.append(`multi_batch_selections[${itemId}][${index}][batch_id]`, batch.batch_id);
+                    formData.append(`multi_batch_selections[${itemId}][${index}][quantity]`, batch.quantity);
+                });
+            }
+            
+            // Add processed data to form as individual fields for proper array parsing
+            processedItems.forEach((itemId, index) => {
+                formData.append(`processed_items[${index}]`, itemId);
+            });
+
+            shortages.forEach((shortage, index) => {
+                formData.append(`shortages[${index}][itemId]`, shortage.itemId);
+                formData.append(`shortages[${index}][requestedQty]`, shortage.requestedQty);
+                formData.append(`shortages[${index}][shortageQty]`, shortage.shortageQty);
+            });
+
+            formData.append('partial_fulfillment', isPartialFulfillment ? 'true' : 'false');
+
+            // Show confirmation modal
+            const totalBatches = Object.values(multiBatchSelections).reduce((sum, batches) => sum + batches.length, 0);
+            let dialogMessage = `Requisition: #${currentReqId}\n` +
+                `Items to process: ${processedItems.length}\n` +
+                `Batches to issue from: ${totalBatches}\n`;
+
+            if (isPartialFulfillment) {
+                dialogMessage += `\n⚠️ PARTIAL FULFILLMENT DETECTED\n` +
+                    `Shortages: ${shortages.length} items\n` +
+                    `Stock will be backordered for missing quantities.\n\n`;
+            }
+
+            dialogMessage += `This will update stock levels permanently. Continue?`;
+
+            // Store the processing logic to be called after confirmation
+            const processFulfillment = async () => {
+                try {
+                    console.log('Sending fulfillment request:', {
+                        requisition_id: currentReqId,
+                        multi_batch_selections: multiBatchSelections,
+                        processed_items: processedItems,
+                        shortages: shortages
+                    });
+
+                    // Send AJAX request to backend
+                    const response = await fetch('/inventory/outbound/confirm-issuance', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.message || 'Failed to process fulfillment');
+                    }
+
+                    // Add visual success feedback
+                    const modal = document.getElementById('pickModal');
+                    modal.classList.add('opacity-75');
+                    
+                    // Show success modal
+                    if (result.partial_fulfillment) {
+                        showSuccessModal('Partial Fulfillment Complete', `✅ Partial fulfillment completed!\n\nIssued: ${result.will_issue} items\nBackordered: ${result.will_backorder} items\n\nStock has been updated and notifications sent.`);
+                    } else {
+                        showSuccessModal('Fulfillment Complete', `✅ Requisition fulfilled successfully!\n\nAll requested items have been issued and stock has been updated.`);
+                    }
+
+                    closePickModal();
+                    
+                    // Reload page to show updated status after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+
+                } catch (error) {
+                    console.error('Fulfillment error:', error);
+                    
+                    // Show error modal
+                    showErrorModal('Fulfillment Failed', `❌ Fulfillment failed: ${error.message}\n\nPlease check stock availability and try again.`);
+                } finally {
+                    // Reset button state
+                    const confirmBtn = document.getElementById('confirmIssueBtn');
+                    confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirm & Issue';
+                    confirmBtn.classList.remove('opacity-75');
+                    confirmBtn.disabled = false;
+                }
+            };
+
+            // Show custom confirmation modal
+            showConfirmModal(dialogMessage, processFulfillment);
+            return;
+
+        } catch (error) {
+            console.error('Fulfillment error:', error);
+            
+            // Reset button state
+            const confirmBtn = document.getElementById('confirmIssueBtn');
+            confirmBtn.innerHTML = '<i class="fas fa-check"></i> Confirm & Issue';
+            confirmBtn.classList.remove('opacity-75');
+            confirmBtn.disabled = false;
+
+            // Show error modal
+            showErrorModal('Fulfillment Failed', `❌ Fulfillment failed: ${error.message}\n\nPlease check stock availability and try again.`);
+        }
+    }
 </script>
 
 <style>
-    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e8dfd4; border-radius: 20px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #c48d3f; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #d1d5db; border-radius: 10px; }
+    
+    /* Modal animations */
+    .modal-enter {
+        animation: modalEnter 0.3s ease-out;
+    }
+    
+    .modal-exit {
+        animation: modalExit 0.3s ease-in;
+    }
+    
+    @keyframes modalEnter {
+        from {
+            opacity: 0;
+            transform: scale(0.95) translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+    
+    @keyframes modalExit {
+        from {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: scale(0.95) translateY(-10px);
+        }
+    }
+    
+    /* Backdrop blur effect */
+    .backdrop-blur {
+        backdrop-filter: blur(4px);
+    }
 </style>
 @endsection

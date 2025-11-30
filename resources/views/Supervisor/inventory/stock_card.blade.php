@@ -201,13 +201,36 @@
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100" id="transactionTableBody">
-                    @forelse($movements as $movement)
-                        @php
+                    @php
+                        // Pre-calculate running balances for all movements efficiently
+                        $movementsWithBalance = [];
+                        $cumulativeBalance = 0;
+                        
+                        // Get all movements for this item up to each point in time (for accurate running balance)
+                        $allMovementsQuery = \App\Models\StockMovement::where('item_id', $item->id)
+                            ->orderBy('created_at', 'asc')
+                            ->get();
+                        
+                        foreach ($movements as $movement) {
                             $isAdjustment = in_array($movement->movement_type, ['adjustment', 'waste', 'expired', 'return']);
-                            
-                            // Only classify as stock in/out if it's NOT an adjustment
                             $isStockIn = !$isAdjustment && $movement->quantity >= 0;
                             $isStockOut = !$isAdjustment && $movement->quantity < 0;
+                            
+                            $movementsWithBalance[] = [
+                                'movement' => $movement,
+                                'isAdjustment' => $isAdjustment,
+                                'isStockIn' => $isStockIn,
+                                'isStockOut' => $isStockOut
+                            ];
+                        }
+                    @endphp
+                    
+                    @forelse($movements as $index => $movement)
+                        @php
+                            $movementData = $movementsWithBalance[$index];
+                            $isAdjustment = $movementData['isAdjustment'];
+                            $isStockIn = $movementData['isStockIn'];
+                            $isStockOut = $movementData['isStockOut'];
                             
                             $rowClass = 'hover:bg-cream-bg/50 transition-colors group';
                             if ($isAdjustment) {
@@ -236,8 +259,16 @@
                             $quantityDisplay = ($isStockIn ? '+' : '') . number_format($movement->quantity, 2);
                             $quantityColor = $isStockIn ? 'text-green-600' : 'text-red-600';
                             
-                            // Simulated running balance for display (as per original)
-                            $runningBalance = $metrics['current_balance']; 
+                            // Calculate running balance efficiently
+                            // Sum all movements up to this point in time
+                            $runningBalance = 0;
+                            foreach ($allMovementsQuery as $movementItem) {
+                                if ($movementItem->created_at->lte($movement->created_at)) {
+                                    $runningBalance += $movementItem->quantity;
+                                } else {
+                                    break; // Since movements are ordered by created_at, we can break early
+                                }
+                            }
                         @endphp
 
                         <tr class="{{ $rowClass }} transaction-row" 

@@ -63,6 +63,55 @@ class FulfillmentController extends Controller
     }
 
     /**
+     * Get requisition details for viewing (AJAX)
+     */
+    public function getRequisitionDetails($requisitionId)
+    {
+        try {
+            $requisition = Requisition::with([
+                'requestedBy:id,name',
+                'requisitionItems.item.unit',
+                'requisitionItems.item.currentStockRecord'
+            ])->findOrFail($requisitionId);
+
+            return response()->json([
+                'success' => true,
+                'requisition' => [
+                    'id' => $requisition->id,
+                    'requisition_number' => $requisition->requisition_number,
+                    'status' => $requisition->status,
+                    'request_date' => $requisition->request_date,
+                    'department' => $requisition->department,
+                    'purpose' => $requisition->purpose,
+                    'requestedBy' => [
+                        'name' => $requisition->requestedBy->name ?? 'Unknown'
+                    ],
+                    'requisitionItems' => $requisition->requisitionItems->map(function($item) {
+                        return [
+                            'id' => $item->id,
+                            'quantity_requested' => $item->quantity_requested,
+                            'item' => [
+                                'name' => $item->item->name ?? 'Unknown Item',
+                                'item_code' => $item->item->item_code ?? 'N/A',
+                                'unit' => [
+                                    'symbol' => $item->item->unit->symbol ?? 'pcs'
+                                ]
+                            ]
+                        ];
+                    })
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting requisition details: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load requisition details'
+            ], 500);
+        }
+    }
+
+    /**
      * Quick action: Start picking for requisition
      */
     public function startPicking($requisitionId)
@@ -155,7 +204,20 @@ class FulfillmentController extends Controller
     {
         try {
             \Log::info('Confirm issuance request received:', $request->all());
-            
+
+            // Normalize boolean flags coming from FormData (strings like "true"/"false")
+            foreach (['partial_fulfillment', 'auto_generate_pr'] as $booleanField) {
+                if ($request->has($booleanField)) {
+                    $request->merge([
+                        $booleanField => filter_var(
+                            $request->input($booleanField),
+                            FILTER_VALIDATE_BOOLEAN,
+                            FILTER_NULL_ON_FAILURE
+                        )
+                    ]);
+                }
+            }
+
             // Use more flexible validation - updated to handle multi_batch_selections
             $validatedData = $request->validate([
                 'requisition_id' => 'required|exists:requisitions,id',
@@ -176,8 +238,8 @@ class FulfillmentController extends Controller
             $multiBatchSelections = $request->multi_batch_selections ?? [];
             $processedItems = $request->processed_items ?? [];
             $shortages = $request->shortages ?? [];
-            $partialFulfillment = $request->partial_fulfillment ?? false;
-            $autoGeneratePR = $request->auto_generate_pr ?? false;
+            $partialFulfillment = $request->boolean('partial_fulfillment');
+            $autoGeneratePR = $request->boolean('auto_generate_pr');
             
             \Log::info('Processing requisition with multi-batch selections:', [
                 'requisition_id' => $requisition->id,

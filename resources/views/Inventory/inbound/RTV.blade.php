@@ -89,7 +89,7 @@
         </div>
 
         {{-- Modal Body --}}
-        <form id="rtvForm" action="{{ route('inventory.inbound.rtv.store') }}" method="POST" class="flex-1 overflow-hidden flex flex-col">
+        <form id="rtvForm" class="flex-1 overflow-hidden flex flex-col">
             @csrf
             <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
                 
@@ -107,7 +107,13 @@
 
                 {{-- Step 2: The Items Table (Hidden until PO selected) --}}
                 <div id="itemsSection" class="hidden">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">2. Select Items to Return</label>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="block text-xs font-bold text-gray-500 uppercase">2. Select Items to Return</label>
+                        <div class="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Enter quantities for items you want to return
+                        </div>
+                    </div>
                     <div class="border border-border-soft rounded-lg overflow-hidden">
                         <table class="min-w-full divide-y divide-gray-100">
                             <thead class="bg-gray-50 text-xs uppercase font-bold text-gray-500">
@@ -132,22 +138,104 @@
                 </div>
 
                 {{-- Basic Details --}}
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">General Notes</label>
-                    <textarea name="notes" class="w-full border-gray-200 rounded-lg text-sm" rows="2" placeholder="Any additional details..."></textarea>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">3. Return Date</label>
+                        <input type="date" 
+                               name="return_date" 
+                               value="{{ date('Y-m-d') }}"
+                               class="w-full border-gray-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                               required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">General Notes</label>
+                        <textarea name="notes" class="w-full border-gray-200 rounded-lg text-sm" rows="2" placeholder="Any additional details..."></textarea>
+                    </div>
                 </div>
             </div>
 
             {{-- Footer --}}
             <div class="px-6 py-4 bg-gray-50 border-t border-border-soft flex justify-end gap-3">
                 <button type="button" onclick="closeRtvModal()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 text-sm font-bold">Cancel</button>
-                <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold shadow-sm">Submit Return</button>
+                <button type="button" onclick="submitRtvForm()" id="submitBtn" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-bold shadow-sm">
+                    <i class="fas fa-spinner fa-spin hidden" id="submitSpinner"></i>
+                    <span id="submitText">Submit Return</span>
+                </button>
             </div>
         </form>
     </div>
 </div>
 
+{{-- Success Modal --}}
+<div id="successModal" class="fixed inset-0 z-50 hidden bg-green-500/10 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-green-200">
+        <div class="px-6 py-4 border-b border-green-100 flex justify-center">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-check-circle text-2xl text-green-600"></i>
+            </div>
+        </div>
+        <div class="px-6 py-6 text-center">
+            <h3 class="font-display text-xl font-bold text-green-800 mb-2">Return Created Successfully!</h3>
+            <p class="text-gray-600 mb-4">Your RTV transaction has been processed.</p>
+            <div class="bg-green-50 rounded-lg p-4 mb-4">
+                <div class="text-sm text-green-800">
+                    <div class="font-bold" id="successRtvNumber">RTV-2025-0001</div>
+                    <div class="text-green-600">Return to Vendor Transaction</div>
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-4 bg-green-50 border-t border-green-100 flex justify-center gap-3">
+            <button onclick="closeSuccessModal()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-bold shadow-sm">
+                <i class="fas fa-check mr-2"></i>Done
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+    // 0. Form Validation
+    function validateForm() {
+        // Check if a purchase order is selected
+        const poSelect = document.getElementById('poSelect');
+        if (!poSelect.value) {
+            alert('Please select a Purchase Order first.');
+            poSelect.focus();
+            return false;
+        }
+
+        // Check if any items have quantities entered
+        const itemsSection = document.getElementById('itemsSection');
+        if (itemsSection.classList.contains('hidden')) {
+            alert('Please load items from the selected Purchase Order first.');
+            return false;
+        }
+
+        // Check if at least one item has a quantity entered
+        const quantityInputs = document.querySelectorAll('input[name*="quantity_returned"]');
+        let hasQuantity = false;
+        
+        quantityInputs.forEach(input => {
+            if (parseFloat(input.value) > 0) {
+                hasQuantity = true;
+            }
+        });
+
+        if (!hasQuantity) {
+            alert('Please enter at least one item quantity to return.');
+            return false;
+        }
+
+        // Check if return date is selected
+        const returnDate = document.querySelector('input[name="return_date"]');
+        if (!returnDate.value) {
+            alert('Please select a return date.');
+            returnDate.focus();
+            return false;
+        }
+
+        return true;
+    }
+
     // 1. Open/Close Modal
     function openRtvModal() {
         document.getElementById('rtvModal').classList.remove('hidden');
@@ -156,6 +244,26 @@
         document.getElementById('rtvModal').classList.add('hidden');
         document.getElementById('rtvForm').reset();
         document.getElementById('itemsSection').classList.add('hidden');
+        
+        // Reset return date to today
+        const returnDateInput = document.querySelector('input[name="return_date"]');
+        if (returnDateInput) {
+            returnDateInput.value = new Date().toISOString().split('T')[0];
+        }
+    }
+
+    // Success Modal Functions
+    function openSuccessModal(rtvNumber) {
+        document.getElementById('successRtvNumber').textContent = rtvNumber;
+        document.getElementById('successModal').classList.remove('hidden');
+    }
+    
+    function closeSuccessModal() {
+        document.getElementById('successModal').classList.add('hidden');
+        // Optionally refresh the page to show the new RTV in the list
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
     }
 
     // 2. Load Items from Backend
@@ -221,7 +329,59 @@
         }
     }
 
-    // 3. Auto-Calculate Total Value
+    // 3. Submit Form via AJAX
+    async function submitRtvForm() {
+        // Validate form first
+        if (!validateForm()) {
+            return;
+        }
+
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        const submitSpinner = document.getElementById('submitSpinner');
+        const submitText = document.getElementById('submitText');
+        
+        submitBtn.disabled = true;
+        submitSpinner.classList.remove('hidden');
+        submitText.textContent = 'Processing...';
+
+        try {
+            const formData = new FormData(document.getElementById('rtvForm'));
+            
+            const response = await fetch('{{ route('inventory.inbound.rtv.store') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                },
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Close the RTV modal
+                closeRtvModal();
+                
+                // Show success modal
+                openSuccessModal(data.rtv_number);
+            } else {
+                // Show error
+                alert('Error: ' + (data.message || 'Failed to create RTV transaction'));
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while processing your request.');
+        } finally {
+            // Reset button state
+            submitBtn.disabled = false;
+            submitSpinner.classList.add('hidden');
+            submitText.textContent = 'Submit Return';
+        }
+    }
+
+    // 4. Auto-Calculate Total Value
     function calculateTotal() {
         let total = 0;
         const rows = document.querySelectorAll('#poItemsContainer tr');

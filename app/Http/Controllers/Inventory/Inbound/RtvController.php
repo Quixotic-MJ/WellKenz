@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\PurchaseOrder;
 use App\Models\Item;
 use App\Models\StockMovement;
+use App\Models\CurrentStock;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -337,17 +338,42 @@ class RtvController extends Controller
     public function storeRtv(Request $request)
     {
         try {
-            $request->validate([
+            // Custom validation for items - only validate items with quantity > 0
+            $validationRules = [
                 'supplier_id' => 'required|exists:suppliers,id',
                 'purchase_order_id' => 'nullable|exists:purchase_orders,id',
                 'return_date' => 'required|date',
                 'notes' => 'nullable|string|max:1000',
                 'items' => 'required|array|min:1',
-                'items.*.item_id' => 'required|exists:items,id',
-                'items.*.quantity_returned' => 'required|numeric|min:0.001',
-                'items.*.unit_cost' => 'required|numeric|min:0.01',
-                'items.*.reason' => 'required|string|max:500'
-            ]);
+            ];
+
+            // Add conditional validation for items with quantity > 0
+            foreach ($request->items as $index => $item) {
+                if (isset($item['quantity_returned']) && floatval($item['quantity_returned']) > 0) {
+                    $validationRules["items.{$index}.item_id"] = 'required|exists:items,id';
+                    $validationRules["items.{$index}.quantity_returned"] = 'required|numeric|min:0.001';
+                    $validationRules["items.{$index}.unit_cost"] = 'required|numeric|min:0.01';
+                    $validationRules["items.{$index}.reason"] = 'required|string|max:500';
+                }
+            }
+
+            // Also ensure at least one item has quantity > 0
+            $hasItemsWithQuantity = false;
+            foreach ($request->items as $item) {
+                if (isset($item['quantity_returned']) && floatval($item['quantity_returned']) > 0) {
+                    $hasItemsWithQuantity = true;
+                    break;
+                }
+            }
+
+            if (!$hasItemsWithQuantity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please enter at least one item quantity to return.'
+                ], 422);
+            }
+
+            $request->validate($validationRules);
 
             DB::beginTransaction();
 
@@ -357,10 +383,12 @@ class RtvController extends Controller
             $rtvCount = RtvTransaction::whereYear('created_at', now()->year)->count();
             $rtvNumber = 'RTV-' . now()->format('Y') . '-' . str_pad($rtvCount + 1, 4, '0', STR_PAD_LEFT);
 
-            // Calculate total value
+            // Calculate total value (only for items with quantity > 0)
             $totalValue = 0;
             foreach ($request->items as $item) {
-                $totalValue += ($item['quantity_returned'] * $item['unit_cost']);
+                if (isset($item['quantity_returned']) && floatval($item['quantity_returned']) > 0) {
+                    $totalValue += ($item['quantity_returned'] * $item['unit_cost']);
+                }
             }
 
             // Create RTV transaction
@@ -375,27 +403,40 @@ class RtvController extends Controller
                 'created_by' => $user->id
             ]);
 
-            // Create RTV items
+            // Create RTV items (only for items with quantity > 0)
             foreach ($request->items as $itemData) {
-                RtvItem::create([
-                    'rtv_id' => $rtv->id,
-                    'item_id' => $itemData['item_id'],
-                    'quantity_returned' => $itemData['quantity_returned'],
-                    'unit_cost' => $itemData['unit_cost'],
-                    'reason' => $itemData['reason']
-                ]);
+                if (isset($itemData['quantity_returned']) && floatval($itemData['quantity_returned']) > 0) {
+                    RtvItem::create([
+                        'rtv_id' => $rtv->id,
+                        'item_id' => $itemData['item_id'],
+                        'quantity_returned' => $itemData['quantity_returned'],
+                        'unit_cost' => $itemData['unit_cost'],
+                        'reason' => $itemData['reason']
+                    ]);
 
-                // Create stock movement for return
-                StockMovement::create([
-                    'item_id' => $itemData['item_id'],
-                    'movement_type' => 'return',
-                    'reference_number' => $rtvNumber,
-                    'quantity' => -$itemData['quantity_returned'], // Negative for outgoing stock
-                    'unit_cost' => $itemData['unit_cost'],
-                    'total_cost' => -($itemData['quantity_returned'] * $itemData['unit_cost']),
-                    'notes' => "RTV Return - Reason: {$itemData['reason']}",
-                    'user_id' => $user->id
-                ]);
+                    // Create stock movement for return
+                    StockMovement::create([
+                        'item_id' => $itemData['item_id'],
+                        'movement_type' => 'return',
+                        'reference_number' => $rtvNumber,
+                        'quantity' => -$itemData['quantity_returned'], // Negative for outgoing stock
+                        'unit_cost' => $itemData['unit_cost'],
+                        'total_cost' => -($itemData['quantity_returned'] * $itemData['unit_cost']),
+                        'notes' => "RTV Return - Reason: {$itemData['reason']}",
+                        'user_id' => $user->id
+                    ]);
+
+                    // Update current stock - DEDUCT the returned quantity
+                    $currentStock = CurrentStock::firstOrNew(['item_id' => $itemData['item_id']]);
+                    $currentStock->current_quantity -= $itemData['quantity_returned'];
+                    
+                    // Ensure current quantity doesn't go below zero
+                    if ($currentStock->current_quantity < 0) {
+                        $currentStock->current_quantity = 0;
+                    }
+                    
+                    $currentStock->save();
+                }
             }
 
             // Create notification for relevant users
