@@ -40,6 +40,7 @@ use App\Http\Controllers\Employee\RequisitionController as EmployeeRequisitionCo
 use App\Http\Controllers\Employee\ProductionController as EmployeeProductionController;
 use App\Http\Controllers\Employee\RecipeController as EmployeeRecipeController;
 use App\Http\Controllers\Employee\Notifications\NotificationController as EmployeeNotificationController;
+
 // Supervisor namespace controllers (incremental split)
 use App\Http\Controllers\Supervisor\InventoryController as SupervisorInventoryController;
 use App\Http\Controllers\Supervisor\ReportsController as SupervisorReportsController;
@@ -328,6 +329,15 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     Route::put('/suppliers/{supplier}', [PurchasingSupplierController::class, 'updateSupplier'])->name('suppliers.update');
     Route::delete('/suppliers/{supplier}', [PurchasingSupplierController::class, 'destroySupplier'])->name('suppliers.destroy');
     Route::patch('/suppliers/{supplier}/toggle-status', [PurchasingSupplierController::class, 'toggleSupplierStatus'])->name('suppliers.toggle-status');
+    
+    // Supplier Items Management
+    Route::get('/suppliers/{supplier}/items', [PurchasingSupplierController::class, 'getSupplierItems'])->name('suppliers.items');
+    Route::post('/suppliers/{supplier}/items', [PurchasingSupplierController::class, 'addSupplierItems'])->name('suppliers.items.add');
+    Route::get('/suppliers/{supplier}/available-items', [PurchasingSupplierController::class, 'getAvailableItems'])->name('suppliers.available-items');
+    Route::get('/supplier-items/{supplierItem}', [PurchasingSupplierController::class, 'showSupplierItem'])->name('supplier-items.show');
+    Route::patch('/supplier-items/{supplierItem}', [PurchasingSupplierController::class, 'updateSupplierItem'])->name('supplier-items.update');
+    Route::delete('/supplier-items/{supplierItem}', [PurchasingSupplierController::class, 'removeSupplierItem'])->name('supplier-items.remove');
+    Route::post('/suppliers/bulk-update-prices', [PurchasingSupplierController::class, 'bulkUpdateSupplierItemPrices'])->name('suppliers.bulk-update-prices');
     Route::get('/suppliers/prices', [PurchasingPriceListController::class, 'supplierPriceList'])->name('suppliers.prices');
     Route::get('/suppliers/prices/export', [PurchasingPriceListController::class, 'exportSupplierPriceList'])->name('suppliers.prices.export');
     Route::get('/suppliers/prices/update', [PurchasingPriceListController::class, 'showPriceUpdate'])->name('suppliers.prices.update');

@@ -47,16 +47,7 @@
             <span class="ml-2">Create PO</span>
         </a>
 
-        {{-- Bulk Configure PO --}}
-        <a href="{{ Route::has('purchasing.po.bulk-configure') ? route('purchasing.po.bulk-configure') : '#' }}"
-           id="menu-purchasing-po-bulk-configure"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('purchasing.po.bulk-configure') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-cogs w-6 text-center text-sm {{ request()->routeIs('purchasing.po.bulk-configure') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Bulk Configure PO</span>
-        </a>
+      
 
 
         {{-- Open Orders --}}
@@ -94,35 +85,14 @@
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
             <i class="fas fa-truck w-6 text-center text-sm {{ request()->routeIs('purchasing.suppliers*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Supplier Masterlist</span>
+            <span class="ml-2">Supplier Management</span>
         </a>
 
-        {{-- Price Lists --}}
-        <a href="{{ Route::has('purchasing.suppliers.prices') ? route('purchasing.suppliers.prices') : '#' }}"
-           id="menu-purchasing-suppliers-prices"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('purchasing.suppliers.prices') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-tags w-6 text-center text-sm {{ request()->routeIs('purchasing.suppliers.prices') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Price Lists</span>
-        </a>
 
         {{-- SECTION: REPORTS --}}
         <div class="px-3 pt-6 pb-2">
             <p class="text-[10px] font-bold text-white/40 uppercase tracking-widest font-display">Analysis</p>
         </div>
-
-        {{-- Purchase History --}}
-        <a href="{{ Route::has('purchasing.reports.history') ? route('purchasing.reports.history') : '#' }}"
-           id="menu-purchasing-reports-history"
-           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('purchasing.reports.history') 
-              ? 'bg-white/10 text-white border-l-2 border-caramel' 
-              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-chart-bar w-6 text-center text-sm {{ request()->routeIs('purchasing.reports.history') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
-            <span class="ml-2">Purchase History</span>
-        </a>
 
         {{-- RTV Reports --}}
         <a href="{{ Route::has('purchasing.reports.rtv') ? route('purchasing.reports.rtv') : '#' }}"

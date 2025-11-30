@@ -75,7 +75,7 @@
                 <div class="md:col-span-3 relative">
                     <select name="supplier_id" class="w-full px-4 py-2.5 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm text-gray-600 cursor-pointer focus:ring-2 focus:ring-caramel/20 transition-all appearance-none">
                         <option value="">All Suppliers</option>
-                        @foreach(\App\Models\Supplier::where('is_active', true)->orderBy('name')->limit(10)->get() as $supplier)
+                        @foreach(\App\Models\Supplier::where('is_active', true)->orderBy('name')->get() as $supplier)
                             <option value="{{ $supplier->id }}" {{ request('supplier_id') == $supplier->id ? 'selected' : '' }}>
                                 {{ $supplier->name }}
                             </option>
@@ -97,10 +97,7 @@
 
                 {{-- Action Buttons --}}
                 <div class="md:col-span-2 flex gap-2">
-                    <button type="submit" class="flex-1 px-3 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-sm">
-                        Apply
-                    </button>
-                    <button type="button" onclick="clearFilters()" class="flex-1 px-3 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-50 transition-all">
+                    <button type="button" id="clearFiltersBtn" class="flex-1 px-3 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-bold rounded-lg hover:bg-gray-50 transition-all">
                         Clear
                     </button>
                 </div>
@@ -328,6 +325,9 @@ class OpenOrdersManager {
             checkbox.addEventListener('change', this.updateSelectionUI.bind(this));
         });
 
+        // Filter auto-apply functionality
+        this.setupFilterAutoApply();
+
         document.getElementById('exportDropdown')?.addEventListener('click', (e) => {
             e.stopPropagation();
             document.getElementById('exportMenu').classList.toggle('hidden');
@@ -340,6 +340,91 @@ class OpenOrdersManager {
                 dropdown.classList.add('hidden');
             }
         });
+    }
+
+    setupFilterAutoApply() {
+        const filterForm = document.getElementById('filterForm');
+        if (!filterForm) return;
+
+        // Search input - auto-apply with debounce
+        const searchInput = filterForm.querySelector('input[name="search"]');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.applyFilters();
+                }, 500); // 500ms delay for search
+            });
+        }
+
+        // Supplier select - auto-apply immediately
+        const supplierSelect = filterForm.querySelector('select[name="supplier_id"]');
+        if (supplierSelect) {
+            supplierSelect.addEventListener('change', () => {
+                this.applyFilters();
+            });
+        }
+
+        // Status select - auto-apply immediately
+        const statusSelect = filterForm.querySelector('select[name="status"]');
+        if (statusSelect) {
+            statusSelect.addEventListener('change', () => {
+                this.applyFilters();
+            });
+        }
+
+        // Clear filters button
+        const clearBtn = document.getElementById('clearFiltersBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.clearFilters();
+            });
+        }
+
+        // Apply filters button - keep original functionality
+        const applyBtn = document.getElementById('applyFiltersBtn');
+        if (applyBtn) {
+            applyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.applyFilters();
+            });
+        }
+    }
+
+    applyFilters() {
+        const filterForm = document.getElementById('filterForm');
+        if (filterForm) {
+            // Add loading state
+            const applyBtn = document.getElementById('applyFiltersBtn');
+            if (applyBtn) {
+                applyBtn.textContent = 'Applying...';
+                applyBtn.disabled = true;
+            }
+
+            // Submit the form
+            filterForm.submit();
+        }
+    }
+
+    clearFilters() {
+        const filterForm = document.getElementById('filterForm');
+        if (!filterForm) return;
+
+        // Clear all filter inputs
+        const searchInput = filterForm.querySelector('input[name="search"]');
+        const supplierSelect = filterForm.querySelector('select[name="supplier_id"]');
+        const statusSelect = filterForm.querySelector('select[name="status"]');
+
+        if (searchInput) searchInput.value = '';
+        if (supplierSelect) supplierSelect.value = '';
+        if (statusSelect) statusSelect.value = '';
+
+        // Submit the cleared form
+        setTimeout(() => {
+            this.applyFilters();
+        }, 100);
     }
 
     handleSelectAll(e) {
@@ -463,10 +548,13 @@ class OpenOrdersManager {
 
 // Global Functions
 let openOrdersManager;
-document.addEventListener('DOMContentLoaded', () => { openOrdersManager = new OpenOrdersManager(); });
+document.addEventListener('DOMContentLoaded', () => { 
+    openOrdersManager = new OpenOrdersManager(); 
+});
 
-function clearFilters() { window.location.href = "{{ route('purchasing.po.open') }}"; }
-function changePerPage(val) { 
+// Expose methods that delegate to the class
+window.clearFilters = () => openOrdersManager.clearFilters();
+window.changePerPage = (val) => { 
     const url = new URL(window.location.href);
     url.searchParams.set('per_page', val);
     window.location.href = url.toString();
