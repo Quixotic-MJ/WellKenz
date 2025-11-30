@@ -1461,6 +1461,10 @@ function closeRejectReasonModal() {
     RequisitionManager.closeRejectReasonModal();
 }
 
+function closeConfirmModal() {
+    RequisitionManager.closeConfirmModal();
+}
+
 // Clear all filters and reset the form
 function clearFilters() {
     // Reset form fields

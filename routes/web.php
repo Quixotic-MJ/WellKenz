@@ -50,6 +50,7 @@ use App\Http\Controllers\Supervisor\DashboardController as SupervisorDashboardCo
 use App\Http\Controllers\Supervisor\ApprovalsController as SupervisorApprovalsController;
 use App\Http\Controllers\Supervisor\Notifications\NotificationController as SupervisorNotificationController;
 use App\Http\Controllers\Supervisor\RequisitionController as SupervisorRequisitionController;
+use App\Http\Controllers\ProfileController;
 
 /* ----------------------------------------------------------
    PUBLIC ROUTES (Guests can access)
@@ -59,6 +60,17 @@ Route::get('/', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+/* ----------------------------------------------------------
+   SHARED PROFILE ROUTES (All authenticated users)
+ ---------------------------------------------------------- */
+
+// Profile routes accessible to all authenticated users regardless of role
+Route::middleware(['auth'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::patch('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
+    Route::patch('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.password');
+    Route::patch('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
+});
 
 /* ----------------------------------------------------------
    PROTECTED ROUTES (Grouped by Role)

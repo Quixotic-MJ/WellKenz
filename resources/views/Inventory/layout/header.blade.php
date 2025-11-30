@@ -120,7 +120,7 @@
                         </div>
                     </div>
                     <div class="p-2 space-y-1">
-                        <a href="#" class="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-cream-bg hover:text-chocolate transition rounded-xl group font-medium">
+                        <a href="{{ route('profile.index') }}" class="flex items-center space-x-3 px-4 py-3 text-sm text-gray-700 hover:bg-cream-bg hover:text-chocolate transition rounded-xl group font-medium">
                             <div class="w-8 h-8 rounded-lg bg-white border border-border-soft text-gray-400 group-hover:border-caramel group-hover:text-caramel flex items-center justify-center transition-colors shadow-sm">
                                 <i class="fas fa-user text-xs"></i>
                             </div>

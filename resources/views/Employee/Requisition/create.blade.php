@@ -28,7 +28,7 @@
                     
                     <div class="relative sm:w-64">
                         <select id="categorySelect" onchange="filterItems(this.value)" 
-                            class="block w-full pl-3 pr-10 py-2.5 text-base border-gray-200 focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm rounded-xl cursor-pointer bg-white">
+                            class="block w-full pl-3 pr-10 py-2.5 text-base border-gray-200 focus:outline-none focus:ring-2 focus:ring-caramel/20 focus:border-caramel sm:text-sm rounded-xl cursor-pointer bg-white appearance-none">
                             <option value="all">All Categories</option>
                             @if(isset($categories) && count($categories) > 0)
                                 @foreach($categories as $category)

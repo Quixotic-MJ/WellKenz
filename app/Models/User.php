@@ -46,7 +46,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
-        'password',
+        'password_hash',
         'role',
         'is_active',
         'last_login_at',
@@ -58,7 +58,6 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
-        'password_hash',
         'remember_token',
     ];
 
@@ -73,17 +72,7 @@ class User extends Authenticatable
         'last_login_at' => 'datetime',
     ];
 
-    /**
-     * Get the password attribute (for Laravel's Auth system).
-     * This method allows Laravel's Auth::attempt() to work with password_hash column.
-     *
-     * @param string $password
-     * @return void
-     */
-    public function setPasswordAttribute($password)
-    {
-        $this->attributes['password_hash'] = Hash::make($password);
-    }
+
 
     /**
      * Get the password for authentication.

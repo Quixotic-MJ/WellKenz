@@ -56,9 +56,7 @@ graph TD
 - [ ] **T001:** Create requisition with single item
 - [ ] **T002:** Create requisition with multiple items
 - [ ] **T003:** Create requisition with different units of measurement
-- [ ] **T004:** Submit requisition with future delivery date
 - [ ] **T005:** Search and select items from inventory catalog
-- [ ] **T006:** Add custom items not in catalog
 - [ ] **T007:** Calculate estimated total cost
 - [ ] **T008:** Save requisition as draft
 - [ ] **T009:** Edit draft requisition before submission
