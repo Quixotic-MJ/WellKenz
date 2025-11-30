@@ -525,4 +525,46 @@ class GeneralController extends Controller
                "📍 Location: " . ($batch->location ?? 'Main Storage') . "\n\n" .
                "💡 Action Required: Please prioritize usage of this batch in production.";
     }
+
+    /**
+     * Get unread notification count for sidebar badge (AJAX endpoint)
+     */
+    public function getNotificationCount()
+    {
+        try {
+            $unreadCount = \App\Models\Notification::unreadCountForCurrentUser();
+
+            return response()->json([
+                'unread_count' => $unreadCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting notification count: ' . $e->getMessage());
+            
+            return response()->json([
+                'unread_count' => 0
+            ]);
+        }
+    }
+
+    /**
+     * Get pending requisitions count for sidebar badge (AJAX endpoint)
+     */
+    public function getPendingRequisitionsCount()
+    {
+        try {
+            $pendingCount = \App\Models\Requisition::countPendingFulfillment();
+
+            return response()->json([
+                'pending_count' => $pendingCount
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error getting pending requisitions count: ' . $e->getMessage());
+            
+            return response()->json([
+                'pending_count' => 0
+            ]);
+        }
+    }
 }

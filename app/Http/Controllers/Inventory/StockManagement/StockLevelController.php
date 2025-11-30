@@ -23,80 +23,83 @@ class StockLevelController extends Controller
     public function index(Request $request)
     {
         try {
-            $query = CurrentStock::with([
-                'item.unit', 
-                'item.category'
-            ])
-            ->whereHas('item', function($q) {
-                $q->where('is_active', true);
-            });
+            // Get filter parameters
+            $search = $request->get('search', '');
+            $category = $request->get('category', '');
+            $status = $request->get('status', '');
+            $perPage = $request->get('per_page', 20);
+
+            // Build the query - matching Supervisor approach
+            $query = Item::with(['currentStockRecord', 'unit', 'category', 'stockMovements' => function($query) {
+                $query->latest()->limit(1);
+            }])->where('is_active', true);
 
             // Apply filters
-            if ($request->has('category_id') && $request->category_id !== 'all') {
-                $query->whereHas('item', function($q) use ($request) {
-                    $q->where('category_id', $request->category_id);
+            if (!empty($search)) {
+                $query->where(function($q) use ($search) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%'])
+                      ->orWhereRaw('LOWER(item_code) LIKE ?', ['%' . strtolower($search) . '%']);
                 });
             }
 
-            if ($request->has('stock_status') && $request->stock_status !== 'all') {
-                switch ($request->stock_status) {
-                    case 'out_of_stock':
-                        $query->where('current_quantity', 0);
-                        break;
-                    case 'low_stock':
-                        $query->whereHas('item', function($q) {
-                            $q->whereRaw('current_stock.current_quantity <= items.min_stock_level');
-                        });
-                        break;
-                    case 'good_stock':
-                        $query->whereHas('item', function($q) {
-                            $q->whereRaw('current_stock.current_quantity > items.min_stock_level');
-                        });
-                        break;
-                }
-            }
-
-            if ($request->has('search') && !empty($request->search)) {
-                $search = $request->search;
-                $query->whereHas('item', function($q) use ($search) {
-                    $q->where('name', 'like', '%' . $search . '%')
-                      ->orWhere('item_code', 'like', '%' . $search . '%');
+            if (!empty($category)) {
+                $query->whereHas('category', function($q) use ($category) {
+                    $q->where('id', $category);
                 });
             }
 
-            $stockLevels = $query->orderBy('updated_at', 'desc')
-                ->paginate(20)
-                ->withQueryString();
+            if (!empty($status)) {
+                $query->where(function($q) use ($status) {
+                    $q->whereHas('currentStockRecord', function($stockQuery) use ($status) {
+                        if ($status === 'good') {
+                            $stockQuery->whereHas('item', function($itemQuery) {
+                                $itemQuery->whereColumn('current_stock.current_quantity', '>', 'items.reorder_point');
+                            });
+                        } elseif ($status === 'low') {
+                            $stockQuery->where('current_quantity', '>', 0)
+                                        ->whereHas('item', function($itemQuery) {
+                                            $itemQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point')
+                                                      ->orWhereColumn('current_stock.current_quantity', '<=', 'items.min_stock_level');
+                                        });
+                        } elseif ($status === 'critical') {
+                            $stockQuery->where('current_quantity', '<=', 0);
+                        }
+                    })->orWhere(function($noStockQuery) use ($status) {
+                        // Items with no current stock record
+                        if ($status === 'critical') {
+                            $noStockQuery->doesntHave('currentStockRecord');
+                        }
+                    });
+                });
+            }
 
-            // Get filter options
-            $categories = Category::where('is_active', true)->orderBy('name')->get(['id', 'name']);
+            // Get paginated results
+            $stockItems = $query->orderBy('name')->paginate($perPage)->withQueryString();
 
-            // Calculate statistics
-            $totalItems = Item::where('is_active', true)->count();
-            $outOfStock = CurrentStock::whereHas('item', function($q) {
-                $q->where('is_active', true);
-            })->where('current_quantity', 0)->count();
-            $lowStock = CurrentStock::whereHas('item', function($q) {
-                $q->where('is_active', true);
-            })->whereRaw('current_stock.current_quantity <= items.min_stock_level')->count();
-            $goodStock = $totalItems - $outOfStock - $lowStock;
+            // Calculate metrics - matching Supervisor approach
+            $metrics = $this->calculateStockMetrics();
 
-            $stats = [
-                'total_items' => $totalItems,
-                'out_of_stock' => $outOfStock,
-                'low_stock' => $lowStock,
-                'good_stock' => $goodStock,
-                'stock_value' => $this->calculateTotalStockValue()
-            ];
+            // Get categories for filter dropdown
+            $categories = Category::where('is_active', true)->orderBy('name')->get();
 
-            return view('Inventory.stock_management.stock_level', compact('stockLevels', 'categories', 'stats'));
+            return view('Inventory.stock_management.stock_levels', compact('stockItems', 'metrics', 'categories'));
 
         } catch (\Exception $e) {
             \Log::error('Error loading stock levels: ' . $e->getMessage());
-            return view('Inventory.stock_management.stock_level', [
-                'stockLevels' => collect(),
-                'categories' => collect(),
-                'stats' => ['total_items' => 0, 'out_of_stock' => 0, 'low_stock' => 0, 'good_stock' => 0, 'stock_value' => 0]
+            
+            // Return empty paginator to maintain consistency
+            $emptyPaginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                collect(), // items
+                0, // total
+                20, // perPage
+                1, // currentPage
+                ['path' => request()->url(), 'pageName' => 'page']
+            );
+            
+            return view('Inventory.stock_management.stock_levels', [
+                'stockItems' => $emptyPaginator,
+                'metrics' => ['total_items' => 0, 'healthy_stock' => 0, 'low_stock' => 0, 'critical_stock' => 0],
+                'categories' => collect()
             ]);
         }
     }
@@ -109,33 +112,34 @@ class StockLevelController extends Controller
         try {
             $query = CurrentStock::with([
                 'item.unit', 
-                'item.category'
+                'item.category',
+                'item.stockMovements'
             ])
             ->whereHas('item', function($q) {
                 $q->where('is_active', true);
             });
 
             // Apply category filter
-            if ($request->has('category_id') && !empty($request->category_id)) {
+            if ($request->has('category') && !empty($request->category)) {
                 $query->whereHas('item', function($q) use ($request) {
-                    $q->where('category_id', $request->category_id);
+                    $q->where('category_id', $request->category);
                 });
             }
 
             // Apply stock level filters
-            if ($request->has('stock_level') && $request->stock_level !== 'all') {
-                switch ($request->stock_level) {
-                    case 'out_of_stock':
+            if ($request->has('status') && $request->status !== '') {
+                switch ($request->status) {
+                    case 'critical':
                         $query->where('current_quantity', 0);
                         break;
-                    case 'low_stock':
+                    case 'low':
                         $query->whereHas('item', function($q) {
-                            $q->whereRaw('current_stock.current_quantity <= items.min_stock_level');
+                            $q->whereColumn('items.reorder_point', '>=', 'current_stock.current_quantity');
                         });
                         break;
-                    case 'good_stock':
+                    case 'good':
                         $query->whereHas('item', function($q) {
-                            $q->whereRaw('current_stock.current_quantity > items.min_stock_level');
+                            $q->whereColumn('current_stock.current_quantity', '>', 'items.reorder_point');
                         });
                         break;
                 }
@@ -340,8 +344,11 @@ class StockLevelController extends Controller
                 ->whereHas('item', function($q) {
                     $q->where('is_active', true);
                 })
-                ->whereRaw('current_stock.current_quantity <= items.min_stock_level')
                 ->get()
+                ->filter(function($currentStock) {
+                    $item = $currentStock->item;
+                    return $currentStock->current_quantity <= ($item->reorder_point ?? 0);
+                })
                 ->map(function($currentStock) {
                     $item = $currentStock->item;
                     $currentQuantity = (float) $currentStock->current_quantity;
@@ -427,6 +434,262 @@ class StockLevelController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to export stock levels: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculate stock metrics for dashboard
+     */
+    private function calculateStockMetrics()
+    {
+        $totalItems = Item::where('is_active', true)->count();
+
+        // Get items with their current stock
+        $itemsWithStock = Item::with(['currentStockRecord'])
+            ->where('is_active', true)
+            ->get();
+
+        $healthyStock = 0;
+        $lowStock = 0;
+        $criticalStock = 0;
+
+        foreach ($itemsWithStock as $item) {
+            $currentStock = $item->currentStockRecord ? $item->currentStockRecord->current_quantity : 0;
+            $reorderPoint = $item->reorder_point ?? 0;
+            $minStockLevel = $item->min_stock_level ?? 0;
+
+            // Determine stock status
+            if ($currentStock <= 0 || $currentStock <= $reorderPoint * 0.5) {
+                $criticalStock++;
+            } elseif ($currentStock <= $reorderPoint) {
+                $lowStock++;
+            } else {
+                $healthyStock++;
+            }
+        }
+
+        return [
+            'total_items' => $totalItems,
+            'healthy_stock' => $healthyStock,
+            'low_stock' => $lowStock,
+            'critical_stock' => $criticalStock
+        ];
+    }
+
+    /**
+     * Display stock card for a specific item
+     */
+    public function stockCard(Request $request, Item $item)
+    {
+        try {
+            // Check if item exists and is active
+            if (!$item || !$item->is_active) {
+                return redirect()->route('inventory.stock.levels')
+                    ->with('error', 'Item not found or inactive.');
+            }
+
+            // Get all active items for dropdown selector
+            $allItems = Item::with(['category', 'unit', 'currentStockRecord'])
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get();
+
+            // Load current item with relationships
+            $item->load(['category', 'unit', 'currentStockRecord', 'stockMovements.user']);
+
+            // Get stock movements with user relationships
+            $movementsQuery = \App\Models\StockMovement::with(['user'])
+                ->where('item_id', $item->id)
+                ->orderBy('created_at', 'desc');
+
+            // Apply date range filter if provided
+            if ($request->filled('date_from')) {
+                $movementsQuery->whereDate('created_at', '>=', $request->date_from);
+            }
+            if ($request->filled('date_to')) {
+                $movementsQuery->whereDate('created_at', '<=', $request->date_to);
+            }
+
+            $movements = $movementsQuery->paginate(50);
+
+            // Calculate metrics
+            $metrics = $this->calculateStockCardMetrics($item);
+
+            return view('Inventory.stock_management.stock_card', compact('item', 'movements', 'allItems', 'metrics'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error loading stock card for item ' . $item->id . ': ' . $e->getMessage());
+
+            return redirect()->route('inventory.stock.levels')
+                ->with('error', 'Unable to load stock card. Please try again.');
+        }
+    }
+
+    /**
+     * Calculate metrics for stock card display
+     */
+    private function calculateStockCardMetrics($item)
+    {
+        try {
+            $currentStock = $item->currentStockRecord ? (float) $item->currentStockRecord->current_quantity : 0.0;
+            $reorderPoint = (float) ($item->reorder_point ?? 0);
+            $minStockLevel = (float) ($item->min_stock_level ?? 0);
+            $maxStockLevel = (float) ($item->max_stock_level ?? 0);
+
+            // Calculate average daily usage (last 7 days)
+            $sevenDaysAgo = \Carbon\Carbon::now()->subDays(7);
+            $stockOutMovements = \App\Models\StockMovement::where('item_id', $item->id)
+                ->where('created_at', '>=', $sevenDaysAgo)
+                ->where('quantity', '<', 0) // Negative quantities are stock outs
+                ->sum('quantity');
+
+            $averageDailyUsage = abs($stockOutMovements) / 7; // Convert to positive and divide by 7 days
+
+            // Get last restock date
+            $lastRestock = \App\Models\StockMovement::where('item_id', $item->id)
+                ->where('quantity', '>', 0) // Positive quantities are stock ins
+                ->where('movement_type', 'purchase')
+                ->latest('created_at')
+                ->first();
+
+            $lastRestockDate = null;
+            $lastRestockDaysAgo = null;
+            if ($lastRestock) {
+                $lastRestockDate = $lastRestock->created_at;
+                // Use diffForHumans for better time formatting
+                $lastRestockDaysAgo = \Carbon\Carbon::now()->diffForHumans($lastRestock->created_at, true);
+            }
+
+            return [
+                'current_balance' => $currentStock,
+                'reorder_level' => $reorderPoint,
+                'min_stock_level' => $minStockLevel,
+                'max_stock_level' => $maxStockLevel,
+                'average_daily_usage' => round($averageDailyUsage, 1),
+                'last_restock_date' => $lastRestockDate,
+                'last_restock_days_ago' => $lastRestockDaysAgo,
+                'stock_status' => $this->getStockStatus($currentStock, $reorderPoint),
+                'days_of_supply' => $averageDailyUsage > 0 ? round($currentStock / $averageDailyUsage, 1) : 0
+            ];
+
+        } catch (\Exception $e) {
+            \Log::error('Error calculating stock card metrics for item ' . $item->id . ': ' . $e->getMessage());
+
+            // Return default values in case of error
+            return [
+                'current_balance' => 0.0,
+                'reorder_level' => 0.0,
+                'min_stock_level' => 0.0,
+                'max_stock_level' => 0.0,
+                'average_daily_usage' => 0.0,
+                'last_restock_date' => null,
+                'last_restock_days_ago' => null,
+                'stock_status' => 'unknown',
+                'days_of_supply' => 0
+            ];
+        }
+    }
+
+    /**
+     * Get stock status based on current quantity and reorder point
+     */
+    private function getStockStatus($currentStock, $reorderPoint)
+    {
+        if ($currentStock <= 0) {
+            return 'out_of_stock';
+        } elseif ($currentStock <= ($reorderPoint * 0.5)) {
+            return 'critical';
+        } elseif ($currentStock <= $reorderPoint) {
+            return 'low';
+        } else {
+            return 'good';
+        }
+    }
+
+    /**
+     * Store inventory adjustment
+     */
+    public function storeAdjustment(Request $request)
+    {
+        try {
+            $request->validate([
+                'item_id' => 'required|exists:items,id',
+                'adjustment_type' => 'required|in:add,remove',
+                'quantity' => 'required|numeric|min:0.001',
+                'reason_code' => 'required|string',
+                'remarks' => 'required|string|max:500',
+                'photo' => 'nullable|file|mimes:jpeg,png,jpg|max:5120'
+            ]);
+
+            $item = Item::findOrFail($request->item_id);
+            $quantity = $request->adjustment_type === 'remove' ? -abs($request->quantity) : abs($request->quantity);
+
+            // Check stock availability for removals
+            if ($request->adjustment_type === 'remove') {
+                $currentStock = CurrentStock::where('item_id', $item->id)->first();
+                $availableStock = $currentStock ? $currentStock->current_quantity : 0;
+
+                if ($availableStock < abs($quantity)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Insufficient stock. Available: ' . $availableStock . ' ' . ($item->unit->symbol ?? '')
+                    ], 422);
+                }
+            }
+
+            // Calculate costs
+            $unitCost = $item->cost_price;
+            $totalCost = abs($quantity) * $unitCost;
+
+            // Handle photo upload
+            $photoPath = null;
+            if ($request->hasFile('photo')) {
+                $photo = $request->file('photo');
+                $photoName = 'adjustment_' . time() . '.' . $photo->getClientOriginalExtension();
+                $photoPath = $photo->storeAs('adjustments', $photoName, 'public');
+            }
+
+            // Create stock movement record
+            $stockMovement = \App\Models\StockMovement::create([
+                'item_id' => $item->id,
+                'movement_type' => 'adjustment',
+                'quantity' => $quantity,
+                'unit_cost' => $unitCost,
+                'total_cost' => $totalCost,
+                'notes' => $request->remarks,
+                'user_id' => auth()->id(),
+                'created_at' => \Carbon\Carbon::now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Inventory adjustment created successfully',
+                'data' => [
+                    'id' => $stockMovement->id,
+                    'item_name' => $item->name,
+                    'quantity' => $quantity,
+                    'unit_symbol' => $item->unit->symbol ?? '',
+                    'reason' => $request->reason_code,
+                    'total_cost' => $totalCost
+                ]
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errorMessages = [];
+            foreach ($e->errors() as $field => $messages) {
+                $errorMessages = array_merge($errorMessages, $messages);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed: ' . implode(', ', $errorMessages)
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error creating adjustment: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create adjustment'
             ], 500);
         }
     }

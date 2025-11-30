@@ -150,22 +150,49 @@ class PurchaseOrderController extends Controller
 
     public function storePurchaseOrder(Request $request)
     {
-
-        $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'expected_delivery_date' => 'required|date|after_or_equal:today',
-            'notes' => 'nullable|string',
-            'selected_pr_ids' => 'required',
-            'save_option' => 'required|in:create',
-            'items' => 'required|array|min:1',
-            'items.*.item_id' => 'required|exists:items,id',
-            'items.*.quantity' => 'nullable|numeric|min:0.001',
-            'items.*.quantity_ordered' => 'nullable|numeric|min:0.001',
-            'items.*.price' => 'nullable|numeric|min:0.01',
-            'items.*.unit_price' => 'nullable|numeric|min:0.01',
-            'items.*.selected' => 'nullable|boolean',
+        // Debug logging for single PO creation issues
+        Log::info('Single PO Creation Attempt', [
+            'all_input' => $request->all(),
+            'items' => $request->input('items'),
+            'selected_pr_ids' => $request->input('selected_pr_ids'),
+            'supplier_id' => $request->input('supplier_id'),
+            'method' => $request->method(),
+            'url' => $request->url(),
+            'user_agent' => $request->userAgent(),
+            'timestamp' => now()
         ]);
 
+        try {
+            $validatedData = $request->validate([
+                'supplier_id' => 'required|exists:suppliers,id',
+                'expected_delivery_date' => 'required|date|after_or_equal:today',
+                'notes' => 'nullable|string',
+                'selected_pr_ids' => 'required',
+                'items' => 'required|array|min:1',
+                'items.*.item_id' => 'required|exists:items,id',
+                'items.*.quantity' => 'nullable|numeric|min:0.001',
+                'items.*.quantity_ordered' => 'nullable|numeric|min:0.001',
+                'items.*.price' => 'nullable|numeric|min:0.01',
+                'items.*.unit_price' => 'nullable|numeric|min:0.01',
+                'items.*.selected' => 'nullable|boolean',
+            ]);
+            
+            Log::info('Single PO Validation Passed', [
+                'validated_items' => $validatedData['items'],
+                'count' => count($validatedData['items'] ?? [])
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Single PO Validation Failed', [
+                'errors' => $e->errors(),
+                'input' => $request->all(),
+                'message' => $e->getMessage()
+            ]);
+            
+            throw $e;
+        }
+
+        // Process selected PR IDs
         $selectedPRInput = $request->selected_pr_ids;
         if (is_string($selectedPRInput)) {
             $selectedPRIds = array_map('intval', array_filter(explode(',', $selectedPRInput)));
@@ -198,23 +225,59 @@ class PurchaseOrderController extends Controller
         $totalAmount = 0;
         $poItems = [];
 
-        foreach ($request->items as $itemData) {
-            $isSelected = filter_var($itemData['selected'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            if (!$isSelected) {
-                continue;
-            }
+        // Process items from the form - handle both possible field structures
+        $itemsData = $request->input('items', []);
+        
+        // Filter out non-array items and process only selected ones
+        $validItems = array_filter($itemsData, function($item) {
+            return is_array($item) && filter_var($item['selected'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        });
 
+        Log::info('Processing Single PO Items', [
+            'raw_items' => $itemsData,
+            'valid_items_count' => count($validItems),
+            'selected_items' => array_keys($validItems)
+        ]);
+
+        foreach ($validItems as $itemData) {
             $itemId = (int) ($itemData['item_id'] ?? 0);
-            $quantity = isset($itemData['quantity'])
+            $prId = (int) ($itemData['pr_id'] ?? 0);
+            
+            // Get quantity and price - handle both field names
+            $quantity = isset($itemData['quantity']) && $itemData['quantity'] !== ''
                 ? (float) $itemData['quantity']
                 : (float) ($itemData['quantity_ordered'] ?? 0);
-            $unitPrice = isset($itemData['price'])
+                
+            $unitPrice = isset($itemData['price']) && $itemData['price'] !== ''
                 ? (float) $itemData['price']
                 : (float) ($itemData['unit_price'] ?? 0);
 
-            if ($itemId <= 0 || $quantity <= 0 || $unitPrice <= 0) {
+            Log::debug('Processing Item', [
+                'item_id' => $itemId,
+                'pr_id' => $prId,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'raw_item_data' => $itemData
+            ]);
+
+            if ($itemId <= 0) {
+                Log::warning('Invalid item ID in single PO creation', ['item_data' => $itemData]);
                 throw ValidationException::withMessages([
-                    'items' => 'Selected items must include valid quantity and price values.',
+                    'items' => 'Invalid item ID found in selection.',
+                ]);
+            }
+            
+            if ($quantity <= 0) {
+                Log::warning('Invalid quantity in single PO creation', ['item_id' => $itemId, 'quantity' => $quantity]);
+                throw ValidationException::withMessages([
+                    'items' => 'Selected items must have valid quantity (greater than 0).',
+                ]);
+            }
+            
+            if ($unitPrice <= 0) {
+                Log::warning('Invalid unit price in single PO creation', ['item_id' => $itemId, 'unit_price' => $unitPrice]);
+                throw ValidationException::withMessages([
+                    'items' => 'Selected items must have valid unit price (greater than 0).',
                 ]);
             }
 
@@ -230,6 +293,12 @@ class PurchaseOrderController extends Controller
         }
 
         if (empty($poItems)) {
+            Log::error('No valid items selected for single PO creation', [
+                'items_data' => $itemsData,
+                'user_id' => Auth::id(),
+                'supplier_id' => $request->supplier_id
+            ]);
+            
             throw ValidationException::withMessages([
                 'items' => 'Please select at least one item to include in the purchase order.',
             ]);

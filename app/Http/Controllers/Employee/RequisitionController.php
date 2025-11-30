@@ -122,8 +122,17 @@ class RequisitionController extends Controller
                     'user_id' => $supervisor->id,
                     'title' => 'New Requisition Submitted',
                     'message' => "New requisition {$requisitionNumber} has been submitted by " . Auth::user()->name . " for approval.",
-                    'type' => 'requisition',
+                    'type' => 'approval_req',
                     'priority' => 'normal',
+                    'action_url' => route('supervisor.requisitions.details', $requisition->id),
+                    'metadata' => [
+                        'requisition_number' => $requisitionNumber,
+                        'requisition_id' => $requisition->id,
+                        'requester' => Auth::user()->name,
+                        'department' => $validated['department'],
+                        'total_estimated_value' => $totalEstimatedValue,
+                        'purpose' => $validated['purpose']
+                    ],
                     'created_at' => Carbon::now()
                 ]);
             }

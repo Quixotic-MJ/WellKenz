@@ -166,12 +166,14 @@ class Notification extends Model
         return match($this->type) {
             'stock_alert' => 'fas fa-exclamation-triangle text-red-600 bg-red-100',
             'approval_req' => 'fas fa-clipboard-check text-amber-600 bg-amber-100',
+            'requisition' => 'fas fa-clipboard-list text-blue-600 bg-blue-100',
             'system_info' => 'fas fa-database text-blue-500 bg-blue-100',
             'delivery_update' => 'fas fa-truck text-green-600 bg-green-100',
             'production' => 'fas fa-cogs text-purple-600 bg-purple-100',
             'inventory' => 'fas fa-boxes text-indigo-600 bg-indigo-100',
             'purchasing' => 'fas fa-shopping-cart text-orange-600 bg-orange-100',
             'quality' => 'fas fa-check-circle text-emerald-600 bg-emerald-100',
+            'requisition_update' => 'fas fa-sync-alt text-teal-600 bg-teal-100',
             default => 'fas fa-bell text-gray-600 bg-gray-100'
         };
     }

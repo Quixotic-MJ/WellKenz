@@ -26,12 +26,18 @@ class NotificationController extends Controller
             // Get notifications with filtering
             $query = Notification::where('user_id', $user->id);
 
-            // Apply filters
-            if ($request->has('status') && $request->status !== 'all') {
-                if ($request->status === 'read') {
-                    $query->whereNotNull('read_at');
-                } elseif ($request->status === 'unread') {
-                    $query->whereNull('read_at');
+            // Apply filters (using 'filter' parameter to match the view tabs)
+            if ($request->has('filter') && $request->filter !== 'all') {
+                switch ($request->filter) {
+                    case 'unread':
+                        $query->where('is_read', false);
+                        break;
+                    case 'high':
+                        $query->whereIn('priority', ['high', 'urgent']);
+                        break;
+                    case 'urgent':
+                        $query->where('priority', 'urgent');
+                        break;
                 }
             }
 
@@ -59,24 +65,24 @@ class NotificationController extends Controller
                 $query->whereDate('created_at', '<=', $request->date_to);
             }
 
-            $notifications = $query->orderByRaw('CASE WHEN read_at IS NULL THEN 0 ELSE 1 END')
+            $notifications = $query->orderByRaw('CASE WHEN is_read = false THEN 0 ELSE 1 END')
                 ->orderBy('created_at', 'desc')
                 ->paginate(15)
                 ->withQueryString();
 
-            // Get statistics
+            // Get statistics for all notifications (not filtered)
             $stats = [
                 'total' => Notification::where('user_id', $user->id)->count(),
                 'unread' => Notification::where('user_id', $user->id)
-                    ->whereNull('read_at')->count(),
+                    ->where('is_read', false)->count(),
                 'read' => Notification::where('user_id', $user->id)
-                    ->whereNotNull('read_at')->count(),
+                    ->where('is_read', true)->count(),
                 'today' => Notification::where('user_id', $user->id)
                     ->whereDate('created_at', today())->count(),
                 'this_week' => Notification::where('user_id', $user->id)
                     ->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
                 'high_priority' => Notification::where('user_id', $user->id)
-                    ->where('priority', 'high')->count(),
+                    ->whereIn('priority', ['high', 'urgent'])->count(),
                 'urgent' => Notification::where('user_id', $user->id)
                     ->where('priority', 'urgent')->count(),
             ];
@@ -90,6 +96,14 @@ class NotificationController extends Controller
 
             // Get current filter from request, default to 'all'
             $filter = $request->get('filter', 'all');
+            
+            // Debug logging to help troubleshoot filter issues
+            \Log::info('Notification filter debug', [
+                'user_id' => Auth::id(),
+                'filter_param' => $request->get('filter'),
+                'final_filter' => $filter,
+                'query_params' => $request->query()
+            ]);
 
             return view('Inventory.notification', compact('notifications', 'stats', 'notificationTypes', 'filter'));
 
@@ -116,9 +130,9 @@ class NotificationController extends Controller
             $stats = [
                 'total' => Notification::where('user_id', $user->id)->count(),
                 'unread' => Notification::where('user_id', $user->id)
-                    ->whereNull('read_at')->count(),
+                    ->where('is_read', false)->count(),
                 'read' => Notification::where('user_id', $user->id)
-                    ->whereNotNull('read_at')->count(),
+                    ->where('is_read', true)->count(),
                 'today' => Notification::where('user_id', $user->id)
                     ->whereDate('created_at', today())->count(),
                 'this_week' => Notification::where('user_id', $user->id)
@@ -129,10 +143,10 @@ class NotificationController extends Controller
                     ->where('priority', 'urgent')->count(),
                 'today_unread' => Notification::where('user_id', $user->id)
                     ->whereDate('created_at', today())
-                    ->whereNull('read_at')->count(),
+                    ->where('is_read', false)->count(),
                 'critical_issues' => Notification::where('user_id', $user->id)
                     ->where('priority', 'urgent')
-                    ->whereNull('read_at')->count(),
+                    ->where('is_read', false)->count(),
             ];
 
             return response()->json([
@@ -173,11 +187,8 @@ class NotificationController extends Controller
                 ], 403);
             }
 
-            if (!$notification->read_at) {
-                $notification->update([
-                    'read_at' => now(),
-                    'read_by' => Auth::id()
-                ]);
+            if (!$notification->is_read) {
+                $notification->update(['is_read' => true]);
             }
 
             return response()->json([
@@ -207,10 +218,7 @@ class NotificationController extends Controller
                 ], 403);
             }
 
-            $notification->update([
-                'read_at' => null,
-                'read_by' => null
-            ]);
+            $notification->update(['is_read' => false]);
 
             return response()->json([
                 'success' => true,
@@ -235,11 +243,8 @@ class NotificationController extends Controller
             $user = Auth::user();
             
             $updatedCount = Notification::where('user_id', $user->id)
-                ->whereNull('read_at')
-                ->update([
-                    'read_at' => now(),
-                    'read_by' => $user->id
-                ]);
+                ->where('is_read', false)
+                ->update(['is_read' => true]);
 
             return response()->json([
                 'success' => true,
@@ -294,7 +299,7 @@ class NotificationController extends Controller
             $user = Auth::user();
             
             $count = Notification::where('user_id', $user->id)
-                ->whereNull('read_at')
+                ->where('is_read', false)
                 ->count();
 
             return response()->json([
@@ -320,7 +325,7 @@ class NotificationController extends Controller
             $user = Auth::user();
             
             $notifications = Notification::where('user_id', $user->id)
-                ->whereNull('read_at')
+                ->where('is_read', false)
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get()
@@ -333,14 +338,14 @@ class NotificationController extends Controller
                         'priority' => $notification->priority,
                         'action_url' => $notification->action_url,
                         'time_ago' => $notification->created_at->diffForHumans(),
-                        'read_at' => $notification->read_at,
+                        'read_at' => $notification->is_read ? $notification->created_at : null,
                         'icon_class' => $this->getIconClass($notification->type, $notification->priority),
                         'metadata' => $notification->metadata
                     ];
                 });
 
             $unreadCount = Notification::where('user_id', $user->id)
-                ->whereNull('read_at')
+                ->where('is_read', false)
                 ->count();
 
             return response()->json([
@@ -420,20 +425,14 @@ class NotificationController extends Controller
                 case 'mark_read':
                     $processedCount = Notification::where('user_id', $user->id)
                         ->whereIn('id', $notificationIds)
-                        ->whereNull('read_at')
-                        ->update([
-                            'read_at' => now(),
-                            'read_by' => $user->id
-                        ]);
+                        ->where('is_read', false)
+                        ->update(['is_read' => true]);
                     break;
 
                 case 'mark_unread':
                     $processedCount = Notification::where('user_id', $user->id)
                         ->whereIn('id', $notificationIds)
-                        ->update([
-                            'read_at' => null,
-                            'read_by' => null
-                        ]);
+                        ->update(['is_read' => false]);
                     break;
 
                 case 'delete':
@@ -479,11 +478,8 @@ class NotificationController extends Controller
             }
 
             // Mark as read if not already read
-            if (!$notification->read_at) {
-                $notification->update([
-                    'read_at' => now(),
-                    'read_by' => Auth::id()
-                ]);
+            if (!$notification->is_read) {
+                $notification->update(['is_read' => true]);
             }
 
             return response()->json([
@@ -497,8 +493,8 @@ class NotificationController extends Controller
                     'action_url' => $notification->action_url,
                     'metadata' => $notification->metadata,
                     'created_at' => $notification->created_at->toISOString(),
-                    'read_at' => $notification->read_at?->toISOString(),
-                    'is_read' => !is_null($notification->read_at)
+                    'read_at' => $notification->is_read ? $notification->created_at->toISOString() : null,
+                    'is_read' => $notification->is_read
                 ]
             ]);
 
@@ -530,9 +526,9 @@ class NotificationController extends Controller
 
             if ($request->has('status') && $request->status !== 'all') {
                 if ($request->status === 'read') {
-                    $query->whereNotNull('read_at');
+                    $query->where('is_read', true);
                 } elseif ($request->status === 'unread') {
-                    $query->whereNull('read_at');
+                    $query->where('is_read', false);
                 }
             }
 
@@ -546,7 +542,7 @@ class NotificationController extends Controller
                         'message' => $notification->message,
                         'type' => $notification->type,
                         'priority' => $notification->priority,
-                        'is_read' => !is_null($notification->read_at),
+                        'is_read' => $notification->is_read,
                         'created_at' => $notification->created_at->diffForHumans(),
                         'action_url' => $notification->action_url
                     ];

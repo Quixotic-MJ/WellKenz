@@ -97,7 +97,9 @@ class ReceivingController extends Controller
                 'low_stock_items' => Item::with(['currentStockRecord', 'reorder_point'])
                     ->where('is_active', true)
                     ->whereHas('currentStockRecord', function($query) {
-                        $query->where('current_quantity', '<=', DB::raw('COALESCE(items.reorder_point, 10)'));
+                        $query->whereHas('item', function($itemQuery) {
+                            $itemQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point');
+                        });
                     })
                     ->count(),
                 'pending_purchase_orders' => PurchaseOrder::whereIn('status', ['sent', 'confirmed', 'partial'])->count(),
@@ -190,7 +192,9 @@ class ReceivingController extends Controller
             $criticalItems = Item::with(['currentStockRecord', 'unit'])
                 ->where('is_active', true)
                 ->whereHas('currentStockRecord', function($query) {
-                    $query->where('current_quantity', '<=', DB::raw('COALESCE(items.reorder_point * 0.5, 5)'));
+                    $query->whereHas('item', function($itemQuery) {
+                        $itemQuery->whereColumn('current_stock.current_quantity', '<=', DB::raw('items.reorder_point * 0.5'));
+                    });
                 })
                 ->get();
 
@@ -502,7 +506,9 @@ class ReceivingController extends Controller
                 'low_stock_alerts' => Item::with(['currentStockRecord', 'reorder_point'])
                     ->where('is_active', true)
                     ->whereHas('currentStockRecord', function($query) {
-                        $query->where('current_quantity', '<=', DB::raw('COALESCE(items.reorder_point * 0.5, 5)'));
+                        $query->whereHas('item', function($itemQuery) {
+                            $itemQuery->whereColumn('current_stock.current_quantity', '<=', DB::raw('items.reorder_point * 0.5'));
+                        });
                     })
                     ->count(),
                 'total_inventory_value' => $this->calculateTotalInventoryValue()
@@ -545,7 +551,7 @@ class ReceivingController extends Controller
     public function getPurchaseOrder($id)
     {
         try {
-            $purchaseOrder = PurchaseOrder::with(['supplier', 'purchaseOrderItems.item.unit'])
+            $purchaseOrder = PurchaseOrder::with(['supplier', 'purchaseOrderItems.item.unit', 'purchaseOrderItems.item.category'])
                 ->findOrFail($id);
             
             // Check if PO can receive delivery
@@ -577,6 +583,7 @@ class ReceivingController extends Controller
                     'item_name' => $poItem->item->name,
                     'sku' => $poItem->item->sku ?? 'N/A',
                     'unit_symbol' => $poItem->item->unit->symbol ?? '',
+                    'category_name' => $poItem->item->category->name ?? 'GENERAL',
                     'quantity_ordered' => $poItem->quantity_ordered,
                     'quantity_received' => $quantityReceived,
                     'quantity_remaining' => $quantityRemaining,
@@ -724,10 +731,15 @@ class ReceivingController extends Controller
                         throw new \Exception("Quantity received for {$purchaseOrderItem->item->name} cannot exceed remaining amount ({$quantityRemaining}).");
                     }
 
-                    // Check for duplicate batch number
+                    // Validate batch number format
                     $batchNumber = trim($itemData['batch_number'] ?? '');
                     if (empty($batchNumber)) {
                         throw new \Exception("Batch number is required for {$purchaseOrderItem->item->name}");
+                    }
+
+                    // Validate simplified batch number format
+                    if (!preg_match('/^BATCH-[A-Z]{3}-\d{4}-\d{2}$/', $batchNumber)) {
+                        throw new \Exception("Batch number '{$batchNumber}' for {$purchaseOrderItem->item->name} does not match the expected format BATCH-XXX-YYYY-ZZ. Please refresh the page to generate a new batch number.");
                     }
 
                     // Verify batch number doesn't already exist
@@ -890,8 +902,14 @@ class ReceivingController extends Controller
                 if (empty($itemData['batch_number'])) {
                     $errors[] = "Batch number is required for {$purchaseOrderItem->item->name}";
                 } else {
-                    // Check for duplicate batch number
                     $batchNumber = trim($itemData['batch_number']);
+                    
+                    // Validate simplified batch number format
+                    if (!preg_match('/^BATCH-[A-Z]{3}-\d{4}-\d{2}$/', $batchNumber)) {
+                        $errors[] = "Batch number '{$batchNumber}' for {$purchaseOrderItem->item->name} does not match the expected format BATCH-XXX-YYYY-ZZ. Please refresh the page to generate a new batch number.";
+                    }
+                    
+                    // Check for duplicate batch number
                     $existingBatch = Batch::where('batch_number', $batchNumber)->first();
                     if ($existingBatch) {
                         $errors[] = "Batch number '{$batchNumber}' already exists for {$purchaseOrderItem->item->name}. Please refresh the page to generate a new batch number.";

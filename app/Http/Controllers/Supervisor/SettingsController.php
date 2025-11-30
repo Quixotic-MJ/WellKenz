@@ -47,7 +47,7 @@ class SettingsController extends Controller
             $query->where(function($q) use ($status) {
                 if ($status === 'low') {
                     $q->whereHas('currentStockRecord', function($stockQuery) {
-                        $stockQuery->whereRaw('current_quantity <= COALESCE(items.reorder_point, items.min_stock_level, 10)');
+                        $stockQuery->whereColumn('current_quantity', '<=', 'reorder_point');
                     })->orWhereDoesntHave('currentStockRecord');
                 } elseif ($status === 'critical') {
                     $q->whereHas('currentStockRecord', function($stockQuery) {
@@ -55,7 +55,7 @@ class SettingsController extends Controller
                     })->orWhereDoesntHave('currentStockRecord');
                 } elseif ($status === 'healthy') {
                     $q->whereHas('currentStockRecord', function($stockQuery) {
-                        $stockQuery->whereRaw('current_quantity > COALESCE(items.reorder_point, items.min_stock_level, 10)');
+                        $stockQuery->whereColumn('current_quantity', '>', 'reorder_point');
                     });
                 }
             });

@@ -24,6 +24,7 @@ use App\Http\Controllers\Inventory\Inbound\RtvController;
 use App\Http\Controllers\Inventory\Outbound\FulfillmentController;
 use App\Http\Controllers\Inventory\Outbound\PurchaseRequestController;
 use App\Http\Controllers\Inventory\StockManagement\BatchLookupController;
+use App\Http\Controllers\Inventory\StockManagement\StockLevelController;
 use App\Http\Controllers\Inventory\Notifications\NotificationController as InventoryNotificationController;
 
 // Purchasing namespace controllers (aliased to avoid conflicts)
@@ -426,6 +427,7 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         Route::get('/rtv/items', [RtvController::class, 'getItemsForRtv'])->name('rtv.items');
         Route::get('/rtv/suppliers', [RtvController::class, 'getSuppliersForRtv'])->name('rtv.suppliers');
         Route::get('/rtv/purchase-orders', [RtvController::class, 'getPurchaseOrdersForRtv'])->name('rtv.purchase-orders');
+        Route::get('/rtv/po-items/{id}', [RtvController::class, 'getPoItemsForRtv'])->name('rtv.po-items');
         Route::get('/rtv/categories', [RtvController::class, 'getCategoriesForRtvBulk'])->name('rtv.categories');
         Route::post('/rtv', [RtvController::class, 'storeRtv'])->name('rtv.store');
         Route::get('/rtv/{id}/details', [RtvController::class, 'getRtvDetails'])->name('rtv.details');
@@ -460,6 +462,41 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
   Route::get('/stock/lookup/search', [BatchLookupController::class, 'searchBatches'])->name('stock.lookup.search');
   Route::get('/stock/lookup/batch/{id}', [BatchLookupController::class, 'getBatchDetails'])->name('stock.lookup.batch');
 
+  // Live Stock Levels Routes
+  Route::get('/stock/levels', [StockLevelController::class, 'index'])->name('stock.levels');
+  Route::get('/stock/levels/data', [StockLevelController::class, 'getStockLevels'])->name('stock.levels.data');
+  Route::post('/stock/levels/update', [StockLevelController::class, 'updateStockLevel'])->name('stock.levels.update');
+  Route::get('/stock/levels/history', [StockLevelController::class, 'getStockHistory'])->name('stock.levels.history');
+  Route::get('/stock/levels/alerts', [StockLevelController::class, 'getLowStockAlerts'])->name('stock.levels.alerts');
+  Route::get('/stock/levels/export', [StockLevelController::class, 'exportStockLevels'])->name('stock.export-stock-csv');
+  
+  // Debug route (temporary)
+  Route::get('/stock/debug', function() {
+      $items = \App\Models\Item::where('is_active', true)->count();
+      $currentStock = \App\Models\CurrentStock::count();
+      $currentStockWithItems = \App\Models\CurrentStock::whereHas('item', function($q) {
+          $q->where('is_active', true);
+      })->count();
+      
+      return response()->json([
+          'active_items' => $items,
+          'current_stock_records' => $currentStock,
+          'current_stock_with_active_items' => $currentStockWithItems,
+          'sample_items' => \App\Models\Item::where('is_active', true)->limit(5)->get(['id', 'name', 'item_code', 'is_active']),
+          'sample_current_stock' => \App\Models\CurrentStock::with('item')->limit(5)->get()
+      ]);
+  })->name('stock.debug');
+  
+  // Export Routes (matching Supervisor routes pattern)
+  Route::get('/stock/export-csv', [StockLevelController::class, 'exportStockLevels'])->name('stock.export-stock-csv');
+  Route::get('/stock/export-pdf', [StockLevelController::class, 'exportStockLevels'])->name('stock.export-stock-pdf');
+  Route::get('/stock/print-report', [StockLevelController::class, 'index'])->name('stock.print-stock-report');
+  Route::get('/stock/stock-card/{item}', [StockLevelController::class, 'stockCard'])->name('stock-card');
+  
+  // Stock Adjustments Routes
+  Route::get('/stock/adjustments/items/{item}', [StockLevelController::class, 'getStockHistory'])->name('stock.adjustments.item-details');
+  Route::post('/stock/adjustments', [StockLevelController::class, 'storeAdjustment'])->name('adjustments.store');
+
 
     // Notification routes
     Route::get('/notifications', [InventoryNotificationController::class, 'index'])->name('notifications');
@@ -471,6 +508,10 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
     Route::post('/notifications/{notification}/mark-unread', [InventoryNotificationController::class, 'markAsUnread'])->name('notifications.mark_unread');
     Route::delete('/notifications/{notification}', [InventoryNotificationController::class, 'destroy'])->name('notifications.delete');
     Route::post('/notifications/bulk-operations', [InventoryNotificationController::class, 'bulkOperations'])->name('notifications.bulk_operations');
+
+    // Sidebar badge count routes for real-time updates
+    Route::get('/notifications/count', [GeneralController::class, 'getNotificationCount'])->name('notifications.count');
+    Route::get('/requisitions/pending-count', [GeneralController::class, 'getPendingRequisitionsCount'])->name('requisitions.pending-count');
 
 });
 

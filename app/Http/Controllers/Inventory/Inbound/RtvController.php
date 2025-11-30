@@ -90,7 +90,14 @@ class RtvController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name']);
 
-            return view('Inventory.inbound.RTV', compact('rtvRecords', 'summary', 'suppliers'));
+            // Get purchase orders for RTV creation dropdown
+            $purchaseOrders = PurchaseOrder::with(['supplier'])
+                ->whereIn('status', ['sent', 'confirmed', 'partial', 'completed'])
+                ->orderBy('order_date', 'desc')
+                ->limit(50)
+                ->get();
+
+            return view('Inventory.inbound.RTV', compact('rtvRecords', 'summary', 'suppliers', 'purchaseOrders'));
 
         } catch (\Exception $e) {
             \Log::error('Error loading RTV records: ' . $e->getMessage());
@@ -236,6 +243,45 @@ class RtvController extends Controller
                 'message' => 'Failed to fetch suppliers',
                 'data' => [],
                 'total' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Get PO items for RTV creation (AJAX) - Missing endpoint that JavaScript expects
+     */
+    public function getPoItemsForRtv($poId)
+    {
+        try {
+            $purchaseOrder = PurchaseOrder::with(['supplier', 'purchaseOrderItems.item.unit'])
+                ->findOrFail($poId);
+
+            $items = $purchaseOrder->purchaseOrderItems->map(function($poItem) {
+                return [
+                    'item_id' => $poItem->item->id,
+                    'item_name' => $poItem->item->name,
+                    'item_code' => $poItem->item->item_code ?? 'N/A',
+                    'unit_price' => number_format($poItem->unit_price, 2),
+                    'quantity_ordered' => $poItem->quantity_ordered,
+                    'quantity_received' => $poItem->quantity_received ?? 0,
+                    'unit_symbol' => $poItem->item->unit->symbol ?? 'pcs'
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'supplier_id' => $purchaseOrder->supplier->id,
+                'supplier_name' => $purchaseOrder->supplier->name,
+                'po_number' => $purchaseOrder->po_number,
+                'items' => $items
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching PO items for RTV: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch PO items',
+                'items' => []
             ], 500);
         }
     }

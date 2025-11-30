@@ -5,12 +5,14 @@ namespace App\View\Composers;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Notification;
+use App\Models\Requisition;
 
 class NotificationComposer
 {
     public function compose(View $view)
     {
         $unreadNotificationsCount = 0;
+        $pendingRequisitionsCount = 0;
         $recentNotifications = collect([]);
 
         try {
@@ -19,6 +21,10 @@ class NotificationComposer
                 if ($user && $user->exists) {
                     // Get actual unread notification count from the Notification model
                     $unreadNotificationsCount = Notification::unreadCountForCurrentUser();
+                    
+                    // Get pending requisitions count that need fulfillment
+                    // Only count approved requisitions that can be fulfilled
+                    $pendingRequisitionsCount = Requisition::countPendingFulfillment();
                     
                     // Get recent notifications (last 5 unread notifications)
                     $recentNotifications = Notification::forCurrentUser('unread')
@@ -43,6 +49,7 @@ class NotificationComposer
         }
 
         $view->with('unreadNotificationsCount', $unreadNotificationsCount)
+             ->with('pendingRequisitionsCount', $pendingRequisitionsCount)
              ->with('recentNotifications', $recentNotifications);
     }
 }

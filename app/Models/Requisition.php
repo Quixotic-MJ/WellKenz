@@ -276,6 +276,21 @@ class Requisition extends Model
         return $query;
     }
 
+    /**
+     * Get count of approved requisitions that can be fulfilled
+     * This considers stock availability for all items in the requisition
+     */
+    public static function countPendingFulfillment(): int
+    {
+        return static::approved()
+            ->with('requisitionItems.currentStockRecord')
+            ->get()
+            ->filter(function ($requisition) {
+                return $requisition->canBeFulfilled();
+            })
+            ->count();
+    }
+
     // Model events for audit trail
     protected static function boot()
     {

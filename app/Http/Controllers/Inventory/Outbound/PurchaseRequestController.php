@@ -9,9 +9,11 @@ use App\Models\Item;
 use App\Models\Category;
 use App\Models\CurrentStock;
 use App\Models\User;
+use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PurchaseRequestController extends Controller
 {
@@ -282,7 +284,9 @@ class PurchaseRequestController extends Controller
                 switch ($request->stock_filter) {
                     case 'low_stock':
                         $query->whereHas('currentStockRecord', function($q) {
-                            $q->whereRaw('current_quantity <= items.min_stock_level');
+                            $q->whereHas('item', function($itemQuery) {
+                                $itemQuery->whereColumn('current_stock.current_quantity', '<=', 'items.min_stock_level');
+                            });
                         });
                         break;
                     case 'out_of_stock':
@@ -292,7 +296,9 @@ class PurchaseRequestController extends Controller
                         break;
                     case 'good_stock':
                         $query->whereHas('currentStockRecord', function($q) {
-                            $q->whereRaw('current_quantity > items.min_stock_level');
+                            $q->whereHas('item', function($itemQuery) {
+                                $itemQuery->whereColumn('current_stock.current_quantity', '>', 'items.min_stock_level');
+                            });
                         });
                         break;
                 }
@@ -303,12 +309,16 @@ class PurchaseRequestController extends Controller
                 switch ($request->reorder_filter) {
                     case 'below_reorder':
                         $query->whereHas('currentStockRecord', function($q) {
-                            $q->whereRaw('current_quantity <= items.reorder_point');
+                            $q->whereHas('item', function($itemQuery) {
+                                $itemQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point');
+                            });
                         });
                         break;
                     case 'above_reorder':
                         $query->whereHas('currentStockRecord', function($q) {
-                            $q->whereRaw('current_quantity > items.reorder_point');
+                            $q->whereHas('item', function($itemQuery) {
+                                $itemQuery->whereColumn('current_stock.current_quantity', '>', 'items.reorder_point');
+                            });
                         });
                         break;
                 }
@@ -503,6 +513,28 @@ class PurchaseRequestController extends Controller
             }
 
             DB::commit();
+
+            // Create notifications for supervisors
+            $supervisors = User::where('role', 'supervisor')->get();
+            foreach ($supervisors as $supervisor) {
+                Notification::create([
+                    'user_id' => $supervisor->id,
+                    'title' => 'New Purchase Request Submitted',
+                    'message' => "New purchase request {$prNumber} has been submitted by " . $user->name . " for approval.",
+                    'type' => 'approval_req',
+                    'priority' => $request->priority ?? 'normal',
+                    'action_url' => route('supervisor.approvals.purchase-requests') . '?pr=' . $purchaseRequest->id,
+                    'metadata' => [
+                        'pr_number' => $prNumber,
+                        'request_id' => $purchaseRequest->id,
+                        'requester' => $user->name,
+                        'department' => $request->department,
+                        'total_estimated_cost' => $totalEstimatedCost,
+                        'priority' => $request->priority ?? 'normal'
+                    ],
+                    'created_at' => Carbon::now()
+                ]);
+            }
 
             return response()->json([
                 'success' => true,

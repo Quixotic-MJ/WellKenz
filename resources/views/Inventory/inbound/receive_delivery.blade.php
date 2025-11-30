@@ -16,15 +16,7 @@
                 <p class="text-sm text-gray-500">Process deliveries directly into inventory.</p>
             </div>
         </div>
-        
-        <div class="flex items-center gap-3">
-            <span class="text-xs font-bold text-gray-400 uppercase tracking-wide mr-2">Mode:</span>
-            <div class="flex bg-white rounded-lg border border-border-soft p-1 shadow-sm">
-                <button class="px-4 py-1.5 rounded-md text-xs font-bold bg-green-100 text-green-800 border border-green-200 shadow-sm">
-                    <i class="fas fa-edit mr-2"></i> Direct Update
-                </button>
-            </div>
-        </div>
+      
     </div>
     
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -182,6 +174,43 @@
 <script>
     let currentPoData = null;
 
+    /**
+     * Generate a simplified batch number in the format: BATCH-XXX-YEAR-ZZ
+     * @param {Object} item - The item object containing category, name, and other data
+     * @param {string|number} poId - The purchase order ID for uniqueness
+     * @returns {string} A simplified batch number
+     */
+    function generateValidBatchNumber(item, poId) {
+        const now = new Date();
+        const year = now.getFullYear(); // 4-digit year
+        
+        // Category code mapping for simplified 3-letter codes
+        const categoryMap = {
+            'FLOUR': 'FLR', 'FLOURS': 'FLR',
+            'SUGAR': 'SUG', 'SUGARS': 'SUG',
+            'BUTTER': 'BTR', 'DAIRY': 'DAI',
+            'EGGS': 'EGG', 'MEAT': 'MEA',
+            'VEGETABLES': 'VEG', 'VEGETABLE': 'VEG',
+            'FRUIT': 'FRU', 'FRUITS': 'FRU',
+            'BAKING': 'BAK', 'SEASONING': 'SEA',
+            'OIL': 'OIL', 'OILS': 'OIL'
+        };
+        
+        // Get category code (fallback to GEN)
+        const categoryName = (item.category_name || 'GENERAL').toUpperCase();
+        let categoryCode = categoryMap[categoryName] || 'GEN';
+        
+        // Generate simple sequential number (01-99)
+        const timestamp = now.getTime().toString().slice(-2);
+        const itemId = String(item.id).padStart(2, '0').slice(-2);
+        const sequentialNumber = String((parseInt(timestamp) + parseInt(itemId)) % 100).padStart(2, '0');
+        
+        // Construct batch number: BATCH-XXX-YEAR-ZZ
+        const batchNum = `BATCH-${categoryCode}-${year}-${sequentialNumber}`;
+        
+        return batchNum;
+    }
+
     function handlePurchaseOrderSelect(selectElement) {
         const poId = selectElement.value;
         loadPurchaseOrder(poId);
@@ -266,12 +295,8 @@
             const isFullyReceived = remaining <= 0;
             const rowClass = isFullyReceived ? 'bg-gray-50 opacity-75' : 'bg-white hover:bg-blue-50/20';
             
-            // Auto-generate unique batch number
-            const now = new Date();
-            const dateStr = now.toISOString().slice(2,10).replace(/-/g,''); // YYMMDD
-            const timeStr = now.getTime().toString().slice(-4); // Last 4 digits of timestamp for uniqueness
-            const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase(); // 4-char random
-            const batchNum = `${(item.sku || 'ITEM').replace(/[^A-Z0-9]/g, '').substring(0, 8)}-${dateStr}-${timeStr}${randomStr}`;
+            // Auto-generate unique batch number with validation
+            const batchNum = generateValidBatchNumber(item, data.id);
 
             const html = `
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 items-center transition-colors ${rowClass}" id="row-${item.id}">
@@ -432,6 +457,33 @@
         updateSummary();
     }
 
+    /**
+     * Validate batch numbers before submission
+     * @param {Object} itemsData - The form data being submitted
+     * @returns {Array} Array of validation errors (empty if valid)
+     */
+    function validateBatchNumbers(itemsData) {
+        const errors = [];
+        
+        for (const [itemId, itemData] of Object.entries(itemsData)) {
+            if (itemData.quantity_received && parseFloat(itemData.quantity_received) > 0) {
+                const batchNumber = itemData.batch_number;
+                
+                // Check for forbidden patterns
+                if (batchNumber.match(/^(N\/A|NA)-/)) {
+                    errors.push(`Item ${itemId}: Batch number "${batchNumber}" starts with invalid pattern. Please refresh the page to generate a new batch number.`);
+                }
+                
+                // Check new simplified format pattern
+                if (!/^BATCH-[A-Z]{3}-\d{4}-\d{2}$/.test(batchNumber)) {
+                    errors.push(`Item ${itemId}: Batch number "${batchNumber}" does not match the expected format BATCH-XXX-YYYY-ZZ. Please refresh the page to generate a new batch number.`);
+                }
+            }
+        }
+        
+        return errors;
+    }
+
     // Form Submit
     document.getElementById('receiveDeliveryForm').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -472,6 +524,12 @@
             
             if (!hasQuantities) {
                 throw new Error('Please enter quantity for at least one item');
+            }
+            
+            // Validate batch numbers before submission
+            const batchValidationErrors = validateBatchNumbers(itemsData);
+            if (batchValidationErrors.length > 0) {
+                throw new Error('Batch number validation failed:\n' + batchValidationErrors.join('\n'));
             }
             
             // Prepare API payload
@@ -557,6 +615,8 @@
                 errorMessage += '\n\nThis usually happens when the page has been open for too long. Please refresh the page and try again.';
             } else if (error.message.includes('network') || error.message.includes('fetch')) {
                 errorMessage = 'Network error. Please check your connection and try again.';
+            } else if (error.message.includes('Batch number') || error.message.includes('batch number')) {
+                errorMessage += '\n\nThis is likely due to an invalid batch number format. Please refresh the page to generate new batch numbers.';
             }
             
             alert(errorMessage);

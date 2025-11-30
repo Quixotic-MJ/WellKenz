@@ -25,6 +25,10 @@
                     </div>
                     
                     <div class="flex gap-2 ml-1">
+                        <button onclick="PRManager.selectLowStockItems()" class="w-10 h-full rounded-xl bg-amber-500 hover:bg-amber-600 text-white border border-amber-500 flex items-center justify-center transition-all shadow-sm tooltip relative" title="Auto-select Low/Out of Stock">
+                            <i class="fas fa-exclamation-triangle text-sm"></i>
+                            <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center" id="lowStockCount">0</span>
+                        </button>
                         <button onclick="PRManager.openHistory()" class="w-10 h-full rounded-xl bg-white hover:bg-cream-bg border border-border-soft text-chocolate flex items-center justify-center transition-all shadow-sm tooltip" title="View History">
                             <i class="fas fa-history text-lg"></i>
                         </button>
@@ -75,7 +79,8 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                 @if(isset($items) && count($items) > 0)
                     @foreach($items as $item)
-                        <div class="group bg-white border border-border-soft rounded-2xl p-5 hover:shadow-md hover:border-caramel/30 transition-all duration-200 cursor-pointer flex flex-col h-full relative overflow-hidden"
+                        <div class="group bg-white border border-border-soft rounded-2xl p-5 hover:shadow-md hover:border-caramel/30 transition-all duration-200 cursor-pointer flex flex-col h-full relative overflow-hidden
+                             @if(($item->stock_status ?? 'normal_stock') === 'out_of_stock' || ($item->stock_status ?? 'normal_stock') === 'low_stock') ring-2 ring-amber-200 hover:ring-amber-300 @endif"
                              data-item-id="{{ $item->id }}"
                              data-category-id="{{ $item->category->id ?? 0 }}"
                              data-stock-status="{{ $item->stock_status ?? 'normal_stock' }}"
@@ -83,12 +88,21 @@
                              data-name="{{ strtolower($item->name) }}"
                              data-code="{{ strtolower($item->item_code ?? '') }}"
                              data-description="{{ strtolower($item->description ?? '') }}"
-                             onclick="PRManager.addToCart({{ $item->id }})">
+                             data-current-stock="{{ $item->current_stock ?? 0 }}"
+                             data-reorder-point="{{ $item->reorder_point ?? 0 }}"
+                             data-min-stock="{{ $item->min_stock_level ?? 0 }}"
+                             data-max-stock="{{ $item->max_stock_level ?? 0 }}"
+                             onclick="PRManager.addToCart({{ $item->id }}, false)">
                             
                             {{-- Header --}}
                             <div class="flex justify-between items-start mb-3 relative z-10">
-                                <div class="w-12 h-12 rounded-xl bg-cream-bg flex items-center justify-center text-caramel shadow-inner border border-border-soft">
+                                <div class="w-12 h-12 rounded-xl bg-cream-bg flex items-center justify-center text-caramel shadow-inner border border-border-soft relative">
                                     <i class="fas fa-box-open text-lg"></i>
+                                    @if(($item->stock_status ?? 'normal_stock') === 'out_of_stock' || ($item->stock_status ?? 'normal_stock') === 'low_stock')
+                                        <div class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center">
+                                            <i class="fas fa-exclamation text-[8px]"></i>
+                                        </div>
+                                    @endif
                                 </div>
                                 <div class="text-right">
                                     @php
@@ -125,8 +139,16 @@
                             
                             {{-- Footer --}}
                             <div class="flex items-center justify-between pt-3 border-t border-gray-100 relative z-10 mt-auto">
-                                <div>
-                                    <span class="text-[10px] text-gray-400 uppercase font-bold">Est. Cost</span>
+                                <div class="flex-1">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-[10px] text-gray-400 uppercase font-bold">Est. Cost</span>
+                                        @if(($item->stock_status ?? 'normal_stock') === 'out_of_stock' || ($item->stock_status ?? 'normal_stock') === 'low_stock')
+                                            <span class="text-[10px] text-amber-600 font-medium">
+                                                <i class="fas fa-info-circle mr-1"></i>
+                                                {{ number_format($item->current_stock ?? 0, 1) }}/{{ number_format($item->reorder_point ?? $item->min_stock_level ?? 0, 1) }}
+                                            </span>
+                                        @endif
+                                    </div>
                                     <div class="font-bold text-chocolate">₱{{ number_format($item->cost_price ?? 0, 2) }}</div>
                                 </div>
                                 <button class="w-8 h-8 rounded-lg bg-chocolate text-white hover:bg-chocolate-dark shadow-sm flex items-center justify-center transition-all transform active:scale-95">
@@ -186,20 +208,13 @@
         <div class="p-5 border-t border-border-soft bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] relative z-20">
             <div class="space-y-4 mb-6">
                 <div>
-                    <input type="text" name="department" id="deptInput" required 
-                           placeholder="Department Name" 
-                           value="{{ $defaultDepartment ?? '' }}"
-                           class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-caramel/20 focus:border-caramel text-sm transition-all placeholder-gray-400">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <select name="priority" id="priorityInput" class="border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-caramel/20 focus:border-caramel text-sm bg-white cursor-pointer">
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Priority</label>
+                    <select name="priority" id="priorityInput" class="w-full border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-caramel/20 focus:border-caramel text-sm bg-white cursor-pointer">
                         <option value="normal">Normal</option>
                         <option value="high">High</option>
                         <option value="urgent">Urgent</option>
                         <option value="low">Low</option>
                     </select>
-                    <input type="date" name="request_date" id="dateInput" 
-                           value="{{ date('Y-m-d') }}" class="border border-gray-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-caramel/20 focus:border-caramel text-sm">
                 </div>
                 <textarea name="notes" id="notesInput" rows="2" 
                           placeholder="Add notes or justification (optional)..." 
@@ -213,10 +228,16 @@
                     <span class="text-xl font-bold text-chocolate" id="cartTotal">₱ 0.00</span>
                 </div>
                 
-                <button type="button" onclick="PRManager.submitPR()" id="submitBtn" disabled 
-                        class="w-full py-3.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2">
-                    <i class="fas fa-paper-plane"></i> Submit Request
-                </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" onclick="PRManager.clearCart()" id="clearBtn" disabled
+                            class="py-2.5 bg-red-50 text-red-600 font-bold rounded-xl cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2 hover:bg-red-100 border border-red-200">
+                        <i class="fas fa-trash-alt"></i> Clear Cart
+                    </button>
+                    <button type="button" onclick="PRManager.submitPR()" id="submitBtn" disabled 
+                            class="py-2.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2">
+                        <i class="fas fa-paper-plane"></i> Submit
+                    </button>
+                </div>
                 <p class="text-center text-[10px] text-gray-400 font-medium" id="totalItems">0 items selected</p>
             </div>
         </div>
@@ -401,6 +422,7 @@ const PRManager = {
         cartTotal: document.getElementById('cartTotal'),
         totalItems: document.getElementById('totalItems'),
         submitBtn: document.getElementById('submitBtn'),
+        clearBtn: document.getElementById('clearBtn'),
         emptyCart: document.getElementById('emptyCartMessage'),
         
         history: {
@@ -419,6 +441,7 @@ const PRManager = {
     init() {
         this.setupListeners();
         this.loadCart();
+        this.updateLowStockCount();
     },
 
     // [ALL PRESERVED JS METHODS FROM YOUR ORIGINAL CODE GO HERE - UNCHANGED]
@@ -511,6 +534,9 @@ const PRManager = {
         }
         
         console.log(`Showing ${visibleCount} of ${items.length} items`); // Debug log
+        
+        // Update low stock count after filtering
+        this.updateLowStockCount();
     },
     
     matchesPriceFilter(price, filter) {
@@ -523,7 +549,7 @@ const PRManager = {
         }
     },
 
-    addToCart(id) {
+    addToCart(id, isAutoSelected = false, calculatedQty = null) {
         const itemElement = document.querySelector(`[data-item-id="${id}"]`);
         if (!itemElement) return;
         
@@ -531,13 +557,111 @@ const PRManager = {
         const itemPrice = parseFloat(itemElement.dataset.price);
         const itemCode = itemElement.dataset.code;
         
+        // Calculate optimal quantity if not provided
+        if (calculatedQty === null && (isAutoSelected || itemElement.dataset.stockStatus === 'low_stock' || itemElement.dataset.stockStatus === 'out_of_stock')) {
+            calculatedQty = this.calculateOptimalQuantity(itemElement);
+        }
+        
         const existing = this.cart.find(c => c.id === id);
-        if (existing) { existing.qty++; } 
-        else { this.cart.push({ id: id, name: itemName.charAt(0).toUpperCase() + itemName.slice(1), code: itemCode.toUpperCase(), price: itemPrice, qty: 1 }); }
+        if (existing) { 
+            existing.qty += calculatedQty || 1; 
+            existing.isAutoSelected = existing.isAutoSelected || isAutoSelected;
+        }
+        else { 
+            this.cart.push({ 
+                id: id, 
+                name: itemName.charAt(0).toUpperCase() + itemName.slice(1), 
+                code: itemCode.toUpperCase(), 
+                price: itemPrice, 
+                qty: calculatedQty || 1, 
+                isAutoSelected: isAutoSelected,
+                calculatedQuantity: calculatedQty // Store for reference
+            }); 
+        }
         
         this.updateCartUI();
         this.saveCart();
-        showToast('Added to Slip', `${itemName} has been added.`);
+        if (!isAutoSelected) {
+            showToast('Added to Slip', `${itemName} has been added${calculatedQty ? ` (Qty: ${calculatedQty})` : ''}.`);
+        }
+    },
+
+    selectLowStockItems() {
+        // Find all items with low stock or out of stock status
+        const lowStockItems = document.querySelectorAll('[data-stock-status="low_stock"], [data-stock-status="out_of_stock"]');
+        let addedCount = 0;
+        let totalCalculatedQty = 0;
+        
+        lowStockItems.forEach(itemElement => {
+            const itemId = parseInt(itemElement.dataset.itemId);
+            const itemName = itemElement.dataset.name;
+            const calculatedQty = this.calculateOptimalQuantity(itemElement);
+            
+            // Check if item is already in cart
+            const existing = this.cart.find(c => c.id === itemId);
+            if (!existing && calculatedQty > 0) {
+                this.addToCart(itemId, true, calculatedQty);
+                addedCount++;
+                totalCalculatedQty += calculatedQty;
+            } else if (existing && !existing.isAutoSelected && calculatedQty > 0) {
+                // Mark existing item as auto-selected and update quantity
+                existing.isAutoSelected = true;
+                existing.qty = calculatedQty; // Update to calculated quantity
+                existing.calculatedQuantity = calculatedQty;
+                this.updateCartUI();
+                this.saveCart();
+                addedCount++;
+                totalCalculatedQty += calculatedQty;
+            }
+        });
+        
+        if (addedCount > 0) {
+            showToast('Auto-Selected Items', `${addedCount} low/out of stock item(s) added to slip with optimal quantities (Total: ${totalCalculatedQty} units).`, 'success');
+        } else {
+            showToast('No Items Found', 'All items are currently in stock or already in slip.', 'error');
+        }
+    },
+
+    updateLowStockCount() {
+        const lowStockItems = document.querySelectorAll('[data-item-id][style*="display: flex"], [data-item-id]:not([style*="display: none"])')
+            .filter(item => item.dataset.stockStatus === 'low_stock' || item.dataset.stockStatus === 'out_of_stock');
+        const countElement = document.getElementById('lowStockCount');
+        if (countElement) {
+            countElement.textContent = lowStockItems.length;
+            countElement.style.display = lowStockItems.length > 0 ? 'flex' : 'none';
+        }
+    },
+
+    calculateOptimalQuantity(itemElement) {
+        const currentStock = parseFloat(itemElement.dataset.currentStock) || 0;
+        const reorderPoint = parseFloat(itemElement.dataset.reorderPoint) || 0;
+        const minStock = parseFloat(itemElement.dataset.minStock) || 0;
+        const maxStock = parseFloat(itemElement.dataset.maxStock) || 0;
+        
+        let targetLevel = reorderPoint || minStock;
+        
+        // If current stock is 0, aim for reorder point + 20% buffer
+        if (currentStock <= 0) {
+            return Math.max(1, Math.ceil(targetLevel * 1.2));
+        }
+        
+        // If below reorder point, calculate exact difference
+        if (currentStock <= reorderPoint) {
+            const neededQuantity = Math.max(1, reorderPoint - currentStock);
+            // Add 15% buffer but don't exceed max stock level
+            const bufferQuantity = Math.ceil(neededQuantity * 1.15);
+            return maxStock > 0 ? Math.min(bufferQuantity, Math.max(1, maxStock - currentStock)) : bufferQuantity;
+        }
+        
+        // If below min stock level, calculate to reach min stock + buffer
+        if (currentStock < minStock) {
+            const neededQuantity = Math.max(1, minStock - currentStock);
+            const bufferQuantity = Math.ceil(neededQuantity * 1.1);
+            return maxStock > 0 ? Math.min(bufferQuantity, Math.max(1, maxStock - currentStock)) : bufferQuantity;
+        }
+        
+        // If above all thresholds, don't suggest reorder (return 0)
+        return 0;
     },
 
     updateCartUI() {
@@ -545,7 +669,9 @@ const PRManager = {
         if (this.cart.length === 0) {
             this.els.emptyCart.classList.remove('hidden');
             this.els.submitBtn.disabled = true;
-            this.els.submitBtn.className = 'w-full py-3.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-none flex items-center justify-center gap-2';
+            this.els.clearBtn.disabled = true;
+            this.els.submitBtn.className = 'py-2.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-none flex items-center justify-center gap-2';
+            this.els.clearBtn.className = 'py-2.5 bg-red-50 text-red-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-none flex items-center justify-center gap-2 border border-red-100';
             this.els.cartCount.textContent = 0;
             this.els.cartTotal.textContent = '₱ 0.00';
             this.els.totalItems.textContent = '0 items selected';
@@ -554,7 +680,9 @@ const PRManager = {
 
         this.els.emptyCart.classList.add('hidden');
         this.els.submitBtn.disabled = false;
-        this.els.submitBtn.className = 'w-full py-3.5 bg-chocolate text-white font-bold rounded-xl hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 transform hover:-translate-y-0.5';
+        this.els.clearBtn.disabled = false;
+        this.els.submitBtn.className = 'py-2.5 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-all shadow-sm flex items-center justify-center gap-2';
+        this.els.clearBtn.className = 'py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all shadow-sm flex items-center justify-center gap-2 border border-red-200 hover:border-red-300';
 
         let total = 0;
         let totalItems = 0;
@@ -565,11 +693,20 @@ const PRManager = {
 
             const row = document.createElement('div');
             row.className = 'bg-white border border-border-soft rounded-xl p-4 mb-3 shadow-sm group hover:border-caramel/30 transition-colors';
+            const isAutoSelected = c.isAutoSelected ? '<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800 border border-amber-200 mr-2"><i class="fas fa-magic text-[8px] mr-1"></i>Auto</span>' : '';
+            const hasCalculatedQty = c.calculatedQuantity ? '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide bg-blue-100 text-blue-800 border border-blue-200 mr-1"><i class="fas fa-calculator text-[8px] mr-0.5"></i>Calc</span>' : '';
             row.innerHTML = `
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex-1 pr-2">
-                        <span class="text-sm font-bold text-gray-900 block leading-tight">${c.name}</span>
-                        <span class="text-xs text-gray-400 font-mono block mt-0.5">${c.code}</span>
+                        <div class="flex items-center mb-1">
+                            ${isAutoSelected}
+                            ${hasCalculatedQty}
+                            <span class="text-sm font-bold text-gray-900 block leading-tight">${c.name}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-400 font-mono">
+                            <span>${c.code}</span>
+                            ${c.calculatedQuantity ? `<span class="text-blue-600 font-medium" title="Recommended quantity based on stock levels">Recommended: ${c.calculatedQuantity}</span>` : ''}
+                        </div>
                     </div>
                     <button onclick="PRManager.removeCartItem(${idx})" class="text-gray-300 hover:text-red-500 transition-colors p-1 rounded-full hover:bg-red-50">
                         <i class="fas fa-times text-xs"></i>
@@ -613,6 +750,17 @@ const PRManager = {
         this.saveCart();
     },
 
+    clearCart() {
+        if (this.cart.length === 0) return;
+        
+        openConfirmModal('Clear Cart?', 'This will remove all items from your requisition slip. This action cannot be undone.', () => {
+            this.cart = [];
+            this.updateCartUI();
+            this.saveCart();
+            showToast('Cart Cleared', 'All items have been removed from your slip.');
+        });
+    },
+
     saveCart() { localStorage.setItem('emp_pr_cart', JSON.stringify(this.cart)); },
     
     loadCart() {
@@ -630,16 +778,11 @@ const PRManager = {
     },
 
     submitPR() {
-        const dept = document.getElementById('deptInput').value.trim();
+        const dept = '{{ $defaultDepartment ?? "Inventory" }}';
         const prio = document.getElementById('priorityInput').value;
-        const date = document.getElementById('dateInput').value;
+        const date = '{{ date("Y-m-d") }}';
         const notes = document.getElementById('notesInput').value.trim();
 
-        if (!dept) { 
-            showToast('Missing Information', 'Please enter your department.', 'error'); 
-            document.getElementById('deptInput').focus();
-            return; 
-        }
         if (this.cart.length === 0) {
             showToast('No Items', 'Please add items to your requisition slip.', 'error');
             return;

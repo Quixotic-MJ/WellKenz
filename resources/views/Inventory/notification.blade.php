@@ -364,9 +364,103 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Auto-read functionality when notification is opened
+    function markNotificationAsRead(notificationId, item) {
+        // Check if already read
+        if (item.dataset.read === 'true') return;
+        
+        // Add subtle visual feedback
+        item.style.opacity = '0.7';
+        item.style.transition = 'opacity 0.2s ease';
+        
+        fetch(`/inventory/notifications/${notificationId}/mark-read`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Remove loading state
+            item.style.opacity = '1';
+            
+            if (data.success) {
+                // Update local state
+                item.dataset.read = 'true';
+                
+                // Update UI immediately
+                item.classList.remove('bg-cream-bg', 'border-l-caramel');
+                item.classList.add('border-l-transparent');
+                item.querySelector('h3').classList.remove('text-chocolate');
+                item.querySelector('h3').classList.add('text-gray-900');
+                
+                // Remove unread dot
+                const dot = item.querySelector('h3')?.nextElementSibling;
+                if(dot && dot.tagName === 'SPAN' && dot.classList.contains('bg-caramel')) {
+                    dot.remove();
+                }
+                
+                // Update button text
+                const markReadUnreadBtn = item.querySelector('.mark-read-unread');
+                if(markReadUnreadBtn) {
+                    markReadUnreadBtn.textContent = 'Mark Unread';
+                }
+                
+                // Update tab counts
+                updateTabCounts();
+                
+                // Update sidebar badge
+                updateSidebarBadge();
+            }
+        })
+        .catch(error => {
+            // Remove loading state on error
+            item.style.opacity = '1';
+            console.error('Error marking notification as read:', error);
+        });
+    }
+
+    // Update sidebar notification badge
+    function updateSidebarBadge() {
+        // This will trigger the sidebar JavaScript to update badge counts
+        const sidebarBadge = document.getElementById('notifications-count-badge');
+        if (sidebarBadge) {
+            // Trigger a refresh by calling the sidebar update function
+            if (typeof window.updateSidebarCounts === 'function') {
+                window.updateSidebarCounts();
+            }
+        }
+    }
+
     // Individual Actions
     document.querySelectorAll('.notification-item').forEach(item => {
         const notificationId = item.dataset.notificationId;
+        
+        // Auto-read when notification item is clicked (but not when clicking buttons/links)
+        item.addEventListener('click', function(e) {
+            // Don't auto-read if clicking on buttons, links, checkboxes, or if already read
+            if (item.dataset.read === 'true') return;
+            if (e.target.closest('button, a, input[type="checkbox"]')) return;
+            
+            markNotificationAsRead(notificationId, item);
+        });
+
+        // Auto-read when "View" link is clicked
+        const viewLink = item.querySelector('a[href]:not([href="#"])');
+        if (viewLink) {
+            viewLink.addEventListener('click', function(e) {
+                if (item.dataset.read === 'false') {
+                    e.preventDefault();
+                    // Mark as read first, then navigate
+                    markNotificationAsRead(notificationId, item);
+                    setTimeout(() => {
+                        window.location.href = viewLink.href;
+                    }, 100);
+                }
+            });
+        }
         
         // Read/Unread Toggle
         const markReadUnreadBtn = item.querySelector('.mark-read-unread');
@@ -501,6 +595,5 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('bulkMarkRead')?.addEventListener('click', () => performBulk('mark_read'));
     document.getElementById('bulkMarkUnread')?.addEventListener('click', () => performBulk('mark_unread'));
     document.getElementById('bulkDelete')?.addEventListener('click', () => performBulk('delete'));
-});
 </script>
 @endsection

@@ -46,19 +46,26 @@ class InventoryController extends Controller
 
         if (!empty($status)) {
             $query->where(function($q) use ($status) {
-                if ($status === 'good') {
-                    $q->where('current_quantity', '>', \DB::raw('COALESCE(items.reorder_point, 0)'));
-                } elseif ($status === 'low') {
-                    $q->where('current_quantity', '>', 0)
-                        ->where('current_quantity', '<=', \DB::raw('COALESCE(items.reorder_point, COALESCE(items.min_stock_level, 10))'));
-                } elseif ($status === 'critical') {
-                    $q->where('current_quantity', '<=', 0);
-                }
-            })->orWhere(function($noStockQuery) use ($status) {
-                // Items with no current stock record
-                if ($status === 'critical') {
-                    $noStockQuery->doesntHave('currentStockRecord');
-                }
+                $q->whereHas('currentStockRecord', function($stockQuery) use ($status) {
+                    if ($status === 'good') {
+                        $stockQuery->whereHas('item', function($itemQuery) {
+                            $itemQuery->whereColumn('current_stock.current_quantity', '>', 'items.reorder_point');
+                        });
+                    } elseif ($status === 'low') {
+                        $stockQuery->where('current_quantity', '>', 0)
+                                    ->whereHas('item', function($itemQuery) {
+                                        $itemQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point')
+                                                  ->orWhereColumn('current_stock.current_quantity', '<=', 'items.min_stock_level');
+                                    });
+                    } elseif ($status === 'critical') {
+                        $stockQuery->where('current_quantity', '<=', 0);
+                    }
+                })->orWhere(function($noStockQuery) use ($status) {
+                    // Items with no current stock record
+                    if ($status === 'critical') {
+                        $noStockQuery->doesntHave('currentStockRecord');
+                    }
+                });
             });
         }
 
@@ -375,10 +382,15 @@ class InventoryController extends Controller
                 $query->where(function($q) use ($status) {
                     $q->whereHas('currentStockRecord', function($stockQuery) use ($status) {
                         if ($status === 'good') {
-                            $stockQuery->where('current_quantity', '>', \DB::raw('COALESCE(items.reorder_point, 0)'));
+                            $stockQuery->whereHas('item', function($itemQuery) {
+                                $itemQuery->whereColumn('current_stock.current_quantity', '>', 'items.reorder_point');
+                            });
                         } elseif ($status === 'low') {
                             $stockQuery->where('current_quantity', '>', 0)
-                                        ->where('current_quantity', '<=', \DB::raw('COALESCE(items.reorder_point, COALESCE(items.min_stock_level, 10))'));
+                                        ->whereHas('item', function($itemQuery) {
+                                            $itemQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point')
+                                                      ->orWhereColumn('current_stock.current_quantity', '<=', 'items.min_stock_level');
+                                        });
                         } elseif ($status === 'critical') {
                             $stockQuery->where('current_quantity', '<=', 0);
                         }

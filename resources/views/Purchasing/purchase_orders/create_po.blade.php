@@ -288,7 +288,7 @@
                 {{-- These buttons will be shown/hidden based on selected mode --}}
                 <button type="button" id="single-mode-btn" onclick="purchaseOrderManager.enterSingleMode()" 
                         class="hidden px-6 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-all flex items-center">
-                    <i class="fas fa-file-invoice-dollar mr-2"></i> Configure Single PO
+                    <i class="fas fa-file-invoice-dollar mr-2"></i> Select Supplier for Single PO
                 </button>
                 <button type="button" id="bulk-mode-btn" onclick="purchaseOrderManager.enterBulkMode()" 
                         class="hidden px-6 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-all flex items-center">
@@ -542,6 +542,25 @@
     </div>
 </div>
 
+{{-- GENERAL ALERT MODAL --}}
+<div id="alert-modal" class="hidden fixed inset-0 z-[70] bg-chocolate/20 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md border border-border-soft p-6 transform transition-all animate-fade-in-down">
+        <div class="text-center mb-6">
+            <div id="alert-modal-icon" class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 text-2xl border border-red-200">
+                <i class="fas fa-exclamation-circle"></i>
+            </div>
+            <h3 id="alert-modal-title" class="font-display text-xl font-bold text-gray-900 mb-2">Alert</h3>
+            <p id="alert-modal-message" class="text-sm text-gray-500">You have an important message.</p>
+        </div>
+        <div class="flex justify-center">
+            <button type="button" onclick="closeAlertModal()" 
+                    class="px-6 py-2 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-all">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 const GROUP_PR_ITEMS_URL = "{{ url('/purchasing/api/group-pr-items') }}";
 const GET_PR_ITEMS_URL = "{{ url('/purchasing/api/get-pr-items') }}";
@@ -671,7 +690,7 @@ class UnifiedPurchaseOrderManager {
 
     proceedToAnalysis() {
         if (!this.currentMode) {
-            alert('Please select a creation mode first.');
+            showAlertModal('Mode Selection Required', 'Please select a creation mode first.', 'warning');
             return;
         }
 
@@ -679,7 +698,7 @@ class UnifiedPurchaseOrderManager {
         this.selectedPRs = Array.from(checkboxes).map(cb => cb.value);
 
         if (this.selectedPRs.length === 0) {
-            alert('Please select at least one purchase request.');
+            showAlertModal('Selection Required', 'Please select at least one purchase request.', 'warning');
             return;
         }
 
@@ -705,6 +724,15 @@ class UnifiedPurchaseOrderManager {
         this.singleSection.classList.add('hidden');
         this.bulkSection.classList.add('hidden');
         this.bucketSection.classList.remove('hidden');
+
+        // Remove single mode instruction
+        const instruction = document.getElementById('single-mode-instruction');
+        if (instruction) {
+            instruction.remove();
+        }
+
+        // Re-render buckets without selection functionality
+        this.renderBuckets();
 
         // Reset mode-specific data
         this.resetModeData();
@@ -753,14 +781,57 @@ class UnifiedPurchaseOrderManager {
     }
 
     enterSingleMode() {
+        this.bucketSection.classList.remove('hidden');
+        this.singleSection.classList.add('hidden');
+        this.bulkSection.classList.add('hidden');
+        
+        // Re-render buckets with selection functionality
+        this.renderBuckets();
+        
+        // Show instruction for single mode
+        this.showSingleModeInstructions();
+    }
+
+    selectSingleBucket(bucketIndex) {
+        const bucket = this.bucketData[bucketIndex];
+        if (!bucket || bucket.items.length === 0) {
+            showAlertModal('No Items Available', 'This supplier bucket has no items. Try selecting a different supplier.', 'info');
+            return;
+        }
+
         this.bucketSection.classList.add('hidden');
         this.singleSection.classList.remove('hidden');
         this.bulkSection.classList.add('hidden');
         
-        // Load the first bucket for single mode configuration
-        if (this.bucketData.length > 0) {
-            this.loadSingleBucket(0);
+        // Load the selected bucket for single mode configuration
+        this.loadSingleBucket(bucketIndex);
+    }
+
+    showSingleModeInstructions() {
+        // Add instruction header if not already present
+        const existingInstruction = document.getElementById('single-mode-instruction');
+        if (existingInstruction) {
+            existingInstruction.remove();
         }
+
+        const instructionDiv = document.createElement('div');
+        instructionDiv.id = 'single-mode-instruction';
+        instructionDiv.className = 'bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6';
+        instructionDiv.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <i class="fas fa-info-circle text-blue-600 text-sm"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-blue-800 text-sm">Single PO Configuration Mode</h4>
+                    <p class="text-xs text-blue-700 mt-0.5">Click on a supplier bucket below to configure a purchase order for that specific supplier.</p>
+                </div>
+            </div>
+        `;
+
+        // Insert instruction at the top of bucket cards container
+        const container = document.getElementById('bucket-cards-container');
+        container.insertBefore(instructionDiv, container.firstChild);
     }
 
     enterBulkMode() {
@@ -785,8 +856,14 @@ class UnifiedPurchaseOrderManager {
 
         this.bucketData.forEach((bucket, index) => {
             const card = document.createElement('div');
-            card.className = 'border border-border-soft rounded-xl shadow-sm overflow-hidden';
+            card.className = 'border border-border-soft rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer';
             card.dataset.bucketIndex = index;
+            
+            // Add selection functionality for single mode
+            if (this.currentMode === 'single') {
+                card.classList.add('hover:border-chocolate', 'hover:bg-chocolate/5');
+                card.addEventListener('click', () => this.selectSingleBucket(index));
+            }
 
             const itemsHtml = bucket.items.map((item, itemIndex) => {
                 const sourceLabels = item.source_prs.map(pr => `<span class="inline-flex items-center text-[10px] font-mono text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">#${pr.pr_number} (${parseFloat(pr.qty_remaining).toFixed(2)})</span>`).join(' ');
@@ -816,12 +893,16 @@ class UnifiedPurchaseOrderManager {
                 `;
             }).join('');
 
+            const selectionIndicator = this.currentMode === 'single' ? 
+                '<div class="text-xs text-chocolate font-bold"><i class="fas fa-hand-pointer mr-1"></i>Click to Select</div>' : '';
+                
             card.innerHTML = `
                 <div class="px-6 py-4 bg-gray-50 flex items-center justify-between">
                     <div>
                         <div class="text-xs font-semibold text-gray-500">Supplier</div>
                         <div class="text-lg font-display font-bold text-chocolate">${bucket.supplier.name}</div>
                         <div class="text-xs text-gray-500">${bucket.supplier.supplier_code || 'No code'} ${bucket.supplier.payment_terms ? `• ${bucket.supplier.payment_terms}-day terms` : ''}</div>
+                        ${selectionIndicator}
                     </div>
                     <div class="text-right">
                         <div class="text-xs text-gray-500">Estimated Total</div>
@@ -913,7 +994,7 @@ class UnifiedPurchaseOrderManager {
     loadSingleBucket(index) {
         const bucket = this.bucketData[index];
         if (!bucket || bucket.items.length === 0) {
-            alert('This supplier bucket has no items.');
+            showAlertModal('No Items Available', 'This supplier bucket has no items.', 'info');
             return;
         }
 
@@ -934,7 +1015,9 @@ class UnifiedPurchaseOrderManager {
         // Set form values
         document.getElementById('single-selected-pr-ids').value = this.selectedPRs.join(',');
         document.getElementById('single_supplier_id').value = bucket.supplier.id;
-        document.getElementById('single_supplier_id').disabled = true;
+        // Don't disable the supplier field - just prevent user from changing it
+        document.getElementById('single_supplier_id').setAttribute('readonly', 'readonly');
+        document.getElementById('single_supplier_id').style.backgroundColor = '#f9f9f9';
     }
 
     renderItems() {
@@ -1002,12 +1085,19 @@ class UnifiedPurchaseOrderManager {
         
         if (checkbox.checked) {
             row.classList.add('bg-orange-50');
-            inputs.forEach(input => input.disabled = false);
+            inputs.forEach(input => {
+                input.disabled = false;
+                input.classList.remove('disabled:bg-gray-100', 'disabled:text-gray-400');
+            });
             totalCell.classList.remove('text-gray-400');
             totalCell.classList.add('text-chocolate');
         } else {
             row.classList.remove('bg-orange-50');
-            inputs.forEach(input => input.disabled = true);
+            inputs.forEach(input => {
+                input.disabled = true;
+                input.classList.add('disabled:bg-gray-100', 'disabled:text-gray-400');
+                // Don't clear values when unchecking, just disable them
+            });
             totalCell.classList.add('text-gray-400');
             totalCell.classList.remove('text-chocolate');
         }
@@ -1145,7 +1235,7 @@ class UnifiedPurchaseOrderManager {
     openConfirmationModal(type) {
         const selectedCount = document.querySelectorAll('.item-checkbox:checked').length;
         if (selectedCount === 0) {
-            alert("Please select at least one item to order.");
+            showAlertModal('Items Required', 'Please select at least one item to order.', 'warning');
             return;
         }
 
@@ -1199,8 +1289,15 @@ class UnifiedPurchaseOrderManager {
             this.items = [];
             this.baseItems = [];
             document.getElementById('single-po-items-table').innerHTML = '';
-            document.getElementById('single_supplier_id').disabled = false;
+            document.getElementById('single_supplier_id').removeAttribute('readonly');
+            document.getElementById('single_supplier_id').style.backgroundColor = '';
             document.getElementById('single_supplier_id').value = '';
+            
+            // Remove single mode instruction
+            const instruction = document.getElementById('single-mode-instruction');
+            if (instruction) {
+                instruction.remove();
+            }
         } else if (this.currentMode === 'bulk') {
             this.bulkConfigData = [];
             document.getElementById('bulk-config-cards-container').innerHTML = '';
@@ -1306,13 +1403,47 @@ function submitPurchaseOrderForm() {
     const selectedPRIds = document.getElementById('single-selected-pr-ids').value;
     const supplierId = document.getElementById('single_supplier_id').value;
     
+    console.log('Submitting Single PO Form', {
+        supplierId,
+        selectedItemsCount: selectedItems.length,
+        selectedPRIds,
+        timestamp: new Date().toISOString()
+    });
+    
     if (!supplierId) {
-        alert('Please select a supplier.');
+        showAlertModal('Supplier Required', 'Please select a supplier.', 'warning');
         return false;
     }
     
     if (selectedItems.length === 0) {
-        alert('Please select at least one item to order.');
+        showAlertModal('Items Required', 'Please select at least one item to order.', 'warning');
+        return false;
+    }
+    
+    // Validate that selected items have valid quantity and price
+    let hasInvalidItems = false;
+    selectedItems.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const qtyInput = row.querySelector('.qty-input');
+        const priceInput = row.querySelector('.price-input');
+        
+        const quantity = parseFloat(qtyInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        
+        if (quantity <= 0) {
+            showAlertModal('Invalid Quantity', 'All selected items must have a quantity greater than 0.', 'warning');
+            hasInvalidItems = true;
+            return false;
+        }
+        
+        if (price <= 0) {
+            showAlertModal('Invalid Price', 'All selected items must have a price greater than 0.', 'warning');
+            hasInvalidItems = true;
+            return false;
+        }
+    });
+    
+    if (hasInvalidItems) {
         return false;
     }
     
@@ -1335,13 +1466,55 @@ function submitBulkPOForm() {
     });
 
     if (!hasValidConfig) {
-        alert('Please fill in all required delivery dates.');
+        showAlertModal('Delivery Dates Required', 'Please fill in all required delivery dates.', 'warning');
         return false;
     }
 
     document.getElementById('bulk-confirmation-modal').classList.add('hidden');
     form.submit();
     return true;
+}
+
+// --- ALERT MODAL FUNCTIONS ---
+
+function showAlertModal(title, message, type = 'warning') {
+    const modal = document.getElementById('alert-modal');
+    const titleEl = document.getElementById('alert-modal-title');
+    const messageEl = document.getElementById('alert-modal-message');
+    const iconEl = document.getElementById('alert-modal-icon');
+    
+    // Set title and message
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    
+    // Set icon and colors based on type
+    iconEl.className = 'w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl border';
+    
+    switch(type) {
+        case 'error':
+            iconEl.classList.add('bg-red-50', 'text-red-500', 'border-red-200');
+            iconEl.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+            break;
+        case 'warning':
+            iconEl.classList.add('bg-yellow-50', 'text-yellow-500', 'border-yellow-200');
+            iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+            break;
+        case 'success':
+            iconEl.classList.add('bg-green-50', 'text-green-500', 'border-green-200');
+            iconEl.innerHTML = '<i class="fas fa-check-circle"></i>';
+            break;
+        case 'info':
+        default:
+            iconEl.classList.add('bg-blue-50', 'text-blue-500', 'border-blue-200');
+            iconEl.innerHTML = '<i class="fas fa-info-circle"></i>';
+            break;
+    }
+    
+    modal.classList.remove('hidden');
+}
+
+function closeAlertModal() {
+    document.getElementById('alert-modal').classList.add('hidden');
 }
 
 // Initialize

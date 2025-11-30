@@ -55,7 +55,9 @@ class ItemController extends Controller
                 $query->where(function($q) {
                     $q->whereHas('currentStockRecord', function($subQ) {
                         $subQ->where('current_quantity', '>', 0)
-                             ->where('current_quantity', '<=', \DB::raw('items.reorder_point'));
+                             ->whereHas('item', function($itemQuery) {
+                                 $itemQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point');
+                             });
                     })
                     ->orWhere(function($subQ2) {
                         // Items without stock records but with reorder_point > 0 (treat as low stock)
@@ -73,7 +75,9 @@ class ItemController extends Controller
             } elseif ($request->stock_status === 'good') {
                 $query->whereHas('currentStockRecord', function($q) {
                     $q->where('current_quantity', '>', 0)
-                      ->where('current_quantity', '>', \DB::raw('items.reorder_point'));
+                      ->whereHas('item', function($itemQuery) {
+                          $itemQuery->whereColumn('current_stock.current_quantity', '>', 'items.reorder_point');
+                      });
                 });
             }
         }

@@ -24,10 +24,10 @@
         <a href="{{ Route::has('inventory.dashboard') ? route('inventory.dashboard') : '#' }}"
            id="menu-inventory-dashboard"
            class="group flex items-center px-3 py-3 rounded-lg text-sm font-medium transition-all duration-200 mb-6
-           {{ request()->routeIs('inventory.dashboard') 
+           {{ request()->route()->getName() === 'inventory.dashboard'
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->routeIs('inventory.dashboard') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-tachometer-alt w-6 text-center text-sm {{ request()->route()->getName() === 'inventory.dashboard' ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Warehouse Home</span>
         </a>
 
@@ -40,10 +40,10 @@
         <a href="{{ Route::has('inventory.inbound.receive') ? route('inventory.inbound.receive') : '#' }}"
            id="menu-inventory-inbound-receive"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.inbound.*') 
+           {{ request()->route()->getName() === 'inventory.inbound.receive'
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-truck-loading w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-truck-loading w-6 text-center text-sm {{ request()->route()->getName() === 'inventory.inbound.receive' ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Receive Delivery</span>
         </a>
 
@@ -51,10 +51,10 @@
         <a href="{{ Route::has('inventory.inbound.labels') ? route('inventory.inbound.labels') : '#' }}"
            id="menu-inventory-inbound-labels"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.inbound.*') 
+           {{ request()->route()->getName() === 'inventory.inbound.labels'
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-qrcode w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-qrcode w-6 text-center text-sm {{ request()->route()->getName() === 'inventory.inbound.labels' ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Batch Records</span>
         </a>
 
@@ -62,10 +62,10 @@
         <a href="{{ Route::has('inventory.inbound.rtv') ? route('inventory.inbound.rtv') : '#' }}"
            id="menu-inventory-inbound-rtv"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.inbound.*') 
+           {{ request()->route()->getName() === 'inventory.inbound.rtv'
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-undo-alt w-6 text-center text-sm {{ request()->routeIs('inventory.inbound.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-undo-alt w-6 text-center text-sm {{ request()->route()->getName() === 'inventory.inbound.rtv' ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Log Returns (RTV)</span>
         </a>
 
@@ -86,11 +86,10 @@
                 <span class="ml-2">Fulfill Requests</span>
             </div>
             {{-- Dynamic count badge --}}
-            @if(isset($pendingRequisitionsCount) && $pendingRequisitionsCount > 0)
-            <span class="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm">
-                {{ $pendingRequisitionsCount }}
+            <span id="requisitions-count-badge" 
+                  class="bg-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm {{ !isset($pendingRequisitionsCount) || $pendingRequisitionsCount <= 0 ? 'hidden' : '' }}">
+                {{ $pendingRequisitionsCount ?? 0 }}
             </span>
-            @endif
         </a>
 
         {{-- Create Purchase Request --}}
@@ -113,11 +112,22 @@
         <a href="{{ Route::has('inventory.stock.lookup') ? route('inventory.stock.lookup') : '#' }}"
            id="menu-inventory-stock-lookup"
            class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
-           {{ request()->routeIs('inventory.stock.*') 
+           {{ request()->routeIs('inventory.stock.lookup') 
               ? 'bg-white/10 text-white border-l-2 border-caramel' 
               : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
-            <i class="fas fa-search-location w-6 text-center text-sm {{ request()->routeIs('inventory.stock.*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <i class="fas fa-search-location w-6 text-center text-sm {{ request()->routeIs('inventory.stock.lookup') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
             <span class="ml-2">Batch Lookup</span>
+        </a>
+
+        {{-- Live Stock Levels --}}
+        <a href="{{ Route::has('inventory.stock.levels') ? route('inventory.stock.levels') : '#' }}"
+           id="menu-inventory-stock-levels"
+           class="group flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200
+           {{ request()->routeIs('inventory.stock.levels') 
+              ? 'bg-white/10 text-white border-l-2 border-caramel' 
+              : 'text-white/70 hover:bg-white/5 hover:text-white border-l-2 border-transparent' }}">
+            <i class="fas fa-chart-bar w-6 text-center text-sm {{ request()->routeIs('inventory.stock.levels') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
+            <span class="ml-2">Live Stock Levels</span>
         </a>
 
         {{-- SECTION: SYSTEM --}}
@@ -136,11 +146,10 @@
                 <i class="fas fa-bell w-6 text-center text-sm {{ request()->routeIs('inventory.notifications*') ? 'text-caramel' : 'text-white/50 group-hover:text-white transition-colors' }}"></i>
                 <span class="ml-2">Notifications</span>
             </div>
-            @if(isset($unreadNotificationsCount) && $unreadNotificationsCount > 0)
-            <span class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm">
-                {{ $unreadNotificationsCount }}
+            <span id="notifications-count-badge" 
+                  class="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded min-w-[1.25rem] text-center shadow-sm {{ !isset($unreadNotificationsCount) || $unreadNotificationsCount <= 0 ? 'hidden' : '' }}">
+                {{ $unreadNotificationsCount ?? 0 }}
             </span>
-            @endif
         </a>
 
     </nav>
@@ -152,6 +161,47 @@
             <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> System Online
         </div>
     </div>
+
+    {{-- Real-time Badge Update Script --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update notification badges every 30 seconds
+            setInterval(updateBadgeCounts, 30000);
+            
+            // Make update function globally available
+            window.updateSidebarCounts = updateBadgeCounts;
+            
+            function updateBadgeCounts() {
+                // Update notification count
+                fetch('/inventory/notifications/count')
+                    .then(response => response.json())
+                    .then(data => {
+                        updateBadge('notifications-count-badge', data.unread_count);
+                    })
+                    .catch(error => console.log('Error updating notification count:', error));
+                
+                // Update requisitions count
+                fetch('/inventory/requisitions/pending-count')
+                    .then(response => response.json())
+                    .then(data => {
+                        updateBadge('requisitions-count-badge', data.pending_count);
+                    })
+                    .catch(error => console.log('Error updating requisitions count:', error));
+            }
+            
+            function updateBadge(badgeId, count) {
+                const badge = document.getElementById(badgeId);
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+            }
+        });
+    </script>
 </aside>
 
 {{-- Custom Scrollbar Style (Inline for isolation or move to CSS) --}}
