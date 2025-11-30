@@ -534,57 +534,42 @@ class ReceivingController extends Controller
 
             return $totalValue;
         } catch (\Exception $e) {
-            \Log::error('Error calculating total inventory value: ' . $e->getMessage());
+            Log::error('Error calculating total inventory value: ' . $e->getMessage());
             return 0;
-        }
-    }
-
-    /**
-     * Display the delivery receiving page
-     */
-    public function receiveDelivery()
-    {
-        try {
-            // Get purchase orders ready for delivery
-            $purchaseOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
-                ->whereIn('status', ['confirmed', 'partial'])
-                ->where('expected_delivery_date', '>=', now()->subDays(30)) // Show orders from last 30 days
-                ->orderBy('expected_delivery_date', 'asc')
-                ->get();
-
-            return view('Inventory.inbound.receive_delivery', compact('purchaseOrders'));
-
-        } catch (\Exception $e) {
-            Log::error('Error loading receive delivery page: ' . $e->getMessage());
-            return redirect()->route('inventory.dashboard')->with('error', 'Unable to load delivery receiving page.');
         }
     }
 
     /**
      * Get purchase order details for delivery receiving
      */
-    public function getPurchaseOrder(PurchaseOrder $purchaseOrder)
+    public function getPurchaseOrder($id)
     {
         try {
-            // Ensure the purchase order can be received
-            if (!in_array($purchaseOrder->status, ['confirmed', 'partial'])) {
+            $purchaseOrder = PurchaseOrder::with(['supplier', 'purchaseOrderItems.item.unit'])
+                ->findOrFail($id);
+            
+            // Check if PO can receive delivery
+            if (!in_array($purchaseOrder->status, ['sent', 'confirmed', 'partial'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Purchase order is not ready for delivery receiving.'
+                    'message' => 'Purchase order cannot receive delivery in its current status.'
                 ], 400);
             }
 
-            $purchaseOrder->load([
-                'supplier',
-                'purchaseOrderItems' => function($query) {
-                    $query->with(['item.unit']);
-                }
-            ]);
-
             // Calculate remaining quantities for each item
-            $items = $purchaseOrder->purchaseOrderItems->map(function ($poItem) {
+            $items = $purchaseOrder->purchaseOrderItems->map(function ($poItem) use ($purchaseOrder) {
                 $quantityReceived = $poItem->quantity_received ?? 0;
-                $quantityRemaining = $poItem->quantity - $quantityReceived;
+                $quantityRemaining = $poItem->quantity_ordered - $quantityReceived;
+                
+                // Debug logging
+                Log::debug('PO Item Debug', [
+                    'po_id' => $purchaseOrder->id,
+                    'item_id' => $poItem->id,
+                    'quantity_ordered' => $poItem->quantity_ordered,
+                    'quantity_received' => $quantityReceived,
+                    'quantity_remaining' => $quantityRemaining,
+                    'can_receive' => $quantityRemaining > 0
+                ]);
                 
                 return [
                     'id' => $poItem->id,
@@ -592,16 +577,23 @@ class ReceivingController extends Controller
                     'item_name' => $poItem->item->name,
                     'sku' => $poItem->item->sku ?? 'N/A',
                     'unit_symbol' => $poItem->item->unit->symbol ?? '',
-                    'quantity_ordered' => $poItem->quantity,
+                    'quantity_ordered' => $poItem->quantity_ordered,
                     'quantity_received' => $quantityReceived,
                     'quantity_remaining' => $quantityRemaining,
-                    'unit_cost' => $poItem->unit_cost,
+                    'unit_cost' => $poItem->unit_price,
                     'is_perishable' => $poItem->item->is_perishable ?? false,
                     'can_receive' => $quantityRemaining > 0
                 ];
             })->filter(function ($item) {
                 return $item['can_receive'];
             })->values();
+
+            // Debug: Log how many items passed the filter
+            Log::debug('PO Filter Results', [
+                'po_id' => $purchaseOrder->id,
+                'total_items' => $purchaseOrder->purchaseOrderItems->count(),
+                'items_after_filter' => $items->count()
+            ]);
 
             if ($items->isEmpty()) {
                 return response()->json([
@@ -641,7 +633,7 @@ class ReceivingController extends Controller
     {
         try {
             $query = $request->get('q', '');
-            $status = $request->get('status', ['sent', 'confirmed']);
+            $status = $request->get('status', ['sent', 'confirmed', 'partial']);
 
             if (empty($query)) {
                 return response()->json([
@@ -727,7 +719,7 @@ class ReceivingController extends Controller
                     $purchaseOrderItem = PurchaseOrderItem::findOrFail($itemData['purchase_order_item_id']);
                     
                     // Validate quantity doesn't exceed remaining
-                    $quantityRemaining = $purchaseOrderItem->quantity - ($purchaseOrderItem->quantity_received ?? 0);
+                    $quantityRemaining = $purchaseOrderItem->quantity_ordered - ($purchaseOrderItem->quantity_received ?? 0);
                     if ($quantityReceived > $quantityRemaining) {
                         throw new \Exception("Quantity received for {$purchaseOrderItem->item->name} cannot exceed remaining amount ({$quantityRemaining}).");
                     }
@@ -739,7 +731,7 @@ class ReceivingController extends Controller
                         'supplier_id' => $purchaseOrder->supplier_id,
                         'purchase_order_id' => $purchaseOrder->id,
                         'quantity' => $quantityReceived,
-                        'unit_cost' => $purchaseOrderItem->unit_cost,
+                        'unit_cost' => $purchaseOrderItem->unit_price,
                         'received_date' => now(),
                         'expiry_date' => $itemData['expiry_date'] ?? null,
                         'condition' => $itemData['condition'] ?? 'good',
@@ -768,9 +760,11 @@ class ReceivingController extends Controller
                     StockMovement::create([
                         'item_id' => $purchaseOrderItem->item_id,
                         'batch_id' => $batch->id,
-                        'movement_type' => 'receiving',
+                        'movement_type' => 'purchase',
                         'quantity' => $quantityReceived,
-                        'unit_cost' => $purchaseOrderItem->unit_cost,
+                        'unit_cost' => $purchaseOrderItem->unit_price,
+                        'total_cost' => $quantityReceived * $purchaseOrderItem->unit_price,
+                        'batch_number' => $batch->batch_number,
                         'reference_type' => 'purchase_order',
                         'reference_id' => $purchaseOrder->id,
                         'notes' => 'Received from PO: ' . $purchaseOrder->po_number,
@@ -792,7 +786,7 @@ class ReceivingController extends Controller
                 
                 foreach ($allItems as $item) {
                     $received = $item->quantity_received ?? 0;
-                    if ($received < $item->quantity) {
+                    if ($received < $item->quantity_ordered) {
                         $isFullyReceived = false;
                         break;
                     }
@@ -800,7 +794,7 @@ class ReceivingController extends Controller
 
                 // Update PO status
                 if ($isFullyReceived) {
-                    $purchaseOrder->status = 'received';
+                    $purchaseOrder->status = 'completed';
                 } else {
                     $purchaseOrder->status = 'partial';
                 }
@@ -874,7 +868,7 @@ class ReceivingController extends Controller
                 }
 
                 $purchaseOrderItem = PurchaseOrderItem::findOrFail($itemData['purchase_order_item_id']);
-                $quantityRemaining = $purchaseOrderItem->quantity - ($purchaseOrderItem->quantity_received ?? 0);
+                $quantityRemaining = $purchaseOrderItem->quantity_ordered - ($purchaseOrderItem->quantity_received ?? 0);
                 
                 if ($quantityReceived > $quantityRemaining) {
                     $errors[] = "Quantity for {$purchaseOrderItem->item->name} exceeds remaining amount ({$quantityRemaining})";
@@ -922,6 +916,31 @@ class ReceivingController extends Controller
                 'errors' => ['Validation failed due to system error'],
                 'warnings' => []
             ], 500);
+        }
+    }
+
+    /**
+     * Show the delivery receiving form
+     */
+    public function receiveDelivery()
+    {
+        try {
+            // Get pending purchase orders that can receive delivery
+            $purchaseOrders = PurchaseOrder::with(['supplier'])
+                ->whereIn('status', ['sent', 'confirmed', 'partial'])
+                ->where(function($query) {
+                    $query->whereNull('expected_delivery_date')
+                          ->orWhere('expected_delivery_date', '>=', now()->subDays(30));
+                })
+                ->orderBy('expected_delivery_date', 'asc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            return view('Inventory.inbound.receive_delivery', compact('purchaseOrders'));
+
+        } catch (\Exception $e) {
+            Log::error('Error loading receiving form: ' . $e->getMessage());
+            return view('Inventory.inbound.receive_delivery')->with('error', 'Unable to load purchase orders.');
         }
     }
 

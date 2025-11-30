@@ -378,6 +378,7 @@ class NotificationController extends Controller
             'urgent' => 'text-red-500',
             'high' => 'text-orange-500',
             'medium' => 'text-yellow-500',
+            'normal' => 'text-amber-500',
             'low' => 'text-green-500',
             default => 'text-caramel'
         };
