@@ -724,6 +724,18 @@ class ReceivingController extends Controller
                         throw new \Exception("Quantity received for {$purchaseOrderItem->item->name} cannot exceed remaining amount ({$quantityRemaining}).");
                     }
 
+                    // Check for duplicate batch number
+                    $batchNumber = trim($itemData['batch_number'] ?? '');
+                    if (empty($batchNumber)) {
+                        throw new \Exception("Batch number is required for {$purchaseOrderItem->item->name}");
+                    }
+
+                    // Verify batch number doesn't already exist
+                    $existingBatch = Batch::where('batch_number', $batchNumber)->first();
+                    if ($existingBatch) {
+                        throw new \Exception("Batch number '{$batchNumber}' already exists for item: {$purchaseOrderItem->item->name}. Please refresh the page to generate a new batch number.");
+                    }
+
                     // Create batch record
                     $batch = Batch::create([
                         'batch_number' => $itemData['batch_number'],
@@ -877,6 +889,13 @@ class ReceivingController extends Controller
                 // Check for missing batch number
                 if (empty($itemData['batch_number'])) {
                     $errors[] = "Batch number is required for {$purchaseOrderItem->item->name}";
+                } else {
+                    // Check for duplicate batch number
+                    $batchNumber = trim($itemData['batch_number']);
+                    $existingBatch = Batch::where('batch_number', $batchNumber)->first();
+                    if ($existingBatch) {
+                        $errors[] = "Batch number '{$batchNumber}' already exists for {$purchaseOrderItem->item->name}. Please refresh the page to generate a new batch number.";
+                    }
                 }
 
                 // Check for expiry date on perishable items

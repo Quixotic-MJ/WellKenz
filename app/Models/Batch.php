@@ -30,6 +30,28 @@ class Batch extends Model
         'expiry_date' => 'date',
     ];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($batch) {
+            // Validate batch number format to prevent problematic patterns
+            if ($batch->batch_number) {
+                $batchNumber = trim($batch->batch_number);
+                
+                // Block problematic patterns
+                if (preg_match('/^(N\/A|NA)-/', $batchNumber)) {
+                    throw new \InvalidArgumentException('Batch number cannot start with "N/A" or "NA-". Please use a valid batch number format.');
+                }
+                
+                // Ensure batch number is not too generic
+                if (strlen($batchNumber) < 8) {
+                    throw new \InvalidArgumentException('Batch number must be at least 8 characters long.');
+                }
+            }
+        });
+    }
+
     public function item()
     {
         return $this->belongsTo(Item::class);

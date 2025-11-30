@@ -303,8 +303,9 @@ Route::middleware(['auth', 'role:purchasing'])->prefix('purchasing')->name('purc
     // Purchase Orders
     Route::get('/po/create', [PurchasingPOController::class, 'createPurchaseOrder'])->name('po.create');
     Route::post('/po', [PurchasingPOController::class, 'storePurchaseOrder'])->name('po.store');
-    Route::get('/po/bulk-configure', [PurchasingPOController::class, 'bulkConfigure'])->name('po.bulk-configure');
+
     Route::post('/po/bulk-create', [PurchasingPOController::class, 'bulkCreatePurchaseOrders'])->name('po.bulk-create');
+    Route::post('/po/bulk-confirm', [PurchasingPOController::class, 'bulkConfirmOrders'])->name('po.bulk-confirm');
     
     // Specific routes first - these must come before the generic {purchaseOrder} route
     Route::get('/po/open', [PurchasingPOController::class, 'openOrders'])->name('po.open');

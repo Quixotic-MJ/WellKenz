@@ -105,28 +105,24 @@
         </div>
 
         {{-- Bulk Actions Bar --}}
-        @if($openOrders->count() > 0)
-            <div class="bg-cream-bg px-6 py-3 border-b border-border-soft flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-3 text-sm text-gray-600">
-                    <span class="font-bold text-chocolate bg-white border border-border-soft px-2 py-0.5 rounded-md shadow-sm" id="bulkSelectedCount">0</span>
-                    <span>orders selected</span>
-                    <span id="bulkInfo" class="text-xs text-caramel font-medium ml-2 italic"></span>
-                </div>
-                
-                <div class="flex items-center gap-2">
-                    @if(auth()->user()->hasRole(['purchasing', 'admin']))
-                        <button onclick="bulkConfirm()" id="bulkConfirmBtn" disabled 
-                                class="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2">
-                            <i class="fas fa-check"></i> Confirm
-                        </button>
-                        <button onclick="bulkExport()" id="bulkExportBtn" disabled 
-                                class="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center gap-2">
-                            <i class="fas fa-download"></i> Export
-                        </button>
-                    @endif
-                </div>
+        <div class="bg-cream-bg px-6 py-3 border-b border-border-soft flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3 text-sm text-gray-600">
+                <span class="font-bold text-chocolate bg-white border border-border-soft px-2 py-0.5 rounded-md shadow-sm" id="bulkSelectedCount">0</span>
+                <span>orders selected</span>
+                <span id="bulkInfo" class="text-xs text-caramel font-medium ml-2 italic"></span>
             </div>
-        @endif
+            
+            <div class="flex items-center gap-2">
+                <button onclick="bulkConfirm()" id="bulkConfirmBtn" 
+                        class="px-4 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-700 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-check"></i> Acknowledge All
+                </button>
+                <button onclick="bulkExport()" id="bulkExportBtn" 
+                        class="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all shadow-sm flex items-center gap-2">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
 
         {{-- Orders Table --}}
         <div class="overflow-x-auto">
@@ -447,10 +443,6 @@ class OpenOrdersManager {
         const bulkConfirmBtn = document.getElementById('bulkConfirmBtn');
         const bulkExportBtn = document.getElementById('bulkExportBtn');
         const bulkInfo = document.getElementById('bulkInfo');
-        
-        const hasSelectableItems = selectedCount > 0;
-        if (bulkConfirmBtn) bulkConfirmBtn.disabled = !hasSelectableItems;
-        if (bulkExportBtn) bulkExportBtn.disabled = !hasSelectableItems;
 
         if (bulkInfo && selectedCount > 0) {
             let totalValue = 0;
@@ -528,12 +520,70 @@ class OpenOrdersManager {
         return Array.from(document.querySelectorAll('.order-checkbox:checked')).map(cb => cb.value);
     }
 
-    bulkConfirm() {
+    async bulkConfirm() {
         const ids = this.getSelectedIds();
-        if (ids.length === 0) return;
-        this.showConfirm('Bulk Confirm', `Confirm ${ids.length} order(s)?`, () => {
-            ids.forEach(id => this.submitForm(`{{ route('purchasing.po.submit', '__ID__') }}`.replace('__ID__', id), 'PATCH'));
+        if (ids.length === 0) {
+            this.showTemporaryAlert('Please select at least one order to acknowledge.', 'warning');
+            return;
+        }
+        
+        this.showConfirm('Acknowledge All', `Acknowledge ${ids.length} order(s)?`, async () => {
+            try {
+                const response = await fetch('{{ route("purchasing.po.bulk-confirm") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        order_ids: ids
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    this.closeConfirm();
+                    
+                    // Show success message
+                    const alertClass = result.errors && result.errors.length > 0 ? 'warning' : 'success';
+                    const message = result.message || `${result.confirmed_count} orders acknowledged successfully`;
+                    
+                    // Reload the page to show updated statuses
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                    
+                    // Show temporary success message
+                    this.showTemporaryAlert(message, alertClass);
+                } else {
+                    throw new Error(result.message || 'Bulk confirmation failed');
+                }
+            } catch (error) {
+                this.closeConfirm();
+                this.showTemporaryAlert('Error: ' + error.message, 'error');
+            }
         });
+    }
+
+    showTemporaryAlert(message, type = 'success') {
+        const alertClass = type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 
+                          type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-800' :
+                          'bg-red-50 border-red-200 text-red-800';
+        
+        const alertHtml = `
+            <div class="fixed top-4 right-4 z-50 ${alertClass} border rounded-xl p-4 flex items-center gap-3 shadow-lg animate-fade-in-down">
+                <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-exclamation-circle'} text-xl"></i>
+                <span class="text-sm font-bold">${message}</span>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', alertHtml);
+        
+        setTimeout(() => {
+            const alert = document.querySelector('.fixed.top-4.right-4.z-50');
+            if (alert) alert.remove();
+        }, 3000);
     }
 
     bulkExport() {

@@ -266,8 +266,12 @@
             const isFullyReceived = remaining <= 0;
             const rowClass = isFullyReceived ? 'bg-gray-50 opacity-75' : 'bg-white hover:bg-blue-50/20';
             
-            // Auto-generate batch number
-            const batchNum = `${item.sku || 'ITEM'}-${new Date().toISOString().slice(2,10).replace(/-/g,'')}`;
+            // Auto-generate unique batch number
+            const now = new Date();
+            const dateStr = now.toISOString().slice(2,10).replace(/-/g,''); // YYMMDD
+            const timeStr = now.getTime().toString().slice(-4); // Last 4 digits of timestamp for uniqueness
+            const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase(); // 4-char random
+            const batchNum = `${(item.sku || 'ITEM').replace(/[^A-Z0-9]/g, '').substring(0, 8)}-${dateStr}-${timeStr}${randomStr}`;
 
             const html = `
                 <div class="grid grid-cols-1 md:grid-cols-12 gap-4 p-4 items-center transition-colors ${rowClass}" id="row-${item.id}">
@@ -507,12 +511,55 @@
                     </button>
                 `;
             } else {
-                throw new Error(result.message || 'Failed to process delivery');
+                // Handle validation errors specifically
+                if (result.errors && result.errors.length > 0) {
+                    const errorList = result.errors.map(err => `<li>${err}</li>`).join('');
+                    const errorHtml = `
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                            <h4 class="text-sm font-bold text-red-800 mb-2">Please fix the following issues:</h4>
+                            <ul class="text-sm text-red-700 space-y-1">
+                                ${errorList}
+                            </ul>
+                        </div>
+                    `;
+                    
+                    // Insert error display above the form
+                    let errorContainer = document.getElementById('errorContainer');
+                    if (!errorContainer) {
+                        errorContainer = document.createElement('div');
+                        errorContainer.id = 'errorContainer';
+                        document.getElementById('deliveryDetailsSection').insertBefore(errorContainer, document.getElementById('receiveDeliveryForm'));
+                    }
+                    errorContainer.innerHTML = errorHtml;
+                    errorContainer.classList.remove('hidden');
+                    
+                    // Scroll to first error
+                    errorContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Auto-hide errors after 10 seconds
+                    setTimeout(() => {
+                        errorContainer.classList.add('hidden');
+                    }, 10000);
+                    
+                } else {
+                    throw new Error(result.message || 'Failed to process delivery');
+                }
             }
             
         } catch (error) {
             console.error('Delivery processing error:', error);
-            alert('Error processing delivery: ' + error.message);
+            
+            // Show user-friendly error message
+            let errorMessage = 'Error processing delivery: ' + error.message;
+            
+            // Provide specific guidance for common errors
+            if (error.message.includes('duplicate key') || error.message.includes('already exists')) {
+                errorMessage += '\n\nThis usually happens when the page has been open for too long. Please refresh the page and try again.';
+            } else if (error.message.includes('network') || error.message.includes('fetch')) {
+                errorMessage = 'Network error. Please check your connection and try again.';
+            }
+            
+            alert(errorMessage);
         } finally {
             // Restore button
             submitButton.innerHTML = originalText;

@@ -1368,32 +1368,77 @@ class PurchaseOrderController extends Controller
         return "PO-{$year}-" . str_pad($newNumber, 6, '0', STR_PAD_LEFT);
     }
 
-    public function bulkConfigure()
+
+
+    /**
+     * Bulk confirm multiple purchase orders
+     */
+    public function bulkConfirmOrders(Request $request)
     {
-        // Get the same data as createPurchaseOrder for PR selection
-        $prIdsWithRemainingItems = $this->getPRIdsWithRemainingItems();
-        
-        $baseApprovedQuery = PurchaseRequest::where('status', 'approved')
-            ->whereIn('id', $prIdsWithRemainingItems);
+        try {
+            $request->validate([
+                'order_ids' => 'required|array',
+                'order_ids.*' => 'exists:purchase_orders,id'
+            ]);
 
-        $approvedRequests = (clone $baseApprovedQuery)
-            ->with([
-                'requestedBy',
-                'purchaseRequestItems.item.unit',
-                'purchaseRequestItems.item.category'
-            ])
-            ->orderBy('request_date', 'desc')
-            ->paginate(15);
+            $orderIds = array_map('intval', $request->order_ids);
+            $confirmedCount = 0;
+            $errors = [];
 
-        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
-        $departments = (clone $baseApprovedQuery)
-            ->whereNotNull('department')
-            ->distinct()
-            ->pluck('department')
-            ->sort()
-            ->values();
+            DB::beginTransaction();
+            
+            try {
+                foreach ($orderIds as $orderId) {
+                    $purchaseOrder = PurchaseOrder::find($orderId);
+                    
+                    // Check if PO can be confirmed (must be in 'sent' status)
+                    if ($purchaseOrder->status !== 'sent') {
+                        $errors[] = "PO {$purchaseOrder->po_number}: Only sent orders can be confirmed.";
+                        continue;
+                    }
 
-        return view('Purchasing.purchase_orders.bulk_configure', compact('approvedRequests', 'suppliers', 'departments'));
+                    // Confirm the order
+                    $purchaseOrder->update([
+                        'status' => 'confirmed',
+                        'acknowledged_by' => Auth::id(),
+                        'acknowledged_at' => Carbon::now(),
+                    ]);
+
+                    $confirmedCount++;
+                }
+
+                DB::commit();
+
+                $message = "Bulk confirmation completed. {$confirmedCount} order(s) confirmed successfully.";
+                if (!empty($errors)) {
+                    $message .= " Errors: " . implode('; ', $errors);
+                }
+
+                $status = empty($errors) ? 'success' : (empty($confirmedCount) ? 'error' : 'warning');
+
+                return response()->json([
+                    'success' => $confirmedCount > 0,
+                    'message' => $message,
+                    'confirmed_count' => $confirmedCount,
+                    'error_count' => count($errors),
+                    'errors' => $errors
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollback();
+                throw $e;
+            }
+
+        } catch (\Exception $e) {
+            Log::error('Error in bulk confirm orders: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to confirm orders: ' . $e->getMessage(),
+                'confirmed_count' => 0,
+                'error_count' => 0,
+                'errors' => []
+            ], 500);
+        }
     }
 
     public function bulkCreatePurchaseOrders(Request $request)
@@ -1549,7 +1594,7 @@ class PurchaseOrderController extends Controller
 
         $status = empty($errors) ? 'success' : (empty($createdPOs) ? 'error' : 'warning');
 
-        return redirect()->route('purchasing.po.bulk-configure')
+        return redirect()->route('purchasing.po.create')
             ->with($status, $message);
     }
 }
