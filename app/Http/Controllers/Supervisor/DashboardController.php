@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Item;
 use App\Models\CurrentStock;
 use App\Models\Requisition;
+use App\Models\PurchaseRequest;
 use App\Models\PurchaseOrder;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -22,107 +23,80 @@ class DashboardController extends Controller
      */
     public function home()
     {
-        $criticalStockItems = $this->getCriticalStockItems();
-        $pendingApprovals = $this->getPendingApprovals();
+        $stats = $this->getStats();
         $recentRequisitions = $this->getRecentRequisitions();
+        $recentPurchaseRequests = $this->getRecentPurchaseRequests();
 
         return view('Supervisor.Home', compact(
-            'criticalStockItems',
-            'pendingApprovals',
-            'recentRequisitions'
+            'stats',
+            'recentRequisitions',
+            'recentPurchaseRequests'
         ));
     }
 
     /**
-     * Get critical stock items (low stock below reorder point)
+     * Get dashboard statistics
      */
-    private function getCriticalStockItems()
+    private function getStats()
+    {
+        $pendingRequisitions = Requisition::where('status', 'pending')->count();
+        $pendingPurchaseRequests = PurchaseRequest::where('status', 'pending')->count();
+        $criticalStock = Item::where('is_active', true)
+            ->whereHas('currentStockRecord', function($query) {
+                $query->whereRaw('current_quantity <= items.reorder_point');
+            })->count();
+
+        return [
+            'pending_requisitions' => $pendingRequisitions,
+            'pending_purchase_requests' => $pendingPurchaseRequests,
+            'critical_stock' => $criticalStock
+        ];
+    }
+
+    /**
+     * Get recent purchase requests for approval (Pending status, urgent first)
+     */
+    private function getRecentPurchaseRequests()
     {
         try {
-            // Log start of method for debugging
-            \Log::info('getCriticalStockItems: Starting method execution');
+            \Log::info('getRecentPurchaseRequests: Starting method execution');
 
-            // Get all items with their current stock and unit relationships
-            $items = Item::with(['currentStockRecord', 'unit'])
-                ->where('is_active', true)
+            $purchaseRequests = PurchaseRequest::with(['requestedBy'])
+                ->where('status', 'pending')
+                ->orderByRaw("FIELD(priority, 'urgent', 'high', 'normal', 'low')")
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
                 ->get();
 
-            \Log::info('getCriticalStockItems: Found ' . $items->count() . ' active items');
+            \Log::info('getRecentPurchaseRequests: Found ' . $purchaseRequests->count() . ' pending purchase requests');
 
-            // Filter items that are at or below reorder point
-            $criticalItems = $items->filter(function($item) {
-                $currentStock = $item->currentStockRecord;
-                $reorderPoint = $item->reorder_point ?? 0;
-
-                // Log for debugging each item
-                if ($currentStock) {
-                    \Log::debug("Item: {$item->name}, Current: {$currentStock->current_quantity}, Reorder Point: {$reorderPoint}");
-                } else {
-                    \Log::debug("Item: {$item->name}, No current stock record found");
-                }
-
-                // Check if item has current stock and is below reorder point
-                if (!$currentStock) return false;
-
-                $isCritical = $currentStock->current_quantity <= $reorderPoint;
-                if ($isCritical) {
-                    \Log::info("CRITICAL STOCK: {$item->name} - Current: {$currentStock->current_quantity}, Reorder: {$reorderPoint}");
-                }
-
-                return $isCritical;
-            });
-
-            \Log::info('getCriticalStockItems: Found ' . $criticalItems->count() . ' critical items');
-
-            // Sort by how critical they are (lowest ratio first)
-            $sortedCriticalItems = $criticalItems->sortBy(function($item) {
-                $currentStock = $item->currentStockRecord;
-                $reorderPoint = max($item->reorder_point ?? 0.001, 0.001); // Ensure minimum of 0.001
-                return $currentStock ? ($currentStock->current_quantity / $reorderPoint) : 1;
-            });
-
-            // Take only the top 10 most critical items
-            $topCriticalItems = $sortedCriticalItems->take(10)->values();
-
-            \Log::info('getCriticalStockItems: Returning ' . $topCriticalItems->count() . ' items');
-
-            // Map to the format expected by the view
-            return $topCriticalItems->map(function($item) {
-                $currentStock = $item->currentStockRecord;
+            $formattedRequests = $purchaseRequests->map(function($request) {
                 return [
-                    'name' => $item->name,
-                    'quantity' => $currentStock ? number_format($currentStock->current_quantity, 1) : '0.0',
-                    'unit' => $item->unit->symbol ?? '',
-                    'reorder_point' => $item->reorder_point ?? 0,
-                    'is_critical' => $currentStock ? ($currentStock->current_quantity <= ($item->reorder_point * 0.5)) : false
+                    'id' => $request->id,
+                    'pr_number' => $request->pr_number,
+                    'requester_name' => $request->requestedBy->name ?? 'Unknown',
+                    'department' => $request->department,
+                    'priority' => $request->priority,
+                    'total_cost' => $request->formatted_total,
+                    'time_ago' => $this->formatTimeAgo($request->created_at),
+                    'notes' => $request->notes,
+                    'request_date' => $request->request_date->format('M d, Y')
                 ];
             });
 
+            \Log::info('getRecentPurchaseRequests: Returning ' . $formattedRequests->count() . ' formatted purchase requests');
+
+            return $formattedRequests;
+
         } catch (\Exception $e) {
-            \Log::error('getCriticalStockItems: Error occurred - ' . $e->getMessage());
+            \Log::error('getRecentPurchaseRequests: Error occurred - ' . $e->getMessage());
             // Return empty collection on error
             return collect([]);
         }
     }
 
     /**
-     * Get pending approvals summary
-     */
-    private function getPendingApprovals()
-    {
-        $pendingRequisitions = Requisition::where('status', 'pending')->count();
-        $pendingPurchaseRequests = PurchaseOrder::where('status', 'draft')->count();
-        $totalPending = $pendingRequisitions + $pendingPurchaseRequests;
-
-        return [
-            'total' => $totalPending,
-            'requisitions' => $pendingRequisitions,
-            'purchase_requests' => $pendingPurchaseRequests
-        ];
-    }
-
-    /**
-     * Get recent requisitions for approval
+     * Get recent requisitions for approval (Pending status, oldest first)
      */
     private function getRecentRequisitions()
     {
@@ -131,8 +105,8 @@ class DashboardController extends Controller
 
             $requisitions = Requisition::with(['requestedBy', 'requisitionItems.item.unit'])
                 ->where('status', 'pending')
-                ->orderBy('created_at', 'desc')
-                ->limit(5)
+                ->orderBy('created_at', 'asc') // Oldest first
+                ->limit(10)
                 ->get();
 
             \Log::info('getRecentRequisitions: Found ' . $requisitions->count() . ' pending requisitions');
@@ -161,7 +135,8 @@ class DashboardController extends Controller
                     'main_item' => $formattedItem,
                     'purpose' => $requisition->purpose,
                     'notes' => $requisition->notes,
-                    'total_items' => $totalItems
+                    'total_items' => $totalItems,
+                    'request_date' => $requisition->request_date->format('M d, Y')
                 ];
             });
 

@@ -100,54 +100,42 @@ class RequisitionController extends Controller
     /**
      * Approve a requisition
      */
-    public function approve(Requisition $requisition, ApproveRequisitionRequest $request): JsonResponse
+    public function approve(Requisition $requisition, ApproveRequisitionRequest $request)
     {
         try {
             $result = $this->approvalService->approveRequisition($requisition, $request);
             
             if ($result['success']) {
-                return response()->json($result);
+                return redirect()->route('supervisor.dashboard')->with('success', 'Requisition approved successfully.');
             } else {
-                return response()->json([
-                    'success' => false,
-                    'error' => $result['message'] ?? 'Failed to approve requisition'
-                ], 400);
+                return redirect()->route('supervisor.dashboard')->with('error', $result['message'] ?? 'Failed to approve requisition');
             }
 
         } catch (\Exception $e) {
             \Log::error('Error approving requisition: ' . $e->getMessage());
             
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to approve requisition'
-            ], 500);
+            return redirect()->route('supervisor.dashboard')->with('error', 'Failed to approve requisition. Please try again.');
         }
     }
 
     /**
      * Reject a requisition
      */
-    public function reject(Requisition $requisition, RejectRequisitionRequest $request): JsonResponse
+    public function reject(Requisition $requisition, RejectRequisitionRequest $request)
     {
         try {
             $result = $this->approvalService->rejectRequisition($requisition, $request);
             
             if ($result['success']) {
-                return response()->json($result);
+                return redirect()->route('supervisor.dashboard')->with('success', 'Requisition rejected successfully.');
             } else {
-                return response()->json([
-                    'success' => false,
-                    'error' => $result['message'] ?? 'Failed to reject requisition'
-                ], 400);
+                return redirect()->route('supervisor.dashboard')->with('error', $result['message'] ?? 'Failed to reject requisition');
             }
 
         } catch (\Exception $e) {
             \Log::error('Error rejecting requisition: ' . $e->getMessage());
             
-            return response()->json([
-                'success' => false,
-                'error' => 'Failed to reject requisition'
-            ], 500);
+            return redirect()->route('supervisor.dashboard')->with('error', 'Failed to reject requisition. Please try again.');
         }
     }
 
