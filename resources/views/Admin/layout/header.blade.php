@@ -188,39 +188,36 @@
                 if (notifications.length === 0) {
                     emptyEl.classList.remove('hidden');
                 } else {
-                    // Render notifications
-                    // REDESIGNED TEMPLATE LITERALS TO MATCH THEME
+                    // Render notifications with clean, minimalist design
                     listEl.innerHTML = notifications.map(notification => {
-                        const iconParts = notification.icon_class.split(' ');
-                        const bgColor = iconParts[1] || 'bg-cream-bg';
-                        // Force icon text to be chocolate or generic gray if not specified
-                        const textColor = iconParts[2] || 'text-chocolate'; 
-                        const icon = iconParts[0] || 'fas fa-bell';
-                        
-                        // Determine read status styles for WellKenz Theme
+                        const icon = notification.icon_class || 'fas fa-bell';
                         const isRead = notification.read_at !== null;
                         
-                        // Unread: Caramel tint bg. Read: White bg.
+                        // Clean design: White background for read, light blue tint for unread
                         const containerClass = isRead 
-                            ? 'bg-white hover:bg-cream-bg' 
-                            : 'bg-orange-50/50 hover:bg-orange-50';
+                            ? 'bg-white hover:bg-gray-50' 
+                            : 'bg-blue-50/30 hover:bg-blue-50/50';
                             
                         const titleClass = isRead 
                             ? 'text-gray-600 font-semibold' 
-                            : 'text-chocolate font-bold';
+                            : 'text-gray-900 font-bold';
                             
+                        // Simple gray icon styling
+                        const iconBg = 'bg-gray-100 text-gray-500';
+                            
+                        // Small blue dot for unread status
                         const unreadDot = !isRead 
-                            ? `<div class="w-2 h-2 bg-caramel rounded-full flex-shrink-0 mt-2 shadow-sm" title="Unread"></div>` 
+                            ? `<div class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2 shadow-sm" title="Unread"></div>` 
                             : '';
 
                         return `
-                            <div class="p-4 border-b border-border-soft last:border-0 cursor-pointer transition-colors group ${containerClass}"
+                            <div class="p-4 border-b border-gray-100 last:border-0 cursor-pointer transition-colors group ${containerClass}"
                                  data-notification-id="${notification.id}"
                                  onclick="handleNotificationClick(${notification.id}, '${notification.action_url}')">
                                 <div class="flex items-start gap-4">
                                     <div class="flex-shrink-0 mt-0.5">
-                                        <div class="w-10 h-10 ${bgColor} rounded-xl flex items-center justify-center border border-border-soft">
-                                            <i class="${icon} ${textColor} text-sm"></i>
+                                        <div class="w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center">
+                                            <i class="${icon} text-sm"></i>
                                         </div>
                                     </div>
                                     <div class="flex-1 min-w-0">

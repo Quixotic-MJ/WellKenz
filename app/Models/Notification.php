@@ -131,50 +131,35 @@ class Notification extends Model
     }
 
     /**
-     * Get the priority color class for styling.
-     */
-    public function getPriorityColorClass(): string
-    {
-        return match($this->priority) {
-            'urgent' => 'border-red-500',
-            'high' => 'border-amber-500', 
-            'normal' => 'border-blue-400',
-            'low' => 'border-gray-300',
-            default => 'border-gray-300'
-        };
-    }
-
-    /**
-     * Get the priority badge color for styling.
-     */
-    public function getPriorityBadgeColor(): string
-    {
-        return match($this->priority) {
-            'urgent' => 'text-red-600 bg-red-50',
-            'high' => 'text-amber-600 bg-amber-50',
-            'normal' => 'text-blue-600 bg-blue-50', 
-            'low' => 'text-gray-600 bg-gray-50',
-            default => 'text-gray-600 bg-gray-50'
-        };
-    }
-
-    /**
      * Get the icon class based on notification type.
+     * Returns only the FontAwesome class without any styling.
      */
     public function getIconClass(): string
     {
         return match($this->type) {
-            'stock_alert' => 'fas fa-exclamation-triangle text-red-600 bg-red-100',
-            'approval_req' => 'fas fa-clipboard-check text-amber-600 bg-amber-100',
-            'requisition' => 'fas fa-clipboard-list text-blue-600 bg-blue-100',
-            'system_info' => 'fas fa-database text-blue-500 bg-blue-100',
-            'delivery_update' => 'fas fa-truck text-green-600 bg-green-100',
-            'production' => 'fas fa-cogs text-purple-600 bg-purple-100',
-            'inventory' => 'fas fa-boxes text-indigo-600 bg-indigo-100',
-            'purchasing' => 'fas fa-shopping-cart text-orange-600 bg-orange-100',
-            'quality' => 'fas fa-check-circle text-emerald-600 bg-emerald-100',
-            'requisition_update' => 'fas fa-sync-alt text-teal-600 bg-teal-100',
-            default => 'fas fa-bell text-gray-600 bg-gray-100'
+            'stock_alert' => 'fas fa-exclamation-triangle',
+            'approval_req' => 'fas fa-clipboard-check',
+            'requisition' => 'fas fa-clipboard-list',
+            'system_info' => 'fas fa-database',
+            'delivery_update' => 'fas fa-truck',
+            'production' => 'fas fa-cogs',
+            'inventory' => 'fas fa-boxes',
+            'purchasing' => 'fas fa-shopping-cart',
+            'quality' => 'fas fa-check-circle',
+            'requisition_update' => 'fas fa-sync-alt',
+            default => 'fas fa-bell'
+        };
+    }
+
+    /**
+     * Get the indicator class for unread status.
+     * Returns 'bg-red-500' for high/urgent priority and 'bg-blue-500' for everything else.
+     */
+    public function getIndicatorClass(): string
+    {
+        return match($this->priority) {
+            'urgent', 'high' => 'bg-red-500',
+            default => 'bg-blue-500'
         };
     }
 

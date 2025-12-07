@@ -48,9 +48,15 @@ class ProfileController extends Controller
             'emergency_contact_phone' => ['nullable', 'string', 'max:20'],
         ]);
 
-        // Add password validation rules only if password fields are provided
+        // Add password validation rules only if user intends to change password
+        // Only apply password validation if ALL three password fields are filled together
         $passwordRules = [];
-        if ($request->filled('current_password') || $request->filled('new_password') || $request->filled('new_password_confirmation')) {
+        $hasCurrentPassword = $request->filled('current_password');
+        $hasNewPassword = $request->filled('new_password');
+        $hasPasswordConfirmation = $request->filled('new_password_confirmation');
+        
+        // Only validate password fields if user filled ALL of them (indicates intent to change password)
+        if ($hasCurrentPassword && $hasNewPassword && $hasPasswordConfirmation) {
             $passwordRules = [
                 'current_password' => ['required', 'string'],
                 'new_password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -73,8 +79,12 @@ class ProfileController extends Controller
                 'email' => $request->email,
             ];
 
-            // Handle password change if provided
-            if ($request->filled('current_password')) {
+            // Handle password change only if ALL password fields are provided (indicates intent to change password)
+            $hasCurrentPassword = $request->filled('current_password');
+            $hasNewPassword = $request->filled('new_password');
+            $hasPasswordConfirmation = $request->filled('new_password_confirmation');
+            
+            if ($hasCurrentPassword && $hasNewPassword && $hasPasswordConfirmation) {
                 // Verify current password
                 if (!Hash::check($request->current_password, $user->password_hash)) {
                     return redirect()->back()
@@ -106,7 +116,7 @@ class ProfileController extends Controller
             }
 
             $message = 'Profile updated successfully.';
-            if ($request->filled('current_password')) {
+            if ($hasCurrentPassword && $hasNewPassword && $hasPasswordConfirmation) {
                 $message = 'Profile and password updated successfully.';
             }
 
@@ -120,6 +130,8 @@ class ProfileController extends Controller
 
     /**
      * Change user password.
+     * Note: This method is kept for backward compatibility but profile updates 
+     * with password changes should use updateProfile method for better UX.
      */
     public function changePassword(Request $request)
     {

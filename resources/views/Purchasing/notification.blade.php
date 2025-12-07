@@ -50,92 +50,83 @@
         </div>
 
         {{-- Notification List --}}
-        <div class="divide-y divide-border-soft">
+        <div class="divide-y divide-gray-100">
             @forelse(($notifications ?? collect()) as $notification)
-                <div class="notification-item group relative p-5 hover:bg-gray-50 transition-all duration-200 flex items-start gap-4 {{ !$notification->is_read ? 'bg-cream-bg' : 'bg-white' }}"
+                <div class="notification-item group relative bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-all duration-300
+                            {{ !$notification->is_read ? 'bg-blue-50' : '' }}"
                      data-notification-id="{{ $notification->id }}"
                      data-read="{{ $notification->is_read ? 'true' : 'false' }}">
                     
-                    {{-- Checkbox --}}
-                    <div class="pt-1 flex-shrink-0">
-                        <input type="checkbox" 
-                               class="notification-checkbox w-4 h-4 text-chocolate focus:ring-caramel border-gray-300 rounded cursor-pointer"
-                               data-notification-id="{{ $notification->id }}">
-                    </div>
-
-                    {{-- Icon --}}
-                    <div class="flex-shrink-0">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-border-soft text-chocolate shadow-sm">
-                            <i class="{{ explode(' ', $notification->getIconClass())[0] }}"></i>
+                    <div class="flex items-start gap-5">
+                        {{-- Checkbox --}}
+                        <div class="pt-1 flex items-center">
+                            <input type="checkbox" 
+                                   class="notification-checkbox h-4 w-4 text-chocolate focus:ring-caramel border-gray-300 rounded cursor-pointer transition-transform transform hover:scale-110"
+                                   data-notification-id="{{ $notification->id }}">
                         </div>
-                    </div>
 
-                    {{-- Content --}}
-                    <div class="flex-1 min-w-0">
-                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                            <div class="space-y-1">
-                                <div class="flex items-center gap-2">
-                                    <h3 class="text-sm font-semibold text-gray-900 {{ !$notification->is_read ? 'text-chocolate' : '' }}">
-                                        {{ $notification->title }}
-                                    </h3>
-                                    {{-- Unread Indicator --}}
-                                    @if(!$notification->is_read)
-                                        <span class="inline-block w-2 h-2 bg-caramel rounded-full"></span>
-                                    @endif
-                                    
-                                    {{-- Priority Badge --}}
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-600 border border-gray-200">
-                                        {{ $notification->priority }}
-                                    </span>
-                                </div>
-                                <p class="text-sm text-gray-600 leading-relaxed">{{ $notification->message }}</p>
+                        {{-- Icon --}}
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 text-gray-500 shadow-sm">
+                                <i class="{{ $notification->getIconClass() }}"></i>
                             </div>
+                        </div>
 
-                            {{-- Time & Actions --}}
-                            <div class="flex items-center gap-4 sm:flex-col sm:items-end sm:gap-1">
-                                <span class="text-xs text-gray-400 whitespace-nowrap">
-                                    {{ $notification->getTimeAgoAttribute() }}
-                                </span>
+                        {{-- Content --}}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-3 flex-wrap">
+                                        <h3 class="text-sm font-bold {{ !$notification->is_read ? 'text-gray-900' : 'text-gray-600' }}">
+                                            {{ $notification->title }}
+                                        </h3>
+                                        @if(!$notification->is_read)
+                                            <span class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" title="Unread"></span>
+                                        @endif
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1 leading-relaxed">{{ $notification->message }}</p>
+                                    
+                                    {{-- Metadata Row --}}
+                                    @if($notification->metadata && count($notification->metadata) > 0)
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        @foreach(array_slice($notification->metadata, 0, 3) as $key => $value)
+                                            <div class="inline-flex items-center px-2 py-1 rounded bg-gray-50 border border-gray-100 text-xs text-gray-500">
+                                                <span class="font-bold mr-1 text-gray-600">{{ ucfirst(str_replace('_', ' ', $key)) }}:</span> 
+                                                <span class="truncate max-w-[120px]">{{ $value }}</span>
+                                            </div>
+                                        @endforeach
+                                        
+                                        @if($notification->expires_at && $notification->expires_at->isBefore(now()->addDays(1)))
+                                            <span class="inline-flex items-center text-xs text-amber-600 font-medium">
+                                                <i class="fas fa-clock mr-1"></i> Exp: {{ $notification->expires_at->diffForHumans() }}
+                                            </span>
+                                        @endif
+                                    </div>
+                                    @endif
+                                </div>
                                 
-                                {{-- Hover Actions --}}
-                                <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    @if($notification->action_url)
-                                        <a href="{{ $notification->action_url }}" class="text-xs font-medium text-chocolate hover:underline">
-                                            View
-                                        </a>
-                                        <span class="text-gray-300">|</span>
-                                    @endif
+                                {{-- Time & Actions --}}
+                                <div class="flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-1 mt-2 sm:mt-0 pl-0 sm:pl-4">
+                                    <span class="text-xs text-gray-400 whitespace-nowrap font-medium">
+                                        {{ method_exists($notification, 'getTimeAgoAttribute') ? $notification->getTimeAgoAttribute() : $notification->created_at->diffForHumans() }}
+                                    </span>
                                     
-                                    <button class="mark-read-unread text-xs font-medium text-caramel hover:text-chocolate transition-colors" title="{{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}">
-                                        {{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}
-                                    </button>
-                                    <span class="text-gray-300">|</span>
-                                    <button class="delete-notification text-gray-400 hover:text-red-600 transition-colors" title="Delete">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <div class="flex items-center gap-3 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+                                        @if($notification->action_url)
+                                            <a href="{{ $notification->action_url }}" class="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                                                View Details
+                                            </a>
+                                            <span class="text-gray-300 text-xs">|</span>
+                                        @endif
+                                        
+                                        <button class="mark-read-unread text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors" 
+                                                title="{{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}">
+                                            {{ $notification->is_read ? 'Mark as Unread' : 'Mark as Read' }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        {{-- Metadata --}}
-                        @if(($notification->metadata && count($notification->metadata) > 0) || ($notification->expires_at && $notification->expires_at->isBefore(now()->addDays(1))))
-                            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                                @if($notification->metadata)
-                                    @foreach(array_slice($notification->metadata, 0, 3) as $key => $value)
-                                        <div class="flex items-center bg-gray-50 border border-border-soft px-2 py-1 rounded">
-                                            <span class="font-medium text-gray-700 mr-1">{{ ucfirst(str_replace('_', ' ', $key)) }}:</span> 
-                                            <span class="truncate max-w-[150px]">{{ $value }}</span>
-                                        </div>
-                                    @endforeach
-                                @endif
-
-                                @if($notification->expires_at && $notification->expires_at->isBefore(now()->addDays(1)))
-                                    <span class="text-caramel flex items-center font-medium">
-                                        <i class="fas fa-clock mr-1"></i> Expires {{ $notification->expires_at->diffForHumans() }}
-                                    </span>
-                                @endif
-                            </div>
-                        @endif
                     </div>
                 </div>
             @empty

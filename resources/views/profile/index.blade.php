@@ -206,19 +206,43 @@
 
                         <!-- Password Change Section -->
                         <div class="border-t border-border-soft mt-6 pt-6">
-                            <h6 class="text-lg font-bold text-chocolate font-display mb-4 flex items-center">
-                                <i class="fas fa-lock mr-2"></i>Change Password (Optional)
-                            </h6>
-                            <p class="text-sm text-gray-600 mb-4">Leave blank if you don't want to change your password.</p>
+                            <div class="flex items-center justify-between mb-4">
+                                <div>
+                                    <h6 class="text-lg font-bold text-chocolate font-display flex items-center">
+                                        <i class="fas fa-lock mr-2"></i>Change Password
+                                    </h6>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        <i class="fas fa-info-circle mr-1"></i>
+                                        Password change is optional. Leave fields empty or partially filled to keep your current password.
+                                    </p>
+                                </div>
+                                <div class="text-xs text-gray-500 bg-gray-50 px-3 py-2 rounded-lg">
+                                    <i class="fas fa-shield-alt mr-1"></i>
+                                    Min. 8 characters
+                                </div>
+                            </div>
+                            
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                <div class="flex">
+                                    <i class="fas fa-lightbulb text-blue-500 mt-0.5 mr-3"></i>
+                                    <div class="text-sm text-blue-700">
+                                        <strong>Tip:</strong> If you want to change your password, you MUST fill in ALL three password fields. 
+                                        If you leave them empty or only fill some fields, your current password will remain unchanged and the form will save successfully.
+                                    </div>
+                                </div>
+                            </div>
                             
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label for="current_password" class="block text-sm font-bold text-chocolate mb-2">Current Password</label>
+                                    <label for="current_password" class="block text-sm font-bold text-chocolate mb-2">
+                                        <i class="fas fa-key mr-1"></i>Current Password
+                                    </label>
                                     <div class="relative">
                                         <input type="password" 
                                                class="w-full px-3 py-2 pr-10 border border-border-soft rounded-lg focus:outline-none focus:ring-2 focus:ring-caramel focus:border-caramel @error('current_password') border-red-500 @enderror" 
                                                id="current_password" 
-                                               name="current_password">
+                                               name="current_password"
+                                               placeholder="Enter current password">
                                         <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-chocolate" onclick="togglePassword('current_password')">
                                             <i class="fas fa-eye" id="current_password_icon"></i>
                                         </button>
@@ -229,12 +253,15 @@
                                 </div>
 
                                 <div>
-                                    <label for="new_password" class="block text-sm font-bold text-chocolate mb-2">New Password</label>
+                                    <label for="new_password" class="block text-sm font-bold text-chocolate mb-2">
+                                        <i class="fas fa-lock mr-1"></i>New Password
+                                    </label>
                                     <div class="relative">
                                         <input type="password" 
                                                class="w-full px-3 py-2 pr-10 border border-border-soft rounded-lg focus:outline-none focus:ring-2 focus:ring-caramel focus:border-caramel @error('new_password') border-red-500 @enderror" 
                                                id="new_password" 
-                                               name="new_password">
+                                               name="new_password"
+                                               placeholder="Enter new password">
                                         <button type="button" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-chocolate" onclick="togglePassword('new_password')">
                                             <i class="fas fa-eye" id="new_password_icon"></i>
                                         </button>
@@ -245,11 +272,14 @@
                                 </div>
 
                                 <div>
-                                    <label for="new_password_confirmation" class="block text-sm font-bold text-chocolate mb-2">Confirm New Password</label>
+                                    <label for="new_password_confirmation" class="block text-sm font-bold text-chocolate mb-2">
+                                        <i class="fas fa-check-circle mr-1"></i>Confirm New Password
+                                    </label>
                                     <input type="password" 
                                            class="w-full px-3 py-2 border border-border-soft rounded-lg focus:outline-none focus:ring-2 focus:ring-caramel focus:border-caramel @error('new_password_confirmation') border-red-500 @enderror" 
                                            id="new_password_confirmation" 
-                                           name="new_password_confirmation">
+                                           name="new_password_confirmation"
+                                           placeholder="Confirm new password">
                                     @error('new_password_confirmation')
                                         <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
                                     @enderror

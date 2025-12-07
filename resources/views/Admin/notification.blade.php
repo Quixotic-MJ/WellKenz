@@ -49,8 +49,8 @@
     {{-- 3. NOTIFICATION LIST --}}
     <div class="space-y-4">
         @forelse($notifications as $notification)
-            <div class="notification-item group relative bg-white border border-border-soft rounded-xl p-5 hover:shadow-md transition-all duration-300
-                        {{ !$notification->is_read ? 'bg-cream-bg border-l-4 border-l-caramel' : 'border-l-4 border-l-transparent' }}"
+            <div class="notification-item group relative bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-all duration-300
+                        {{ !$notification->is_read ? 'bg-blue-50' : '' }}"
                  data-notification-id="{{ $notification->id }}"
                  data-read="{{ $notification->is_read ? 'true' : 'false' }}">
                 
@@ -64,10 +64,8 @@
 
                     {{-- Icon --}}
                     <div class="flex-shrink-0">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center shadow-sm ring-4 ring-white
-                            {{ str_contains($notification->getIconClass(), 'bg-') ? $notification->getIconClass() : 'bg-white text-chocolate border border-border-soft' }}">
-                            {{-- Assuming getIconClass returns font awesome classes or bg classes --}}
-                            <i class="{{ explode(' ', $notification->getIconClass())[0] ?? 'fas fa-bell' }}"></i>
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 text-gray-500 shadow-sm">
+                            <i class="{{ $notification->getIconClass() }}"></i>
                         </div>
                     </div>
 
@@ -76,29 +74,21 @@
                         <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 flex-wrap">
-                                    <h3 class="text-sm font-bold {{ !$notification->is_read ? 'text-chocolate' : 'text-gray-900' }}">
+                                    <h3 class="text-sm font-bold {{ !$notification->is_read ? 'text-gray-900' : 'text-gray-600' }}">
                                         {{ $notification->title }}
                                     </h3>
                                     @if(!$notification->is_read)
-                                        <span class="inline-block w-2 h-2 bg-caramel rounded-full animate-pulse" title="Unread"></span>
-                                    @endif
-                                    
-                                    {{-- Priority Badge --}}
-                                    @if($notification->priority !== 'normal')
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border
-                                            {{ $notification->priority === 'urgent' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100' }}">
-                                            {{ $notification->priority }}
-                                        </span>
+                                        <span class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" title="Unread"></span>
                                     @endif
                                 </div>
-                                <p class="text-sm text-gray-600 mt-1 leading-relaxed">{{ $notification->message }}</p>
+                                <p class="text-sm text-gray-500 mt-1 leading-relaxed">{{ $notification->message }}</p>
                                 
                                 {{-- Metadata Row --}}
                                 @if($notification->metadata && count($notification->metadata) > 0)
                                 <div class="mt-3 flex flex-wrap gap-2">
                                     @foreach(array_slice($notification->metadata, 0, 3) as $key => $value)
                                         <div class="inline-flex items-center px-2 py-1 rounded bg-gray-50 border border-gray-100 text-xs text-gray-500">
-                                            <span class="font-bold mr-1 text-chocolate/80">{{ ucfirst(str_replace('_', ' ', $key)) }}:</span> 
+                                            <span class="font-bold mr-1 text-gray-600">{{ ucfirst(str_replace('_', ' ', $key)) }}:</span> 
                                             <span class="truncate max-w-[120px]">{{ $value }}</span>
                                         </div>
                                     @endforeach
@@ -120,19 +110,15 @@
                                 
                                 <div class="flex items-center gap-3 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                                     @if($notification->action_url)
-                                        <a href="{{ $notification->action_url }}" class="text-xs font-bold text-chocolate hover:text-caramel underline decoration-chocolate/30 underline-offset-2 transition-colors">
-                                            View
+                                        <a href="{{ $notification->action_url }}" class="text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors">
+                                            View Details
                                         </a>
                                         <span class="text-gray-300 text-xs">|</span>
                                     @endif
                                     
-                                    <button class="mark-read-unread text-xs font-medium text-gray-500 hover:text-chocolate transition-colors" 
+                                    <button class="mark-read-unread text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors" 
                                             title="{{ $notification->is_read ? 'Mark Unread' : 'Mark Read' }}">
-                                        {{ $notification->is_read ? 'Unread' : 'Read' }}
-                                    </button>
-                                    
-                                    <button class="delete-notification text-gray-400 hover:text-red-600 transition-colors ml-1" title="Delete">
-                                        <i class="fas fa-trash text-xs"></i>
+                                        {{ $notification->is_read ? 'Mark as Unread' : 'Mark as Read' }}
                                     </button>
                                 </div>
                             </div>

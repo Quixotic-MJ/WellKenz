@@ -202,60 +202,46 @@
                 if (notifications.length === 0) {
                     emptyEl.classList.remove('hidden');
                 } else {
-                    // Render notifications
+                    // Render notifications with clean, minimalist design
                     listEl.innerHTML = notifications.map(notification => {
-                        const iconParts = notification.icon_class.split(' ');
-                        const bgColor = iconParts[1] || 'bg-gray-100';
-                        const textColor = iconParts[2] || 'text-gray-600';
-                        const icon = iconParts[0] || 'fas fa-bell';
-                        
+                        const icon = notification.icon_class || 'fas fa-bell';
                         const isRead = notification.read_at !== null;
+                        
+                        // Clean design: White background for read, light blue tint for unread
                         const containerClass = isRead 
                             ? 'bg-white hover:bg-gray-50' 
-                            : 'bg-blue-50/40 hover:bg-blue-50/70 border-l-4 border-l-caramel';
+                            : 'bg-blue-50/30 hover:bg-blue-50/50';
+                            
                         const titleClass = isRead 
-                            ? 'text-gray-700 font-semibold' 
-                            : 'text-chocolate font-bold';
-                        const iconBg = isRead ? 'bg-gray-100 text-gray-400' : 'bg-white border border-border-soft text-caramel shadow-sm';
-
-                        let categoryLabel = '';
-                        let categoryColor = '';
-                        if (notification.type === 'approval_req' || notification.type === 'purchasing') {
-                            categoryLabel = 'Approval';
-                            categoryColor = 'text-green-600 bg-green-50 border-green-100';
-                        } else if (notification.type === 'inventory' || (notification.type === 'requisition_update' && notification.metadata?.requisition_status === 'fulfilled')) {
-                            categoryLabel = 'Fulfillment';
-                            categoryColor = 'text-blue-600 bg-blue-50 border-blue-100';
-                        } else if (notification.type === 'stock_alert') {
-                            categoryLabel = 'Alert';
-                            categoryColor = 'text-red-600 bg-red-50 border-red-100';
-                        } else {
-                            categoryLabel = 'Update';
-                            categoryColor = 'text-gray-600 bg-gray-50 border-gray-200';
-                        }
+                            ? 'text-gray-600 font-semibold' 
+                            : 'text-gray-900 font-bold';
+                            
+                        // Simple gray icon styling
+                        const iconBg = 'bg-gray-100 text-gray-500';
+                            
+                        // Small blue dot for unread status
+                        const unreadDot = !isRead 
+                            ? `<div class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2 shadow-sm" title="Unread"></div>` 
+                            : '';
 
                         return `
-                            <div class="p-4 border-b border-border-soft last:border-0 cursor-pointer transition-all duration-200 group ${containerClass}"
+                            <div class="p-4 border-b border-gray-100 last:border-0 cursor-pointer transition-colors group ${containerClass}"
                                  data-notification-id="${notification.id}"
                                  onclick="handleNotificationClick(${notification.id}, '${notification.action_url}')">
                                 <div class="flex items-start gap-4">
                                     <div class="flex-shrink-0 mt-0.5">
-                                        <div class="w-10 h-10 rounded-xl flex items-center justify-center ${iconBg}">
+                                        <div class="w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center">
                                             <i class="${icon} text-sm"></i>
                                         </div>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <div class="flex justify-between items-start mb-1">
-                                            <div class="flex items-center gap-2">
-                                                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${categoryColor}">${categoryLabel}</span>
-                                                <span class="text-[10px] text-gray-400">•</span>
-                                                <span class="text-[10px] text-gray-400 font-medium">${notification.priority}</span>
-                                            </div>
-                                            <span class="text-[10px] text-gray-400 whitespace-nowrap font-medium uppercase tracking-wide">${notification.time_ago}</span>
+                                        <div class="flex justify-between items-start">
+                                            <p class="text-sm ${titleClass} truncate pr-2 font-sans">${notification.title}</p>
+                                            <span class="text-[10px] text-gray-400 whitespace-nowrap pt-1 uppercase tracking-wide font-medium">${notification.time_ago}</span>
                                         </div>
-                                        <p class="text-sm ${titleClass} truncate pr-2 font-sans">${notification.title}</p>
                                         <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed font-sans">${notification.message}</p>
                                     </div>
+                                    ${unreadDot}
                                 </div>
                             </div>
                         `;
