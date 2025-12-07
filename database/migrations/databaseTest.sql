@@ -666,11 +666,7 @@ CREATE TRIGGER update_recipes_updated_at BEFORE UPDATE ON recipes FOR EACH ROW E
 CREATE TRIGGER update_requisitions_updated_at BEFORE UPDATE ON requisitions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON system_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Create trigger to automatically update current stock
--- CREATE TRIGGER update_stock_movement_trigger
---     AFTER INSERT ON stock_movements
---     FOR EACH ROW
---     EXECUTE FUNCTION update_current_stock();
+
 
 -- Create triggers for automatic total calculations
 CREATE TRIGGER calculate_pr_item_totals
@@ -1886,29 +1882,29 @@ INSERT INTO notifications (user_id, title, message, type, priority, is_read, cre
 (2, 'Monthly Inventory', 'Monthly inventory count scheduled for next week', 'inventory', 'normal', true, '2024-01-22 15:10:00'),
 (3, 'New Supplier', 'New supplier Frozen Goods Ltd added to system', 'supplier', 'normal', true, '2024-01-21 13:45:00');
 
--- Insert sample audit logs
-INSERT INTO audit_logs (table_name, record_id, action, user_id, created_at) VALUES
-('users', 1, 'CREATE', 1, '2024-01-15 08:00:00'),
-('items', 1, 'CREATE', 2, '2024-01-15 09:30:00'),
-('stock_movements', 1, 'CREATE', 3, '2024-01-16 10:15:00'),
-('purchase_orders', 3, 'CREATE', 3, '2024-01-20 11:30:00'),
-('purchase_orders', 4, 'CREATE', 3, '2024-01-20 14:20:00'),
-('requisitions', 3, 'UPDATE', 4, '2024-01-20 14:32:00'),
-('requisitions', 4, 'UPDATE', 4, '2024-01-20 15:18:00'),
-('items', 51, 'UPDATE', 2, '2024-01-21 09:15:00'),
-('items', 63, 'UPDATE', 2, '2024-01-21 10:30:00'),
-('suppliers', 11, 'CREATE', 3, '2024-01-19 15:20:00'),
-('suppliers', 12, 'CREATE', 3, '2024-01-19 16:10:00'),
-('recipes', 5, 'CREATE', 7, '2024-01-18 14:25:00'),
-('recipes', 6, 'CREATE', 7, '2024-01-18 15:40:00'),
-('stock_movements', 11, 'CREATE', 2, '2024-01-23 08:30:00'),
-('stock_movements', 12, 'CREATE', 2, '2024-01-23 09:45:00'),
-('batches', 11, 'CREATE', 2, '2024-01-22 11:20:00'),
-('batches', 12, 'CREATE', 2, '2024-01-22 12:15:00'),
-('users', 7, 'CREATE', 1, '2024-01-17 10:00:00'),
-('users', 8, 'CREATE', 1, '2024-01-17 10:30:00'),
-('categories', 16, 'CREATE', 1, '2024-01-16 14:20:00'),
-('categories', 17, 'CREATE', 1, '2024-01-16 15:10:00');
+-- -- Insert sample audit logs
+-- INSERT INTO audit_logs (table_name, record_id, action, user_id, created_at) VALUES
+-- ('users', 1, 'CREATE', 1, '2024-01-15 08:00:00'),
+-- ('items', 1, 'CREATE', 2, '2024-01-15 09:30:00'),
+-- ('stock_movements', 1, 'CREATE', 3, '2024-01-16 10:15:00'),
+-- ('purchase_orders', 3, 'CREATE', 3, '2024-01-20 11:30:00'),
+-- ('purchase_orders', 4, 'CREATE', 3, '2024-01-20 14:20:00'),
+-- ('requisitions', 3, 'UPDATE', 4, '2024-01-20 14:32:00'),
+-- ('requisitions', 4, 'UPDATE', 4, '2024-01-20 15:18:00'),
+-- ('items', 51, 'UPDATE', 2, '2024-01-21 09:15:00'),
+-- ('items', 63, 'UPDATE', 2, '2024-01-21 10:30:00'),
+-- ('suppliers', 11, 'CREATE', 3, '2024-01-19 15:20:00'),
+-- ('suppliers', 12, 'CREATE', 3, '2024-01-19 16:10:00'),
+-- ('recipes', 5, 'CREATE', 7, '2024-01-18 14:25:00'),
+-- ('recipes', 6, 'CREATE', 7, '2024-01-18 15:40:00'),
+-- ('stock_movements', 11, 'CREATE', 2, '2024-01-23 08:30:00'),
+-- ('stock_movements', 12, 'CREATE', 2, '2024-01-23 09:45:00'),
+-- ('batches', 11, 'CREATE', 2, '2024-01-22 11:20:00'),
+-- ('batches', 12, 'CREATE', 2, '2024-01-22 12:15:00'),
+-- ('users', 7, 'CREATE', 1, '2024-01-17 10:00:00'),
+-- ('users', 8, 'CREATE', 1, '2024-01-17 10:30:00'),
+-- ('categories', 16, 'CREATE', 1, '2024-01-16 14:20:00'),
+-- ('categories', 17, 'CREATE', 1, '2024-01-16 15:10:00');
 
 -- ============================================================================
 -- COMPLETION MESSAGE

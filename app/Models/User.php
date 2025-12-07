@@ -9,13 +9,14 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use App\Traits\Auditable;
 
 // DEBUGGING: Temporarily remove HasUuids to test if this is the issue
 // use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, Auditable;
 
     /**
      * The data type of the primary key ID.

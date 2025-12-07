@@ -275,34 +275,7 @@
                 <button type="button" onclick="closeDetailModal()" class="inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-5 py-2 bg-white text-sm font-bold text-gray-700 hover:bg-cream-bg hover:text-chocolate focus:outline-none transition-all">
                     Close
                 </button>
-                <button type="button" onclick="toggleDebugInfo()" id="debugToggleBtn" class="inline-flex justify-center rounded-lg border border-blue-300 shadow-sm px-4 py-2 bg-blue-50 text-sm font-bold text-blue-700 hover:bg-blue-100 hover:text-blue-800 focus:outline-none transition-all">
-                    <i class="fas fa-bug mr-2"></i>Debug Info
-                </button>
             </div>
-        </div>
-    </div>
-</div>
-
-{{-- Debug Panel (Hidden by default) --}}
-<div id="debugPanel" class="hidden fixed bottom-5 right-5 z-[80] max-w-md w-full bg-gray-900 text-white rounded-lg shadow-2xl border border-gray-700 overflow-hidden">
-    <div class="px-4 py-3 bg-gray-800 border-b border-gray-700 flex justify-between items-center">
-        <div class="flex items-center">
-            <i class="fas fa-bug text-yellow-400 mr-2"></i>
-            <span class="text-sm font-bold">Debug Panel</span>
-        </div>
-        <button onclick="toggleDebugInfo()" class="text-gray-400 hover:text-white">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-    <div class="p-4 max-h-64 overflow-y-auto">
-        <div class="text-xs text-gray-300 space-y-2">
-            <div><strong>Keyboard Shortcuts:</strong></div>
-            <div>• <kbd class="bg-gray-700 px-1 rounded">ESC</kbd> - Close modal</div>
-            <div>• <kbd class="bg-gray-700 px-1 rounded">Ctrl+Shift+D</kbd> - Enable debug mode</div>
-            <div class="mt-3"><strong>Debug Commands:</strong></div>
-            <div>• Call <code class="bg-gray-700 px-1 rounded">debugAuditLogData(log)</code> in console</div>
-            <div>• Use <code class="bg-gray-700 px-1 rounded">window.auditLogDebug</code> for detailed logging</div>
-            <div class="mt-3 text-yellow-400"><i class="fas fa-lightbulb mr-1"></i>Check browser console for detailed audit information</div>
         </div>
     </div>
 </div>
@@ -413,6 +386,15 @@ const formatValue = (val, context = 'general') => {
     
     // Handle special string values
     if (typeof val === 'string') {
+        // Detect and format ISO dates
+        const isoDateRegex = /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/;
+        if (isoDateRegex.test(val)) {
+            const date = new Date(val);
+            if (!isNaN(date)) {
+                return `<span class="font-mono text-sm text-gray-700">${date.toLocaleString()}</span>`;
+            }
+        }
+        
         // Check for common empty indicators
         if (val.toLowerCase() === 'null' || val.toLowerCase() === 'undefined' || val.trim() === '') {
             return '<span class="text-gray-400 italic flex items-center" title="Empty string value"><i class="fas fa-circle mr-1" style="font-size: 4px;"></i>Empty</span>';
@@ -568,6 +550,9 @@ function openDetailModal(log) {
     }
 
     const container = document.getElementById('modalContentContainer');
+    
+    // Clear previous content to prevent duplicates
+    container.innerHTML = '';
     
     // Show parse errors if any
     if (parseErrors.length > 0) {
@@ -725,38 +710,6 @@ function renderAttributeList(data, title, headerClass) {
     `;
 }
 
-// Debug helper function for troubleshooting
-function debugAuditLogData(log) {
-    const debug = {
-        id: log.id,
-        action: log.action,
-        table_name: log.table_name,
-        record_id: log.record_id,
-        created_at: log.created_at,
-        user: log.user ? { id: log.user.id, name: log.user.name, role: log.user.role } : null,
-        old_values_type: typeof log.old_values,
-        new_values_type: typeof log.new_values,
-        old_values_content: log.old_values,
-        new_values_content: log.new_values,
-        timestamp: new Date().toISOString()
-    };
-    
-    console.group('🔍 Audit Log Debug Info');
-    console.log('Log ID:', debug.id);
-    console.log('Action:', debug.action);
-    console.log('Table:', debug.table_name);
-    console.log('Record ID:', debug.record_id);
-    console.log('User:', debug.user);
-    console.log('Old Values Type:', debug.old_values_type);
-    console.log('New Values Type:', debug.new_values_type);
-    console.log('Old Values Content:', debug.old_values_content);
-    console.log('New Values Content:', debug.new_values_content);
-    console.log('Timestamp:', debug.timestamp);
-    console.groupEnd();
-    
-    return debug;
-}
-
 function closeDetailModal() {
     document.getElementById('detailModal').classList.add('hidden');
 }
@@ -764,12 +717,6 @@ function closeDetailModal() {
 document.addEventListener('keydown', function(event) {
     if (event.key === "Escape") {
         closeDetailModal();
-    }
-    // Debug mode: Press Ctrl+Shift+D to enable debug logging
-    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-        console.log('🔧 Debug mode enabled for audit logs');
-        window.auditLogDebugEnabled = true;
-        showToast('Debug Mode Enabled', 'Check browser console for detailed audit log information.');
     }
 });
 
@@ -812,31 +759,5 @@ function showEnhancedToast(type, title, message) {
     
     setTimeout(() => hideToast(), 4000);
 }
-
-// Debug function to help troubleshoot issues
-function enableDebugMode() {
-    window.auditLogDebugEnabled = true;
-    showEnhancedToast('info', 'Debug Mode Activated', 'Console logging enabled for audit operations.');
-}
-
-// Debug panel toggle function
-function toggleDebugInfo() {
-    const debugPanel = document.getElementById('debugPanel');
-    const debugBtn = document.getElementById('debugToggleBtn');
-    
-    if (debugPanel.classList.contains('hidden')) {
-        debugPanel.classList.remove('hidden');
-        debugBtn.classList.add('bg-yellow-100', 'text-yellow-800');
-        debugBtn.classList.remove('bg-blue-50', 'text-blue-700');
-    } else {
-        debugPanel.classList.add('hidden');
-        debugBtn.classList.remove('bg-yellow-100', 'text-yellow-800');
-        debugBtn.classList.add('bg-blue-50', 'text-blue-700');
-    }
-}
-
-// Make debug function globally available
-window.auditLogDebug = debugAuditLogData;
-window.enableAuditDebug = enableDebugMode;
 </script>
 @endsection 
