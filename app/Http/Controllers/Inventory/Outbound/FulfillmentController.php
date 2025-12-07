@@ -387,6 +387,30 @@ class FulfillmentController extends Controller
                 }
             }
 
+            // NEW: Notify the requester about the issuance
+            try {
+                $title = $partialFulfillment ? 'Requisition Partially Issued' : 'Requisition Issued';
+                $msg = $partialFulfillment 
+                    ? "Items for {$requisition->requisition_number} have been partially issued. Check details for backorders."
+                    : "All items for {$requisition->requisition_number} have been issued and are ready for pickup.";
+
+                Notification::create([
+                    'user_id' => $requisition->requested_by,
+                    'title' => $title,
+                    'message' => $msg,
+                    'type' => 'requisition_update',
+                    'priority' => 'normal',
+                    'action_url' => route('employee.requisitions.history'), // Simplified URL
+                    'created_at' => now(),
+                    'metadata' => [
+                        'requisition_number' => $requisition->requisition_number,
+                        'status' => 'fulfilled'
+                    ]
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to send fulfillment notification: ' . $e->getMessage());
+            }
+
             DB::commit();
 
             // Prepare response based on fulfillment type

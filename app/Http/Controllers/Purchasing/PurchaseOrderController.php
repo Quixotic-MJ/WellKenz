@@ -18,6 +18,8 @@ use App\Models\PurchaseRequestPurchaseOrderLink;
 use App\Models\SupplierItem;
 use App\Models\Item;
 use App\Models\PurchaseRequestItem;
+use App\Models\Notification;
+use App\Models\User;
 
 class PurchaseOrderController extends Controller
 {
@@ -354,6 +356,24 @@ class PurchaseOrderController extends Controller
             if ($fullyOrdered && $purchaseRequest->status !== 'converted') {
                 $purchaseRequest->update(['status' => 'converted']);
             }
+        }
+
+        // NEW: Notify Supervisors/Admins about new PO
+        try {
+            $managers = User::whereIn('role', ['supervisor', 'admin'])->get();
+            foreach ($managers as $manager) {
+                Notification::create([
+                    'user_id' => $manager->id,
+                    'title' => 'New Purchase Order',
+                    'message' => "PO {$poNumber} created for {$purchaseOrder->supplier->name} ($" . number_format($totalAmount, 2) . ")",
+                    'type' => 'purchasing',
+                    'priority' => 'normal',
+                    'action_url' => route('admin.notifications.index'), // Or specific PO view if available to them
+                    'created_at' => Carbon::now()
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::warning('Failed to send PO creation notification: ' . $e->getMessage());
         }
 
         $message = "Purchase Order {$poNumber} created successfully from " . count($selectedPRIds) . " purchase request(s)!";

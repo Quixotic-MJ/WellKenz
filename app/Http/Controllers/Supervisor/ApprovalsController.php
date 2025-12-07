@@ -485,6 +485,19 @@ class ApprovalsController extends Controller
 
 
                         $approvedCount++;
+
+                        // NEW: Notify Requester
+                        try {
+                            \App\Models\Notification::create([
+                                'user_id' => $requisition->requested_by,
+                                'title' => 'Requisition Approved',
+                                'message' => "Requisition {$requisition->requisition_number} has been approved via bulk action.",
+                                'type' => 'requisition_update',
+                                'priority' => 'normal',
+                                'action_url' => route('employee.requisitions.details', $requisition->id),
+                                'created_at' => now()
+                            ]);
+                        } catch (\Exception $e) {}
                     } else {
                         $errors[] = "Requisition #{$requisition->requisition_number}: Insufficient stock for " . implode(', ', $insufficientItems);
                     }
@@ -820,6 +833,19 @@ class ApprovalsController extends Controller
 
                     $approvedCount++;
 
+                    // NEW: Notify Requester
+                    try {
+                        \App\Models\Notification::create([
+                            'user_id' => $purchaseRequest->requested_by,
+                            'title' => 'Purchase Request Approved',
+                            'message' => "PR {$purchaseRequest->pr_number} has been approved via bulk action.",
+                            'type' => 'purchasing',
+                            'priority' => 'normal',
+                            'action_url' => route('employee.requisitions.history'),
+                            'created_at' => now()
+                        ]);
+                    } catch (\Exception $e) {}
+
                 } catch (\Exception $e) {
                     $errors[] = "Failed to approve PR ID {$prId}: " . $e->getMessage();
                 }
@@ -928,7 +954,18 @@ class ApprovalsController extends Controller
                 'quantity_requested' => $newQuantity
             ]);
 
-
+            // NEW: Notify Requester of Modification
+            try {
+                \App\Models\Notification::create([
+                    'user_id' => $requisition->requested_by,
+                    'title' => 'Requisition Modified',
+                    'message' => "Quantity for {$requisitionItem->item->name} in {$requisition->requisition_number} was changed from {$originalQuantity} to {$newQuantity}. Reason: {$validated['reason']}",
+                    'type' => 'requisition_update',
+                    'priority' => 'high', // Important: User needs to know their request changed
+                    'action_url' => route('employee.requisitions.details', $requisition->id),
+                    'created_at' => now()
+                ]);
+            } catch (\Exception $e) {}
 
             return response()->json([
                 'success' => true,

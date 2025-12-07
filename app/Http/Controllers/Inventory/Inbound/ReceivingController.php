@@ -824,6 +824,24 @@ class ReceivingController extends Controller
                 }
                 $purchaseOrder->save();
 
+                // NEW: Notify Purchasing Team that delivery arrived
+                try {
+                    $purchasingUsers = User::where('role', 'purchasing')->get();
+                    foreach ($purchasingUsers as $pUser) {
+                        Notification::create([
+                            'user_id' => $pUser->id,
+                            'title' => 'Delivery Received',
+                            'message' => "Delivery for PO {$purchaseOrder->po_number} has been received ({$processedItems} items processed).",
+                            'type' => 'delivery_update',
+                            'priority' => 'normal',
+                            'action_url' => route('purchasing.po.show', $purchaseOrder->id),
+                            'created_at' => now()
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Failed to send receiving notification: ' . $e->getMessage());
+                }
+
                 DB::commit();
 
                 // Log the receiving activity

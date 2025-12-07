@@ -253,6 +253,28 @@ class StockLevelController extends Controller
                 'created_at' => now()
             ]);
 
+            // NEW: Notify Supervisors of Manual Adjustment (Audit Trail)
+            try {
+                // Find supervisors to notify (exclude the user making the change)
+                $supervisors = \App\Models\User::where('role', 'supervisor')
+                    ->where('id', '!=', $user->id) 
+                    ->get();
+
+                foreach ($supervisors as $supervisor) {
+                    \App\Models\Notification::create([
+                        'user_id' => $supervisor->id,
+                        'title' => 'Manual Stock Adjustment',
+                        'message' => "Stock for {$item->name} was manually adjusted by {$user->name}. Change: " . ($adjustmentQuantity > 0 ? '+' : '') . "{$adjustmentQuantity}.",
+                        'type' => 'stock_alert',
+                        'priority' => 'high',
+                        'action_url' => route('inventory.stock.levels'),
+                        'created_at' => now()
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::warning('Failed to send stock adjustment notification: ' . $e->getMessage());
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Stock level updated successfully',
