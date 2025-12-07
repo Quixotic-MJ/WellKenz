@@ -32,8 +32,9 @@ trait Auditable
                     $oldValues[$key] = $model->getOriginal($key);
                 }
 
-                // Ignore timestamp updates
+                // Ignore timestamp updates and redundant user tracking
                 unset($newValues['updated_at'], $oldValues['updated_at']);
+                unset($newValues['updated_by'], $oldValues['updated_by']);
 
                 if (!empty($newValues)) {
                     AuditLogHelper::logUpdate(

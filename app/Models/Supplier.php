@@ -53,6 +53,21 @@ class Supplier extends Model
             if (!$supplier->supplier_code) {
                 $supplier->supplier_code = static::generateUniqueSupplierCode();
             }
+            
+            // Automatically set created_by and updated_by
+            if (auth()->check()) {
+                if (!$supplier->created_by) {
+                    $supplier->created_by = auth()->id();
+                }
+                $supplier->updated_by = auth()->id();
+            }
+        });
+
+        static::updating(function ($supplier) {
+            // Automatically set updated_by on every update
+            if (auth()->check()) {
+                $supplier->updated_by = auth()->id();
+            }
         });
     }
 

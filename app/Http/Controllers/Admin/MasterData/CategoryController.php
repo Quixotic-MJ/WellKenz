@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin\MasterData;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -78,16 +77,7 @@ class CategoryController extends Controller
                 'is_active' => true
             ]);
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'categories',
-                'record_id' => $category->id,
-                'action' => 'CREATE',
-                'user_id' => Auth::id(),
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'new_values' => json_encode($category->toArray())
-            ]);
+
 
             return response()->json([
                 'success' => true,
@@ -141,17 +131,7 @@ class CategoryController extends Controller
                 'color' => $request->color ?? '#8B4513',
             ]);
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'categories',
-                'record_id' => $category->id,
-                'action' => 'UPDATE',
-                'user_id' => Auth::id(),
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'old_values' => json_encode($oldData),
-                'new_values' => json_encode($category->toArray())
-            ]);
+
 
             return response()->json([
                 'success' => true,
@@ -186,16 +166,7 @@ class CategoryController extends Controller
             $categoryName = $category->name;
             $category->delete();
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'categories',
-                'record_id' => $category->id,
-                'action' => 'DELETE',
-                'user_id' => Auth::id(),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-                'old_values' => json_encode(['name' => $categoryName])
-            ]);
+
 
             return response()->json([
                 'success' => true,
@@ -225,17 +196,7 @@ class CategoryController extends Controller
 
             $status = $category->is_active ? 'activated' : 'deactivated';
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'categories',
-                'record_id' => $category->id,
-                'action' => 'UPDATE',
-                'user_id' => Auth::id(),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-                'old_values' => json_encode(['is_active' => $oldStatus]),
-                'new_values' => json_encode(['is_active' => $category->is_active])
-            ]);
+
 
             return response()->json([
                 'success' => true,

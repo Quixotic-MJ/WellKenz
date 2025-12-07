@@ -165,22 +165,7 @@ class ApprovalsController extends Controller
                 ], 500);
             }
 
-            // Create audit log
-            try {
-                \App\Models\AuditLog::create([
-                    'table_name' => 'requisitions',
-                    'record_id' => $requisition->id,
-                    'action' => 'UPDATE',
-                    'user_id' => auth()->id(),
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'old_values' => json_encode(['status' => $oldStatus]),
-                    'new_values' => json_encode(['status' => 'approved'])
-                ]);
-            } catch (\Exception $e) {
-                // Audit log creation failed, but don't fail the main operation
-                \Log::warning('Failed to create audit log for requisition approval: ' . $e->getMessage());
-            }
+
 
             // Notify the requesting employee that the requisition was approved
             try {
@@ -299,26 +284,7 @@ class ApprovalsController extends Controller
                 ], 500);
             }
 
-            // Create audit log
-            try {
-                \App\Models\AuditLog::create([
-                    'table_name' => 'requisitions',
-                    'record_id' => $requisition->id,
-                    'action' => 'UPDATE',
-                    'user_id' => auth()->id(),
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'old_values' => json_encode(['status' => $oldStatus]),
-                    'new_values' => json_encode([
-                        'status' => 'rejected',
-                        'reject_reason' => $reason,
-                        'comments' => $comments
-                    ])
-                ]);
-            } catch (\Exception $e) {
-                // Audit log creation failed, but don't fail the main operation
-                \Log::warning('Failed to create audit log for requisition rejection: ' . $e->getMessage());
-            }
+
 
             // Notify the requesting employee that the requisition was rejected
             try {
@@ -516,17 +482,7 @@ class ApprovalsController extends Controller
                             'approved_at' => \Carbon\Carbon::now()
                         ]);
 
-                        // Create audit log
-                        \App\Models\AuditLog::create([
-                            'table_name' => 'requisitions',
-                            'record_id' => $requisition->id,
-                            'action' => 'UPDATE',
-                            'user_id' => auth()->id(),
-                            'ip_address' => $request->ip(),
-                            'user_agent' => $request->userAgent(),
-                            'old_values' => json_encode(['status' => $oldStatus]),
-                            'new_values' => json_encode(['status' => 'approved', 'bulk_approval' => true])
-                        ]);
+
 
                         $approvedCount++;
                     } else {
@@ -574,24 +530,7 @@ class ApprovalsController extends Controller
                 'approved_at' => now(),
             ]);
 
-            // Create audit log entry
-            \App\Services\AuditLogHelper::logAction(
-                'purchase_requests',
-                $purchaseRequest->id,
-                'UPDATE',
-                [
-                    'status' => 'approved',
-                    'approved_by' => auth()->id(),
-                    'approved_at' => now(),
-                ],
-                $request,
-                [
-                    'action_type' => 'approval',
-                    'previous_status' => 'pending',
-                    'new_status' => 'approved',
-                    'approved_by' => auth()->user()->name,
-                ]
-            );
+
 
             // Notify the requesting user about approval
             try {
@@ -713,22 +652,7 @@ class ApprovalsController extends Controller
             // Update the purchase request
             $purchaseRequest->update($rejectionData);
 
-            // Create audit log entry
-            \App\Services\AuditLogHelper::logAction(
-                'purchase_requests',
-                $purchaseRequest->id,
-                'UPDATE',
-                $rejectionData,
-                $request,
-                [
-                    'action_type' => 'rejection',
-                    'previous_status' => 'pending',
-                    'new_status' => 'rejected',
-                    'rejected_by' => auth()->user()->name,
-                    'reason' => $reason,
-                    'comments' => $comments,
-                ]
-            );
+
 
             // Notify the requesting user about rejection
             try {
@@ -901,29 +825,7 @@ class ApprovalsController extends Controller
                 }
             }
 
-            // Create audit log entry for bulk operation
-            if ($approvedCount > 0) {
-                \App\Services\AuditLogHelper::logAction(
-                    'purchase_requests',
-                    null, // No single record ID for bulk operations
-                    'UPDATE',
-                    [
-                        'bulk_approval' => true,
-                        'approved_count' => $approvedCount,
-                        'approved_requests' => $approvedRequests,
-                        'errors' => $errors
-                    ],
-                    $request,
-                    [
-                        'action_type' => 'bulk_approval',
-                        'approved_count' => $approvedCount,
-                        'total_requested' => count($validated['requisition_ids']),
-                        'approved_by' => auth()->user()->name,
-                        'approved_requests' => $approvedRequests,
-                        'errors' => $errors
-                    ]
-                );
-            }
+
 
             $response = [
                 'success' => true,
@@ -1026,28 +928,7 @@ class ApprovalsController extends Controller
                 'quantity_requested' => $newQuantity
             ]);
 
-            // Create audit log entry
-            \App\Services\AuditLogHelper::logAction(
-                'requisition_items',
-                $requisitionItem->id,
-                'UPDATE',
-                [
-                    'original_quantity' => $originalQuantity,
-                    'new_quantity' => $newQuantity,
-                    'item_id' => $validated['item_id'],
-                    'reason' => $validated['reason'],
-                    'stock_available' => $currentStock
-                ],
-                request(),
-                [
-                    'modification_type' => 'quantity_change',
-                    'original_quantity' => $originalQuantity,
-                    'new_quantity' => $newQuantity,
-                    'item_id' => $validated['item_id'],
-                    'reason' => $validated['reason'],
-                    'stock_available' => $currentStock
-                ]
-            );
+
 
             return response()->json([
                 'success' => true,
@@ -1158,26 +1039,7 @@ class ApprovalsController extends Controller
                 }
             }
 
-            // If there are successful modifications, create audit log
-            if (!empty($modifications)) {
-                \App\Services\AuditLogHelper::logAction(
-                    'requisitions',
-                    $requisition->id,
-                    'UPDATE',
-                    [
-                        'modifications' => $modifications,
-                        'reason' => $validated['reason'],
-                        'total_items_modified' => count($modifications)
-                    ],
-                    request(),
-                    [
-                        'modification_type' => 'multiple_quantities',
-                        'modifications' => $modifications,
-                        'reason' => $validated['reason'],
-                        'total_items_modified' => count($modifications)
-                    ]
-                );
-            }
+
 
             // Prepare response
             $response = [

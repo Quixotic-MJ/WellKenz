@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin\MasterData;
 
 use App\Http\Controllers\Controller;
 use App\Models\Unit;
-use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -131,16 +130,7 @@ class UnitController extends Controller
                 'is_active' => true
             ]);
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'units',
-                'record_id' => $unit->id,
-                'action' => 'CREATE',
-                'user_id' => Auth::id(),
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'new_values' => json_encode($unit->toArray())
-            ]);
+
 
             return response()->json([
                 'success' => true,
@@ -196,17 +186,7 @@ class UnitController extends Controller
                 'conversion_factor' => $request->conversion_factor ?? 1,
             ]);
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'units',
-                'record_id' => $unit->id,
-                'action' => 'UPDATE',
-                'user_id' => Auth::id(),
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'old_values' => json_encode($oldData),
-                'new_values' => json_encode($unit->toArray())
-            ]);
+
 
             return response()->json([
                 'success' => true,
@@ -249,16 +229,7 @@ class UnitController extends Controller
             $unitName = $unit->name;
             $unit->delete();
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'units',
-                'record_id' => $unit->id,
-                'action' => 'DELETE',
-                'user_id' => Auth::id(),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-                'old_values' => json_encode(['name' => $unitName])
-            ]);
+
 
             return response()->json([
                 'success' => true,
@@ -288,17 +259,7 @@ class UnitController extends Controller
 
             $status = $unit->is_active ? 'activated' : 'deactivated';
 
-            // Create audit log
-            AuditLog::create([
-                'table_name' => 'units',
-                'record_id' => $unit->id,
-                'action' => 'UPDATE',
-                'user_id' => Auth::id(),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-                'old_values' => json_encode(['is_active' => $oldStatus]),
-                'new_values' => json_encode(['is_active' => $unit->is_active])
-            ]);
+
 
             return response()->json([
                 'success' => true,

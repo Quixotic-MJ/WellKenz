@@ -7,7 +7,6 @@ use App\Http\Requests\Supplier\StoreSupplierRequest;
 use App\Http\Requests\Supplier\UpdateSupplierRequest;
 use App\Models\Supplier;
 use App\Models\SupplierItem;
-use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -142,13 +141,7 @@ class SupplierController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            // Log the action
-            $this->logAction('CREATE', $supplier->id, 'suppliers', [
-                'supplier_code' => $supplier->supplier_code,
-                'supplier_name' => $supplier->name,
-                'action' => 'Supplier created',
-                'created_by' => Auth::user()->name ?? 'Unknown'
-            ]);
+
 
             DB::commit();
 
@@ -265,7 +258,7 @@ class SupplierController extends Controller
             // Store old data for logging
             $oldData = $supplier->toArray();
 
-            // Update the supplier
+            // Update the supplier (updated_by is automatically set by model events)
             $supplier->update([
                 'name' => $request->name,
                 'contact_person' => $request->contact_person,
@@ -282,20 +275,12 @@ class SupplierController extends Controller
                 'rating' => $request->rating,
                 'notes' => $request->notes,
                 'is_active' => $request->boolean('is_active', true),
-                'updated_by' => Auth::id(),
             ]);
 
             // Reload the supplier to get updated data
             $supplier->refresh();
 
-            // Log the action
-            $this->logAction('UPDATE', $supplier->id, 'suppliers', [
-                'supplier_code' => $supplier->supplier_code,
-                'supplier_name' => $supplier->name,
-                'action' => 'Supplier updated',
-                'updated_by' => Auth::user()->name ?? 'Unknown',
-                'changes' => $this->getChangedFields($oldData, $supplier->toArray())
-            ]);
+
 
             DB::commit();
 
@@ -374,22 +359,13 @@ class SupplierController extends Controller
             $oldStatus = $supplier->is_active;
             $action = $oldStatus ? 'deactivate' : 'activate';
             
-            // Update the supplier status
+            // Update the supplier status (updated_by is automatically set by model events)
             $supplier->is_active = !$oldStatus;
-            $supplier->updated_by = Auth::id();
             $supplier->save();
 
             DB::commit();
 
-            // Log the action
-            $this->logAction('UPDATE', $supplier->id, 'suppliers', [
-                'supplier_code' => $supplier->supplier_code,
-                'supplier_name' => $supplier->name,
-                'action' => "Supplier {$action}d",
-                'old_status' => $oldStatus ? 'Active' : 'Inactive',
-                'new_status' => $supplier->is_active ? 'Active' : 'Inactive',
-                'updated_by' => Auth::user()->name ?? 'Unknown'
-            ]);
+
 
             Log::info("Supplier {$action}d successfully", [
                 'supplier_id' => $supplier->id,
@@ -444,13 +420,7 @@ class SupplierController extends Controller
             $supplierName = $supplier->name;
             $supplier->delete();
 
-            // Log the action
-            $this->logAction('DELETE', $supplier->id, 'suppliers', [
-                'supplier_code' => $supplierCode,
-                'supplier_name' => $supplierName,
-                'action' => 'Supplier deleted',
-                'deleted_by' => Auth::user()->name ?? 'Unknown'
-            ]);
+
 
             DB::commit();
 
@@ -553,58 +523,7 @@ class SupplierController extends Controller
         }
     }
 
-    /**
-     * Log audit actions.
-     */
-    private function logAction(string $action, int $recordId, string $tableName, array $data = []): void
-    {
-        try {
-            AuditLog::create([
-                'user_id' => Auth::id(),
-                'action' => $action,
-                'table_name' => $tableName,
-                'record_id' => $recordId,
-                'old_values' => isset($data['old_data']) ? json_encode($data['old_data']) : null,
-                'new_values' => isset($data['new_data']) ? json_encode($data['new_data']) : json_encode($data),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-                'created_at' => now(),
-            ]);
-        } catch (\Exception $e) {
-            Log::warning('Failed to log audit action', [
-                'action' => $action,
-                'table' => $tableName,
-                'record_id' => $recordId,
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 
-    /**
-     * Get changed fields between old and new data.
-     */
-    private function getChangedFields(array $oldData, array $newData): array
-    {
-        $changed = [];
-        $ignoreFields = ['created_at', 'updated_at', 'created_by', 'updated_by'];
-        
-        foreach ($newData as $key => $newValue) {
-            if (in_array($key, $ignoreFields)) {
-                continue;
-            }
-            
-            $oldValue = $oldData[$key] ?? null;
-            
-            if ($oldValue !== $newValue) {
-                $changed[$key] = [
-                    'old' => $oldValue,
-                    'new' => $newValue
-                ];
-            }
-        }
-        
-        return $changed;
-    }
 
     /**
      * Export suppliers to CSV format.

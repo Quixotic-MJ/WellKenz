@@ -168,24 +168,7 @@ class SettingsController extends Controller
                 ], 422);
             }
 
-            // Create audit log with only updated fields
-            $newValues = [];
-            foreach ($updateData as $key => $value) {
-                $newValues[$key] = $value;
-            }
 
-            if (!empty($newValues)) {
-                AuditLog::create([
-                    'table_name' => 'items',
-                    'record_id' => $item->id,
-                    'action' => 'UPDATE',
-                    'user_id' => auth()->id(),
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'old_values' => json_encode(array_intersect_key($oldData, $updateData)),
-                    'new_values' => json_encode($newValues)
-                ]);
-            }
 
             // Prepare response data with current values
             $responseData = [
@@ -282,23 +265,7 @@ class SettingsController extends Controller
                         $item->update($newData);
                         $item->refresh();
 
-                        // Create audit log
-                        AuditLog::create([
-                            'table_name' => 'items',
-                            'record_id' => $item->id,
-                            'action' => 'UPDATE',
-                            'user_id' => auth()->id(),
-                            'ip_address' => $request->ip(),
-                            'user_agent' => $request->userAgent(),
-                            'old_values' => json_encode(array_intersect_key($oldData, $newData)),
-                            'new_values' => json_encode($newData),
-                            'metadata' => json_encode([
-                                'seasonal_adjustment' => true,
-                                'category_id' => $request->category_id,
-                                'adjustment_percentage' => $request->adjustment_percentage,
-                                'adjustment_type' => $request->adjustment_type
-                            ])
-                        ]);
+
 
                         $updatedCount++;
                         $processedItems[] = [
