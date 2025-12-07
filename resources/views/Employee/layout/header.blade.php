@@ -61,7 +61,7 @@
                         </div>
                     </div>
                     
-                    <div id="notificationsLoading" class="p-10 text-center">
+                    <div id="notificationsLoading" class="hidden p-10 text-center">
                         <div class="animate-spin inline-block w-6 h-6 border-[3px] border-border-soft border-t-caramel rounded-full"></div>
                         <p class="text-xs text-gray-400 mt-3 font-medium uppercase tracking-wide">Loading updates...</p>
                     </div>
@@ -150,268 +150,203 @@
 </header>
 
 <script>
-    // Utility function to safely access elements
+(function() { // IIFE to prevent variable collisions
+    
+    // Scoped utility
     const getEl = (id) => document.getElementById(id);
 
-    // Load header notifications from API
-    async function loadHeaderNotifications() {
-        const loadingEl = getEl('notificationsLoading');
-        const errorEl = getEl('notificationsError');
-        const emptyEl = getEl('notificationsEmpty');
-        const listEl = getEl('notificationsList');
-        const countEl = getEl('notificationCount');
-        const headerEl = getEl('notifHeader');
-
-        try {
-            // Show loading state
-            loadingEl.classList.remove('hidden');
-            errorEl.classList.add('hidden');
-            emptyEl.classList.add('hidden');
-            listEl.innerHTML = '';
-
-            const response = await fetch('{{ route("employee.notifications.header") }}', {
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Accept': 'application/json'
-                }
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                const notifications = data.notifications || [];
-                const unreadCount = data.unread_count || 0;
-
-                // Hide loading
-                loadingEl.classList.add('hidden');
-
-                // Update count badge
-                if (unreadCount > 0) {
-                    countEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                    countEl.classList.remove('hidden');
-                } else {
-                    countEl.classList.add('hidden');
-                }
-
-                // Update header
-                headerEl.textContent = `Notifications (${unreadCount})`;
-
-                // Show appropriate state
-                if (notifications.length === 0) {
-                    emptyEl.classList.remove('hidden');
-                } else {
-                    // Render notifications with clean, minimalist design
-                    listEl.innerHTML = notifications.map(notification => {
-                        const icon = notification.icon_class || 'fas fa-bell';
-                        const isRead = notification.read_at !== null;
-                        
-                        // Clean design: White background for read, light blue tint for unread
-                        const containerClass = isRead 
-                            ? 'bg-white hover:bg-gray-50' 
-                            : 'bg-blue-50/30 hover:bg-blue-50/50';
-                            
-                        const titleClass = isRead 
-                            ? 'text-gray-600 font-semibold' 
-                            : 'text-gray-900 font-bold';
-                            
-                        // Simple gray icon styling
-                        const iconBg = 'bg-gray-100 text-gray-500';
-                            
-                        // Small blue dot for unread status
-                        const unreadDot = !isRead 
-                            ? `<div class="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2 shadow-sm" title="Unread"></div>` 
-                            : '';
-
-                        return `
-                            <div class="p-4 border-b border-gray-100 last:border-0 cursor-pointer transition-colors group ${containerClass}"
-                                 data-notification-id="${notification.id}"
-                                 onclick="handleNotificationClick(${notification.id}, '${notification.action_url}')">
-                                <div class="flex items-start gap-4">
-                                    <div class="flex-shrink-0 mt-0.5">
-                                        <div class="w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center">
-                                            <i class="${icon} text-sm"></i>
-                                        </div>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex justify-between items-start">
-                                            <p class="text-sm ${titleClass} truncate pr-2 font-sans">${notification.title}</p>
-                                            <span class="text-[10px] text-gray-400 whitespace-nowrap pt-1 uppercase tracking-wide font-medium">${notification.time_ago}</span>
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed font-sans">${notification.message}</p>
-                                    </div>
-                                    ${unreadDot}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                }
-
-            } else {
-                throw new Error(data.message || 'Failed to load notifications');
-            }
-
-        } catch (error) {
-            console.error('Error loading notifications:', error);
-            loadingEl.classList.add('hidden');
-            errorEl.classList.remove('hidden');
+    // Global toggle functions
+    window.toggleSidebar = function() {
+        const sidebar = getEl('sidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('collapsed');
+            localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
         }
     }
 
-    // Handle notification click
-    async function handleNotificationClick(notificationId, actionUrl) {
-        try {
-            // Optimistic UI update: Remove unread highlighting immediately
-            const item = document.querySelector(`div[data-notification-id="${notificationId}"]`);
-            if(item) {
-                // Remove Unread styles
-                item.classList.remove('bg-orange-50/60', 'hover:bg-orange-50', 'border-l-4', 'border-l-caramel');
-                // Add Read styles
-                item.classList.add('bg-white', 'hover:bg-gray-50');
-                
-                const title = item.querySelector('p.text-sm');
-                if(title) {
-                    title.classList.remove('text-chocolate', 'font-bold');
-                    title.classList.add('text-gray-700', 'font-semibold');
-                }
-                
-                // Update icon style
-                const iconContainer = item.querySelector('.w-10.h-10');
-                if(iconContainer) {
-                    iconContainer.className = 'w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 text-gray-400';
-                }
-            }
-
-            // Update count locally
-            const countEl = getEl('notificationCount');
-            let currentCount = parseInt(countEl.textContent) || 0;
-            if (currentCount > 0) {
-                currentCount--;
-                countEl.textContent = currentCount > 99 ? '99+' : currentCount;
-                if (currentCount === 0) countEl.classList.add('hidden');
-                
-                // Update header text count
-                const headerEl = getEl('notifHeader');
-                if(headerEl) headerEl.textContent = `Notifications (${currentCount})`;
-            }
-
-            // Send request to backend
-            await fetch(`{{ route('employee.notifications.mark-read', ['notification' => '__ID__']) }}`.replace('__ID__', notificationId), {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            // Navigate
-            if (actionUrl && actionUrl !== 'null' && actionUrl !== '') {
-                window.location.href = actionUrl;
-            }
-        } catch (error) {
-            console.error('Error marking notification as read:', error);
-        }
-    }
-
-    // Mark all notifications as read
-    async function markAllAsRead() {
-        try {
-            const response = await fetch('{{ route("employee.notifications.mark-all-read") }}', {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                loadHeaderNotifications();
-            }
-        } catch (error) {
-            console.error('Error marking all as read:', error);
-        }
-    }
-
-    // Toggles the Notifications dropdown visibility
-    function toggleNotifications() {
+    window.toggleNotifications = function() {
         const notificationsDropdown = getEl('notificationsDropdown');
         const profileDropdown = getEl('profileDropdown');
-        
-        // Close other dropdown
         if (profileDropdown) profileDropdown.classList.add('hidden');
         
-        // Toggle self
         if (notificationsDropdown) {
             notificationsDropdown.classList.toggle('hidden');
-            
-            // Load notifications when opening
             if (!notificationsDropdown.classList.contains('hidden')) {
                 loadHeaderNotifications();
             }
         }
     }
 
-    // Toggles the Profile dropdown visibility
-    function toggleProfile() {
+    window.toggleProfile = function() {
         const profileDropdown = getEl('profileDropdown');
         const notificationsDropdown = getEl('notificationsDropdown');
-        
-        // Close other dropdown
         if (notificationsDropdown) notificationsDropdown.classList.add('hidden');
-        
-        // Toggle self
         if (profileDropdown) profileDropdown.classList.toggle('hidden');
     }
 
-    // Toggle sidebar function
-    function toggleSidebar() {
-        const sidebar = getEl('sidebar');
-        
-        console.log('Toggle sidebar called, sidebar element:', sidebar);
-        if (sidebar) {
-            console.log('Before toggle - classes:', sidebar.className);
-            sidebar.classList.toggle('collapsed');
-            const isCollapsed = sidebar.classList.contains('collapsed');
+    // --- Dynamic Route Prefixes based on URL/Role ---
+    // Detect role from current URL or use hardcoded check based on file path logic
+    // For safety, assume this block is pasted into the specific file.
+    // EMPLOYEE/SUPERVISOR USE DASHES IN ROUTES: mark-read, mark-all-read
+    
+    const getRoutePrefix = () => {
+        if(window.location.pathname.includes('/employee')) return 'employee';
+        if(window.location.pathname.includes('/supervisor')) return 'supervisor';
+        return 'employee'; // fallback
+    };
+    const prefix = getRoutePrefix();
+
+    window.markAllAsRead = async function() {
+        try {
+            // Note: Laravel route generation happens server-side, so we strictly use the server-generated URL 
+            // defined in the specific view context. 
+            // We use the specific route syntax below for these 2 roles.
+            const routeName = `{{ route(Request::segment(1) . '.notifications.mark-all-read') }}`;
             
-            console.log('After toggle - collapsed:', isCollapsed, 'classes:', sidebar.className);
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-        } else {
-            console.error('Sidebar element not found!');
+            const response = await fetch(routeName, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            if (data.success) loadHeaderNotifications();
+        } catch (error) { console.error('Error marking all read:', error); }
+    }
+
+    window.handleNotificationClick = async function(notificationId, actionUrl) {
+        // UI Update
+        const item = document.querySelector(`div[data-notification-id="${notificationId}"]`);
+        if(item) {
+            item.classList.remove('bg-blue-50/30');
+            item.classList.add('bg-white');
+            const dot = item.querySelector('.bg-blue-500');
+            if(dot) dot.remove();
+            const title = item.querySelector('p.text-sm');
+            if(title) { title.classList.remove('font-bold', 'text-gray-900'); title.classList.add('font-medium', 'text-gray-600'); }
+        }
+        
+        // Count Update
+        const countEl = getEl('notificationCount');
+        let currentCount = parseInt(countEl.textContent) || 0;
+        if (currentCount > 0) {
+            currentCount--;
+            countEl.textContent = currentCount > 99 ? '99+' : currentCount;
+            if (currentCount === 0) countEl.classList.add('hidden');
+            const headerEl = getEl('notifHeader');
+            if(headerEl) headerEl.textContent = `Notifications (${currentCount})`;
+        }
+
+        try {
+            // Using placeholder for ID replacement
+            let routeUrl = `{{ route(Request::segment(1) . '.notifications.mark-read', ['notification' => '999999']) }}`;
+            routeUrl = routeUrl.replace('999999', notificationId);
+
+            await fetch(routeUrl, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' }
+            });
+        } catch (e) { console.error(e); }
+
+        if (actionUrl && actionUrl !== 'null') window.location.href = actionUrl;
+    }
+
+    async function loadHeaderNotifications() {
+        const loadingEl = getEl('notificationsLoading');
+        const listEl = getEl('notificationsList');
+        const countEl = getEl('notificationCount');
+        const emptyEl = getEl('notificationsEmpty');
+        const errorEl = getEl('notificationsError');
+        const headerEl = getEl('notifHeader');
+
+        try {
+            if(loadingEl) loadingEl.classList.remove('hidden');
+            if(listEl) listEl.innerHTML = '';
+            if(emptyEl) emptyEl.classList.add('hidden');
+            if(errorEl) errorEl.classList.add('hidden');
+
+            const routeName = `{{ route(Request::segment(1) . '.notifications.header') }}`;
+            const response = await fetch(routeName, {
+                headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+            });
+
+            if(!response.ok) throw new Error('Network response was not ok');
+            
+            const data = await response.json();
+
+            if (data.success) {
+                const notifications = data.notifications || [];
+                const unreadCount = data.unread_count || 0;
+
+                if(loadingEl) loadingEl.classList.add('hidden');
+
+                if (unreadCount > 0) {
+                    countEl.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    countEl.classList.remove('hidden');
+                } else {
+                    countEl.classList.add('hidden');
+                }
+                if(headerEl) headerEl.textContent = `Notifications (${unreadCount})`;
+
+                if (notifications.length === 0) {
+                    if(emptyEl) emptyEl.classList.remove('hidden');
+                } else {
+                    listEl.innerHTML = notifications.map(n => {
+                        const icon = (n.icon_class || 'fas fa-bell').split(' ')[0];
+                        const isRead = n.read_at !== null;
+                        const bgClass = isRead ? 'bg-white hover:bg-gray-50' : 'bg-blue-50/30 hover:bg-blue-50/50';
+                        const titleStyle = isRead ? 'font-medium text-gray-600' : 'font-bold text-gray-900';
+                        const dot = !isRead ? `<div class="w-2 h-2 bg-blue-500 rounded-full mt-2 shrink-0"></div>` : '';
+
+                        return `
+                        <div class="p-4 border-b border-gray-100 last:border-0 cursor-pointer group transition-colors ${bgClass}"
+                             data-notification-id="${n.id}"
+                             onclick="handleNotificationClick(${n.id}, '${n.action_url}')">
+                            <div class="flex items-start gap-3">
+                                <div class="shrink-0 mt-0.5">
+                                    <div class="w-8 h-8 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center">
+                                        <i class="${icon} text-xs"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between items-start">
+                                        <p class="text-sm ${titleStyle} truncate pr-2 font-sans">${n.title}</p>
+                                        <span class="text-[10px] text-gray-400 whitespace-nowrap pt-1">${n.time_ago}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">${n.message}</p>
+                                </div>
+                                ${dot}
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            if(loadingEl) loadingEl.classList.add('hidden');
+            if(errorEl) errorEl.classList.remove('hidden');
         }
     }
 
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', function(event) {
-        const notificationsBtn = getEl('notificationsBtn');
-        const profileBtn = getEl('profileBtn');
-        const notificationsDropdown = getEl('notificationsDropdown');
-        const profileDropdown = getEl('profileDropdown');
-        
-        if (notificationsDropdown && notificationsBtn && !notificationsBtn.contains(event.target) && !notificationsDropdown.contains(event.target)) {
-            notificationsDropdown.classList.add('hidden');
-        }
-        
-        if (profileDropdown && profileBtn && !profileBtn.contains(event.target) && !profileDropdown.contains(event.target)) {
-            profileDropdown.classList.add('hidden');
-        }
-    });
-
-    // Restore sidebar state from localStorage
-    document.addEventListener('DOMContentLoaded', function() {
-        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    // Initialization
+    document.addEventListener('DOMContentLoaded', () => {
         const sidebar = getEl('sidebar');
-        if (sidebar && sidebarCollapsed) {
+        if (sidebar && localStorage.getItem('sidebarCollapsed') === 'true') {
             sidebar.classList.add('collapsed');
         }
-
-        // Load initial notification count
         loadHeaderNotifications();
-        
-        // Refresh notifications every 60 seconds
-        setInterval(() => {
-            if (!document.hidden) loadHeaderNotifications();
-        }, 60000);
+        setInterval(() => { if (!document.hidden) loadHeaderNotifications(); }, 60000);
+
+        // Close dropdowns on click outside
+        document.addEventListener('click', (e) => {
+            const nBtn = getEl('notificationsBtn');
+            const pBtn = getEl('profileBtn');
+            const nDrop = getEl('notificationsDropdown');
+            const pDrop = getEl('profileDropdown');
+            
+            if (nDrop && nBtn && !nBtn.contains(e.target) && !nDrop.contains(e.target)) nDrop.classList.add('hidden');
+            if (pDrop && pBtn && !pBtn.contains(e.target) && !pDrop.contains(e.target)) pDrop.classList.add('hidden');
+        });
     });
+})();
 </script>
 
 <style>
