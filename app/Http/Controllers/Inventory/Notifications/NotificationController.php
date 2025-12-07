@@ -291,16 +291,14 @@ class NotificationController extends Controller
     }
 
     /**
-     * Get unread notification count for header
+     * Get unread notification count for header (24-hour rule)
      */
     public function getUnreadCount()
     {
         try {
             $user = Auth::user();
             
-            $count = Notification::where('user_id', $user->id)
-                ->where('is_read', false)
-                ->count();
+            $count = Notification::unreadCountForHeaderDisplay();
 
             return response()->json([
                 'success' => true,
@@ -317,16 +315,14 @@ class NotificationController extends Controller
     }
 
     /**
-     * Get header notifications (latest 5 unread)
+     * Get header notifications (latest 5 unread from last 24 hours)
      */
     public function getHeaderNotifications()
     {
         try {
             $user = Auth::user();
             
-            $notifications = Notification::where('user_id', $user->id)
-                ->where('is_read', false)
-                ->orderBy('created_at', 'desc')
+            $notifications = Notification::forHeaderDisplay()
                 ->limit(5)
                 ->get()
                 ->map(function($notification) {
@@ -344,9 +340,7 @@ class NotificationController extends Controller
                     ];
                 });
 
-            $unreadCount = Notification::where('user_id', $user->id)
-                ->where('is_read', false)
-                ->count();
+            $unreadCount = Notification::unreadCountForHeaderDisplay();
 
             return response()->json([
                 'success' => true,

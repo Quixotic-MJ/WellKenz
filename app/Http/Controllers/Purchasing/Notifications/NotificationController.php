@@ -142,9 +142,7 @@ class NotificationController extends Controller
     public function getHeaderNotifications()
     {
         try {
-            $notifications = Notification::forCurrentUser()
-                ->where('is_read', false)
-                ->latest()
+            $notifications = Notification::forHeaderDisplay()
                 ->take(5)
                 ->get()
                 ->map(function ($notification) {
@@ -161,7 +159,7 @@ class NotificationController extends Controller
                     ];
                 });
                 
-            $unreadCount = Notification::unreadCountForCurrentUser();
+            $unreadCount = Notification::unreadCountForHeaderDisplay();
             
             return response()->json([
                 'success' => true,

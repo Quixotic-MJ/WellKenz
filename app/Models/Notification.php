@@ -311,4 +311,39 @@ class Notification extends Model
               ->orWhere('expires_at', '>', now());
         });
     }
+
+    /**
+     * Scope to get notifications suitable for header display.
+     * Filters notifications that are:
+     * - Unread (is_read = false)
+     * - Created within the last 24 hours
+     * - Not expired (respect existing expires_at logic)
+     */
+    public function scopeForHeaderDisplay($query)
+    {
+        return $query->where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->where(function($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->latest();
+    }
+
+    /**
+     * Get unread count for header display (24-hour rule).
+     * This is specifically for header badge counts.
+     */
+    public static function unreadCountForHeaderDisplay(): int
+    {
+        return static::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->where(function($q) {
+                $q->whereNull('expires_at')
+                  ->orWhere('expires_at', '>', now());
+            })
+            ->count();
+    }
 }

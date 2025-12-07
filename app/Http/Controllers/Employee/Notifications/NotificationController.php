@@ -98,7 +98,7 @@ class NotificationController extends Controller
     public function getUnreadCount()
     {
         try {
-            $unreadCount = Notification::unreadCountForCurrentUser();
+            $unreadCount = Notification::unreadCountForHeaderDisplay();
             return response()->json(['success' => true, 'unread_count' => $unreadCount]);
         } catch (\Exception $e) {
             Log::error('Error getting unread notification count: ' . $e->getMessage());
@@ -109,9 +109,7 @@ class NotificationController extends Controller
     public function getHeaderNotifications()
     {
         try {
-            $notifications = Notification::forCurrentUser()
-                ->where('is_read', false)
-                ->orderBy('created_at', 'desc')
+            $notifications = Notification::forHeaderDisplay()
                 ->limit(5)
                 ->get()
                 ->map(function ($notification) {
@@ -129,7 +127,7 @@ class NotificationController extends Controller
                     ];
                 });
 
-            $unreadCount = Notification::unreadCountForCurrentUser();
+            $unreadCount = Notification::unreadCountForHeaderDisplay();
             return response()->json(['success' => true, 'notifications' => $notifications, 'unread_count' => $unreadCount]);
         } catch (\Exception $e) {
             Log::error('Error getting header notifications: ' . $e->getMessage());

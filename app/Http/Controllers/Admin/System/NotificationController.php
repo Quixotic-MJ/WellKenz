@@ -250,6 +250,7 @@ class NotificationController extends Controller
     
     /**
      * Get header notifications for the current user.
+     * Only shows notifications from the last 24 hours.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -257,9 +258,7 @@ class NotificationController extends Controller
     public function getHeaderNotifications(Request $request): JsonResponse
     {
         try {
-            $notifications = Notification::forCurrentUser()
-                ->where('is_read', false)
-                ->latest()
+            $notifications = Notification::forHeaderDisplay()
                 ->take(5)
                 ->get()
                 ->map(function ($notification) {
@@ -276,7 +275,7 @@ class NotificationController extends Controller
                     ];
                 });
                 
-            $unreadCount = Notification::unreadCountForCurrentUser();
+            $unreadCount = Notification::unreadCountForHeaderDisplay();
             
             return response()->json([
                 'success' => true,
@@ -319,7 +318,7 @@ class NotificationController extends Controller
     }
     
     /**
-     * Get unread notification count for the current user.
+     * Get unread notification count for the current user (24-hour rule for header).
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -327,7 +326,7 @@ class NotificationController extends Controller
     public function getUnreadNotificationCount(Request $request): JsonResponse
     {
         try {
-            $count = Notification::unreadCountForCurrentUser();
+            $count = Notification::unreadCountForHeaderDisplay();
             
             return response()->json([
                 'success' => true,

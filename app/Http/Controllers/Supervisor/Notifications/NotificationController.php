@@ -30,14 +30,11 @@ class NotificationController extends Controller
     public function getHeaderNotifications()
     {
         try {
-            $notifications = \App\Models\Notification::where('user_id', auth()->id())
-                ->notExpired()
-                ->unread()
-                ->latest()
+            $notifications = \App\Models\Notification::forHeaderDisplay()
                 ->limit(5)
                 ->get();
 
-            $unreadCount = \App\Models\Notification::unreadCountForCurrentUser();
+            $unreadCount = \App\Models\Notification::unreadCountForHeaderDisplay();
 
             $formattedNotifications = $notifications->map(function($notification) {
                 return [
@@ -71,7 +68,7 @@ class NotificationController extends Controller
     public function getUnreadNotificationCount()
     {
         try {
-            $count = \App\Models\Notification::unreadCountForCurrentUser();
+            $count = \App\Models\Notification::unreadCountForHeaderDisplay();
 
             return response()->json([
                 'success' => true,
