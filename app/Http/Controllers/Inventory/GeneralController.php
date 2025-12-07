@@ -29,85 +29,49 @@ use Carbon\Carbon;
 class GeneralController extends Controller
 {
     /**
-     * Display inventory dashboard home with comprehensive statistics
+     * Display inventory dashboard home focused on operational tasks
      */
     public function home()
     {
         try {
-            // Pending Purchase Orders
-            $pendingPurchaseOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
-                ->whereIn('status', ['sent', 'confirmed', 'partial'])
-                ->orderBy('expected_delivery_date', 'desc')
-                ->limit(5)
-                ->get();
-
-            // Expiring batches with auto-notification check
-            $expiringBatches = Batch::with(['item.unit', 'supplier'])
-                ->whereIn('status', ['active', 'quarantine'])
-                ->where(function($query) {
-                    $query->whereBetween('expiry_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
-                        ->orWhereBetween('expiry_date', ['2024-01-01', '2024-12-31']);
-                })
-                ->orderBy('expiry_date')
-                ->limit(5)
-                ->get();
-
-            // Auto-create expiry notifications for critical batches
-            $this->createAutoExpiryNotifications($expiringBatches);
-
-            // Two separate requisition widgets
-            $pendingApprovalRequisitions = Requisition::with(['requestedBy', 'requisitionItems'])
-                ->where('status', 'pending')
-                ->orderBy('created_at', 'desc')
-                ->limit(3)
-                ->get();
-
-            $readyForPickingRequisitions = Requisition::with(['requestedBy', 'requisitionItems'])
-                ->where('status', 'approved')
-                ->orderBy('created_at', 'desc')
-                ->limit(3)
-                ->get();
-
-            // Inventory calculations
-            $inventoryValue = DB::table('current_stock')
-                ->join('items', 'current_stock.item_id', '=', 'items.id')
-                ->where('items.is_active', true)
-                ->select(DB::raw('COALESCE(SUM(current_stock.current_quantity * current_stock.average_cost), 0) as total_value'))
-                ->value('total_value') ?? 0;
-
-            $lowStockItemsCount = DB::table('items')
-                ->join('current_stock', 'items.id', '=', 'current_stock.item_id')
-                ->where('items.is_active', true)
-                ->whereRaw('current_stock.current_quantity <= items.min_stock_level')
-                ->where('current_stock.current_quantity', '>', 0)
+            // Operational KPIs
+            $to_pack = Requisition::where('status', 'approved')->count();
+            
+            $incoming_pos = PurchaseOrder::whereIn('status', ['confirmed', 'partial'])->count();
+            
+            $expiring_soon = Batch::where('expiry_date', '<=', now()->addDays(30)->toDateString())
+                ->where('expiry_date', '>=', now()->toDateString())
                 ->count();
 
-            $activeItemsCount = Item::where('is_active', true)->count();
-            $todayMovementsCount = StockMovement::count();
+            // Main List: Ready for Picking (FIFO - First In, First Out)
+            $pickList = Requisition::with(['requestedBy', 'requisitionItems'])
+                ->where('status', 'approved')
+                ->orderBy('created_at', 'asc') // FIFO
+                ->get();
+
+            // Sidebar: Incoming Deliveries
+            $incomingOrders = PurchaseOrder::with(['supplier', 'purchaseOrderItems'])
+                ->whereIn('status', ['confirmed', 'partial'])
+                ->orderBy('expected_delivery_date', 'asc')
+                ->get();
 
             return view('Inventory.home', compact(
-                'pendingPurchaseOrders',
-                'expiringBatches',
-                'pendingApprovalRequisitions',
-                'readyForPickingRequisitions',
-                'inventoryValue',
-                'lowStockItemsCount',
-                'activeItemsCount',
-                'todayMovementsCount'
+                'to_pack',
+                'incoming_pos',
+                'expiring_soon',
+                'pickList',
+                'incomingOrders'
             ));
 
         } catch (\Exception $e) {
             \Log::error('Error loading inventory dashboard: ' . $e->getMessage());
             
             return view('Inventory.home', [
-                'pendingPurchaseOrders' => collect(),
-                'expiringBatches' => collect(),
-                'pendingApprovalRequisitions' => collect(),
-                'readyForPickingRequisitions' => collect(),
-                'inventoryValue' => 0,
-                'lowStockItemsCount' => 0,
-                'activeItemsCount' => 0,
-                'todayMovementsCount' => 0
+                'to_pack' => 0,
+                'incoming_pos' => 0,
+                'expiring_soon' => 0,
+                'pickList' => collect(),
+                'incomingOrders' => collect()
             ]);
         }
     }

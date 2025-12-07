@@ -1,490 +1,188 @@
 @extends('Inventory.layout.app')
 
 @section('content')
-<div class="space-y-8 font-sans text-gray-600">
+<div class="space-y-6 font-sans text-gray-600">
 
-    {{-- 1. HEADER --}}
+    {{-- HEADER --}}
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-            <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Warehouse Home</h1>
+            <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Warehouse Operations</h1>
             <p class="text-sm text-gray-500 flex items-center gap-2">
-                <span>Overview for {{ date('F d, Y') }}</span>
+                <span>Daily operations overview for {{ date('F d, Y') }}</span>
                 <span class="text-border-soft">|</span>
-                <span class="text-caramel font-bold bg-cream-bg px-2 py-0.5 rounded-md border border-border-soft">Shift A (Morning)</span>
+                <span class="text-caramel font-bold bg-cream-bg px-2 py-0.5 rounded-md border border-border-soft">Operational Focus</span>
             </p>
         </div>
         <div class="flex space-x-3">
-            <a href="{{ route('inventory.inbound.receive') }}" class="flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+            <a href="{{ route('inventory.inbound.receive') }}" class="flex items-center justify-center px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark transition-all shadow-md hover:shadow-lg">
                 <i class="fas fa-truck-loading mr-2"></i> Receive Delivery
             </a>
         </div>
     </div>
 
-    {{-- 2. OPERATIONAL WIDGETS --}}
+    {{-- KPI CARDS --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">To Pack</p>
+                    <p class="text-3xl font-bold text-chocolate mt-2">{{ $to_pack }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Approved requisitions ready for picking</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-box-open text-blue-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Incoming</p>
+                    <p class="text-3xl font-bold text-chocolate mt-2">{{ $incoming_pos }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Purchase orders confirmed/partial</p>
+                </div>
+                <div class="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-truck text-green-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-600">Expiring Soon</p>
+                    <p class="text-3xl font-bold text-chocolate mt-2">{{ $expiring_soon }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Batches expiring within 30 days</p>
+                </div>
+                <div class="w-12 h-12 bg-amber-50 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-clock text-amber-600 text-xl"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- MAIN CONTENT: MAIN (2/3) + SIDEBAR (1/3) --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {{-- WIDGET 1: INCOMING DELIVERIES (Column 1) --}}
-        <div class="bg-white border border-border-soft rounded-xl shadow-sm flex flex-col h-full overflow-hidden">
-            <div class="px-5 py-4 border-b border-border-soft bg-cream-bg flex justify-between items-center">
-                <h3 class="font-display text-lg font-bold text-chocolate">Incoming</h3>
-                <span class="bg-white border border-border-soft text-chocolate text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
-                    {{ $pendingPurchaseOrders->count() }} Expected
-                </span>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto p-0 custom-scrollbar h-96">
-                <div class="divide-y divide-gray-100">
-                    @forelse($pendingPurchaseOrders as $po)
-                        <div class="p-4 hover:bg-gray-50 transition-colors group relative">
-                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-caramel group-hover:bg-chocolate transition-colors"></div>
-                            <div class="flex items-start pl-2">
-                                {{-- Date Box --}}
-                                <div class="flex-shrink-0 mr-4 text-center bg-cream-bg rounded-lg p-2 border border-border-soft w-16">
-                                    <span class="block text-lg font-bold text-chocolate leading-none">
-                                        {{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('d') : '--' }}
-                                    </span>
-                                    <span class="block text-[10px] text-gray-500 uppercase mt-1">
-                                        {{ $po->expected_delivery_date ? \Carbon\Carbon::parse($po->expected_delivery_date)->format('M') : 'N/A' }}
-                                    </span>
-                                </div>
-                                
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-start">
-                                        <h4 class="text-sm font-bold text-gray-900 truncate" title="{{ $po->supplier->name ?? 'Unknown Supplier' }}">
-                                            {{ $po->supplier->name ?? 'Unknown Supplier' }}
-                                        </h4>
-                                        @php
-                                            $statusConfig = [
-                                                'sent' => ['color' => 'blue', 'icon' => 'fa-paper-plane'],
-                                                'confirmed' => ['color' => 'green', 'icon' => 'fa-check'],
-                                                'partial' => ['color' => 'amber', 'icon' => 'fa-box-open']
-                                            ];
-                                            $conf = $statusConfig[$po->status] ?? ['color' => 'gray', 'icon' => 'fa-circle'];
-                                        @endphp
-                                        <span class="text-[10px] bg-{{ $conf['color'] }}-50 text-{{ $conf['color'] }}-700 px-2 py-0.5 rounded border border-{{ $conf['color'] }}-100 capitalize">
-                                            {{ $po->status }}
+        {{-- MAIN SECTION: READY FOR PICKING --}}
+        <div class="lg:col-span-2">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="font-display text-xl font-bold text-chocolate">Ready for Picking</h2>
+                    <p class="text-sm text-gray-600 mt-1">FIFO - First In, First Out order</p>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Req #</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requester</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Count</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @forelse($pickList as $requisition)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm font-bold text-gray-900">{{ $requisition->requisition_number }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ $requisition->requestedBy->name ?? 'Unknown' }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="text-sm text-gray-900">{{ $requisition->department }}</div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            {{ $requisition->requisitionItems->count() }} items
                                         </span>
-                                    </div>
-                                    <p class="text-xs text-gray-500 mt-1 font-mono">PO: {{ $po->po_number }}</p>
-                                    <p class="text-xs text-caramel mt-1 font-medium">
-                                        <i class="fas fa-box mr-1"></i> {{ $po->purchaseOrderItems ? $po->purchaseOrderItems->count() : 0 }} Line Items
-                                    </p>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                        {{ $requisition->created_at->format('M d, Y H:i') }}
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="{{ route('inventory.outbound.fulfill') }}?requisition={{ $requisition->id }}" 
+                                           class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-chocolate hover:bg-chocolate-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-chocolate transition-all">
+                                            <i class="fas fa-hand-paper mr-1"></i> Pick
+                                        </a>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-6 py-12 text-center">
+                                        <div class="flex flex-col items-center">
+                                            <i class="fas fa-check-circle text-4xl text-gray-300 mb-4"></i>
+                                            <p class="text-lg font-medium text-gray-900 mb-1">All caught up!</p>
+                                            <p class="text-sm text-gray-500">No requisitions ready for picking at the moment.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- SIDEBAR: INCOMING DELIVERIES --}}
+        <div class="lg:col-span-1">
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h2 class="font-display text-xl font-bold text-chocolate">Incoming Deliveries</h2>
+                    <p class="text-sm text-gray-600 mt-1">Expected deliveries</p>
+                </div>
+                
+                <div class="divide-y divide-gray-200">
+                    @forelse($incomingOrders as $order)
+                        <div class="p-6 hover:bg-gray-50">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="flex-1">
+                                    <h3 class="text-sm font-bold text-gray-900 mb-1">{{ $order->supplier->name ?? 'Unknown Supplier' }}</h3>
+                                    <p class="text-xs text-gray-600 font-mono">PO: {{ $order->po_number }}</p>
+                                </div>
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium 
+                                    @if($order->status === 'confirmed') bg-green-100 text-green-800
+                                    @elseif($order->status === 'partial') bg-amber-100 text-amber-800
+                                    @else bg-gray-100 text-gray-800 @endif">
+                                    {{ ucfirst($order->status) }}
+                                </span>
+                            </div>
+                            
+                            <div class="flex justify-between items-center">
+                                <div class="text-sm text-gray-600">
+                                    <i class="fas fa-calendar mr-1"></i>
+                                    {{ $order->expected_delivery_date ? \Carbon\Carbon::parse($order->expected_delivery_date)->format('M d, Y') : 'TBD' }}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    {{ $order->purchaseOrderItems ? $order->purchaseOrderItems->count() : 0 }} items
                                 </div>
                             </div>
                         </div>
                     @empty
-                        <div class="flex flex-col items-center justify-center h-full py-10 text-gray-400">
-                            <i class="fas fa-truck text-3xl mb-2 opacity-20"></i>
-                            <p class="text-sm">No pending deliveries</p>
+                        <div class="p-6 text-center">
+                            <div class="flex flex-col items-center">
+                                <i class="fas fa-truck text-3xl text-gray-300 mb-3"></i>
+                                <p class="text-sm text-gray-500">No incoming deliveries</p>
+                            </div>
                         </div>
                     @endforelse
                 </div>
-            </div>
-            <div class="p-3 bg-gray-50 border-t border-border-soft text-center">
-                <a href="{{ route('inventory.purchase-orders.index') }}" class="text-xs font-bold text-caramel hover:text-chocolate transition-colors uppercase tracking-wide">
-                    View All Orders &rarr;
-                </a>
-            </div>
-        </div>
-
-        {{-- WIDGET 2: EXPIRING SOON (Column 2) --}}
-        <div class="bg-white border border-border-soft rounded-xl shadow-sm flex flex-col h-full overflow-hidden">
-            <div class="px-5 py-4 border-b border-border-soft bg-cream-bg flex justify-between items-center">
-                <div>
-                    <h3 class="font-display text-lg font-bold text-red-700">Expiring Soon</h3>
-                    <p class="text-[10px] text-red-500 uppercase tracking-wider font-bold">Priority: FEFO</p>
-                </div>
-                <div class="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-600 border border-red-100">
-                    <i class="fas fa-hourglass-half text-sm"></i>
-                </div>
-            </div>
-
-            <div class="flex-1 overflow-y-auto p-0 custom-scrollbar h-96">
-                <table class="min-w-full divide-y divide-gray-100">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider">Item / Batch</th>
-                            <th class="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Expiry</th>
-                            <th class="px-4 py-2 text-right text-[10px] font-bold text-gray-500 uppercase tracking-wider">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-50 bg-white">
-                        @forelse($expiringBatches as $batch)
-                            @php
-                                $daysUntilExpiry = $batch->expiry_date ? \Carbon\Carbon::parse($batch->expiry_date)->diffInDays(now()) : 999;
-                                $isCritical = $daysUntilExpiry <= 1;
-                                $isWarning = $daysUntilExpiry <= 3;
-                                $isQuarantined = $batch->status === 'quarantine';
-                                
-                                $rowClass = $isCritical ? 'bg-red-50/50' : '';
-                                $textClass = $isCritical ? 'text-red-700' : ($isWarning ? 'text-amber-600' : 'text-gray-600');
-                            @endphp
-                            <tr class="hover:bg-gray-50 transition-colors {{ $rowClass }}">
-                                <td class="px-4 py-3">
-                                    <p class="text-xs font-bold text-gray-900 line-clamp-1" title="{{ $batch->item->name ?? '' }}">
-                                        {{ $batch->item->name ?? 'Unknown' }}
-                                    </p>
-                                    <p class="text-[10px] text-gray-500 font-mono mt-0.5">{{ $batch->batch_number }}</p>
-                                    
-                                    @if($isQuarantined)
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-100 text-purple-800 mt-1">
-                                            <i class="fas fa-lock mr-1"></i> Reserved
-                                        </span>
-                                    @elseif($isWarning)
-                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 mt-1">
-                                            <i class="fas fa-bell mr-1"></i> Alerted
-                                        </span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap">
-                                    <span class="text-xs font-bold {{ $textClass }} block">
-                                        {{ $isCritical ? 'Today' : $daysUntilExpiry . ' Days' }}
-                                    </span>
-                                    <span class="text-[10px] text-gray-400">
-                                        {{ number_format($batch->quantity, 2) }} {{ $batch->item->unit->symbol ?? '' }}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    @if(!$isQuarantined)
-                                        <span class="text-gray-400 text-xs"><i class="fas fa-clock"></i> Pending</span>
-                                    @else
-                                        <span class="text-gray-400 text-xs"><i class="fas fa-check"></i> Reserved</span>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="3" class="px-4 py-10 text-center text-gray-400 text-xs italic">
-                                    No immediate expiry risks.
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-            @if($expiringBatches->count() > 0)
-            <div class="p-2 bg-red-50/50 border-t border-red-100 text-center">
-                <p class="text-[10px] text-red-600 font-medium flex justify-center items-center gap-2">
-                    <i class="fas fa-exclamation-circle"></i> Auto-alerts sent to Production Team
-                </p>
-            </div>
-            @endif
-        </div>
-
-        {{-- WIDGET 3: REQUISITIONS (Column 3 - Stacked) --}}
-        <div class="space-y-6 h-full flex flex-col">
-            
-            {{-- 3A: PENDING APPROVAL --}}
-            <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col">
-                <div class="px-4 py-3 border-b border-border-soft bg-cream-bg flex justify-between items-center">
-                    <h3 class="font-display text-sm font-bold text-chocolate uppercase tracking-wide">Approvals</h3>
-                    <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {{ $pendingApprovalRequisitions->count() }}
-                    </span>
-                </div>
-                <div class="flex-1 overflow-y-auto p-0 custom-scrollbar max-h-48">
-                    <ul class="divide-y divide-gray-100">
-                        @forelse($pendingApprovalRequisitions as $req)
-                            <li class="p-3 hover:bg-gray-50 transition-colors">
-                                <div class="flex justify-between mb-1">
-                                    <span class="text-xs font-mono font-bold text-gray-600">#{{ $req->requisition_number }}</span>
-                                    <span class="text-[10px] text-gray-400">{{ $req->created_at->diffForHumans(null, true, true) }}</span>
-                                </div>
-                                <p class="text-xs text-gray-800 font-medium mb-1">
-                                    {{ $req->department }} <span class="text-gray-400 font-normal">({{ $req->requestedBy->name ?? 'User' }})</span>
-                                </p>
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border border-gray-200">
-                                        {{ $req->requisitionItems->count() }} Items
-                                    </span>
-                                    <span class="text-[10px] text-amber-600 font-bold">Pending</span>
-                                </div>
-                            </li>
-                        @empty
-                            <li class="p-4 text-center text-xs text-gray-400 italic">No pending approvals</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-
-            {{-- 3B: READY FOR PICKING --}}
-            <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col">
-                <div class="px-4 py-3 border-b border-border-soft bg-cream-bg flex justify-between items-center">
-                    <h3 class="font-display text-sm font-bold text-chocolate uppercase tracking-wide">Pick List</h3>
-                    <span class="bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded-full">
-                        {{ $readyForPickingRequisitions->count() }}
-                    </span>
-                </div>
-                <div class="flex-1 overflow-y-auto p-0 custom-scrollbar max-h-48">
-                    <ul class="divide-y divide-gray-100">
-                        @forelse($readyForPickingRequisitions as $req)
-                            <li class="p-3 hover:bg-green-50/30 transition-colors group">
-                                <div class="flex justify-between mb-1">
-                                    <span class="text-xs font-mono font-bold text-gray-800">#{{ $req->requisition_number }}</span>
-                                    <span class="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded">
-                                        Ready
-                                    </span>
-                                </div>
-                                <p class="text-xs text-gray-600">
-                                    To: <span class="font-bold text-chocolate">{{ $req->department }}</span>
-                                </p>
-                                <p class="text-[10px] text-gray-400 mt-0.5">{{ $req->requisitionItems->count() }} items requested</p>
-                            </li>
-                        @empty
-                            <li class="p-4 text-center text-xs text-gray-400 italic">Nothing to pick right now</li>
-                        @endforelse
-                    </ul>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
-    {{-- 3. QUICK STATS ROW --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-chocolate rounded-xl p-4 shadow-md flex items-center justify-between text-white relative overflow-hidden">
-            <div class="absolute right-0 bottom-0 opacity-10 transform translate-x-2 translate-y-2">
-                <i class="fas fa-coins text-6xl"></i>
-            </div>
-            <div class="relative z-10">
-                <p class="text-[10px] uppercase tracking-widest opacity-80 font-bold">Inventory Value</p>
-                <p class="font-display text-2xl font-bold mt-1">₱ {{ number_format($inventoryValue, 2) }}</p>
-            </div>
-        </div>
-
-        <div class="bg-white border border-border-soft rounded-xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Low Stock</p>
-                <p class="font-display text-2xl font-bold text-chocolate mt-1">{{ $lowStockItemsCount }}</p>
-            </div>
-            <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-        </div>
-
-        <div class="bg-white border border-border-soft rounded-xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Active Items</p>
-                <p class="font-display text-2xl font-bold text-chocolate mt-1">{{ $activeItemsCount }}</p>
-            </div>
-            <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
-                <i class="fas fa-boxes"></i>
-            </div>
-        </div>
-
-        <div class="bg-white border border-border-soft rounded-xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Movements (Today)</p>
-                <p class="font-display text-2xl font-bold text-chocolate mt-1">{{ $todayMovementsCount }}</p>
-            </div>
-            <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
-                <i class="fas fa-exchange-alt"></i>
-            </div>
-        </div>
-    </div>
-
-    {{-- CUSTOM MODALS --}}
-    <!-- Confirmation Modal -->
-    <div id="confirmationModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="closeConfirmationModal()"></div>
-        <div class="flex min-h-full items-center justify-center p-4">
-            <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto border border-border-soft transform transition-all">
-                <!-- Header -->
-                <div class="flex items-center justify-between p-6 border-b border-border-soft bg-cream-bg/50 rounded-t-2xl">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-caramel/20 rounded-xl flex items-center justify-center">
-                            <i class="fas fa-question-circle text-caramel text-lg"></i>
-                        </div>
-                        <h3 id="confirmTitle" class="font-display text-lg font-bold text-chocolate">Confirm Action</h3>
-                    </div>
-                    <button onclick="closeConfirmationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                </div>
                 
-                <!-- Content -->
-                <div class="p-6">
-                    <p id="confirmMessage" class="text-gray-700 leading-relaxed"></p>
+                @if($incomingOrders->count() > 0)
+                <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                    <a href="{{ route('purchasing.purchase-orders.index') }}" class="text-sm font-medium text-chocolate hover:text-chocolate-dark">
+                        View all purchase orders →
+                    </a>
                 </div>
-                
-                <!-- Footer -->
-                <div class="flex justify-end space-x-3 p-6 border-t border-border-soft bg-gray-50/50 rounded-b-2xl">
-                    <button onclick="closeConfirmationModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                        Cancel
-                    </button>
-                    <button id="confirmButton" class="px-4 py-2 text-sm font-bold text-white bg-chocolate hover:bg-chocolate-dark rounded-lg transition-colors shadow-md">
-                        Confirm
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notification Modal -->
-    <div id="notificationModal" class="fixed inset-0 z-50 hidden">
-        <div class="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"></div>
-        <div class="flex min-h-full items-center justify-center p-4">
-            <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-auto border border-border-soft transform transition-all">
-                <!-- Header -->
-                <div class="flex items-center justify-between p-6 border-b border-border-soft bg-cream-bg/50 rounded-t-2xl">
-                    <div class="flex items-center space-x-3">
-                        <div id="notificationIcon" class="w-10 h-10 rounded-xl flex items-center justify-center">
-                            <!-- Icon will be dynamically set -->
-                        </div>
-                        <h3 id="notificationTitle" class="font-display text-lg font-bold text-chocolate">Notification</h3>
-                    </div>
-                    <button onclick="closeNotificationModal()" class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                </div>
-                
-                <!-- Content -->
-                <div class="p-6">
-                    <p id="notificationMessage" class="text-gray-700 leading-relaxed whitespace-pre-line"></p>
-                </div>
-                
-                <!-- Footer -->
-                <div class="flex justify-end p-6 border-t border-border-soft bg-gray-50/50 rounded-b-2xl">
-                    <button onclick="closeNotificationModal()" class="px-6 py-2 text-sm font-bold text-white bg-caramel hover:bg-caramel-dark rounded-lg transition-colors shadow-md">
-                        OK
-                    </button>
-                </div>
+                @endif
             </div>
         </div>
     </div>
 
 </div>
-
-<script>
-// Custom Modal Management Functions
-let currentModal = null;
-let confirmCallback = null;
-
-function showConfirmationModal(title, message, callback) {
-    const modal = document.getElementById('confirmationModal');
-    const titleEl = document.getElementById('confirmTitle');
-    const messageEl = document.getElementById('confirmMessage');
-    const buttonEl = document.getElementById('confirmButton');
-    
-    titleEl.textContent = title;
-    messageEl.textContent = message;
-    confirmCallback = callback;
-    
-    // Remove any existing listeners
-    const newButton = buttonEl.cloneNode(true);
-    buttonEl.parentNode.replaceChild(newButton, buttonEl);
-    
-    // Add new listener
-    newButton.addEventListener('click', function() {
-        closeConfirmationModal();
-        if (confirmCallback) confirmCallback();
-    });
-    
-    modal.classList.remove('hidden');
-    currentModal = modal;
-    document.body.style.overflow = 'hidden';
-    
-    // Focus management
-    setTimeout(() => {
-        newButton.focus();
-    }, 100);
-    
-    // Add keyboard listener
-    document.addEventListener('keydown', handleModalKeydown);
-}
-
-function closeConfirmationModal() {
-    const modal = document.getElementById('confirmationModal');
-    modal.classList.add('hidden');
-    currentModal = null;
-    document.body.style.overflow = '';
-    confirmCallback = null;
-    document.removeEventListener('keydown', handleModalKeydown);
-}
-
-function showNotificationModal(title, message, type = 'info') {
-    const modal = document.getElementById('notificationModal');
-    const titleEl = document.getElementById('notificationTitle');
-    const messageEl = document.getElementById('notificationMessage');
-    const iconEl = document.getElementById('notificationIcon');
-    
-    titleEl.textContent = title;
-    messageEl.textContent = message;
-    
-    // Set icon based on type
-    const iconConfig = {
-        success: { icon: 'fas fa-check-circle', bg: 'bg-green-100', text: 'text-green-600' },
-        error: { icon: 'fas fa-exclamation-circle', bg: 'bg-red-100', text: 'text-red-600' },
-        warning: { icon: 'fas fa-exclamation-triangle', bg: 'bg-amber-100', text: 'text-amber-600' },
-        info: { icon: 'fas fa-info-circle', bg: 'bg-blue-100', text: 'text-blue-600' }
-    };
-    
-    const config = iconConfig[type] || iconConfig.info;
-    iconEl.className = `w-10 h-10 rounded-xl flex items-center justify-center ${config.bg}`;
-    iconEl.innerHTML = `<i class="${config.icon} ${config.text} text-lg"></i>`;
-    
-    modal.classList.remove('hidden');
-    currentModal = modal;
-    document.body.style.overflow = 'hidden';
-    
-    // Focus management
-    const okButton = modal.querySelector('button:last-child');
-    setTimeout(() => {
-        okButton.focus();
-    }, 100);
-    
-    // Add keyboard listener
-    document.addEventListener('keydown', handleModalKeydown);
-}
-
-function closeNotificationModal() {
-    const modal = document.getElementById('notificationModal');
-    modal.classList.add('hidden');
-    currentModal = null;
-    document.body.style.overflow = '';
-    document.removeEventListener('keydown', handleModalKeydown);
-}
-
-function handleModalKeydown(event) {
-    if (!currentModal) return;
-    
-    // Handle ESC key
-    if (event.key === 'Escape') {
-        event.preventDefault();
-        if (currentModal.id === 'confirmationModal') {
-            closeConfirmationModal();
-        } else if (currentModal.id === 'notificationModal') {
-            closeNotificationModal();
-        }
-    }
-    
-    // Handle Enter key on confirmation modal
-    if (event.key === 'Enter' && currentModal.id === 'confirmationModal' && confirmCallback) {
-        event.preventDefault();
-        closeConfirmationModal();
-        confirmCallback();
-    }
-}
-
-// Add global keyboard listener for closing modals by clicking outside
-document.addEventListener('click', function(event) {
-    if (currentModal && event.target === currentModal.querySelector('.absolute.inset-0')) {
-        if (currentModal.id === 'confirmationModal') {
-            closeConfirmationModal();
-        } else if (currentModal.id === 'notificationModal') {
-            closeNotificationModal();
-        }
-    }
-});
-
-// Action button functions removed - buttons are no longer active
-</script>
-
-<style>
-    /* Custom scrollbar for widgets */
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e8dfd4; border-radius: 10px; }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #c48d3f; }
-</style>
 @endsection
