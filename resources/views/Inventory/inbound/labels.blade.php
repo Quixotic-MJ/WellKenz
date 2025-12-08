@@ -1,6 +1,4 @@
-@extends('Inventory.layout.app')
 
-@section('content')
 <div class="print-screen-view">
     {{-- Header Section for Screen View Only --}}
     <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6">
@@ -77,16 +75,7 @@
                         <span class="metadata-value">{{ Str::limit($batch->supplier->name ?? 'N/A', 20) }}</span>
                     </div>
                     
-                    <div class="metadata-item">
-                        <span class="metadata-label">MFG DATE:</span>
-                        <span class="metadata-value">
-                            @if($batch->manufacturing_date)
-                                {{ \Carbon\Carbon::parse($batch->manufacturing_date)->format('M d, Y') }}
-                            @else
-                                N/A
-                            @endif
-                        </span>
-                    </div>
+
                 </div>
             </div>
 
@@ -170,6 +159,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+@push('styles')
 <style>
 /* ============================================
    SCREEN VIEW STYLES

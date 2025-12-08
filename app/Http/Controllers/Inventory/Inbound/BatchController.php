@@ -206,7 +206,6 @@ class BatchController extends Controller
                 'item_code' => $batch->item->item_code,
                 'quantity' => $batch->quantity,
                 'unit' => $batch->item->unit->symbol ?? 'pcs',
-                'manufacturing_date' => $batch->manufacturing_date?->format('Y-m-d'),
                 'expiry_date' => $batch->expiry_date?->format('Y-m-d'),
                 'supplier' => $batch->supplier->name ?? 'N/A',
                 'location' => $batch->location ?? 'Main Storage',
@@ -224,7 +223,6 @@ class BatchController extends Controller
                         'sku' => $batch->item->item_code,
                         'quantity' => (float) $batch->quantity,
                         'unit_symbol' => $batch->item->unit->symbol ?? 'pcs',
-                        'manufacturing_date' => $batch->manufacturing_date?->format('M d, Y'),
                         'expiry_date' => $batch->expiry_date?->format('M d, Y'),
                         'supplier_name' => $batch->supplier->name ?? 'N/A',
                         'location' => $batch->location ?? 'Main Storage',
@@ -252,7 +250,7 @@ class BatchController extends Controller
     {
         try {
             // Fix Input Handling: Handle single batch parameter from button click
-            if ($request->has('batch') && !$request->has('batch_ids')) {
+            if ($request->has('batch') && $request->missing('batch_ids')) {
                 $request->merge(['batch_ids' => [$request->batch]]);
             }
 
@@ -283,7 +281,6 @@ class BatchController extends Controller
                     'item_code' => $batch->item->item_code,
                     'quantity' => $batch->quantity,
                     'unit' => $batch->item->unit->symbol ?? 'pcs',
-                    'manufacturing_date' => $batch->manufacturing_date?->format('Y-m-d'),
                     'expiry_date' => $batch->expiry_date?->format('Y-m-d'),
                     'supplier' => $batch->supplier->name ?? 'N/A',
                     'location' => $batch->location ?? 'Main Storage',
@@ -352,7 +349,6 @@ class BatchController extends Controller
                             'item_code' => $batch->item->item_code,
                             'quantity' => $batch->quantity,
                             'unit' => $batch->item->unit->symbol ?? 'pcs',
-                            'manufacturing_date' => $batch->manufacturing_date?->format('Y-m-d'),
                             'expiry_date' => $batch->expiry_date?->format('Y-m-d'),
                             'supplier' => $batch->supplier->name ?? 'N/A',
                         ])
@@ -585,7 +581,6 @@ class BatchController extends Controller
             ],
             'quantity' => (float) $batch->quantity,
             'unit_cost' => (float) $batch->unit_cost,
-            'manufacturing_date' => $manufacturingDate ? $manufacturingDate->format('M d, Y') : 'N/A',
             'expiry_date' => $expiryDate ? $expiryDate->format('M d, Y') : 'No Expiry',
             'expiry_date_raw' => $expiryDate ? $expiryDate->format('Y-m-d') : null,
             'location' => $batch->location ?? 'Main Storage',
