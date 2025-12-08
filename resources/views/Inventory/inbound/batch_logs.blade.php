@@ -238,6 +238,16 @@
                         <button class="print-label-btn p-2 text-chocolate hover:text-white hover:bg-chocolate rounded-lg transition-all tooltip text-sm" data-batch-id="{{ $batch->id }}" title="Print Label">
                             <i class="fas fa-print"></i>
                         </button>
+                        @if($batch->quantity > 0 && ($isExpired || $batch->status === 'quarantine'))
+                        <button class="dispose-batch-btn p-2 text-orange-600 hover:text-white hover:bg-orange-600 rounded-lg transition-all tooltip text-sm" data-batch-id="{{ $batch->id }}" data-batch-number="{{ $batch->batch_number }}" data-quantity="{{ $batch->quantity }}" data-unit="{{ $batch->item->unit->symbol ?? 'pcs' }}" title="Dispose Batch">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        @endif
+                        @if($isExpired)
+                        <button class="delete-batch-btn p-2 text-red-600 hover:text-white hover:bg-red-600 rounded-lg transition-all tooltip text-sm" data-batch-id="{{ $batch->id }}" data-batch-number="{{ $batch->batch_number }}" title="Delete Batch">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -305,6 +315,14 @@ class BatchLogsManager {
             btn.addEventListener('click', (e) => this.printLabel(e.currentTarget.dataset.batchId));
         });
 
+        document.querySelectorAll('.delete-batch-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.deleteBatch(e.currentTarget));
+        });
+
+        document.querySelectorAll('.dispose-batch-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => this.disposeBatch(e.currentTarget));
+        });
+
         document.getElementById('closeBatchModal')?.addEventListener('click', () => this.closeBatchModal());
     }
 
@@ -356,6 +374,131 @@ class BatchLogsManager {
     }
 
     printLabel(batchId) { window.location.href = `/inventory/inbound/labels/stream?batch=${batchId}`; }
+
+    async deleteBatch(button) {
+        const batchId = button.dataset.batchId;
+        const batchNumber = button.dataset.batchNumber;
+        
+        if (!confirm(`Are you sure you want to delete batch ${batchNumber}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const response = await fetch(`/inventory/inbound/batch/${batchId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                }
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // Remove the batch card from the DOM
+                const batchCard = button.closest('.bg-white');
+                if (batchCard) {
+                    batchCard.style.transition = 'opacity 0.3s ease';
+                    batchCard.style.opacity = '0';
+                    setTimeout(() => {
+                        batchCard.remove();
+                        // Refresh page to update pagination counts
+                        window.location.reload();
+                    }, 300);
+                }
+                this.showNotification(result.message, 'success');
+            } else {
+                this.showNotification(result.message, 'error');
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-trash"></i>';
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            this.showNotification('Failed to delete batch', 'error');
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-trash"></i>';
+        }
+    }
+
+    async disposeBatch(button) {
+        const batchId = button.dataset.batchId;
+        const batchNumber = button.dataset.batchNumber;
+        const quantity = button.dataset.quantity;
+        const unit = button.dataset.unit;
+        
+        const confirmationMessage = `This will remove ${quantity} ${unit} from inventory for batch ${batchNumber}. Proceed?`;
+        if (!confirm(confirmationMessage)) {
+            return;
+        }
+
+        try {
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const response = await fetch(`/inventory/inbound/batch/${batchId}/dispose`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    reason: 'Disposed via batch disposal feature'
+                })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                // Update the batch card to reflect the disposal
+                const batchCard = button.closest('.bg-white');
+                if (batchCard) {
+                    // Update quantity display - target the specific quantity div
+                    const quantityDiv = batchCard.querySelector('.grid.grid-cols-2.gap-4.pt-2 > div:first-child .text-lg.font-bold.text-gray-900');
+                    if (quantityDiv) {
+                        // Find the span with unit and update both number and unit
+                        const unitSpan = quantityDiv.querySelector('.text-sm.font-normal.text-gray-500');
+                        if (unitSpan) {
+                            unitSpan.textContent = unit;
+                        }
+                        // Update the text content, keeping the unit span
+                        const currentText = quantityDiv.textContent.trim();
+                        const unitText = unitSpan ? unitSpan.textContent : unit;
+                        quantityDiv.innerHTML = `0 <span class="text-sm font-normal text-gray-500">${unitText}</span>`;
+                    }
+                    
+                    // Update status badge
+                    const statusElement = batchCard.querySelector('.inline-flex.px-2\\.5.py-0\\.5.rounded-full');
+                    if (statusElement) {
+                        statusElement.className = 'inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide border bg-gray-100 text-gray-800 border-gray-200';
+                        statusElement.textContent = 'Consumed';
+                    }
+                    
+                    // Remove dispose button
+                    button.remove();
+                    
+                    // Add visual feedback
+                    batchCard.style.transition = 'background-color 0.3s ease';
+                    batchCard.style.backgroundColor = '#fef2f2';
+                    setTimeout(() => {
+                        batchCard.style.backgroundColor = '';
+                    }, 1000);
+                }
+                this.showNotification(result.message, 'success');
+            } else {
+                this.showNotification(result.message, 'error');
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-ban"></i>';
+            }
+        } catch (error) {
+            console.error('Dispose error:', error);
+            this.showNotification('Failed to dispose batch', 'error');
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-ban"></i>';
+        }
+    }
 
     getCurrentFilters() {
         return {

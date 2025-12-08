@@ -429,6 +429,8 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         Route::get('/batch-logs/{id}/edit', [BatchController::class, 'editBatch'])->name('batch-logs.edit');
         Route::patch('/batch-logs/{id}/status', [BatchController::class, 'updateBatchStatus'])->name('batch-logs.status');
         Route::post('/batch-logs/export', [BatchController::class, 'exportBatchLogs'])->name('batch-logs.export');
+        Route::delete('/batch/{id}', [BatchController::class, 'destroy'])->name('batch.destroy');
+        Route::post('/batch/{id}/dispose', [BatchController::class, 'dispose'])->name('batch.dispose');
 
         // Batch Labels Printing Routes
         Route::get('/labels', [BatchController::class, 'batchLogs'])->name('labels');

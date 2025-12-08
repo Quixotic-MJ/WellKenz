@@ -9,6 +9,8 @@ use App\Models\Supplier;
 use App\Models\Category;
 use App\Models\Notification;
 use App\Models\User;
+use App\Models\StockMovement;
+use App\Models\CurrentStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -635,6 +637,149 @@ class BatchController extends Controller
             return 'border-yellow-500';
         } else {
             return 'border-green-500';
+        }
+    }
+
+    /**
+     * Dispose of a specific batch (zero out inventory)
+     */
+    public function dispose(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'reason' => 'nullable|string|max:255'
+            ]);
+
+            return DB::transaction(function () use ($request, $id) {
+                $batch = Batch::findOrFail($id);
+                
+                // Check if batch can be disposed
+                if ($batch->quantity <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Batch quantity is already zero.'
+                    ], 400);
+                }
+
+                $batchQuantity = $batch->quantity;
+                $batchItem = $batch->item;
+
+                // Create negative stock movement for disposal
+                $stockMovement = new StockMovement([
+                    'item_id' => $batch->item_id,
+                    'movement_type' => 'waste',
+                    'reference_number' => 'DISPOSE-' . $batch->batch_number,
+                    'quantity' => -$batchQuantity, // Negative quantity for disposal
+                    'unit_cost' => $batch->unit_cost,
+                    'total_cost' => -($batchQuantity * $batch->unit_cost),
+                    'batch_number' => $batch->batch_number,
+                    'expiry_date' => $batch->expiry_date,
+                    'location' => $batch->location ?? 'Main Storage',
+                    'notes' => $request->reason ?: 'Batch disposed via disposal feature',
+                    'user_id' => auth()->id(),
+                    'created_at' => now()
+                ]);
+                $stockMovement->save();
+
+                // Update or create current stock record
+                $currentStock = CurrentStock::where('item_id', $batch->item_id)->first();
+                if ($currentStock) {
+                    $currentStock->current_quantity = max(0, $currentStock->current_quantity - $batchQuantity);
+                    $currentStock->last_updated = now();
+                    $currentStock->save();
+                }
+
+                // Update batch quantity to 0 and status to 'consumed'
+                $batch->quantity = 0;
+                $batch->status = 'consumed';
+                $batch->save();
+
+                // Log the disposal
+                \Log::info("Batch disposed", [
+                    'batch_id' => $id,
+                    'batch_number' => $batch->batch_number,
+                    'item_id' => $batch->item_id,
+                    'disposed_quantity' => $batchQuantity,
+                    'unit_cost' => $batch->unit_cost,
+                    'disposal_reason' => $request->reason ?: 'Batch disposed via disposal feature',
+                    'user_id' => auth()->id(),
+                    'user_name' => auth()->user()->name
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => "Batch {$batch->batch_number} disposed successfully. {$batchQuantity} " . ($batchItem->unit->symbol ?? 'pcs') . " removed from inventory.",
+                    'data' => [
+                        'disposed_quantity' => $batchQuantity,
+                        'unit_symbol' => $batchItem->unit->symbol ?? 'pcs',
+                        'batch_number' => $batch->batch_number
+                    ]
+                ]);
+            });
+
+        } catch (\Exception $e) {
+            \Log::error('Error disposing batch: ' . $e->getMessage(), [
+                'batch_id' => $id,
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to dispose batch: ' . $e->getMessage(),
+                'debug' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete expired batch
+     */
+    public function destroy($id)
+    {
+        try {
+            $batch = Batch::findOrFail($id);
+            
+            // Check if batch can be deleted (only expired batches)
+            $expiryDate = $batch->expiry_date ? \Carbon\Carbon::parse($batch->expiry_date) : null;
+            $isExpired = $expiryDate && $expiryDate->isPast();
+            
+            if (!$isExpired && $batch->status !== 'expired') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Only expired batches can be deleted. Batch status: ' . $batch->status
+                ], 403);
+            }
+
+            // Additional safety check - don't delete if quantity > 0
+            if ($batch->quantity > 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete batch with remaining stock. Please consume or transfer remaining quantity first.'
+                ], 403);
+            }
+
+            $batchNumber = $batch->batch_number;
+            $batch->delete();
+
+            // Log the deletion
+            \Log::info("Expired batch deleted", [
+                'batch_id' => $id,
+                'batch_number' => $batchNumber,
+                'user_id' => auth()->id(),
+                'user_name' => auth()->user()->name
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Error deleting batch: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete batch: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

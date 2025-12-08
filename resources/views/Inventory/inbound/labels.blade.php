@@ -79,21 +79,7 @@
                 </div>
             </div>
 
-            {{-- QR Code Section --}}
-            <div class="qr-section">
-                <div class="qr-placeholder">
-                    <div class="qr-code" data-qr-data="{{ $batch->qr_code_data }}">
-                        <!-- QR Code will be generated here -->
-                        <div class="qr-fallback">
-                            <i class="fas fa-qrcode"></i>
-                            <small>QR CODE</small>
-                        </div>
-                    </div>
-                    <div class="qr-info">
-                        <small>Scan for details</small>
-                    </div>
-                </div>
-            </div>
+
         </div>
         @endforeach
     </div>
@@ -126,38 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endif
 
-{{-- QR Code Generation Script --}}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Generate QR codes for each label
-    document.querySelectorAll('.qr-code').forEach(function(element) {
-        try {
-            const qrData = JSON.parse(element.dataset.qrData);
-            const qrText = `BATCH: ${qrData.batch_number}\nITEM: ${qrData.item_name}\nEXPIRY: ${qrData.expiry_date}\nQTY: ${qrData.quantity} ${qrData.unit}`;
-            
-            // Create QR code
-            new QRCode(element, {
-                text: qrText,
-                width: 60,
-                height: 60,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.M
-            });
-            
-            // Remove the fallback div
-            const fallback = element.querySelector('.qr-fallback');
-            if (fallback) {
-                fallback.style.display = 'none';
-            }
-        } catch (error) {
-            console.warn('QR Code generation failed:', error);
-            // Keep fallback display
-        }
-    });
-});
-</script>
+
 
 @push('styles')
 <style>
@@ -190,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /* Remove all margins and padding for printing */
     @page {
-        margin: 0.25in;
+        margin: 0;
         size: auto;
     }
     
@@ -210,13 +165,13 @@ document.addEventListener('DOMContentLoaded', function() {
         padding: 0;
     }
     
-    /* Label dimensions - 4" x 3" ratio */
+    /* Label dimensions - 3.5" x 2.5" warehouse label size */
     .batch-label {
-        width: 4in;
-        height: 3in;
+        width: 3.5in;
+        height: 2.5in;
         border: 2px solid #000;
-        padding: 0.15in;
-        margin: 0.1in;
+        padding: 0.12in;
+        margin: 0.08in;
         display: inline-block;
         vertical-align: top;
         page-break-inside: avoid;
@@ -226,13 +181,14 @@ document.addEventListener('DOMContentLoaded', function() {
         font-family: Arial, sans-serif;
     }
     
-    /* Grid layout for multiple labels */
+    /* Grid layout for multiple labels - fits 2 per row on A4 */
     .labels-grid-container {
         display: grid;
-        grid-template-columns: repeat(2, 4in);
-        gap: 0.2in;
+        grid-template-columns: repeat(2, 3.5in);
+        gap: 0.15in;
         justify-content: start;
         align-content: start;
+        max-width: 7.5in; /* Prevent overflow */
     }
 }
 
@@ -253,14 +209,14 @@ document.addEventListener('DOMContentLoaded', function() {
 /* Screen view label sizing */
 @media screen {
     .batch-label {
-        width: 300px;
-        height: 225px; /* 4:3 ratio */
+        width: 280px; /* 3.5in converted to pixels for screen */
+        height: 200px; /* 2.5in converted to pixels for screen */
         margin: 10px;
     }
     
     .labels-grid-container {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 20px;
         justify-content: center;
     }
@@ -367,51 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 7px;
 }
 
-/* QR Section */
-.qr-section {
-    border-top: 1px solid #000;
-    padding-top: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
 
-.qr-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-}
-
-.qr-code {
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #000;
-    background: white;
-}
-
-.qr-fallback {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: #666;
-    font-size: 8px;
-}
-
-.qr-fallback i {
-    font-size: 20px;
-    margin-bottom: 2px;
-}
-
-.qr-info {
-    margin-top: 2px;
-    font-size: 6px;
-    color: #666;
-    text-align: center;
-}
 
 /* ============================================
    RESPONSIVE ADJUSTMENTS
@@ -420,12 +332,12 @@ document.addEventListener('DOMContentLoaded', function() {
 /* For smaller screens, reduce label size */
 @media screen and (max-width: 768px) {
     .batch-label {
-        width: 250px;
-        height: 187.5px;
+        width: 240px;
+        height: 172px; /* 3.5:2.5 ratio */
     }
     
     .labels-grid-container {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     }
     
     .item-name {
@@ -445,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
 @media screen and (max-width: 480px) {
     .batch-label {
         width: 200px;
-        height: 150px;
+        height: 143px; /* 3.5:2.5 ratio */
     }
     
     .labels-grid-container {
