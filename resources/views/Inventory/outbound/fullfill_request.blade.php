@@ -321,6 +321,31 @@
     let currentReqId = null;
     let pendingConfirmAction = null;
 
+    function validateBatchInput(input, maxQty) {
+        const value = parseFloat(input.value) || 0;
+        const min = parseFloat(input.min) || 0;
+        const max = parseFloat(input.max) || maxQty;
+        
+        // Ensure value is within bounds
+        if (value < min) {
+            input.value = min;
+        } else if (value > max) {
+            input.value = max;
+        }
+        
+        // Add visual feedback for validation
+        if (value > max) {
+            input.classList.add('border-red-300', 'bg-red-50');
+            setTimeout(() => {
+                input.classList.remove('border-red-300', 'bg-red-50');
+                input.classList.add('border-gray-300');
+            }, 2000);
+        } else {
+            input.classList.remove('border-red-300', 'bg-red-50');
+            input.classList.add('border-gray-300');
+        }
+    }
+
     function openPickList(id) {
         currentReqId = id;
         const data = JSON.parse(document.getElementById('requisitionData').textContent);
@@ -359,9 +384,15 @@
                                     <span class="text-xs text-gray-500 ml-2">Loc: ${batch.location}</span>
                                 </div>
                             </div>
-                            <div class="font-bold text-chocolate">
-                                Pick: ${take} ${item.unit}
-                                <input type="hidden" name="items[${item.id}][batches][${batch.id}]" value="${take}">
+                            <div class="flex items-center gap-2">
+                                <input type="number" 
+                                       name="items[${item.id}][batches][${batch.id}]" 
+                                       value="${take}" 
+                                       min="0" 
+                                       max="${batch.qty}" 
+                                       class="w-20 text-right border-gray-300 rounded text-sm"
+                                       onchange="validateBatchInput(this, ${batch.qty})">
+                                <span class="font-bold text-chocolate text-sm">${item.unit}</span>
                             </div>
                         </div>
                     `;

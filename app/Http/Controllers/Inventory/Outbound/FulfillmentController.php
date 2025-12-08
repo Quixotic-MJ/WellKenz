@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Models\PurchaseRequest;
 use App\Models\PurchaseRequestItem;
 use App\Models\Item;
+use App\Models\CurrentStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -288,6 +289,14 @@ class FulfillmentController extends Controller
                     // Update batch quantity
                     $batch->decrement('quantity', $quantityToIssue);
 
+                    // Update current stock
+                    $currentStock = CurrentStock::where('item_id', $item->id)->first();
+                    if ($currentStock) {
+                        $currentStock->decrement('current_quantity', $quantityToIssue);
+                        $currentStock->last_updated = now();
+                        $currentStock->save();
+                    }
+
                     // Update requisition item issued quantity
                     $requisitionItem->update([
                         'quantity_issued' => $quantityToIssue
@@ -304,7 +313,7 @@ class FulfillmentController extends Controller
                         'batch_number' => $batch->batch_number,
                         'expiry_date' => $batch->expiry_date,
                         'location' => 'Kitchen/Production',
-                        'notes' => "Auto-issuance for requisition {$requisition->requisition_number}. Issued: {$quantityToIssue}, Requested: {$requisitionItem->quantity_requested}",
+                        'notes' => "Issuance for requisition {$requisition->requisition_number}. Issued: {$quantityToIssue} from Batch {$batch->batch_number}",
                         'user_id' => $user->id
                     ]);
 
@@ -332,6 +341,14 @@ class FulfillmentController extends Controller
                         
                         // Update batch quantity
                         $batch->decrement('quantity', $actualQuantity);
+                        
+                        // Update current stock
+                        $currentStock = CurrentStock::where('item_id', $item->id)->first();
+                        if ($currentStock) {
+                            $currentStock->decrement('current_quantity', $actualQuantity);
+                            $currentStock->last_updated = now();
+                            $currentStock->save();
+                        }
                         $totalIssued += $actualQuantity;
                         
                         // Create stock movement for this batch
@@ -345,7 +362,7 @@ class FulfillmentController extends Controller
                             'batch_number' => $batch->batch_number,
                             'expiry_date' => $batch->expiry_date,
                             'location' => 'Kitchen/Production',
-                            'notes' => "Partial issuance for requisition {$requisition->requisition_number} (Multi-batch). Issued: {$actualQuantity} from Batch {$batch->batch_number}",
+                            'notes' => "Issuance for requisition {$requisition->requisition_number}. Issued: {$actualQuantity} from Batch {$batch->batch_number}",
                             'user_id' => $user->id
                         ]);
                         

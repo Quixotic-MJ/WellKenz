@@ -684,6 +684,13 @@ class StockLevelController extends Controller
                 'created_at' => \Carbon\Carbon::now()
             ]);
 
+            // Update CurrentStock record
+            $currentStock = CurrentStock::firstOrNew(['item_id' => $item->id]);
+            $currentStock->current_quantity = ($currentStock->current_quantity ?? 0) + $quantity;
+            $currentStock->last_adjustment_date = now();
+            $currentStock->updated_by = auth()->id();
+            $currentStock->save();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Inventory adjustment created successfully',
