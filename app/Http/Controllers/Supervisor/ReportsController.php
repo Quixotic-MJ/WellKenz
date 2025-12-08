@@ -129,7 +129,7 @@ class ReportsController extends Controller
         ];
 
         // Generate PDF
-        $pdf = Pdf::loadView('Supervisor.reports.print_use_first_list', $data);
+        $pdf = Pdf::loadView('Supervisor.reports.pdf_use_first_list', $data);
         
         // Configure PDF settings with proper margins
         $pdf->setOptions([

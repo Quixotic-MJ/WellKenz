@@ -4,45 +4,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'WellKenz - Cakes & Pastries')</title>
+    <title>@yield('title', 'WellKenz Bakery - Document')</title>
 
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Custom Styles matching the sidebar theme -->
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'cream-bg': '#faf7f3',
-                        'white': '#ffffff',
-                        'chocolate': '#3d2817',
-                        'chocolate-dark': '#2a1a0f',
-                        'caramel': '#c48d3f',
-                        'caramel-dark': '#a67332',
-                        'text-dark': '#1a1410',
-                        'text-muted': '#8b7355',
-                        'border-soft': '#e8dfd4',
-                    },
-                    fontFamily: {
-                        'sans': ['Inter', 'system-ui', 'sans-serif'],
-                    }
-                }
-            }
-        }
-    </script>
-
+    <!-- CSS Variables for Brand Colors -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+        :root {
+            --chocolate: #3d2817;
+            --chocolate-dark: #2a1a0f;
+            --caramel: #c48d3f;
+            --caramel-dark: #a67332;
+            --text-dark: #1a1410;
+            --text-muted: #8b7355;
+            --border-soft: #e8dfd4;
+            --cream-bg: #faf7f3;
+            --white: #ffffff;
+        }
 
-        /* Print-optimized styles - PRESERVE DESIGN */
+        /* Print-optimized styles */
         @media print {
             * {
                 -webkit-print-color-adjust: exact !important;
@@ -50,68 +39,79 @@
                 print-color-adjust: exact !important;
             }
 
-            /* Keep original fonts and colors - don't override */
+            /* Page setup */
+            @page {
+                margin: 15mm;
+                size: A4;
+                @bottom-center {
+                    content: "WellKenz Bakery - " counter(page) " of " counter(pages);
+                    font-size: 9pt;
+                    color: #666;
+                }
+                @top-center {
+                    content: "@yield('document_title', 'Document') - WellKenz Bakery";
+                    font-size: 10pt;
+                    color: #333;
+                }
+            }
+
+            /* Reset margins and padding */
             body {
+                margin: 0 !important;
+                padding: 0 !important;
                 font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
                 font-size: 11pt !important;
                 line-height: 1.4 !important;
                 color: #1a1410 !important;
                 background: white !important;
-                margin: 0 !important;
-                padding: 0 !important;
             }
 
-            /* Preserve design colors */
+            /* Brand colors - preserved for print */
             .text-chocolate { color: #3d2817 !important; }
             .text-caramel { color: #c48d3f !important; }
             .border-chocolate { border-color: #3d2817 !important; }
             .bg-chocolate { background-color: #3d2817 !important; }
             
-            /* Page setup */
-            @page {
-                margin: 15mm;
-                size: A4;
-            }
-        /* Preserve Tailwind design classes in print */
-        @media print {
-            /* Brand colors preservation */
-            .text-chocolate { color: #3d2817 !important; }
-            .text-caramel { color: #c48d3f !important; }
-            .text-gray-500 { color: #6b7280 !important; }
-            .text-gray-600 { color: #4b5563 !important; }
-            .text-gray-700 { color: #374151 !important; }
-            .text-gray-900 { color: #111827 !important; }
-            
-            .bg-chocolate { background-color: #3d2817 !important; }
-            .bg-gray-50 { background-color: #f9fafb !important; }
-            .bg-gray-100 { background-color: #f3f4f6 !important; }
-            
-            .border-chocolate { border-color: #3d2817 !important; }
-            .border-gray-200 { border-color: #e5e7eb !important; }
-            .border-gray-300 { border-color: #d1d5db !important; }
-            
-            /* Font families */
+            /* Typography */
             .font-display { 
                 font-family: 'Playfair Display', serif !important;
                 font-weight: 700 !important;
             }
             .font-bold { font-weight: 700 !important; }
             .font-medium { font-weight: 500 !important; }
-            
-            /* Ensure text remains readable */
             .uppercase { text-transform: uppercase !important; }
             .tracking-wide { letter-spacing: 0.025em !important; }
             .tracking-wider { letter-spacing: 0.05em !important; }
-            .tracking-widest { letter-spacing: 0.1em !important; }
-        }
 
-            /* Only remove UI elements, preserve content styling */
+            /* Hide UI elements */
             .screen-only {
                 display: none !important;
             }
+
+            /* Table optimizations */
+            table {
+                border-collapse: collapse !important;
+            }
+
+            th, td {
+                border: 1pt solid #333 !important;
+                padding: 8pt !important;
+            }
+
+            th {
+                background-color: #f9f9f9 !important;
+                font-weight: bold !important;
+                color: #3d2817 !important;
+            }
+
+            /* Prevent page breaks in critical sections */
+            .no-print-break {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
         }
 
-        /* Screen-only styles for print preview */
+        /* Screen styles for print preview */
         @media screen {
             .print-preview-container {
                 max-width: 210mm;
@@ -167,10 +167,144 @@
             .print-only {
                 display: block !important;
             }
-            
-            .screen-only {
-                display: none !important;
-            }
+        }
+
+        /* Common Document Styles */
+        .document-header {
+            border-bottom: 2px solid var(--chocolate);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .brand-block {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .brand-logo {
+            width: 50px;
+            height: 50px;
+            background: var(--chocolate);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .brand-text h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--chocolate);
+            margin: 0;
+            line-height: 1;
+        }
+
+        .brand-text p {
+            color: var(--caramel);
+            font-weight: 600;
+            font-size: 10px;
+            letter-spacing: 2px;
+            margin: 2px 0 0 0;
+            text-transform: uppercase;
+        }
+
+        .metadata-box {
+            background: var(--cream-bg);
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: right;
+            min-width: 200px;
+        }
+
+        .metadata-box h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--chocolate);
+            margin: 0 0 8px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .metadata-box .doc-id {
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--caramel);
+            margin-bottom: 8px;
+        }
+
+        .metadata-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+            font-size: 11px;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .metadata-value {
+            font-weight: 500;
+            color: var(--text-dark);
+        }
+
+        /* Standardized Table Styles */
+        .document-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .document-table th {
+            background-color: var(--chocolate);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.5px;
+            padding: 12px 8px;
+            text-align: left;
+        }
+
+        .document-table td {
+            border-bottom: 1px solid var(--border-soft);
+            padding: 10px 8px;
+            font-size: 10pt;
+            vertical-align: top;
+        }
+
+        .document-table tr:nth-child(even) {
+            background-color: rgba(250, 247, 243, 0.3);
+        }
+
+        /* Document Footer */
+        .document-footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-soft);
+            text-align: center;
+            font-size: 9pt;
+            color: var(--text-muted);
+        }
+
+        .footer-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .print-timestamp {
+            font-weight: 600;
+            color: var(--text-dark);
         }
     </style>
 
@@ -206,7 +340,6 @@
     <!-- Scripts -->
     <script>
         function downloadPDF() {
-            // Get current URL and modify it to PDF route
             const currentUrl = window.location.href;
             const pdfUrl = currentUrl.replace('/print', '/pdf');
             window.open(pdfUrl, '_blank');

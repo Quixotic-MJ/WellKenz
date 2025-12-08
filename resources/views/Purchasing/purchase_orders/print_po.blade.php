@@ -16,51 +16,36 @@
 
         <div class="relative z-10">
             {{-- 1. DOCUMENT HEADER --}}
-            <header class="border-b-2 border-chocolate pb-6 mb-8 no-print-break">
-                <div class="flex justify-between items-start print:items-start">
-                    <div class="flex items-center gap-4">
-                        <div class="w-16 h-16 bg-chocolate text-white rounded-full flex items-center justify-center text-2xl print:border-2 print:border-black print:text-black print:bg-transparent">
+            <header class="document-header no-print-break">
+                <div class="flex justify-between items-start">
+                    <div class="brand-block">
+                        <div class="brand-logo">
                             <i class="fas fa-birthday-cake"></i>
                         </div>
-                        <div>
-                            <h1 class="font-display text-3xl font-bold text-chocolate leading-none tracking-wide print:text-black print:text-2xl">WellKenz Bakery</h1>
-                            <p class="text-xs text-gray-500 uppercase tracking-[0.2em] mt-1 print:text-black">Official Purchase Order Document</p>
-                            <p class="text-xs text-gray-400 print:text-black print:text-xs mt-1">Generated on: {{ now()->format('F d, Y g:i A') }}</p>
+                        <div class="brand-text">
+                            <h1>WellKenz Bakery</h1>
+                            <p>Official Purchase Order Document</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <h2 class="font-display text-2xl font-bold text-gray-900 uppercase tracking-wide print:text-black print:text-xl">PO #{{ $purchaseOrder->po_number }}</h2>
-                        <div class="inline-block px-3 py-1 rounded border border-gray-300 bg-gray-50 text-xs font-bold uppercase tracking-widest mt-2 print:border-black print:bg-transparent">
-                            {{ $purchaseOrder->status }}
+                    <div class="metadata-box">
+                        <h2>PO #{{ $purchaseOrder->po_number }}</h2>
+                        <div class="doc-id">ID: {{ $purchaseOrder->id }}</div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Date Issued:</span>
+                            <span class="metadata-value">{{ $purchaseOrder->created_at->format('M d, Y') }}</span>
                         </div>
-                        <div class="mt-2 text-xs text-gray-500 print:text-black">
-                            <strong>PO ID:</strong> {{ $purchaseOrder->id }}
+                        <div class="metadata-item">
+                            <span class="metadata-label">Created By:</span>
+                            <span class="metadata-value">{{ $purchaseOrder->createdBy->name ?? 'System' }}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Status:</span>
+                            <span class="metadata-value font-bold">{{ $purchaseOrder->status }}</span>
                         </div>
                     </div>
                 </div>
                 
-                <div class="mt-6 flex justify-between text-sm text-gray-600 print:text-black">
-                    <div class="flex-1">
-                        <p class="mb-1">
-                            <span class="font-bold text-gray-900 print:text-black">Date Issued:</span> 
-                            {{ $purchaseOrder->created_at->format('F d, Y') }}
-                        </p>
-                        <p>
-                            <span class="font-bold text-gray-900 print:text-black">Created By:</span> 
-                            {{ $purchaseOrder->createdBy->name ?? 'System' }}
-                        </p>
-                    </div>
-                    <div class="flex-1 text-right">
-                        <p class="mb-1">
-                            <span class="font-bold text-gray-900 print:text-black">Expected Delivery:</span> 
-                            {{ $purchaseOrder->expected_delivery_date ? $purchaseOrder->expected_delivery_date->format('F d, Y') : 'TBA' }}
-                        </p>
-                        <p>
-                            <span class="font-bold text-gray-900 print:text-black">Payment Terms:</span> 
-                            {{ $purchaseOrder->payment_terms ?? 30 }} Days
-                        </p>
-                    </div>
-                </div>
+
             </header>
 
             {{-- 2. INFO GRID --}}
@@ -143,8 +128,7 @@
 
             {{-- 3. ITEMS TABLE --}}
             <div class="mb-8 no-print-break">
-                <div class="bg-gray-50 print:bg-transparent border border-gray-200 print:border-black rounded-t-lg print:rounded-none overflow-hidden">
-                    <table class="w-full text-left border-collapse">
+                <table class="document-table">
                         <thead>
                             <tr class="bg-gray-100 print:bg-gray-50">
                                 <th class="py-4 px-4 text-xs font-bold text-gray-700 uppercase tracking-wider w-12 print:text-black print:py-2 print:px-2">No.</th>
@@ -211,15 +195,14 @@
                             @endfor
                         </tbody>
                     </table>
-                </div>
-                
-                {{-- Table Summary --}}
-                <div class="bg-gray-50 print:bg-transparent px-4 py-3 border border-gray-200 border-t-0 print:border-black print:rounded-b-none rounded-b-lg">
-                    <div class="flex justify-between text-sm text-gray-600 print:text-black">
-                        <span class="font-medium">Total Items: {{ count($purchaseOrder->purchaseOrderItems) }}</span>
-                        <span class="font-medium">Total Quantity: {{ number_format($purchaseOrder->purchaseOrderItems->sum('quantity_ordered'), 0) }} units</span>
+                    
+                    {{-- Table Summary --}}
+                    <div class="bg-gray-50 print:bg-transparent px-4 py-3 border border-gray-200 border-t-0 print:border-black print:rounded-b-none rounded-b-lg">
+                        <div class="flex justify-between text-sm text-gray-600 print:text-black">
+                            <span class="font-medium">Total Items: {{ count($purchaseOrder->purchaseOrderItems) }}</span>
+                            <span class="font-medium">Total Quantity: {{ number_format($purchaseOrder->purchaseOrderItems->sum('quantity_ordered'), 0) }} units</span>
+                        </div>
                     </div>
-                </div>
             </div>
 
             {{-- 4. TOTALS & SUMMARY --}}
