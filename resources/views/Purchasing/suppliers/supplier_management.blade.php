@@ -750,7 +750,7 @@ function openAddItemsModal() {
 function closeAddItemsModal() {
     document.getElementById('addItemsModal').style.display = 'none';
     selectedItems = [];
-    document.getElementById('selectedItemsForm').classList.add('hidden');
+    document.getElementById('selectedCount').textContent = '0';
     document.getElementById('addItemsSubmitBtn').disabled = true;
 }
 
@@ -909,46 +909,54 @@ function submitAddItems(event) {
     }
     
     const supplierId = document.getElementById('items_supplier_id').value;
-    const itemsData = [];
     
-    selectedItems.forEach(itemId => {
-        const config = document.querySelector(`[data-item-config="${itemId}"]`);
-        if (config) {
-            itemsData.push({
-                item_id: itemId,
-                unit_price: config.querySelector('[name="unit_price"]').value,
-                minimum_order_quantity: config.querySelector('[name="minimum_order_quantity"]').value,
-                lead_time_days: config.querySelector('[name="lead_time_days"]').value,
-                is_preferred: config.querySelector('[name="is_preferred"]').checked
-            });
-        }
-    });
+    // 1. Prepare simple data (just IDs)
+    const itemsData = selectedItems.map(itemId => ({
+        item_id: itemId
+        // We don't send price/moq/lead_time here; the Controller will use the defaults we set (0, 1, 1)
+    }));
     
-    const formData = new FormData();
-    formData.append('items', JSON.stringify(itemsData));
+    // 2. Button Loading State
+    const btn = document.getElementById('addItemsSubmitBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Adding...';
     
+    // 3. Send as JSON (Fixes the 422 Error)
     fetch(`/purchasing/suppliers/${supplierId}/items`, {
         method: 'POST',
         headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json', // <--- CRITICAL: Tells Laravel this is JSON data
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
             'Accept': 'application/json'
         },
-        body: formData
+        body: JSON.stringify({
+            items: itemsData
+        })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showToast(`Successfully added ${data.created_count} item(s)!`, 'success');
+            showToast('Items added successfully', 'success');
             closeAddItemsModal();
-            // Reload supplier items
-            loadSupplierItems(supplierId);
+            // Refresh the page or the list
+            window.location.reload(); 
         } else {
-            showToast('Error adding items: ' + (data.message || 'Unknown error'), 'error');
+            // Handle specific validation errors from Laravel
+            if (data.errors && data.errors.items) {
+                showToast(data.errors.items[0], 'error');
+            } else {
+                showToast(data.message || 'Error adding items', 'error');
+            }
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        showToast('Error adding items', 'error');
+        showToast('An error occurred', 'error');
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     });
 }
 
@@ -1096,7 +1104,12 @@ function toggleAvailableItem(itemId) {
         selectedItems = selectedItems.filter(id => id !== itemId);
     }
     
-    updateSelectedItemsForm();
+    // Update the counter
+    document.getElementById('selectedCount').textContent = selectedItems.length;
+    
+    // Enable/disable submit button
+    const submitBtn = document.getElementById('addItemsSubmitBtn');
+    submitBtn.disabled = selectedItems.length === 0;
 }
 
 function toggleSelectAllAvailableItems() {
@@ -1109,77 +1122,7 @@ function toggleSelectAllAvailableItems() {
     });
 }
 
-function updateSelectedItemsForm() {
-    const formContainer = document.getElementById('selectedItemsForm');
-    const configContainer = document.getElementById('selectedItemsConfig');
-    const submitBtn = document.getElementById('addItemsSubmitBtn');
-    
-    if (selectedItems.length === 0) {
-        formContainer.classList.add('hidden');
-        submitBtn.disabled = true;
-        return;
-    }
-    
-    // Get item details for selected items
-    const availableItems = Array.from(document.querySelectorAll('#availableItemsList tr')).map(row => {
-        const checkbox = row.querySelector('input[type="checkbox"]');
-        const name = row.querySelector('.text-sm.font-bold').textContent;
-        const code = row.querySelector('.text-xs.text-gray-500').textContent;
-        return {
-            id: checkbox.value,
-            name: name,
-            code: code
-        };
-    });
-    
-    const selectedItemsData = availableItems.filter(item => selectedItems.includes(item.id));
-    
-    configContainer.innerHTML = selectedItemsData.map(item => `
-        <div class="border border-gray-200 rounded-lg p-4" data-item-config="${item.id}">
-            <div class="flex justify-between items-center mb-3">
-                <div>
-                    <h5 class="font-bold text-gray-900">${item.name}</h5>
-                    <p class="text-xs text-gray-500">${item.code}</p>
-                </div>
-                <button type="button" onclick="removeSelectedItem(${item.id})" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Unit Price *</label>
-                    <input type="number" name="unit_price" step="0.01" min="0.01" required 
-                           class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-caramel">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Min Order Qty *</label>
-                    <input type="number" name="minimum_order_quantity" step="0.001" min="0.001" required 
-                           class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-caramel">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-700 mb-1">Lead Time (Days) *</label>
-                    <input type="number" name="lead_time_days" min="0" required 
-                           class="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-caramel">
-                </div>
-                <div class="flex items-center">
-                    <input type="checkbox" name="is_preferred" value="1" 
-                           class="rounded border-gray-300 text-chocolate focus:ring-chocolate w-3 h-3 mr-2">
-                    <label class="text-xs font-bold text-gray-700">Preferred</label>
-                </div>
-            </div>
-        </div>
-    `).join('');
-    
-    formContainer.classList.remove('hidden');
-    submitBtn.disabled = false;
-}
 
-function removeSelectedItem(itemId) {
-    selectedItems = selectedItems.filter(id => id !== id);
-    const checkbox = document.querySelector(`input[value="${itemId}"]`);
-    if (checkbox) checkbox.checked = false;
-    updateSelectedItemsForm();
-}
 
 function filterAvailableItems() {
     const searchTerm = document.getElementById('itemSearch').value.toLowerCase();

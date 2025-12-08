@@ -264,9 +264,9 @@ class SupplierController extends Controller
         $request->validate([
             'items' => 'required|array',
             'items.*.item_id' => 'required|exists:items,id',
-            'items.*.unit_price' => 'required|numeric|min:0.01',
-            'items.*.minimum_order_quantity' => 'required|numeric|min:0.001',
-            'items.*.lead_time_days' => 'required|integer|min:0',
+            'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.minimum_order_quantity' => 'nullable|numeric|min:0',
+            'items.*.lead_time_days' => 'nullable|integer|min:0',
             'items.*.is_preferred' => 'boolean',
         ]);
 
@@ -289,9 +289,9 @@ class SupplierController extends Controller
                 $supplierItem = SupplierItem::create([
                     'supplier_id' => $supplier->id,
                     'item_id' => $itemData['item_id'],
-                    'unit_price' => $itemData['unit_price'],
-                    'minimum_order_quantity' => $itemData['minimum_order_quantity'],
-                    'lead_time_days' => $itemData['lead_time_days'],
+                    'unit_price' => $itemData['unit_price'] ?? 0,
+                    'minimum_order_quantity' => $itemData['minimum_order_quantity'] ?? 1,
+                    'lead_time_days' => $itemData['lead_time_days'] ?? 1,
                     'is_preferred' => $itemData['is_preferred'] ?? false,
                 ]);
 

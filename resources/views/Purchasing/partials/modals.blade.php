@@ -265,19 +265,15 @@
         <form id="addItemsForm" onsubmit="submitAddItems(event)">
             @csrf
             <input type="hidden" name="supplier_id" id="items_supplier_id">
-            <div id="selectedItemsForm" class="mb-6 hidden">
-                <h4 class="text-sm font-bold text-gray-700 mb-3">Configure Selected Items</h4>
-                <div class="space-y-4" id="selectedItemsConfig">
-                    {{-- Dynamic item configurations will be added here --}}
-                </div>
-            </div>
+            
+            <div class="mt-4 text-sm text-gray-500"><span id="selectedCount">0</span> items selected</div>
 
             <div class="flex justify-end gap-3">
                 <button type="button" onclick="closeAddItemsModal()" class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-bold rounded-lg hover:bg-gray-50 transition-colors">
                     Cancel
                 </button>
                 <button type="submit" class="px-5 py-2.5 bg-chocolate text-white text-sm font-bold rounded-lg hover:bg-chocolate-dark shadow-md transition-colors" disabled id="addItemsSubmitBtn">
-                    <i class="fas fa-plus mr-2"></i> Add Selected Items
+                    <i class="fas fa-link mr-2"></i> Link Selected Items
                 </button>
             </div>
         </form>
