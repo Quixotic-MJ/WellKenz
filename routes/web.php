@@ -242,6 +242,7 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
     Route::patch('/requisitions/{requisition}/approve', [SupervisorApprovalsController::class, 'approveRequisition'])->name('requisitions.approve');
     Route::patch('/requisitions/{requisition}/reject', [SupervisorApprovalsController::class, 'rejectRequisition'])->name('requisitions.reject');
     Route::patch('/requisitions/{requisition}/modify', [SupervisorApprovalsController::class, 'modifyRequisitionQuantity'])->name('requisitions.modify');
+    Route::patch('/requisitions/{requisition}/modify-item', [SupervisorApprovalsController::class, 'modifyItemQuantity'])->name('requisitions.modify-item');
     Route::patch('/requisitions/{requisition}/modify-multi', [SupervisorApprovalsController::class, 'modifyMultipleRequisitionItems'])->name('requisitions.modify-multi');
     
     // Purchase Request Actions

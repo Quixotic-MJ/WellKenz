@@ -80,6 +80,8 @@ class RequisitionController extends Controller
     public function getDetails(Requisition $requisition): JsonResponse
     {
         try {
+            \Log::info('getDetails called for requisition ID: ' . $requisition->id);
+            
             $details = $this->approvalService->getRequisitionDetails($requisition);
             
             return response()->json([
@@ -88,11 +90,14 @@ class RequisitionController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error getting requisition details: ' . $e->getMessage());
+            \Log::error('Error getting requisition details: ' . $e->getMessage(), [
+                'requisition_id' => $requisition->id ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to load requisition details'
+                'error' => 'Failed to load requisition details: ' . $e->getMessage()
             ], 500);
         }
     }

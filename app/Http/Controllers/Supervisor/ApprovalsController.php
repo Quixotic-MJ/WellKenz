@@ -725,6 +725,77 @@ class ApprovalsController extends Controller
     }
 
     /**
+     * Modify single requisition item quantity (new method with exact signature)
+     */
+    public function modifyItemQuantity(\App\Models\Requisition $requisition, Request $request)
+    {
+        try {
+            \Log::info('modifyItemQuantity called', [
+                'requisition_id' => $requisition->id,
+                'requisition_status' => $requisition->status,
+                'request_data' => $request->all()
+            ]);
+
+            // Validate request data
+            $validated = $request->validate([
+                'item_id' => 'required|integer|exists:items,id',
+                'new_quantity' => 'required|numeric|min:0.001',
+                'reason' => 'required|string|max:500'
+            ]);
+
+            \Log::info('Validation passed', ['validated_data' => $validated]);
+
+            // Call service method with exact signature
+            $result = $this->approvalService->modifyItemQuantity(
+                $requisition,
+                $validated['item_id'],
+                (float) $validated['new_quantity'],
+                $validated['reason']
+            );
+            
+            \Log::info('Service method completed', ['result' => $result]);
+            
+            return response()->json([
+                'success' => $result['success'],
+                'message' => $result['message'],
+                'data' => $result['data']
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            \Log::error('Validation failed for requisition modification:', [
+                'errors' => $e->errors(),
+                'request_data' => $request->all()
+            ]);
+            
+            // Flatten validation errors properly
+            $flattenedErrors = [];
+            foreach ($e->errors() as $fieldErrors) {
+                foreach ($fieldErrors as $error) {
+                    $flattenedErrors[] = $error;
+                }
+            }
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed: ' . implode(', ', $flattenedErrors),
+                'details' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('Error modifying requisition item quantity: ' . $e->getMessage(), [
+                'requisition_id' => $requisition->id ?? 'unknown',
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to modify requisition item quantity: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Modify multiple requisition items at once
      */
     public function modifyMultipleRequisitionItems(\App\Models\Requisition $requisition, Request $request)

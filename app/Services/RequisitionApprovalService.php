@@ -161,54 +161,69 @@ class RequisitionApprovalService
      */
     public function getRequisitionDetails(Requisition $requisition): array
     {
-        $requisition->load([
-            'requestedBy',
-            'requisitionItems.item.unit',
-            'requisitionItems.currentStockRecord'
-        ]);
+        try {
+            \Log::info('getRequisitionDetails called for requisition ID: ' . $requisition->id);
+            
+            $requisition->load([
+                'requestedBy',
+                'requisitionItems.item.unit',
+                'requisitionItems.currentStockRecord'
+            ]);
 
-        $stockAnalysis = $requisition->getStockAnalysis();
+            $stockAnalysis = $requisition->getStockAnalysis();
 
-        // Format items for the view
-        $formattedItems = $requisition->requisitionItems->map(function ($item) {
-            $currentStock = $item->currentStockRecord?->current_quantity ?? 0;
-            $requestedQty = $item->quantity_requested;
-            $stockPercentage = $currentStock > 0 ? round(($requestedQty / $currentStock) * 100, 1) : 0;
+            // Format items for the view
+            $formattedItems = $requisition->requisitionItems->map(function ($item) {
+                $currentStock = $item->currentStockRecord?->current_quantity ?? 0;
+                $requestedQty = $item->quantity_requested;
+                $stockPercentage = $currentStock > 0 ? round(($requestedQty / $currentStock) * 100, 1) : 0;
 
-            return [
-                'id' => $item->id,
-                'item_id' => $item->item_id, // Add the item_id field for frontend compatibility
-                'item_name' => $item->item?->name ?? 'Unknown Item',
-                'item_code' => $item->item?->item_code ?? '',
-                'unit_symbol' => $item->item?->unit?->symbol ?? '',
-                'quantity_requested' => number_format($requestedQty, 3),
-                'current_stock' => number_format($currentStock, 3),
-                'stock_percentage' => $stockPercentage,
-                'unit_cost_estimate' => number_format($item->unit_cost_estimate, 2),
-                'total_estimated_value' => number_format($item->total_estimated_value, 2),
-                'stock_status' => $item->stock_status,
-                'can_fulfill' => $currentStock >= $requestedQty && $currentStock > 0
+                return [
+                    'id' => $item->id,
+                    'item_id' => $item->item_id, // Add the item_id field for frontend compatibility
+                    'item_name' => $item->item?->name ?? 'Unknown Item',
+                    'item_code' => $item->item?->item_code ?? '',
+                    'unit_symbol' => $item->item?->unit?->symbol ?? '',
+                    'quantity_requested' => number_format($requestedQty, 3),
+                    'current_stock' => number_format($currentStock, 3),
+                    'stock_percentage' => $stockPercentage,
+                    'unit_cost_estimate' => number_format($item->unit_cost_estimate, 2),
+                    'total_estimated_value' => number_format($item->total_estimated_value, 2),
+                    'stock_status' => $item->stock_status,
+                    'can_fulfill' => $currentStock >= $requestedQty && $currentStock > 0
+                ];
+            });
+
+            $result = [
+                'id' => $requisition->id,
+                'requisition_number' => $requisition->requisition_number,
+                'requested_by' => $requisition->requestedBy?->name ?? 'Unknown',
+                'department' => $requisition->department,
+                'purpose' => $requisition->purpose,
+                'status' => $requisition->status,
+                'total_estimated_value' => $requisition->total_estimated_value,
+                'created_at' => $requisition->created_at->format('Y-m-d H:i:s'),
+                'notes' => $requisition->notes,
+                'reject_reason' => $requisition->reject_reason,
+                'total_items' => $requisition->requisitionItems->count(),
+                'items' => $formattedItems,
+                'stock_analysis' => $stockAnalysis,
+                'can_approve' => $requisition->canBeApproved(),
+                'can_reject' => $requisition->canBeRejected(),
+                'can_modify' => $requisition->canBeModified(),
             ];
-        });
-
-        return [
-            'id' => $requisition->id,
-            'requisition_number' => $requisition->requisition_number,
-            'requested_by' => $requisition->requestedBy?->name ?? 'Unknown',
-            'department' => $requisition->department,
-            'purpose' => $requisition->purpose,
-            'status' => $requisition->status,
-            'total_estimated_value' => $requisition->total_estimated_value,
-            'created_at' => $requisition->created_at->format('Y-m-d H:i:s'),
-            'notes' => $requisition->notes,
-            'reject_reason' => $requisition->reject_reason,
-            'total_items' => $requisition->requisitionItems->count(),
-            'items' => $formattedItems,
-            'stock_analysis' => $stockAnalysis,
-            'can_approve' => $requisition->canBeApproved(),
-            'can_reject' => $requisition->canBeRejected(),
-            'can_modify' => $requisition->canBeModified(),
-        ];
+            
+            \Log::info('getRequisitionDetails completed successfully for requisition ID: ' . $requisition->id);
+            
+            return $result;
+            
+        } catch (\Exception $e) {
+            \Log::error('Error in getRequisitionDetails: ' . $e->getMessage(), [
+                'requisition_id' => $requisition->id ?? 'unknown',
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     /**
@@ -443,6 +458,118 @@ class RequisitionApprovalService
     }
 
     /**
+     * Modify single requisition item quantity (exact signature as requested)
+     */
+    public function modifyItemQuantity(Requisition $requisition, int $itemId, float $newQuantity, string $reason): array
+    {
+        return DB::transaction(function () use ($requisition, $itemId, $newQuantity, $reason) {
+            // Validate status is 'pending'
+            if (!$requisition->canBeModified()) {
+                throw new \Exception('Requisition cannot be modified in its current status.');
+            }
+
+            \Log::info('Starting modifyItemQuantity', [
+                'requisition_id' => $requisition->id,
+                'item_id' => $itemId,
+                'new_quantity' => $newQuantity,
+                'reason' => $reason
+            ]);
+
+            // Find item first, then load relationships separately
+            $requisitionItem = $requisition->requisitionItems()
+                ->where('item_id', $itemId)
+                ->first();
+
+            if (!$requisitionItem) {
+                throw new \Exception("Requisition item not found for item ID: {$itemId}");
+            }
+
+            // Load relationships manually to avoid hasOneThrough issues
+            $requisitionItem->load(['item.unit']);
+            
+            // Get current stock manually
+            $currentStock = \App\Models\CurrentStock::where('item_id', $itemId)->first();
+            if ($currentStock) {
+                $requisitionItem->setRelation('currentStockRecord', $currentStock);
+            }
+
+            \Log::info('Requisition item loaded', [
+                'requisition_item_id' => $requisitionItem->id,
+                'item_name' => $requisitionItem->item?->name,
+                'current_stock' => $currentStock?->current_quantity ?? 0
+            ]);
+
+            // Check stock availability
+            $currentStockQuantity = $currentStock?->current_quantity ?? 0;
+            
+            \Log::info('Stock validation', [
+                'current_stock' => $currentStockQuantity,
+                'new_quantity' => $newQuantity
+            ]);
+
+            if ($newQuantity <= 0) {
+                throw new \Exception('New quantity must be greater than 0.');
+            }
+
+            if ($newQuantity > $currentStockQuantity) {
+                throw new \Exception("Requested quantity ({$newQuantity}) exceeds available stock ({$currentStockQuantity}).");
+            }
+
+            // Store original values for audit log
+            $originalQuantity = $requisitionItem->quantity_requested;
+
+            // Update `quantity_requested`
+            $requisitionItem->update([
+                'quantity_requested' => $newQuantity
+            ]);
+
+            // Recalculate totals (if needed)
+            $this->updateRequisitionTotal($requisition);
+
+            // Create Notification for the requester
+            $itemName = $requisitionItem->item?->name ?? 'Unknown Item';
+            $this->createNotification(
+                $requisition->requested_by,
+                'Requisition Modified',
+                "Quantity for {$itemName} in {$requisition->requisition_number} was changed from {$originalQuantity} to {$newQuantity}. Reason: {$reason}",
+                'requisition_modified'
+            );
+
+            // Log Audit Trail
+            $this->createAuditLog($requisition, 'UPDATE', [
+                'quantity_requested' => $originalQuantity
+            ], [
+                'quantity_requested' => $newQuantity,
+                'item_id' => $itemId,
+                'modification_reason' => $reason
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Requisition item quantity modified successfully',
+                'data' => [
+                    'original_quantity' => $originalQuantity,
+                    'new_quantity' => $newQuantity,
+                    'item_name' => $itemName,
+                    'stock_available' => $currentStockQuantity
+                ]
+            ];
+        });
+    }
+
+    /**
+     * Update requisition total estimated value
+     */
+    private function updateRequisitionTotal(Requisition $requisition): void
+    {
+        $total = $requisition->requisitionItems()->get()->sum(function ($item) {
+            return $item->quantity_requested * ($item->unit_cost_estimate ?? 0);
+        });
+
+        $requisition->update(['total_estimated_value' => $total]);
+    }
+
+    /**
      * Modify multiple requisition items at once
      */
     public function modifyMultipleRequisitionItems(Requisition $requisition, array $requestData): array
@@ -469,8 +596,9 @@ class RequisitionApprovalService
                         continue;
                     }
 
-                    // Find the requisition item
+                    // Find the requisition item with relationships
                     $requisitionItem = $requisition->requisitionItems()
+                        ->with(['item.unit', 'currentStockRecord'])
                         ->where('item_id', $itemData['item_id'])
                         ->first();
 
@@ -516,6 +644,9 @@ class RequisitionApprovalService
                     $errors[] = "Item ID {$itemData['item_id']}: " . $e->getMessage();
                 }
             }
+
+            // Recalculate totals after bulk modification
+            $this->updateRequisitionTotal($requisition);
 
             // Create audit log for bulk modification
             if (!empty($modifications)) {
