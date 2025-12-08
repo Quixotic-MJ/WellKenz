@@ -33,70 +33,8 @@ class BatchController extends Controller
                     $q->where('is_active', true);
                 });
 
-            // Apply filters based on request parameters
-            if ($request->has('status') && $request->status !== 'all') {
-                $query->where('status', $request->status);
-            }
-
-            if ($request->has('category_id') && $request->category_id !== 'all') {
-                $query->whereHas('item.category', function($q) use ($request) {
-                    $q->where('id', $request->category_id);
-                });
-            }
-
-            // Date range filters
-            if ($request->has('date_range') && $request->date_range !== 'all') {
-                $now = now();
-                switch ($request->date_range) {
-                    case 'today':
-                        $query->whereDate('created_at', $now->toDateString());
-                        break;
-                    case 'week':
-                        $query->whereBetween('created_at', [$now->startOfWeek(), $now->endOfWeek()]);
-                        break;
-                    case 'month':
-                        $query->whereBetween('created_at', [$now->startOfMonth(), $now->endOfMonth()]);
-                        break;
-                    case 'quarter':
-                        $query->whereBetween('created_at', [$now->startOfQuarter(), $now->endOfQuarter()]);
-                        break;
-                }
-            }
-
-            // Advanced date filters
-            if ($request->has('manufacturing_date_from') && $request->manufacturing_date_from) {
-                $query->whereDate('manufacturing_date', '>=', $request->manufacturing_date_from);
-            }
-            if ($request->has('manufacturing_date_to') && $request->manufacturing_date_to) {
-                $query->whereDate('manufacturing_date', '<=', $request->manufacturing_date_to);
-            }
-            if ($request->has('expiry_date_from') && $request->expiry_date_from) {
-                $query->whereDate('expiry_date', '>=', $request->expiry_date_from);
-            }
-            if ($request->has('expiry_date_to') && $request->expiry_date_to) {
-                $query->whereDate('expiry_date', '<=', $request->expiry_date_to);
-            }
-
-            // Supplier filter
-            if ($request->has('supplier_id') && $request->supplier_id) {
-                $query->where('supplier_id', $request->supplier_id);
-            }
-
-            // Item type filter
-            if ($request->has('item_type') && $request->item_type) {
-                $query->whereHas('item', function($q) use ($request) {
-                    $q->where('item_type', $request->item_type);
-                });
-            }
-
-            // Quantity filters
-            if ($request->has('min_quantity') && $request->min_quantity) {
-                $query->where('quantity', '>=', $request->min_quantity);
-            }
-            if ($request->has('max_quantity') && $request->max_quantity) {
-                $query->where('quantity', '<=', $request->max_quantity);
-            }
-
+            // Simplified filters - only essential ones
+            // Search filter
             if ($request->has('search') && !empty($request->search)) {
                 $search = $request->search;
                 $query->where(function($q) use ($search) {
@@ -111,29 +49,33 @@ class BatchController extends Controller
                 });
             }
 
-            // Sorting
-            $sortField = $request->get('sort', 'created_at');
-            $sortOrder = $request->get('order', 'desc');
-            
-            $allowedSortFields = ['batch_number', 'item_name', 'quantity', 'manufacturing_date', 'supplier', 'status', 'created_at'];
-            if (in_array($sortField, $allowedSortFields)) {
-                switch ($sortField) {
-                    case 'item_name':
-                        $query->join('items', 'batches.item_id', '=', 'items.id')
-                              ->orderBy('items.name', $sortOrder)
-                              ->select('batches.*');
-                        break;
-                    case 'supplier':
-                        $query->join('suppliers', 'batches.supplier_id', '=', 'suppliers.id')
-                              ->orderBy('suppliers.name', $sortOrder)
-                              ->select('batches.*');
-                        break;
-                    default:
-                        $query->orderBy($sortField, $sortOrder);
+            // Status filter (simplified to Active/Expired)
+            if ($request->has('status') && $request->status !== 'all') {
+                if ($request->status === 'expired') {
+                    // Include both 'expired' status and expired by date
+                    $query->where(function($q) {
+                        $q->where('status', 'expired')
+                          ->orWhere('expiry_date', '<', now()->toDateString());
+                    });
+                } elseif ($request->status === 'active') {
+                    $query->whereIn('status', ['active', 'quarantine'])
+                          ->where(function($q) {
+                              $q->whereNull('expiry_date')
+                                ->orWhere('expiry_date', '>=', now()->toDateString());
+                          });
+                } else {
+                    $query->where('status', $request->status);
                 }
-            } else {
-                $query->orderBy('created_at', 'desc');
             }
+
+            // Supplier filter
+            if ($request->has('supplier_id') && $request->supplier_id) {
+                $query->where('supplier_id', $request->supplier_id);
+            }
+
+            // Default sorting: expiry_date ASC (expiring first), then created_at DESC
+            $query->orderByRaw('CASE WHEN expiry_date IS NOT NULL THEN expiry_date ELSE \'9999-12-31\'::date END ASC')
+                  ->orderBy('created_at', 'desc');
 
             $batches = $query->paginate(15)->withQueryString();
 
