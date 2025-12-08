@@ -3,7 +3,7 @@
 @section('title', 'Order Builder')
 
 @section('content')
-<div class="max-w-7xl mx-auto p-6 space-y-6 font-sans text-gray-600">
+<div class="w-full max-w-[1600px] mx-auto p-4 space-y-4 font-sans text-gray-600">
     
     {{-- HEADER --}}
     <div class="flex items-center justify-between">
@@ -34,59 +34,55 @@
         </div>
     @endif
 
-    {{-- 3-PANEL GRID LAYOUT --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-300px)]">
+    {{-- FLEXBOX LAYOUT --}}
+    <div class="flex flex-col lg:flex-row gap-4 h-auto lg:h-[calc(100vh-140px)]">
         
-        {{-- PANEL 1: SUPPLIER SELECT --}}
-        <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b border-border-soft bg-cream-bg">
-                <h3 class="font-display text-lg font-bold text-chocolate">1. Select Supplier</h3>
+        {{-- PANEL 1: SUPPLIER SELECT (Fixed Sidebar) --}}
+        <div class="w-full lg:w-72 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col flex-shrink-0">
+            <div class="px-4 py-3 border-b border-border-soft bg-cream-bg">
+                <h3 class="font-display text-base font-bold text-chocolate">1. Select Supplier</h3>
                 <p class="text-xs text-gray-500 mt-0.5">Choose a supplier to see available items.</p>
             </div>
             
-            <div class="p-6 flex-1 flex flex-col">
+            <div class="p-4 flex-1 flex flex-col">
                 {{-- Searchable Dropdown --}}
-                <div class="relative mb-4">
-                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                <div class="relative mb-3">
+                    <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
                     <input type="text" 
                            id="supplier-search" 
                            placeholder="Search suppliers..." 
-                           class="w-full pl-10 pr-4 py-3 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20">
+                           class="w-full pl-9 pr-3 py-2 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20">
                 </div>
 
                 {{-- Supplier List --}}
-                <div id="supplier-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-2 max-h-96">
+                <div id="supplier-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
                     @foreach($suppliers ?? [] as $supplier)
-                        <div class="supplier-item border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-chocolate hover:bg-chocolate/5 transition-all"
+                        <div class="supplier-item border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-chocolate hover:bg-chocolate/5 transition-all"
                              data-supplier-id="{{ $supplier->id }}"
                              data-supplier-name="{{ strtolower($supplier->name) }}"
                              data-pending-count="{{ $supplier->pending_items_count ?? 0 }}"
                              onclick="orderBuilder.selectSupplier({{ $supplier->id }})">
                             <div class="flex items-start justify-between">
                                 <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <h4 class="font-bold text-chocolate">{{ $supplier->name }}</h4>
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <h4 class="font-bold text-chocolate text-sm">{{ $supplier->name }}</h4>
                                         @if(($supplier->pending_items_count ?? 0) > 0)
                                             <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800">
-                                                <i class="fas fa-clock mr-1"></i>{{ $supplier->pending_items_count }} Pending
+                                                <i class="fas fa-clock mr-1"></i>{{ $supplier->pending_items_count }}
                                             </span>
                                         @else
                                             <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600">
-                                                <i class="fas fa-check mr-1"></i>No Pending
+                                                <i class="fas fa-check mr-1"></i>0
                                             </span>
                                         @endif
                                     </div>
-                                    <p class="text-xs text-gray-500 mt-1">{{ $supplier->supplier_code ?? 'No code' }}</p>
-                                    @if($supplier->contact_person)
-                                        <p class="text-xs text-gray-600 mt-1">{{ $supplier->contact_person }}</p>
-                                    @endif
                                     @if($supplier->payment_terms)
-                                        <p class="text-xs text-blue-600 mt-1">{{ $supplier->payment_terms }}-day terms</p>
+                                        <p class="text-xs text-blue-600">{{ $supplier->payment_terms }}-day terms</p>
                                     @endif
                                 </div>
                                 <div class="text-right">
-                                    <div class="w-8 h-8 bg-chocolate/10 rounded-full flex items-center justify-center">
-                                        <i class="fas fa-building text-chocolate text-sm"></i>
+                                    <div class="w-6 h-6 bg-chocolate/10 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-building text-chocolate text-xs"></i>
                                     </div>
                                 </div>
                             </div>
@@ -96,172 +92,176 @@
 
                 {{-- No Suppliers Message --}}
                 @if(empty($suppliers))
-                    <div class="text-center py-8 text-gray-400">
-                        <i class="fas fa-building text-3xl mb-2"></i>
+                    <div class="text-center py-6 text-gray-400">
+                        <i class="fas fa-building text-2xl mb-2"></i>
                         <p class="text-sm">No active suppliers found</p>
                     </div>
                 @endif
             </div>
         </div>
 
-        {{-- PANEL 2: ITEM PICKER --}}
-        <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b border-border-soft bg-cream-bg">
-                <h3 class="font-display text-lg font-bold text-chocolate">2. Add Items</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Browse approved requests or full catalog.</p>
-            </div>
+        {{-- MAIN AREA: Item Picker + Summary --}}
+        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
             
-            <div class="flex-1 flex flex-col">
-                {{-- Tab Navigation --}}
-                <div class="border-b border-border-soft">
-                    <nav class="flex">
-                        <button type="button" 
-                                id="tab-requests" 
-                                onclick="orderBuilder.switchTab('requests')"
-                                class="flex-1 px-4 py-3 text-sm font-bold text-chocolate border-b-2 border-chocolate bg-chocolate/5">
-                            <i class="fas fa-clipboard-list mr-2"></i>From Requests
-                            <span id="requests-count" class="ml-1 bg-chocolate text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
-                        </button>
-                        <button type="button" 
-                                id="tab-catalog" 
-                                onclick="orderBuilder.switchTab('catalog')"
-                                class="flex-1 px-4 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-chocolate hover:bg-chocolate/5">
-                            <i class="fas fa-boxes mr-2"></i>Full Catalog
-                            <span id="catalog-count" class="ml-1 bg-gray-400 text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
-                        </button>
-                    </nav>
+            {{-- PANEL 2: ITEM PICKER (col-span-7 desktop, col-span-1 mobile) --}}
+            <div class="col-span-1 lg:col-span-7 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div class="px-6 py-4 border-b border-border-soft bg-cream-bg">
+                    <h3 class="font-display text-lg font-bold text-chocolate">2. Add Items</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Browse approved requests or full catalog.</p>
                 </div>
-
-                {{-- Tab Content --}}
-                <div class="flex-1 flex flex-col p-6">
-                    
-                    {{-- From Requests Tab --}}
-                    <div id="content-requests" class="flex-1 flex flex-col">
-                        <div class="relative mb-4">
-                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                            <input type="text" 
-                                   id="requests-search" 
-                                   placeholder="Search requested items..." 
-                                   class="w-full pl-10 pr-4 py-2.5 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20">
-                        </div>
-                        
-                        <div id="requests-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 max-h-80">
-                            <div class="text-center py-8 text-gray-400">
-                                <i class="fas fa-clipboard-list text-3xl mb-2"></i>
-                                <p class="text-sm">Select a supplier to view requested items</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Full Catalog Tab --}}
-                    <div id="content-catalog" class="hidden flex-1 flex flex-col">
-                        <div class="relative mb-4">
-                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                            <input type="text" 
-                                   id="catalog-search" 
-                                   placeholder="Search catalog items..." 
-                                   class="w-full pl-10 pr-4 py-2.5 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20">
-                        </div>
-                        
-                        <div id="catalog-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 max-h-80">
-                            <div class="text-center py-8 text-gray-400">
-                                <i class="fas fa-boxes text-3xl mb-2"></i>
-                                <p class="text-sm">Select a supplier to view catalog</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- PANEL 3: ORDER SUMMARY --}}
-        <div class="bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b border-border-soft bg-cream-bg">
-                <h3 class="font-display text-lg font-bold text-chocolate">3. Order Summary</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Review and finalize your purchase order.</p>
-            </div>
-            
-            <div class="flex-1 flex flex-col">
-                {{-- Order Details Form --}}
-                <div class="p-6 border-b border-border-soft space-y-4">
-                    <div>
-                        <label class="block text-sm font-bold text-chocolate mb-2">Expected Delivery Date *</label>
-                        <input type="date" 
-                               id="expected_delivery_date" 
-                               name="expected_delivery_date"
-                               value="{{ date('Y-m-d', strtotime('+7 days')) }}"
-                               class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all text-sm shadow-sm">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-bold text-chocolate mb-2">Payment Terms (days)</label>
-                        <input type="number" 
-                               id="payment_terms" 
-                               name="payment_terms"
-                               value="30"
-                               class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all text-sm shadow-sm">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-bold text-chocolate mb-2">Notes</label>
-                        <textarea id="notes" 
-                                  name="notes" 
-                                  rows="2"
-                                  placeholder="Internal notes..."
-                                  class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel resize-none text-sm transition-all placeholder-gray-400 shadow-sm"></textarea>
-                    </div>
-                </div>
-
-                {{-- Order Items Table --}}
+                
                 <div class="flex-1 flex flex-col">
-                    <div class="px-6 py-3 bg-gray-50 border-b border-border-soft">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-bold text-gray-800 text-sm">Selected Items</h4>
-                            <span id="order-items-count" class="text-xs font-semibold text-chocolate">0 items</span>
+                    {{-- Tab Navigation --}}
+                    <div class="border-b border-border-soft">
+                        <nav class="flex">
+                            <button type="button" 
+                                    id="tab-requests" 
+                                    onclick="orderBuilder.switchTab('requests')"
+                                    class="flex-1 px-4 py-3 text-sm font-bold text-chocolate border-b-2 border-chocolate bg-chocolate/5">
+                                <i class="fas fa-clipboard-list mr-2"></i>From Requests
+                                <span id="requests-count" class="ml-1 bg-chocolate text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
+                            </button>
+                            <button type="button" 
+                                    id="tab-catalog" 
+                                    onclick="orderBuilder.switchTab('catalog')"
+                                    class="flex-1 px-4 py-3 text-sm font-bold text-gray-500 border-b-2 border-transparent hover:text-chocolate hover:bg-chocolate/5">
+                                <i class="fas fa-boxes mr-2"></i>Full Catalog
+                                <span id="catalog-count" class="ml-1 bg-gray-400 text-white text-xs px-1.5 py-0.5 rounded-full">0</span>
+                            </button>
+                        </nav>
+                    </div>
+
+                    {{-- Tab Content --}}
+                    <div class="flex-1 flex flex-col p-6">
+                        
+                        {{-- From Requests Tab --}}
+                        <div id="content-requests" class="flex-1 flex flex-col">
+                            <div class="relative mb-4">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                <input type="text" 
+                                       id="requests-search" 
+                                       placeholder="Search requested items..." 
+                                       class="w-full pl-10 pr-4 py-2.5 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20">
+                            </div>
+                            
+                            <div id="requests-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-clipboard-list text-3xl mb-2"></i>
+                                    <p class="text-sm">Select a supplier to view requested items</p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="flex-1 overflow-y-auto custom-scrollbar max-h-80">
-                        <table class="min-w-full">
-                            <thead class="bg-gray-50 sticky top-0">
-                                <tr>
-                                    <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-20">Qty</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Price</th>
-                                    <th class="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-20">Total</th>
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-8"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="order-items-table" class="bg-white divide-y divide-gray-100">
-                                <tr id="no-items-row">
-                                    <td colspan="5" class="px-4 py-8 text-center text-gray-400">
-                                        <i class="fas fa-shopping-cart text-2xl mb-2"></i>
-                                        <p class="text-sm">No items selected</p>
-                                        <p class="text-xs mt-1">Add items from the middle panel</p>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    {{-- Order Total --}}
-                    <div class="px-6 py-4 bg-gray-50 border-t border-border-soft">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-bold text-gray-600">Total Amount:</span>
-                            <span id="order-total" class="text-xl font-bold text-chocolate">₱0.00</span>
+
+                        {{-- Full Catalog Tab --}}
+                        <div id="content-catalog" class="hidden flex-1 flex flex-col">
+                            <div class="relative mb-4">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                                <input type="text" 
+                                       id="catalog-search" 
+                                       placeholder="Search catalog items..." 
+                                       class="w-full pl-10 pr-4 py-2.5 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20">
+                            </div>
+                            
+                            <div id="catalog-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-3">
+                                <div class="text-center py-8 text-gray-400">
+                                    <i class="fas fa-boxes text-3xl mb-2"></i>
+                                    <p class="text-sm">Select a supplier to view catalog</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {{-- Create PO Button --}}
-                <div class="p-6 border-t border-border-soft">
-                    <button type="button" 
-                            id="create-po-btn"
-                            onclick="orderBuilder.createPO()"
-                            disabled
-                            class="w-full px-6 py-3 bg-chocolate text-white font-bold rounded-lg hover:bg-chocolate-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg">
-                        <i class="fas fa-paper-plane mr-2"></i>Create Purchase Order
-                    </button>
+            {{-- PANEL 3: ORDER SUMMARY (col-span-5 desktop, col-span-1 mobile) --}}
+            <div class="col-span-1 lg:col-span-5 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
+                <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-border-soft bg-cream-bg">
+                    <h3 class="font-display text-base lg:text-lg font-bold text-chocolate">3. Order Summary</h3>
+                    <p class="text-xs text-gray-500 mt-0.5">Review and finalize your purchase order.</p>
+                </div>
+                
+                <div class="flex-1 flex flex-col">
+                    {{-- Order Details Form --}}
+                    <div class="p-4 lg:p-6 border-b border-border-soft space-y-3 lg:space-y-4">
+                        <div>
+                            <label class="block text-sm font-bold text-chocolate mb-2">Expected Delivery Date *</label>
+                            <input type="date" 
+                                   id="expected_delivery_date" 
+                                   name="expected_delivery_date"
+                                   value="{{ date('Y-m-d', strtotime('+7 days')) }}"
+                                   class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all text-sm shadow-sm">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-chocolate mb-2">Payment Terms (days)</label>
+                            <input type="number" 
+                                   id="payment_terms" 
+                                   name="payment_terms"
+                                   value="30"
+                                   class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel/20 focus:border-caramel focus:bg-white transition-all text-sm shadow-sm">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-bold text-chocolate mb-2">Notes</label>
+                            <textarea id="notes" 
+                                      name="notes" 
+                                      rows="2"
+                                      placeholder="Internal notes..."
+                                      class="w-full px-4 py-2.5 border-gray-200 bg-gray-50 rounded-lg focus:ring-2 focus:ring-caramel resize-none text-sm transition-all placeholder-gray-400 shadow-sm"></textarea>
+                        </div>
+                    </div>
+
+                    {{-- Order Items Table --}}
+                    <div class="flex-1 flex flex-col">
+                        <div class="px-4 lg:px-6 py-3 bg-gray-50 border-b border-border-soft">
+                            <div class="flex justify-between items-center">
+                                <h4 class="font-bold text-gray-800 text-sm">Selected Items</h4>
+                                <span id="order-items-count" class="text-xs font-semibold text-chocolate">0 items</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-1 overflow-y-auto custom-scrollbar">
+                            <table class="min-w-full">
+                                <thead class="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th class="px-2 lg:px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
+                                        <th class="px-2 lg:px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-16 lg:w-20">Qty</th>
+                                        <th class="px-2 lg:px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-16 lg:w-24">Price</th>
+                                        <th class="px-2 lg:px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-16 lg:w-20">Total</th>
+                                        <th class="px-2 lg:px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-8"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="order-items-table" class="bg-white divide-y divide-gray-100">
+                                    <tr id="no-items-row">
+                                        <td colspan="5" class="px-2 lg:px-4 py-6 lg:py-8 text-center text-gray-400">
+                                            <i class="fas fa-shopping-cart text-xl lg:text-2xl mb-2"></i>
+                                            <p class="text-sm">No items selected</p>
+                                            <p class="text-xs mt-1">Add items from the middle panel</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        {{-- Order Total --}}
+                        <div class="px-4 lg:px-6 py-4 bg-gray-50 border-t border-border-soft">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm lg:text-sm font-bold text-gray-600">Total Amount:</span>
+                                <span id="order-total" class="text-lg lg:text-xl font-bold text-chocolate">₱0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Create PO Button --}}
+                    <div class="p-4 lg:p-6 border-t border-border-soft">
+                        <button type="button" 
+                                id="create-po-btn"
+                                onclick="orderBuilder.createPO()"
+                                disabled
+                                class="w-full px-4 lg:px-6 py-2 lg:py-3 bg-chocolate text-white text-sm lg:text-base font-bold rounded-lg hover:bg-chocolate-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg">
+                            <i class="fas fa-paper-plane mr-2"></i>Create Purchase Order
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -409,39 +409,43 @@ class OrderBuilder {
             return;
         }
         
-        container.innerHTML = prItems.map(item => `
-            <div class="border border-gray-200 rounded-lg p-4 hover:border-chocolate hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="flex-1">
-                        <h4 class="font-bold text-gray-800 text-sm">${item.item_name}</h4>
-                        <p class="text-xs text-gray-500 font-mono">${item.item_code}</p>
-                        <p class="text-xs text-gray-600 mt-1">${item.category}</p>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-xs text-gray-500">Remaining</div>
-                        <div class="font-bold text-green-600">${item.remaining_quantity} ${item.unit_symbol}</div>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <div class="text-xs text-gray-600 mb-2">Source Purchase Requests:</div>
-                    <div class="space-y-1">
-                        ${item.source_prs.map(pr => `
-                            <div class="flex justify-between items-center text-xs bg-blue-50 border border-blue-100 rounded px-2 py-1">
-                                <span class="font-mono text-blue-700">#${pr.pr_number}</span>
-                                <span class="text-blue-600">${pr.remaining_quantity} ${item.unit_symbol}</span>
+        container.innerHTML = `
+            <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-4">
+                ${prItems.map(item => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:border-chocolate hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h4 class="font-bold text-gray-800 text-sm">${item.item_name}</h4>
+                                <p class="text-xs text-gray-500 font-mono">${item.item_code}</p>
+                                <p class="text-xs text-gray-600 mt-1">${item.category}</p>
                             </div>
-                        `).join('')}
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500">Remaining</div>
+                                <div class="font-bold text-green-600">${item.remaining_quantity} ${item.unit_symbol}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="text-xs text-gray-600 mb-2">Source Purchase Requests:</div>
+                            <div class="space-y-1">
+                                ${item.source_prs.map(pr => `
+                                    <div class="flex justify-between items-center text-xs bg-blue-50 border border-blue-100 rounded px-2 py-1">
+                                        <span class="font-mono text-blue-700">#${pr.pr_number}</span>
+                                        <span class="text-blue-600">${pr.remaining_quantity} ${item.unit_symbol}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <button type="button" 
+                                onclick="orderBuilder.addItem('${item.item_id}', '${item.item_name}', '${item.item_code}', ${item.remaining_quantity}, 'requests')"
+                                class="w-full px-3 py-2 bg-chocolate text-white text-xs font-bold rounded hover:bg-chocolate-dark transition-all">
+                            <i class="fas fa-plus mr-1"></i>Add All (${item.remaining_quantity} ${item.unit_symbol})
+                        </button>
                     </div>
-                </div>
-                
-                <button type="button" 
-                        onclick="orderBuilder.addItem('${item.item_id}', '${item.item_name}', '${item.item_code}', ${item.remaining_quantity}, 'requests')"
-                        class="w-full px-3 py-2 bg-chocolate text-white text-xs font-bold rounded hover:bg-chocolate-dark transition-all">
-                    <i class="fas fa-plus mr-1"></i>Add All (${item.remaining_quantity} ${item.unit_symbol})
-                </button>
+                `).join('')}
             </div>
-        `).join('');
+        `;
         
         document.getElementById('requests-count').textContent = prItems.length.toString();
     }
@@ -462,35 +466,39 @@ class OrderBuilder {
             return;
         }
         
-        container.innerHTML = catalogItems.map(item => `
-            <div class="border border-gray-200 rounded-lg p-4 hover:border-chocolate hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
-                <div class="flex items-start justify-between mb-3">
-                    <div class="flex-1">
-                        <h4 class="font-bold text-gray-800 text-sm">${item.item_name}</h4>
-                        <p class="text-xs text-gray-500 font-mono">${item.item_code}</p>
-                        <p class="text-xs text-gray-600 mt-1">${item.category}</p>
-                        ${item.is_preferred ? '<span class="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Preferred</span>' : ''}
+        container.innerHTML = `
+            <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-4">
+                ${catalogItems.map(item => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover:border-chocolate hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
+                        <div class="flex items-start justify-between mb-3">
+                            <div class="flex-1">
+                                <h4 class="font-bold text-gray-800 text-sm">${item.item_name}</h4>
+                                <p class="text-xs text-gray-500 font-mono">${item.item_code}</p>
+                                <p class="text-xs text-gray-600 mt-1">${item.category}</p>
+                                ${item.is_preferred ? '<span class="inline-block mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">Preferred</span>' : ''}
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-500">Unit Price</div>
+                                <div class="font-bold text-chocolate">₱${item.unit_price.toFixed(2)}</div>
+                                <div class="text-xs text-gray-500 mt-1">${item.unit_symbol}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs text-gray-500">
+                                ${item.minimum_order_quantity ? `Min order: ${item.minimum_order_quantity}` : ''}
+                                ${item.lead_time_days ? ` • ${item.lead_time_days} days` : ''}
+                            </div>
+                            <button type="button" 
+                                    onclick="orderBuilder.addItem('${item.item_id}', '${item.item_name}', '${item.item_code}', 1, 'catalog', ${item.unit_price})"
+                                    class="px-3 py-2 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700 transition-all">
+                                <i class="fas fa-plus mr-1"></i>Add
+                            </button>
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <div class="text-xs text-gray-500">Unit Price</div>
-                        <div class="font-bold text-chocolate">₱${item.unit_price.toFixed(2)}</div>
-                        <div class="text-xs text-gray-500 mt-1">${item.unit_symbol}</div>
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-500">
-                        ${item.minimum_order_quantity ? `Min order: ${item.minimum_order_quantity}` : ''}
-                        ${item.lead_time_days ? ` • ${item.lead_time_days} days` : ''}
-                    </div>
-                    <button type="button" 
-                            onclick="orderBuilder.addItem('${item.item_id}', '${item.item_name}', '${item.item_code}', 1, 'catalog', ${item.unit_price})"
-                            class="px-3 py-2 bg-gray-600 text-white text-xs font-bold rounded hover:bg-gray-700 transition-all">
-                        <i class="fas fa-plus mr-1"></i>Add
-                    </button>
-                </div>
+                `).join('')}
             </div>
-        `).join('');
+        `;
         
         document.getElementById('catalog-count').textContent = catalogItems.length.toString();
     }
