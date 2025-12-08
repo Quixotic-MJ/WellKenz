@@ -38,8 +38,8 @@ class PurchaseRequestController extends Controller
         $user = Auth::user();
         
         // Get items that need replenishment:
-        // 1. Items with currentStockRecord WHERE current_quantity <= reorder_point
-        // 2. Items WITHOUT currentStockRecord WHERE reorder_point > 0
+        // 1. Items with currentStockRecord WHERE current_quantity <= reorder_point OR current_quantity <= min_stock_level
+        // 2. Items WITHOUT currentStockRecord WHERE reorder_point > 0 OR min_stock_level > 0
         $lowStockItems = Item::with([
             'category',
             'unit', 
@@ -47,14 +47,20 @@ class PurchaseRequestController extends Controller
         ])
         ->where('is_active', true)
         ->where(function($query) {
-            // Case 1: Items that have currentStockRecord and are below reorder point
+            // Case 1: Items that have currentStockRecord and are below reorder_point OR min_stock_level
             $query->whereHas('currentStockRecord', function($stockQuery) {
-                $stockQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point');
+                $stockQuery->where(function($q) {
+                    $q->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point')
+                      ->orWhereColumn('current_stock.current_quantity', '<=', 'items.min_stock_level');
+                });
             })
-            // Case 2: Items without currentStockRecord but have reorder_point > 0
+            // Case 2: Items without currentStockRecord but have reorder_point > 0 OR min_stock_level > 0
             ->orWhere(function($noStockQuery) {
                 $noStockQuery->whereDoesntHave('currentStockRecord')
-                           ->where('reorder_point', '>', 0);
+                           ->where(function($q) {
+                               $q->where('reorder_point', '>', 0)
+                                 ->orWhere('min_stock_level', '>', 0);
+                           });
             });
         })
         ->orderBy('name')
@@ -63,13 +69,23 @@ class PurchaseRequestController extends Controller
             $currentStock = $item->currentStockRecord ? 
                 $item->currentStockRecord->current_quantity : 0;
             
-            // Calculate suggested quantity (max_stock - current_stock)
-            $maxStock = $item->max_stock_level ?? 0;
-            $suggestedQty = max(0, $maxStock - $currentStock);
+            // Calculate target level as max of reorder_point, min_stock_level, and 1
+            $reorderPoint = $item->reorder_point ?? 0;
+            $minStockLevel = $item->min_stock_level ?? 0;
+            $maxStockLevel = $item->max_stock_level ?? 0;
+            $targetLevel = max($reorderPoint, $minStockLevel, 1);
             
-            // Ensure minimum suggested quantity for completely out-of-stock items
-            if ($currentStock <= 0 && $suggestedQty == 0) {
-                $suggestedQty = $item->reorder_point ?? 1;
+            // Calculate suggested quantity
+            $suggestedQty = 0;
+            if ($maxStockLevel > 0) {
+                $suggestedQty = max(0, $maxStockLevel - $currentStock);
+            } else {
+                $suggestedQty = max(0, $targetLevel - $currentStock);
+            }
+            
+            // Ensure minimum suggested quantity for items that are truly needed
+            if ($currentStock <= $targetLevel && $suggestedQty == 0) {
+                $suggestedQty = 1;
             }
             
             return (object) [
@@ -80,8 +96,10 @@ class PurchaseRequestController extends Controller
                 'category' => $item->category->name ?? 'General',
                 'unit' => $item->unit->symbol ?? 'pcs',
                 'current_stock' => (float) $currentStock,
-                'reorder_point' => (float) ($item->reorder_point ?? 0),
-                'max_stock_level' => (float) $maxStock,
+                'reorder_point' => (float) $reorderPoint,
+                'min_stock_level' => (float) $minStockLevel,
+                'max_stock_level' => (float) $maxStockLevel,
+                'target_level' => (float) $targetLevel,
                 'suggested_qty' => (int) $suggestedQty,
                 'cost_price' => (float) ($item->cost_price ?? 0),
                 'stock_status' => $this->getStockStatus($item)

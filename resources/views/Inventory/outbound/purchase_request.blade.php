@@ -34,9 +34,27 @@
         <div class="flex-1 overflow-y-auto p-6 bg-gray-50/50 custom-scrollbar">
             @if($lowStockItems->count() > 0)
                 <div class="bg-white rounded-xl border border-border-soft overflow-hidden shadow-sm">
+                    {{-- Bulk Actions Bar --}}
+                    <div class="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()" 
+                                       class="w-4 h-4 text-chocolate bg-gray-100 border-gray-300 rounded focus:ring-chocolate focus:ring-2">
+                                <label for="selectAllCheckbox" class="text-sm font-medium text-gray-700 cursor-pointer">Select All</label>
+                            </div>
+                        </div>
+                        <button onclick="addSelectedToDraft()" 
+                                class="px-4 py-2 bg-chocolate text-white rounded-lg hover:bg-chocolate-dark transition-colors text-sm font-medium shadow-sm">
+                            <i class="fas fa-plus mr-1"></i> Add Selected
+                        </button>
+                    </div>
+                    
                     <table class="min-w-full">
                         <thead class="bg-gray-50 border-b border-border-soft">
                             <tr>
+                                <th class="px-4 py-3 text-center">
+                                    {{-- Checkbox moved to bulk actions bar --}}
+                                </th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Current Stock</th>
                                 <th class="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Reorder Point</th>
@@ -47,6 +65,11 @@
                         <tbody class="divide-y divide-gray-100">
                             @foreach($lowStockItems as $item)
                                 <tr class="hover:bg-amber-25 transition-colors">
+                                    <td class="px-4 py-4 text-center">
+                                        <input type="checkbox" id="itemCheckbox{{ $item->id }}" 
+                                               data-item-id="{{ $item->id }}"
+                                               class="w-4 h-4 text-chocolate bg-gray-100 border-gray-300 rounded focus:ring-chocolate focus:ring-2 item-checkbox">
+                                    </td>
                                     <td class="px-4 py-4">
                                         <div class="flex items-center gap-3">
                                             <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 border border-amber-200">
@@ -68,6 +91,9 @@
                                     </td>
                                     <td class="px-4 py-4">
                                         <div class="text-sm text-gray-700">{{ number_format($item->reorder_point, 1) }} {{ $item->unit }}</div>
+                                        @if(isset($item->min_stock_level) && $item->min_stock_level > 0)
+                                            <div class="text-xs text-gray-500">Min: {{ number_format($item->min_stock_level, 1) }} {{ $item->unit }}</div>
+                                        @endif
                                     </td>
                                     <td class="px-4 py-4">
                                         <div class="text-sm font-bold text-green-600">{{ $item->suggested_qty }} {{ $item->unit }}</div>
@@ -295,16 +321,6 @@ const ReplenishmentManager = {
         
         this.saveDraft();
         this.updateDraftUI();
-        
-        // Show toast notification with error handling
-        const toastTitle = 'Added to Draft';
-        const toastMessage = `${item.name || 'Item'} (${item.suggested_qty || 1} ${item.unit || 'pcs'}) added to draft request.`;
-        
-        if (typeof showToast === 'function') {
-            showToast(toastTitle, toastMessage);
-        } else {
-            console.log(toastTitle, toastMessage);
-        }
     },
 
     updateDraftUI() {
@@ -429,7 +445,6 @@ const ReplenishmentManager = {
             this.draft = [];
             this.saveDraft();
             this.updateDraftUI();
-            showToast('Draft Cleared', 'All items removed from draft request.');
         }
     },
 
@@ -551,6 +566,58 @@ function clearDraft() {
 
 function submitDraft() {
     ReplenishmentManager.submitDraft();
+}
+
+// Select All functionality
+function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    
+    itemCheckboxes.forEach(checkbox => {
+        checkbox.checked = selectAllCheckbox.checked;
+    });
+    
+    // Update the select all checkbox state based on individual checkboxes
+    updateSelectAllState();
+}
+
+function updateSelectAllState() {
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (checkedBoxes.length === itemCheckboxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+        selectAllCheckbox.checked = false;
+    }
+}
+
+function addSelectedToDraft() {
+    const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        alert('Please select at least one item to add to draft.');
+        return;
+    }
+    
+    let addedCount = 0;
+    checkedBoxes.forEach(checkbox => {
+        const itemId = parseInt(checkbox.dataset.itemId);
+        ReplenishmentManager.addToDraft(itemId);
+        addedCount++;
+    });
+    
+    // Clear all checkboxes after adding
+    checkedBoxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateSelectAllState();
 }
 
 // Toast notification system
