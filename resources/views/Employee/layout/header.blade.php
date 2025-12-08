@@ -201,7 +201,7 @@
             // Note: Laravel route generation happens server-side, so we strictly use the server-generated URL 
             // defined in the specific view context. 
             // We use the specific route syntax below for these 2 roles.
-            const routeName = `{{ route(Request::segment(1) . '.notifications.mark-all-read') }}`;
+            const routeName = `{{ route('employee.notifications.mark-all-read') }}`;
             
             const response = await fetch(routeName, {
                 method: 'POST',
@@ -237,7 +237,7 @@
 
         try {
             // Using placeholder for ID replacement
-            let routeUrl = `{{ route(Request::segment(1) . '.notifications.mark-read', ['notification' => '999999']) }}`;
+            let routeUrl = `{{ route('employee.notifications.mark-read', ['notification' => '999999']) }}`;
             routeUrl = routeUrl.replace('999999', notificationId);
 
             await fetch(routeUrl, {
@@ -263,7 +263,7 @@
             if(emptyEl) emptyEl.classList.add('hidden');
             if(errorEl) errorEl.classList.add('hidden');
 
-            const routeName = `{{ route(Request::segment(1) . '.notifications.header') }}`;
+            const routeName = `{{ route('employee.notifications.header') }}`;
             const response = await fetch(routeName, {
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
             });

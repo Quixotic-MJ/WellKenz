@@ -20,21 +20,43 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
-        $profile = $user->profile;
-        $activeRequisitions = $this->getActiveRequisitions();
-        $incomingDeliveries = $this->getIncomingDeliveries();
-        $notifications = $this->getNotifications();
-        $recipeOfTheDay = $this->getRecipeOfTheDay();
+        // Fetch data for workstation interface
+        $my_pending_reqs = $this->getMyPendingRequisitionsCount();
+        $my_approved_reqs = $this->getMyApprovedRequisitionsCount();
+        $recent_requisitions = $this->getRecentRequisitions();
+        $notifications = $this->getUnreadNotifications();
 
         return view('Employee.home', compact(
-            'user', 'profile', 'activeRequisitions', 'incomingDeliveries', 'notifications', 'recipeOfTheDay'
+            'user', 'my_pending_reqs', 'my_approved_reqs', 'recent_requisitions', 'notifications'
         ));
     }
 
-    private function getActiveRequisitions()
+    /**
+     * Count of pending requisitions for current user
+     */
+    private function getMyPendingRequisitionsCount()
     {
         return Requisition::where('requested_by', Auth::id())
-            ->whereIn('status', ['pending', 'approved'])
+            ->where('status', 'pending')
+            ->count();
+    }
+
+    /**
+     * Count of approved requisitions (ready to collect) for current user
+     */
+    private function getMyApprovedRequisitionsCount()
+    {
+        return Requisition::where('requested_by', Auth::id())
+            ->where('status', 'approved')
+            ->count();
+    }
+
+    /**
+     * Fetch the last 5 requisitions created by current user
+     */
+    private function getRecentRequisitions()
+    {
+        return Requisition::where('requested_by', Auth::id())
             ->with(['requisitionItems' => function($query) {
                 $query->with('item');
             }])
@@ -43,31 +65,15 @@ class DashboardController extends Controller
             ->get();
     }
 
-    private function getIncomingDeliveries()
-    {
-        return Requisition::where('requested_by', Auth::id())
-            ->where('status', 'approved')
-            ->with(['requisitionItems' => function($query) {
-                $query->with('item');
-            }])
-            ->orderBy('approved_at', 'desc')
-            ->limit(3)
-            ->get();
-    }
-
-    private function getNotifications($limit = 5)
+    /**
+     * Fetch unread notifications for current user
+     */
+    private function getUnreadNotifications($limit = 5)
     {
         return Notification::forCurrentUser()
-            ->where('priority', '!=', 'low')
+            ->where('is_read', false)
+            ->orderBy('created_at', 'desc')
             ->limit($limit)
             ->get();
-    }
-
-    private function getRecipeOfTheDay()
-    {
-        return Recipe::where('is_active', true)
-            ->with('finishedItem', 'ingredients.item')
-            ->orderBy('created_at', 'desc')
-            ->first();
     }
 }

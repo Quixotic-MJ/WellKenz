@@ -3,134 +3,173 @@
 @section('content')
 <div class="w-full px-4 sm:px-6 lg:px-8 space-y-8 pb-24 font-sans text-gray-600">
     
-    {{-- 1. HEADER --}}
-    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-display font-bold text-chocolate">My Hub</h1>
-            <p class="text-gray-500 mt-1">Welcome back, <span class="font-bold text-caramel">{{ $user->name ?? 'Employee' }}</span>!</p>
-        </div>
-        
-        {{-- Status Badge --}}
-        <div class="flex items-center gap-3 bg-white px-5 py-2.5 rounded-xl border border-border-soft shadow-sm self-start sm:self-center">
-            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Current Status</span>
-            <span class="h-4 w-px bg-border-soft"></span>
-            <div class="flex items-center gap-2">
-                <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
-                </span>
-                <span class="text-sm font-bold text-chocolate">On Duty</span>
+    {{-- 1. WELCOME BANNER --}}
+    <div class="bg-gradient-to-r from-chocolate to-caramel rounded-2xl p-8 text-white shadow-xl">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-display font-bold mb-2">
+                    Good {{ date('H') < 12 ? 'Morning' : (date('H') < 18 ? 'Afternoon' : 'Evening') }}, {{ $user->name ?? 'Employee' }}!
+                </h1>
+                <p class="text-white/80 text-lg">
+                    {{ now()->format('l, F j, Y') }} • Current Shift
+                </p>
+            </div>
+            <div class="hidden sm:block">
+                <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user-tie text-3xl text-white/80"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-        
-        {{-- LEFT COLUMN (Main Content) --}}
-        <div class="xl:col-span-2 space-y-8">
-            
-            {{-- 2. CRITICAL WIDGET: INCOMING DELIVERIES --}}
-           
-            {{-- 3. STATUS WIDGET: ACTIVE REQUESTS --}}
-            <div class="bg-white rounded-xl border border-border-soft shadow-sm overflow-hidden">
-                <div class="px-6 py-5 border-b border-border-soft bg-white flex justify-between items-center">
-                    <h3 class="font-display text-lg font-bold text-chocolate">Active Requests</h3>
-                    <a href="{{ route('employee.requisitions.history') }}" class="text-xs font-bold text-caramel hover:text-chocolate uppercase tracking-wider transition-colors">
-                        View History &rarr;
-                    </a>
+    {{-- 2. STATUS CARDS (KPIs) --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {{-- Pending Requests --}}
+        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase tracking-wide">Pending Requests</p>
+                    <p class="text-4xl font-bold text-amber-600 mt-2">{{ $my_pending_reqs }}</p>
                 </div>
-
-                <div class="divide-y divide-border-soft">
-                    @if($activeRequisitions->count() > 0)
-                        @foreach($activeRequisitions as $requisition)
-                            <div class="p-5 hover:bg-cream-bg transition-colors group">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-4">
-                                        {{-- Icon Status --}}
-                                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center border
-                                            {{ $requisition->status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100' }}">
-                                            <i class="fas {{ $requisition->status === 'pending' ? 'fa-hourglass-half' : 'fa-clipboard-check' }}"></i>
-                                        </div>
-                                        
-                                        <div>
-                                            <h4 class="text-sm font-bold text-chocolate">
-                                                {{ $requisition->requisitionItems->first()?->item?->name ?? 'Unknown Item' }}
-                                                @if($requisition->requisitionItems->count() > 1)
-                                                    <span class="text-gray-400 font-normal text-xs ml-1">+{{ $requisition->requisitionItems->count() - 1 }} more</span>
-                                                @endif
-                                            </h4>
-                                            <p class="text-xs text-gray-500 mt-0.5">
-                                                {{ $requisition->status === 'pending' ? 'Submitted ' . $requisition->created_at->diffForHumans() : 'Approved, preparing items...' }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    {{-- Status Badge --}}
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide
-                                        {{ $requisition->status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800' }}">
-                                        {{ $requisition->status }}
-                                    </span>
-                                </div>
-                            </div>
-                        @endforeach
-                    @else
-                        <div class="p-10 text-center">
-                            <p class="text-sm text-gray-500 italic">No active requests found.</p>
-                            <a href="{{ route('employee.requisitions.create') }}" class="inline-block mt-3 text-xs font-bold text-chocolate hover:text-caramel border-b border-chocolate hover:border-caramel transition-colors pb-0.5">
-                                Create New Request
-                            </a>
-                        </div>
-                    @endif
+                <div class="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-clock text-2xl text-amber-600"></i>
                 </div>
             </div>
         </div>
 
-        {{-- RIGHT COLUMN (Sidebar) --}}
-        <div class="space-y-6">
-            
-            {{-- 4. QUICK ACTIONS --}}
-            <div class="grid grid-cols-2 xl:grid-cols-1 gap-4">
-                <a href="{{ route('employee.requisitions.create') }}" class="group block p-5 bg-white border border-border-soft rounded-xl shadow-sm hover:shadow-md hover:border-caramel transition-all">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="w-10 h-10 bg-cream-bg rounded-lg flex items-center justify-center text-caramel group-hover:bg-caramel group-hover:text-white transition-colors">
-                            <i class="fas fa-plus text-lg"></i>
-                        </div>
-                        <i class="fas fa-arrow-right text-gray-300 group-hover:text-caramel transition-colors transform group-hover:translate-x-1"></i>
-                    </div>
-                    <h3 class="font-display font-bold text-chocolate">Request Stock</h3>
-                    <p class="text-xs text-gray-500 mt-1">Order ingredients & supplies</p>
-                </a>
-
-              
-            </div>
-
-            {{-- 5. RECIPE SHORTCUT --}}
-            <div class="bg-chocolate rounded-xl shadow-lg p-6 relative overflow-hidden text-white group">
-                {{-- Decorative circles --}}
-                <div class="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full"></div>
-                <div class="absolute bottom-4 right-4 w-12 h-12 bg-white/5 rounded-full"></div>
-                
-                <div class="relative z-10">
-                    <div class="flex items-center gap-2 mb-3">
-                        <i class="fas fa-book-open text-caramel"></i>
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-white/70">Featured Recipe</p>
-                    </div>
-                    
-                    <h3 class="font-display text-xl font-bold mb-1 truncate">
-                        {{ $recipeOfTheDay->name ?? 'Bakery Classics' }}
-                    </h3>
-                    
-                    <div class="h-px w-full bg-white/20 my-4"></div>
-                    
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs text-white/80">View standard procedure</span>
-                        <a href="{{ $recipeOfTheDay ? route('employee.recipes.index') : '#' }}" class="w-8 h-8 rounded-full bg-white text-chocolate flex items-center justify-center hover:bg-caramel hover:text-white transition-colors shadow-sm">
-                            <i class="fas fa-arrow-right text-xs"></i>
-                        </a>
-                    </div>
+        {{-- Ready to Pick --}}
+        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium uppercase tracking-wide">Ready to Pick</p>
+                    <p class="text-4xl font-bold text-green-600 mt-2">{{ $my_approved_reqs }}</p>
+                </div>
+                <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center">
+                    <i class="fas fa-check-circle text-2xl text-green-600"></i>
                 </div>
             </div>
+        </div>
+    </div>
 
+    {{-- 3. QUICK ACTIONS GRID --}}
+    <div class="bg-white rounded-2xl p-8 shadow-lg">
+        <h2 class="text-2xl font-display font-bold text-chocolate mb-6">Quick Actions</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            {{-- New Requisition --}}
+            <a href="{{ route('employee.requisitions.create') }}" 
+               class="group bg-gradient-to-br from-chocolate to-caramel rounded-2xl p-8 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-white/30 transition-colors">
+                        <i class="fas fa-plus text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">New Requisition</h3>
+                    <p class="text-white/80 text-sm">Request ingredients & supplies</p>
+                </div>
+            </a>
+
+            {{-- Recipe Book --}}
+            <a href="{{ route('employee.recipes.index') }}" 
+               class="group bg-gradient-to-br from-caramel to-amber-500 rounded-2xl p-8 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-white/30 transition-colors">
+                        <i class="fas fa-book-open text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Recipe Book</h3>
+                    <p class="text-white/80 text-sm">View recipes & procedures</p>
+                </div>
+            </a>
+
+            {{-- My Profile --}}
+            <a href="{{ route('profile.index') }}" 
+               class="group bg-gradient-to-br from-amber-500 to-yellow-500 rounded-2xl p-8 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                <div class="text-center">
+                    <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-white/30 transition-colors">
+                        <i class="fas fa-user text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">My Profile</h3>
+                    <p class="text-white/80 text-sm">Manage your account</p>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    {{-- 4. RECENT ACTIVITY SECTION --}}
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <div class="px-8 py-6 border-b border-gray-100">
+            <h2 class="text-2xl font-display font-bold text-chocolate">Recent Activity</h2>
+            <p class="text-gray-500 text-sm mt-1">Your latest requisitions</p>
+        </div>
+
+        <div class="overflow-x-auto">
+            @if($recent_requisitions->count() > 0)
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-8 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Req Number</th>
+                            <th class="px-8 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-8 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-8 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        @foreach($recent_requisitions as $requisition)
+                            <tr class="hover:bg-gray-50 transition-colors">
+                                <td class="px-8 py-6 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-chocolate/10 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-file-alt text-chocolate"></i>
+                                        </div>
+                                        <div>
+                                            <div class="text-sm font-bold text-gray-900">REQ-{{ str_pad($requisition->id, 4, '0', STR_PAD_LEFT) }}</div>
+                                            <div class="text-xs text-gray-500">
+                                                {{ $requisition->requisitionItems->count() }} item{{ $requisition->requisitionItems->count() != 1 ? 's' : '' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-8 py-6 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">{{ $requisition->created_at->format('M j, Y') }}</div>
+                                    <div class="text-xs text-gray-500">{{ $requisition->created_at->format('g:i A') }}</div>
+                                </td>
+                                <td class="px-8 py-6 whitespace-nowrap">
+                                    @if($requisition->status === 'pending')
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                            <i class="fas fa-clock mr-1"></i> Pending
+                                        </span>
+                                    @elseif($requisition->status === 'approved')
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                            <i class="fas fa-check mr-1"></i> Ready to Pick
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                            {{ ucfirst($requisition->status) }}
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="px-8 py-6 whitespace-nowrap">
+                                    <a href="{{ route('employee.requisitions.history') }}" 
+                                       class="inline-flex items-center px-4 py-2 border border-chocolate text-sm font-medium rounded-lg text-chocolate bg-white hover:bg-chocolate hover:text-white transition-colors">
+                                        <i class="fas fa-eye mr-2"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            @else
+                <div class="p-12 text-center">
+                    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-file-alt text-2xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No recent requisitions</h3>
+                    <p class="text-gray-500 mb-4">Start by creating your first requisition</p>
+                    <a href="{{ route('employee.requisitions.create') }}" 
+                       class="inline-flex items-center px-6 py-3 bg-chocolate text-white font-medium rounded-lg hover:bg-caramel transition-colors">
+                        <i class="fas fa-plus mr-2"></i> New Requisition
+                    </a>
+                </div>
+            @endif
         </div>
     </div>
 

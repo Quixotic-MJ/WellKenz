@@ -1089,22 +1089,22 @@ INSERT INTO supplier_items (supplier_id, item_id, supplier_item_code, unit_price
 (22, 101, 'SWT-SYRUP-AGV', 315.00, 6.000, 5, true), -- Agave Syrup
 (30, 106, 'SWT-SUGAR-BLK', 46.00, 1000.000, 7, true), -- Bulk Sugar
 
--- PACKAGING MATERIALS (Category 10) -> Packaging Pros (SUP009), High Volume (SUP030)
-(9, 102, 'PKG-BREAD-BAG-SM', 0.48, 200.000, 3, true),   -- Bread Bag Small
-(9, 103, 'PKG-BREAD-BAG-LG', 0.72, 150.000, 3, true),   -- Bread Bag Large
-(9, 104, 'PKG-PASTRY-BOX-SM', 3.45, 100.000, 5, true),  -- Pastry Box Small
-(9, 105, 'PKG-PASTRY-BOX-LG', 4.95, 80.000, 5, false),  -- Pastry Box Large
-(9, 106, 'PKG-CAKE-BOX-SP', 7.85, 50.000, 7, true),     -- Cake Box
-(9, 107, 'PKG-PAPER-BAG-BR', 1.15, 300.000, 3, false),  -- Paper Bag
-(30, 114, 'PKG-BULK-MATL', 0.24, 2000.000, 7, true),    -- Bulk Packaging
+-- PACKAGING MATERIALS (Category 10) -> Packaging Pros (SUP009)
+-- Fixed IDs: 40 to 45 (previously incorrectly pointing to 102+)
+(9, 40, 'PKG-BREAD-BAG-SM', 0.48, 200.000, 3, true),    -- Bread Bag Small (Item ID 40)
+(9, 41, 'PKG-BREAD-BAG-LG', 0.72, 150.000, 3, true),    -- Bread Bag Large (Item ID 41)
+(9, 42, 'PKG-PASTRY-BOX-SM', 3.45, 100.000, 5, true),   -- Pastry Box Small (Item ID 42)
+(9, 43, 'PKG-PASTRY-BOX-LG', 4.95, 80.000, 5, false),   -- Pastry Box Large (Item ID 43)
+(9, 44, 'PKG-CAKE-BOX-SP', 7.85, 50.000, 7, true),      -- Cake Box (Item ID 44)
+(9, 45, 'PKG-PAPER-BAG-BR', 1.15, 300.000, 3, false),   -- Paper Bag (Item ID 45)
 
 -- CLEANING SUPPLIES (Category 11) -> Clean Solutions (SUP010)
-(10, 108, 'CLN-SANITIZE-FOOD', 175.00, 5.000, 2, true),   -- Food Safe Sanitizer
-(10, 109, 'CLN-FLOOR-INDUS', 215.00, 3.000, 2, true),     -- Floor Cleaner
-(10, 110, 'CLN-DISH-SOAP', 92.00, 8.000, 2, false),       -- Dish Soap
-(10, 111, 'CLN-HAND-SOAP', 115.00, 6.000, 2, false),      -- Hand Soap
-(10, 112, 'CLN-GLOVES-DISP', 345.00, 10.000, 3, true),    -- Disposable Gloves
-(10, 125, 'CLN-CLEANER-IND', 445.00, 5.000, 3, true),     -- Industrial Cleaner
+-- Fixed IDs: 46 to 50 (previously incorrectly pointing to 108+)
+(10, 46, 'CLN-SANITIZE-FOOD', 175.00, 5.000, 2, true),  -- Food Safe Sanitizer (Item ID 46)
+(10, 47, 'CLN-FLOOR-INDUS', 215.00, 3.000, 2, true),    -- Floor Cleaner (Item ID 47)
+(10, 48, 'CLN-DISH-SOAP', 92.00, 8.000, 2, false),      -- Dish Soap (Item ID 48)
+(10, 49, 'CLN-HAND-SOAP', 115.00, 6.000, 2, false),     -- Hand Soap (Item ID 49)
+(10, 50, 'CLN-GLOVES-DISP', 345.00, 10.000, 3, true),   -- Disposable Gloves (Item ID 50)
 
 -- CHOCOLATE PRODUCTS (Category 16) -> Choco Masters Inc (SUP011), Premium Imports (SUP022)
 (11, 51, 'CHC-COA-POWDER', 260.00, 3.000, 3, true),   -- Cocoa Powder
@@ -1218,7 +1218,7 @@ INSERT INTO supplier_items (supplier_id, item_id, supplier_item_code, unit_price
 -- Secondary egg supplier (Diverse Options Inc)
 (35, 59, 'EGG-FRESH-ALT', 11.00, 50.000, 2, false), -- Fresh Eggs Alternative
 -- Secondary packaging supplier (Diverse Options Inc)
-(35, 102, 'PKG-BAG-ALT', 0.52, 500.000, 7, false),  -- Bread Bag Alternative
+(35, 40, 'PKG-BAG-ALT', 0.52, 500.000, 7, false),  -- Bread Bag Alternative
 -- Secondary nut supplier (Nutty World)
 (13, 65, 'NUT-ALMNDS-ALT', 470.00, 5.000, 6, false), -- Almonds Alternative
 (13, 66, 'NUT-WLNUTS-ALT', 420.00, 5.000, 6, false); -- Walnuts Alternative
