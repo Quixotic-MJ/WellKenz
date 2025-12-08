@@ -178,9 +178,9 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-chocolate hover:bg-caramel transition-colors">
+                                        <a href="{{ route('purchasing.po.create') }}" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-chocolate hover:bg-caramel transition-colors">
                                             <i class="fas fa-plus mr-1"></i> Create PO
-                                        </button>
+                                        </a>
                                     </td>
                                 </tr>
                             @empty

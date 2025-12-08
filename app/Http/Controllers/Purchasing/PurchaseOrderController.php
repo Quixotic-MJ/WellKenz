@@ -68,95 +68,203 @@ class PurchaseOrderController extends Controller
 
     public function createPurchaseOrder()
     {
-        $orderedQuantitiesSub = DB::table('purchase_request_items as pri2')
-            ->select('pri2.id as pr_item_id', DB::raw('COALESCE(SUM(poi.quantity_ordered), 0) as ordered_qty'))
-            ->leftJoin('purchase_request_purchase_order_link as link', 'link.purchase_request_id', '=', 'pri2.purchase_request_id')
-            ->leftJoin('purchase_order_items as poi', function ($join) {
-                $join->on('poi.purchase_order_id', '=', 'link.purchase_order_id')
-                    ->on('poi.item_id', '=', 'pri2.item_id');
-            })
-            ->groupBy('pri2.id');
-
-        // Simple approach: Show all approved PRs first, then filter out fully ordered ones
-        $baseApprovedQuery = PurchaseRequest::where('status', 'approved');
+        // Get approved purchase request IDs
+        $approvedPRIds = PurchaseRequest::where('status', 'approved')->pluck('id')->toArray();
         
-        // Get PR IDs that have remaining items
-        $prIdsWithRemainingItems = $this->getPRIdsWithRemainingItems();
-        
-        // Only include PRs that have remaining items
-        $baseApprovedQuery->whereIn('id', $prIdsWithRemainingItems);
+        // Calculate pending items count for each supplier
+        $suppliers = Supplier::where('is_active', true)->get()->map(function($supplier) use ($approvedPRIds) {
+            if (empty($approvedPRIds)) {
+                $supplier->pending_items_count = 0;
+                return $supplier;
+            }
+            
+            // Get supplier's items that are in approved PRs
+            $supplierItemIds = SupplierItem::where('supplier_id', $supplier->id)
+                ->pluck('item_id')
+                ->toArray();
+                
+            if (empty($supplierItemIds)) {
+                $supplier->pending_items_count = 0;
+                return $supplier;
+            }
+            
+            // Get ordered quantities for these items across all approved PRs
+            $orderedQuantities = DB::table('purchase_request_items as pri')
+                ->select('pri.item_id', DB::raw('COALESCE(SUM(poi.quantity_ordered), 0) as ordered_quantity'))
+                ->leftJoin('purchase_request_purchase_order_link as link', 'link.purchase_request_id', '=', 'pri.purchase_request_id')
+                ->leftJoin('purchase_order_items as poi', function ($join) {
+                    $join->on('poi.purchase_order_id', '=', 'link.purchase_order_id')
+                        ->on('poi.item_id', '=', 'pri.item_id');
+                })
+                ->whereIn('pri.purchase_request_id', $approvedPRIds)
+                ->whereIn('pri.item_id', $supplierItemIds)
+                ->groupBy('pri.item_id')
+                ->pluck('ordered_quantity', 'item_id');
+            
+            // Count items with remaining quantities
+            $pendingCount = PurchaseRequestItem::whereIn('purchase_request_id', $approvedPRIds)
+                ->whereIn('item_id', $supplierItemIds)
+                ->get()
+                ->filter(function ($item) use ($orderedQuantities) {
+                    $ordered = $orderedQuantities[$item->item_id] ?? 0;
+                    return $ordered < (float) $item->quantity_requested;
+                })
+                ->count();
+                
+            $supplier->pending_items_count = $pendingCount;
+            return $supplier;
+        })->sortByDesc(function($supplier) {
+            return [$supplier->pending_items_count, $supplier->name];
+        })->values();
 
-        $approvedRequests = (clone $baseApprovedQuery)
-            ->with([
-                'requestedBy',
-                'purchaseRequestItems.item.unit',
-                'purchaseRequestItems.item.category'
-            ])
-            ->orderBy('request_date', 'desc')
-            ->paginate(15);
-        
+        return view('Purchasing.purchase_orders.create_po', compact('suppliers'));
+    }
 
-        $suppliers = Supplier::where('is_active', true)->orderBy('name')->get();
+    /**
+     * Get supplier data for order builder
+     * Returns catalog items, approved PR items, and supplier details
+     */
+    public function getSupplierData(Request $request, $supplierId)
+    {
+        try {
+            $supplier = Supplier::where('is_active', true)->findOrFail($supplierId);
 
-        $departments = (clone $baseApprovedQuery)
-            ->whereNotNull('department')
-            ->distinct()
-            ->pluck('department')
-            ->sort()
-            ->values();
+            // Get catalog items - all items this supplier sells
+            $catalogItems = SupplierItem::where('supplier_id', $supplierId)
+                ->with(['item.unit', 'item.category'])
+                ->where('unit_price', '>', 0)
+                ->get()
+                ->map(function ($supplierItem) {
+                    return [
+                        'item_id' => $supplierItem->item_id,
+                        'item_name' => $supplierItem->item->name,
+                        'item_code' => $supplierItem->item->item_code,
+                        'category' => $supplierItem->item->category->name ?? 'No Category',
+                        'unit_symbol' => $supplierItem->item->unit->symbol ?? '',
+                        'unit_price' => (float) $supplierItem->unit_price,
+                        'is_preferred' => (bool) $supplierItem->is_preferred,
+                        'minimum_order_quantity' => (float) $supplierItem->minimum_order_quantity,
+                        'lead_time_days' => $supplierItem->lead_time_days,
+                        'source' => 'catalog'
+                    ];
+                })
+                ->sortByDesc('is_preferred')
+                ->values();
 
-        $approvedRequestsForJS = (clone $baseApprovedQuery)
-            ->with([
-                'requestedBy',
-                'purchaseRequestItems.item.unit',
-                'purchaseRequestItems.item.category'
-            ])
-            ->orderBy('request_date', 'desc')
-            ->get()
-            ->map(function ($pr) {
-                return [
-                    'id' => $pr->id,
-                    'pr_number' => $pr->pr_number,
-                    'department' => $pr->department,
-                    'priority' => $pr->priority,
-                    'total_estimated_cost' => (float) $pr->total_estimated_cost,
-                    'request_date' => $pr->request_date ? Carbon::parse($pr->request_date)->format('Y-m-d') : null,
-                    'requestedBy' => [
-                        'name' => $pr->requestedBy->name ?? 'N/A'
-                    ],
-                    'purchaseRequestItems' => $pr->purchaseRequestItems->map(function ($item) {
+            // Get approved PR items that this supplier can fulfill, grouped by Item ID
+            $approvedPRIds = PurchaseRequest::where('status', 'approved')->pluck('id')->toArray();
+            
+            if (empty($approvedPRIds)) {
+                $prItems = [];
+            } else {
+                // Get ordered quantities for these PRs
+                $orderedQuantities = $this->getOrderedQuantitiesForPRs($approvedPRIds);
+                
+                // Get PR items for items that this supplier sells
+                $supplierItemIds = $catalogItems->pluck('item_id')->toArray();
+                
+                $prItems = PurchaseRequestItem::with([
+                        'item.unit',
+                        'purchaseRequest:id,pr_number,department,priority,request_date'
+                    ])
+                    ->whereIn('purchase_request_id', $approvedPRIds)
+                    ->whereIn('item_id', $supplierItemIds)
+                    ->get()
+                    ->groupBy('item_id')
+                    ->map(function ($items, $itemId) use ($orderedQuantities) {
+                        $firstItem = $items->first();
+                        $totalRequested = $items->sum('quantity_requested');
+                        
+                        // Calculate total ordered so far for this item across all PRs
+                        $totalOrdered = 0;
+                        foreach ($items as $item) {
+                            $prId = $item->purchase_request_id;
+                            $totalOrdered += $orderedQuantities[$prId][$itemId] ?? 0;
+                        }
+                        
+                        $remainingQuantity = $totalRequested - $totalOrdered;
+                        
+                        if ($remainingQuantity <= 0) {
+                            return null; // Skip fully ordered items
+                        }
+                        
+                        // Get source PRs with remaining quantities
+                        $sourcePRs = $items->map(function ($item) use ($orderedQuantities) {
+                            $prId = $item->purchase_request_id;
+                            $ordered = $orderedQuantities[$prId][$item->item_id] ?? 0;
+                            $remaining = $item->quantity_requested - $ordered;
+                            
+                            return [
+                                'pr_id' => $prId,
+                                'pr_number' => $item->purchaseRequest->pr_number,
+                                'department' => $item->purchaseRequest->department,
+                                'priority' => $item->purchaseRequest->priority,
+                                'requested_quantity' => (float) $item->quantity_requested,
+                                'ordered_quantity' => (float) $ordered,
+                                'remaining_quantity' => (float) $remaining
+                            ];
+                        })->filter(function ($pr) {
+                            return $pr['remaining_quantity'] > 0;
+                        })->values();
+
                         return [
-                            'id' => $item->id,
-                            'item_id' => $item->item_id,
-                            'quantity_requested' => (float) $item->quantity_requested,
-                            'unit_price_estimate' => (float) $item->unit_price_estimate,
-                            'total_estimated_cost' => (float) $item->total_estimated_cost,
-                            'item' => [
-                                'id' => $item->item->id,
-                                'name' => $item->item->name,
-                                'item_code' => $item->item->item_code,
-                                'category' => [
-                                    'name' => $item->item->category->name ?? 'No Category'
-                                ],
-                                'unit' => [
-                                    'symbol' => $item->item->unit->symbol ?? 'pcs'
-                                ]
-                            ]
+                            'item_id' => (int) $itemId,
+                            'item_name' => $firstItem->item->name,
+                            'item_code' => $firstItem->item->item_code,
+                            'category' => $firstItem->item->category->name ?? 'No Category',
+                            'unit_symbol' => $firstItem->item->unit->symbol ?? '',
+                            'total_requested_quantity' => (float) $totalRequested,
+                            'total_ordered_quantity' => (float) $totalOrdered,
+                            'remaining_quantity' => (float) $remainingQuantity,
+                            'source_prs' => $sourcePRs,
+                            'source' => 'requests'
                         ];
-                    })->toArray()
-                ];
-            })->toArray();
+                    })
+                    ->filter()
+                    ->values();
+            }
 
-        return view('Purchasing.purchase_orders.create_po', compact('approvedRequests', 'suppliers', 'departments', 'approvedRequestsForJS'));
+            // Get supplier details
+            $supplierDetails = [
+                'id' => $supplier->id,
+                'name' => $supplier->name,
+                'supplier_code' => $supplier->supplier_code,
+                'contact_person' => $supplier->contact_person,
+                'email' => $supplier->email,
+                'phone' => $supplier->display_phone,
+                'payment_terms' => $supplier->payment_terms,
+                'credit_limit' => (float) $supplier->credit_limit,
+                'rating' => $supplier->rating,
+                'full_address' => $supplier->full_address,
+                'notes' => $supplier->notes
+            ];
+
+            return response()->json([
+                'supplier_details' => $supplierDetails,
+                'pending_items' => $prItems,
+                'catalog_items' => $catalogItems,
+                'summary' => [
+                    'pending_items_count' => $prItems->count(),
+                    'catalog_items_count' => $catalogItems->count(),
+                    'total_potential_items' => $catalogItems->count() + $prItems->count()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Error fetching supplier data: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Failed to fetch supplier data.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function storePurchaseOrder(Request $request)
     {
-        // Debug logging for single PO creation issues
-        Log::info('Single PO Creation Attempt', [
+        // Debug logging for order builder PO creation
+        Log::info('Order Builder PO Creation Attempt', [
             'all_input' => $request->all(),
             'items' => $request->input('items'),
-            'selected_pr_ids' => $request->input('selected_pr_ids'),
             'supplier_id' => $request->input('supplier_id'),
             'method' => $request->method(),
             'url' => $request->url(),
@@ -168,119 +276,79 @@ class PurchaseOrderController extends Controller
             $validatedData = $request->validate([
                 'supplier_id' => 'required|exists:suppliers,id',
                 'expected_delivery_date' => 'required|date|after_or_equal:today',
+                'payment_terms' => 'nullable|integer|min:0',
                 'notes' => 'nullable|string',
-                'selected_pr_ids' => 'required',
                 'items' => 'required|array|min:1',
                 'items.*.item_id' => 'required|exists:items,id',
-                'items.*.quantity' => 'nullable|numeric|min:0.001',
-                'items.*.quantity_ordered' => 'nullable|numeric|min:0.001',
-                'items.*.price' => 'nullable|numeric|min:0.01',
-                'items.*.unit_price' => 'nullable|numeric|min:0.01',
-                'items.*.selected' => 'nullable|boolean',
+                'items.*.quantity' => 'required|numeric|min:0.001',
+                'items.*.unit_price' => 'required|numeric|min:0.01',
             ]);
             
-            Log::info('Single PO Validation Passed', [
+            Log::info('Order Builder PO Validation Passed', [
                 'validated_items' => $validatedData['items'],
                 'count' => count($validatedData['items'] ?? [])
             ]);
             
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Single PO Validation Failed', [
+            Log::error('Order Builder PO Validation Failed', [
                 'errors' => $e->errors(),
                 'input' => $request->all(),
                 'message' => $e->getMessage()
             ]);
             
-            throw $e;
-        }
-
-        // Process selected PR IDs
-        $selectedPRInput = $request->selected_pr_ids;
-        if (is_string($selectedPRInput)) {
-            $selectedPRIds = array_map('intval', array_filter(explode(',', $selectedPRInput)));
-        } elseif (is_array($selectedPRInput)) {
-            $selectedPRIds = array_map('intval', array_filter($selectedPRInput));
-        } else {
-            $selectedPRIds = [];
-        }
-        $selectedPRIds = array_values(array_unique($selectedPRIds));
-
-        if (empty($selectedPRIds)) {
-            throw ValidationException::withMessages([
-                'selected_pr_ids' => 'Please select at least one purchase request.',
-            ]);
-        }
-
-        $purchaseRequests = PurchaseRequest::whereIn('id', $selectedPRIds)
-            ->where('status', 'approved')
-            ->with('purchaseRequestItems')
-            ->get();
-
-        if ($purchaseRequests->count() !== count($selectedPRIds)) {
-            return redirect()->back()
-                ->with('error', 'Some selected purchase requests are invalid or not approved.')
-                ->withInput();
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed: ' . $e->getMessage(),
+                'errors' => $e->errors()
+            ], 422);
         }
 
         $poNumber = $this->generatePONumber();
-
         $totalAmount = 0;
         $poItems = [];
 
-        // Process items from the form - handle both possible field structures
+        // Process items from the order builder
         $itemsData = $request->input('items', []);
-        
-        // Filter out non-array items and process only selected ones
-        $validItems = array_filter($itemsData, function($item) {
-            return is_array($item) && filter_var($item['selected'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        });
 
-        Log::info('Processing Single PO Items', [
+        Log::info('Processing Order Builder PO Items', [
             'raw_items' => $itemsData,
-            'valid_items_count' => count($validItems),
-            'selected_items' => array_keys($validItems)
+            'items_count' => count($itemsData)
         ]);
 
-        foreach ($validItems as $itemData) {
+        foreach ($itemsData as $itemData) {
             $itemId = (int) ($itemData['item_id'] ?? 0);
-            $prId = (int) ($itemData['pr_id'] ?? 0);
-            
-            // Get quantity and price - handle both field names
-            $quantity = isset($itemData['quantity']) && $itemData['quantity'] !== ''
-                ? (float) $itemData['quantity']
-                : (float) ($itemData['quantity_ordered'] ?? 0);
-                
-            $unitPrice = isset($itemData['price']) && $itemData['price'] !== ''
-                ? (float) $itemData['price']
-                : (float) ($itemData['unit_price'] ?? 0);
+            $quantity = (float) ($itemData['quantity'] ?? 0);
+            $unitPrice = (float) ($itemData['unit_price'] ?? 0);
 
             Log::debug('Processing Item', [
                 'item_id' => $itemId,
-                'pr_id' => $prId,
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
                 'raw_item_data' => $itemData
             ]);
 
             if ($itemId <= 0) {
-                Log::warning('Invalid item ID in single PO creation', ['item_data' => $itemData]);
-                throw ValidationException::withMessages([
-                    'items' => 'Invalid item ID found in selection.',
-                ]);
+                Log::warning('Invalid item ID in order builder PO creation', ['item_data' => $itemData]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid item ID found in selection.'
+                ], 422);
             }
             
             if ($quantity <= 0) {
-                Log::warning('Invalid quantity in single PO creation', ['item_id' => $itemId, 'quantity' => $quantity]);
-                throw ValidationException::withMessages([
-                    'items' => 'Selected items must have valid quantity (greater than 0).',
-                ]);
+                Log::warning('Invalid quantity in order builder PO creation', ['item_id' => $itemId, 'quantity' => $quantity]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'All items must have valid quantity (greater than 0).'
+                ], 422);
             }
             
             if ($unitPrice <= 0) {
-                Log::warning('Invalid unit price in single PO creation', ['item_id' => $itemId, 'unit_price' => $unitPrice]);
-                throw ValidationException::withMessages([
-                    'items' => 'Selected items must have valid unit price (greater than 0).',
-                ]);
+                Log::warning('Invalid unit price in order builder PO creation', ['item_id' => $itemId, 'unit_price' => $unitPrice]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'All items must have valid unit price (greater than 0).'
+                ], 422);
             }
 
             $totalPrice = $quantity * $unitPrice;
@@ -295,114 +363,90 @@ class PurchaseOrderController extends Controller
         }
 
         if (empty($poItems)) {
-            Log::error('No valid items selected for single PO creation', [
+            Log::error('No valid items in order builder PO creation', [
                 'items_data' => $itemsData,
                 'user_id' => Auth::id(),
                 'supplier_id' => $request->supplier_id
             ]);
             
-            throw ValidationException::withMessages([
-                'items' => 'Please select at least one item to include in the purchase order.',
-            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select at least one item to include in the purchase order.'
+            ], 422);
         }
 
         $status = 'sent';
 
-        $purchaseOrder = PurchaseOrder::create([
-            'po_number' => $poNumber,
-            'supplier_id' => $request->supplier_id,
-            'order_date' => Carbon::now()->toDateString(),
-            'expected_delivery_date' => $request->expected_delivery_date,
-            'status' => $status,
-            'total_amount' => $totalAmount,
-            'grand_total' => $totalAmount,
-            'payment_terms' => 30,
-            'notes' => $request->notes,
-            'created_by' => Auth::id(),
-        ]);
-
-        foreach ($poItems as $item) {
-            PurchaseOrderItem::create(array_merge($item, [
-                'purchase_order_id' => $purchaseOrder->id,
-                'created_at' => Carbon::now(),
-            ]));
-        }
-
-        foreach ($selectedPRIds as $prId) {
-            PurchaseRequestPurchaseOrderLink::updateOrCreate(
-                [
-                    'purchase_request_id' => $prId,
-                    'purchase_order_id' => $purchaseOrder->id,
-                ],
-                [
-                    'consolidated_by' => Auth::id(),
-                    'consolidated_at' => Carbon::now(),
-                    'created_at' => Carbon::now(),
-                ]
-            );
-        }
-
-        $orderedQuantities = $this->getOrderedQuantitiesForPRs($selectedPRIds);
-
-        foreach ($purchaseRequests as $purchaseRequest) {
-            $prId = $purchaseRequest->id;
-            $items = $purchaseRequest->purchaseRequestItems;
-
-            $fullyOrdered = $items->every(function ($item) use ($orderedQuantities, $prId) {
-                $ordered = $orderedQuantities[$prId][$item->item_id] ?? 0;
-                return $ordered >= (float) $item->quantity_requested;
-            });
-
-            if ($fullyOrdered && $purchaseRequest->status !== 'converted') {
-                $purchaseRequest->update(['status' => 'converted']);
-            }
-        }
-
-        // NEW: Notify Supervisors/Admins about new PO
         try {
-            $managers = User::whereIn('role', ['supervisor', 'admin'])->get();
-            foreach ($managers as $manager) {
-                Notification::create([
-                    'user_id' => $manager->id,
-                    'title' => 'New Purchase Order',
-                    'message' => "PO {$poNumber} created for {$purchaseOrder->supplier->name} ($" . number_format($totalAmount, 2) . ")",
-                    'type' => 'purchasing',
-                    'priority' => 'normal',
-                    'action_url' => route('admin.notifications.index'), // Or specific PO view if available to them
-                    'created_at' => Carbon::now()
-                ]);
-            }
-        } catch (\Exception $e) {
-            Log::warning('Failed to send PO creation notification: ' . $e->getMessage());
-        }
+            DB::beginTransaction();
+            
+            $purchaseOrder = PurchaseOrder::create([
+                'po_number' => $poNumber,
+                'supplier_id' => $request->supplier_id,
+                'order_date' => Carbon::now()->toDateString(),
+                'expected_delivery_date' => $request->expected_delivery_date,
+                'status' => $status,
+                'total_amount' => $totalAmount,
+                'grand_total' => $totalAmount,
+                'payment_terms' => $request->payment_terms ?? 30,
+                'notes' => $request->notes,
+                'created_by' => Auth::id(),
+            ]);
 
-        $message = "Purchase Order {$poNumber} created successfully from " . count($selectedPRIds) . " purchase request(s)!";
-        
-        // Add information about remaining items if any PRs have partial orders
-        $remainingPRs = [];
-        foreach ($purchaseRequests as $pr) {
-            if ($pr->status === 'approved') { // Only check PRs that weren't fully converted
-                $prId = $pr->id;
-                $items = $pr->purchaseRequestItems;
-                $hasRemainingItems = $items->some(function ($item) use ($orderedQuantities, $prId) {
-                    $ordered = $orderedQuantities[$prId][$item->item_id] ?? 0;
-                    return $ordered < (float) $item->quantity_requested;
-                });
-                
-                if ($hasRemainingItems) {
-                    $remainingPRs[] = $pr->pr_number;
+            foreach ($poItems as $item) {
+                PurchaseOrderItem::create(array_merge($item, [
+                    'purchase_order_id' => $purchaseOrder->id,
+                    'created_at' => Carbon::now(),
+                ]));
+            }
+
+            DB::commit();
+
+            // NEW: Notify Supervisors/Admins about new PO
+            try {
+                $managers = User::whereIn('role', ['supervisor', 'admin'])->get();
+                foreach ($managers as $manager) {
+                    Notification::create([
+                        'user_id' => $manager->id,
+                        'title' => 'New Purchase Order',
+                        'message' => "PO {$poNumber} created for {$purchaseOrder->supplier->name} (₱" . number_format($totalAmount, 2) . ")",
+                        'type' => 'purchasing',
+                        'priority' => 'normal',
+                        'action_url' => route('purchasing.po.open'),
+                        'created_at' => Carbon::now()
+                    ]);
                 }
+            } catch (\Exception $e) {
+                Log::warning('Failed to send PO creation notification: ' . $e->getMessage());
             }
-        }
-        
-        if (!empty($remainingPRs)) {
-            $message .= " Remaining items can be ordered from PRs: " . implode(', ', $remainingPRs);
-        }
 
-        // Redirect back to PO creation page so users can create more POs for remaining items
-        return redirect()->route('purchasing.po.create')
-            ->with('success', $message)
-            ->with('refresh_needed', true);
+            Log::info('Order Builder PO Created Successfully', [
+                'po_number' => $poNumber,
+                'supplier_id' => $request->supplier_id,
+                'total_amount' => $totalAmount,
+                'items_count' => count($poItems)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "Purchase Order {$poNumber} created successfully!",
+                'po_number' => $poNumber,
+                'redirect' => route('purchasing.po.open')
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Order Builder PO Creation Failed', [
+                'error' => $e->getMessage(),
+                'po_number' => $poNumber,
+                'supplier_id' => $request->supplier_id
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create purchase order: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
