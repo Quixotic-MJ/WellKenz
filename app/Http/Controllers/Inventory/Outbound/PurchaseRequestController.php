@@ -23,100 +23,62 @@ class PurchaseRequestController extends Controller
     }
 
     /**
-     * Display purchase request interface with catalog and history
+     * Display purchase request interface - now focused on replenishment
      */
     public function index()
     {
-        return $this->create();
+        return $this->replenish();
     }
 
     /**
-     * Show the form for creating a new purchase request
-     * This serves as the main interface with catalog and history
+     * Show replenishment-focused interface with low stock items
      */
-    public function create()
+    public function replenish()
     {
         $user = Auth::user();
         
-        // Get active items with current stock information from current_stock table
-        $items = Item::with([
+        // Get only items that need replenishment (current_stock <= reorder_point)
+        $lowStockItems = Item::with([
             'category',
-            'unit',
+            'unit', 
             'currentStockRecord'
         ])
         ->where('is_active', true)
+        ->whereHas('currentStockRecord', function($query) {
+            $query->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point');
+        })
         ->orderBy('name')
         ->get()
         ->map(function($item) {
-            // Get current stock from the relationship
             $currentStock = $item->currentStockRecord ? 
                 $item->currentStockRecord->current_quantity : 0;
             
-            // Ensure relationships exist with fallbacks
-            $category = $item->category ? [
-                'id' => $item->category->id,
-                'name' => $item->category->name
-            ] : ['id' => 0, 'name' => 'General'];
+            // Calculate suggested quantity (max_stock - current_stock)
+            $maxStock = $item->max_stock_level ?? 0;
+            $suggestedQty = max(0, $maxStock - $currentStock);
             
-            $unit = $item->unit ? [
-                'id' => $item->unit->id,
-                'name' => $item->unit->name,
-                'symbol' => $item->unit->symbol
-            ] : ['id' => 0, 'name' => 'Piece', 'symbol' => 'pcs'];
+            // Ensure minimum suggested quantity for completely out-of-stock items
+            if ($currentStock <= 0 && $suggestedQty == 0) {
+                $suggestedQty = $item->reorder_point ?? 1;
+            }
             
             return (object) [
                 'id' => $item->id,
                 'item_code' => $item->item_code ?? 'N/A',
                 'name' => $item->name,
                 'description' => $item->description ?? '',
-                'category' => (object) $category,
-                'unit' => (object) $unit,
-                'cost_price' => (float) ($item->cost_price ?? 0),
-                'selling_price' => (float) ($item->selling_price ?? 0),
+                'category' => $item->category->name ?? 'General',
+                'unit' => $item->unit->symbol ?? 'pcs',
                 'current_stock' => (float) $currentStock,
-                'min_stock_level' => (float) ($item->min_stock_level ?? 0),
-                'max_stock_level' => (float) ($item->max_stock_level ?? 0),
                 'reorder_point' => (float) ($item->reorder_point ?? 0),
+                'max_stock_level' => (float) $maxStock,
+                'suggested_qty' => (int) $suggestedQty,
+                'cost_price' => (float) ($item->cost_price ?? 0),
                 'stock_status' => $this->getStockStatus($item)
             ];
         });
 
-        // Get active categories for filtering
-        $categories = Category::where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name']);
-
-        // Get user's default department
-        $defaultDepartment = $user->userProfile?->department ?? 'Inventory';
-
-        // Get purchase request history with filtering
-        $purchaseRequests = PurchaseRequest::with([
-            'requestedBy:id,name,email',
-            'purchaseRequestItems.item.unit'
-        ])
-        ->where('requested_by', $user->id) // Only show user's own requests
-        ->when(request('status'), function($query, $status) {
-            if ($status !== 'all') {
-                $query->where('status', $status);
-            }
-        })
-        ->when(request('department'), function($query, $department) {
-            if ($department !== 'all') {
-                $query->where('department', 'like', '%' . $department . '%');
-            }
-        })
-        ->when(request('search'), function($query, $search) {
-            $query->where(function($q) use ($search) {
-                $q->where('pr_number', 'like', '%' . $search . '%')
-                  ->orWhere('department', 'like', '%' . $search . '%')
-                  ->orWhere('notes', 'like', '%' . $search . '%');
-            });
-        })
-        ->latest('created_at')
-        ->paginate(10)
-        ->withQueryString();
-
-        // Calculate statistics for the current user
+        // Get user's purchase request statistics
         $stats = [
             'total' => PurchaseRequest::where('requested_by', $user->id)->count(),
             'pending' => PurchaseRequest::where('requested_by', $user->id)
@@ -129,23 +91,30 @@ class PurchaseRequestController extends Controller
                 ->where('status', 'draft')->count(),
         ];
 
-        // Get unique departments for filter dropdown
-        $departments = PurchaseRequest::where('requested_by', $user->id)
-            ->distinct()
-            ->whereNotNull('department')
-            ->where('department', '!=', '')
-            ->pluck('department')
-            ->sort()
-            ->values();
+        // Get recent purchase request history for reference
+        $recentRequests = PurchaseRequest::with([
+            'requestedBy:id,name,email',
+            'purchaseRequestItems.item.unit'
+        ])
+        ->where('requested_by', $user->id)
+        ->latest('created_at')
+        ->limit(5)
+        ->get();
 
         return view('Inventory.outbound.purchase_request', compact(
-            'items',
-            'categories',
-            'defaultDepartment',
+            'lowStockItems',
             'stats',
-            'departments',
-            'purchaseRequests'
+            'recentRequests'
         ));
+    }
+
+    /**
+     * Show the form for creating a new purchase request
+     * This now serves as the main replenishment interface
+     */
+    public function create()
+    {
+        return $this->replenish();
     }
 
     /**
