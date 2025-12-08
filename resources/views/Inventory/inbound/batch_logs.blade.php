@@ -138,7 +138,7 @@
         @forelse($batches as $batch)
             @php
                 $expiryDate = $batch->expiry_date ? \Carbon\Carbon::parse($batch->expiry_date) : null;
-                $expiryDays = $expiryDate ? now()->diffInDays($expiryDate, false) : null;
+                $expiryDays = $expiryDate ? (int)now()->diffInDays($expiryDate, false) : null;
                 $isExpired = $expiryDays !== null && $expiryDays < 0;
                 $isExpiringSoon = $expiryDays !== null && !$isExpired && $expiryDays <= 7;
                 
@@ -238,9 +238,6 @@
                         <button class="print-label-btn p-2 text-chocolate hover:text-white hover:bg-chocolate rounded-lg transition-all tooltip text-sm" data-batch-id="{{ $batch->id }}" title="Print Label">
                             <i class="fas fa-print"></i>
                         </button>
-                        <button class="view-batch-btn p-2 text-gray-500 hover:text-chocolate hover:bg-gray-200 rounded-lg transition-all tooltip text-sm" data-batch-id="{{ $batch->id }}" title="View Details">
-                            <i class="fas fa-eye"></i>
-                        </button>
                     </div>
                 </div>
             </div>
@@ -270,25 +267,7 @@
 
 {{-- MODALS SECTION --}}
 
-{{-- Batch Details Modal --}}
-<div id="batchDetailsModal" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm" onclick="document.getElementById('batchDetailsModal').classList.add('hidden')"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
-
-        <div class="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full border border-border-soft">
-            <div class="bg-chocolate px-6 py-4 flex justify-between items-center">
-                <h3 class="font-display text-lg font-bold text-white">Batch Details</h3>
-                <button id="closeBatchModal" class="text-white/70 hover:text-white transition-colors">
-                    <i class="fas fa-times text-lg"></i>
-                </button>
-            </div>
-            <div class="p-6 bg-cream-bg max-h-[70vh] overflow-y-auto custom-scrollbar" id="batchDetailsContent">
-                {{-- Content loaded dynamically --}}
-            </div>
-        </div>
-    </div>
-</div>
+{{-- No modals needed for simplified view --}}
 
 @push('scripts')
 <script>
@@ -376,46 +355,7 @@ class BatchLogsManager {
         }
     }
 
-    async viewBatchDetails(batchId) {
-        try {
-            const response = await fetch(`/inventory/inbound/batch-logs/${batchId}/details`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            const result = await response.json();
-            if (result.success) this.showBatchDetails(result.data);
-            else this.showNotification(result.message || 'Failed to load batch details', 'error');
-        } catch (error) {
-            this.showNotification('Error loading batch details: ' + error.message, 'error');
-        }
-    }
-
-    showBatchDetails(batchData) {
-        const modal = document.getElementById('batchDetailsModal');
-        const content = document.getElementById('batchDetailsContent');
-        
-        content.innerHTML = `
-            <div class="space-y-6">
-                <div class="bg-white p-5 rounded-xl border border-border-soft shadow-sm">
-                    <h4 class="text-lg font-bold text-chocolate mb-4 border-b border-border-soft pb-2">Basic Information</h4>
-                    <div class="grid grid-cols-2 gap-6 text-sm">
-                        <div><span class="text-gray-500 font-bold block text-xs uppercase tracking-wide">Batch #</span> ${batchData.batch_number}</div>
-                        <div><span class="text-gray-500 font-bold block text-xs uppercase tracking-wide">Status</span> ${batchData.status}</div>
-                        <div><span class="text-gray-500 font-bold block text-xs uppercase tracking-wide">Location</span> ${batchData.location || 'N/A'}</div>
-                    </div>
-                </div>
-                <div class="bg-white p-5 rounded-xl border border-border-soft shadow-sm">
-                    <h4 class="text-lg font-bold text-chocolate mb-4 border-b border-border-soft pb-2">Item Information</h4>
-                    <div class="grid grid-cols-2 gap-6 text-sm">
-                        <div><span class="text-gray-500 font-bold block text-xs uppercase tracking-wide">Name</span> ${batchData.item?.name || 'N/A'}</div>
-                        <div><span class="text-gray-500 font-bold block text-xs uppercase tracking-wide">Code</span> ${batchData.item?.item_code || 'N/A'}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        modal.classList.remove('hidden');
-    }
-
-    closeBatchModal() { document.getElementById('batchDetailsModal').classList.add('hidden'); }
-    printLabel(batchId) { window.location.href = `/inventory/inbound/labels?batch=${batchId}`; }
+    printLabel(batchId) { window.location.href = `/inventory/inbound/labels/stream?batch=${batchId}`; }
 
     getCurrentFilters() {
         return {

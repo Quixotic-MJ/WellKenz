@@ -251,6 +251,11 @@ class BatchController extends Controller
     public function streamLabels(Request $request)
     {
         try {
+            // Fix Input Handling: Handle single batch parameter from button click
+            if ($request->has('batch') && !$request->has('batch_ids')) {
+                $request->merge(['batch_ids' => [$request->batch]]);
+            }
+
             $request->validate([
                 'batch_ids' => 'required|array|min:1',
                 'batch_ids.*' => 'exists:batches,id'
