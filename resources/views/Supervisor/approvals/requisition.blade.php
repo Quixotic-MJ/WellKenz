@@ -455,15 +455,15 @@ window.RequisitionManager = {
     
     // API endpoints
     getDetailsUrl(requisitionId) {
-        return `/supervisor/requisitions/${requisitionId}/details`;
+        return route('supervisor.requisitions.details', requisitionId);
     },
     
     getApproveUrl(requisitionId) {
-        return `/supervisor/requisitions/${requisitionId}/approve`;
+        return route('supervisor.requisitions.approve', requisitionId);
     },
     
     getRejectUrl(requisitionId) {
-        return `/supervisor/requisitions/${requisitionId}/reject`;
+        return route('supervisor.requisitions.reject', requisitionId);
     },
     
     // Initialize event listeners and DOM elements
@@ -483,17 +483,25 @@ window.RequisitionManager = {
 
     // API endpoints for modification
     getModifyUrl(requisitionId) {
-        return `/supervisor/requisitions/${requisitionId}/modify`;
+        return route('supervisor.requisitions.modify', requisitionId);
     },
 
     getModifyMultiUrl(requisitionId) {
-        return `/supervisor/requisitions/${requisitionId}/modify-multi`;
+        return route('supervisor.requisitions.modify-multi', requisitionId);
     },
 
     // Open modification modal
     openModifyModal(requisitionId) {
+        if (!requisitionId) {
+            this.showToast('Error', 'Invalid requisition ID', 'error');
+            return;
+        }
+        
         // Show loading state
         this.showLoadingState();
+        
+        // Clear any previous requisition data
+        this.currentRequisition = null;
         
         // Fetch requisition details for modification
         fetch(this.getDetailsUrl(requisitionId), {
@@ -503,9 +511,14 @@ window.RequisitionManager = {
                 'X-CSRF-TOKEN': this.csrfToken
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.success) {
+            if (data.success && data.data) {
                 this.currentRequisition = data.data;
                 this.populateModifyModal(data.data);
                 this.showModifyModal();
@@ -515,7 +528,7 @@ window.RequisitionManager = {
         })
         .catch(error => {
             console.error('Error loading requisition for modification:', error);
-            this.showToast('Error', 'Failed to load requisition for modification', 'error');
+            this.showToast('Error', 'Failed to load requisition for modification: ' + error.message, 'error');
         })
         .finally(() => {
             this.hideLoadingState();
@@ -763,8 +776,8 @@ window.RequisitionManager = {
     submitModification(event) {
         event.preventDefault();
         
-        if (!this.currentRequisition) {
-            this.showToast('Error', 'No requisition data available', 'error');
+        if (!this.currentRequisition || !this.currentRequisition.id) {
+            this.showToast('Error', 'No requisition data available. Please try opening the modification modal again.', 'error');
             return;
         }
         
@@ -817,9 +830,13 @@ window.RequisitionManager = {
         
         console.log('Submitting modification with data:', { items: modifiedItems, reason: reason });
         
+        // Debug logging
+        console.log('Submitting modification with currentRequisition:', this.currentRequisition);
+        console.log('Modified items collected:', modifiedItems);
+        
         // Check for significant changes
         const hasSignificantIncrease = modifiedItems.some(item => {
-            const input = document.querySelector(`[data-item-id] input[data-original]`);
+            const input = document.querySelector(`[data-item-id="${item.item_id}"] input[data-original]`);
             const original = parseFloat(input?.dataset.original || 0);
             return item.new_quantity > original * 1.1; // More than 10% increase
         });
@@ -839,6 +856,12 @@ window.RequisitionManager = {
 
     // Submit modification request to server
     submitModificationRequest(items, reason) {
+        // Ensure we have current requisition data
+        if (!this.currentRequisition || !this.currentRequisition.id) {
+            this.showToast('Error', 'No requisition data available. Please try again.', 'error');
+            return;
+        }
+        
         this.showLoadingState();
         
         const url = items.length === 1 ? 

@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\MasterData\UnitController;
 use App\Http\Controllers\Admin\System\AuditLogController;
 use App\Http\Controllers\Admin\System\NotificationController;
 use App\Http\Controllers\Admin\Partner\SupplierController;
-
+    
 // Inventory namespace controllers
 use App\Http\Controllers\Inventory\GeneralController;
 use App\Http\Controllers\Inventory\Inbound\ReceivingController;
@@ -226,7 +226,7 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
         Route::patch('/{requisition}/reject', [SupervisorRequisitionController::class, 'reject'])->name('reject');
         
         // Bulk operations
-        Route::patch('/bulk-approve', [SupervisorRequisitionController::class, 'bulkApprove'])->name('bulk-approve');
+        Route::patch('/bulk-approve', [SupervisorRequisitionController::class, 'bulkApprove'])->name('requisitions.bulk-approve');
         
         // AJAX endpoints for dynamic updates
         Route::get('/api/filtered', [SupervisorRequisitionController::class, 'getFiltered'])->name('api.filtered');
