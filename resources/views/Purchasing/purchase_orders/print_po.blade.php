@@ -41,16 +41,16 @@
 
             /* Page setup */
             @page {
-                margin: 15mm;
+                margin: 12mm;
                 size: A4;
                 @bottom-center {
                     content: "Purchase Order #{{ $purchaseOrder->po_number ?? 'N/A' }} - Page " counter(page);
-                    font-size: 9pt;
+                    font-size: 8pt;
                     color: #666;
                 }
                 @top-center {
                     content: "WellKenz Bakery - Official Purchase Order";
-                    font-size: 10pt;
+                    font-size: 9pt;
                     color: #333;
                 }
             }
@@ -60,8 +60,8 @@
                 margin: 0 !important;
                 padding: 0 !important;
                 font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-                font-size: 11pt !important;
-                line-height: 1.4 !important;
+                font-size: 9pt !important;
+                line-height: 1.3 !important;
                 color: #1a1410 !important;
                 background: white !important;
             }
@@ -71,58 +71,215 @@
                 display: none !important;
             }
 
+            /* Container adjustments for paper */
+            .print-preview-container {
+                max-width: none !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                background: white !important;
+            }
+
+            .min-h-screen {
+                min-height: auto !important;
+                padding: 0 !important;
+            }
+
+            .bg-white {
+                width: 100% !important;
+                max-width: 190mm !important;
+                min-height: auto !important;
+                padding: 8mm !important;
+                margin: 0 auto !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                overflow: hidden !important;
+            }
+
+            /* Prevent content overflow */
+            .relative.z-10 {
+                overflow: hidden !important;
+            }
+
+            /* Grid adjustments */
+            .grid-cols-2 {
+                gap: 8pt !important;
+            }
+
+            .gap-8 {
+                gap: 8pt !important;
+            }
+
             /* Brand colors - preserved for print */
             .text-chocolate { color: #3d2817 !important; }
             .text-caramel { color: #c48d3f !important; }
             .border-chocolate { border-color: #3d2817 !important; }
             .bg-chocolate { background-color: #3d2817 !important; }
             
-            /* Typography */
+            /* Typography optimizations for print */
             .font-display { 
                 font-family: 'Playfair Display', serif !important;
                 font-weight: 700 !important;
             }
-            .font-bold { font-weight: 700 !important; }
+            .font-bold { font-weight: 600 !important; }
             .font-medium { font-weight: 500 !important; }
             .uppercase { text-transform: uppercase !important; }
             .tracking-wide { letter-spacing: 0.025em !important; }
             .tracking-wider { letter-spacing: 0.05em !important; }
 
+            /* Header sizing for print */
+            .document-header {
+                margin-bottom: 15pt !important;
+                padding-bottom: 10pt !important;
+            }
+
+            .brand-text h1 {
+                font-size: 16pt !important;
+                margin-bottom: 2pt !important;
+            }
+
+            .brand-text p {
+                font-size: 8pt !important;
+            }
+
+            .brand-logo {
+                width: 30pt !important;
+                height: 30pt !important;
+                font-size: 12pt !important;
+            }
+
+            .metadata-box {
+                padding: 6pt !important;
+                min-width: 120pt !important;
+                max-width: 140pt !important;
+            }
+
+            .metadata-box h2 {
+                font-size: 10pt !important;
+                margin-bottom: 3pt !important;
+            }
+
+            .metadata-item {
+                font-size: 7pt !important;
+                margin-bottom: 1pt !important;
+            }
+
             /* Table optimizations */
             table {
                 border-collapse: collapse !important;
+                margin-bottom: 12pt !important;
+                width: 100% !important;
+                table-layout: fixed !important;
             }
 
             th, td {
-                border: 1pt solid #333 !important;
-                padding: 8pt !important;
+                border: 0.5pt solid #333 !important;
+                padding: 3pt 4pt !important;
+                font-size: 7pt !important;
+                word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
             }
 
             th {
-                background-color: #f9f9f9 !important;
-                font-weight: bold !important;
+                background-color: #f5f5f5 !important;
+                font-weight: 600 !important;
                 color: #3d2817 !important;
+                font-size: 6pt !important;
+                padding: 4pt !important;
             }
 
-            /* Prevent page breaks in critical sections */
-            .no-print-break {
-                page-break-inside: avoid !important;
-                break-inside: avoid !important;
+            /* Table column widths */
+            .document-table th:nth-child(1),
+            .document-table td:nth-child(1) { width: 8% !important; } /* No. */
+            .document-table th:nth-child(2),
+            .document-table td:nth-child(2) { width: 35% !important; } /* Description */
+            .document-table th:nth-child(3),
+            .document-table td:nth-child(3) { width: 15% !important; } /* Item Code */
+            .document-table th:nth-child(4),
+            .document-table td:nth-child(4) { width: 12% !important; } /* Quantity */
+            .document-table th:nth-child(5),
+            .document-table td:nth-child(5) { width: 15% !important; } /* Unit Price */
+            .document-table th:nth-child(6),
+            .document-table td:nth-child(6) { width: 15% !important; } /* Line Total */
+
+            /* Info grid adjustments */
+            .grid-cols-2 {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8pt !important;
+                max-width: 100% !important;
+            }
+
+            .border {
+                border: 0.5pt solid #333 !important;
+                padding: 6pt !important;
+                margin-bottom: 8pt !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+            }
+
+            .rounded-lg {
+                border-radius: 0 !important;
+            }
+
+            /* Flex container adjustments */
+            .flex {
+                flex-wrap: wrap !important;
+            }
+
+            .justify-between {
+                justify-content: space-between !important;
             }
 
             /* Typography adjustments */
             h1 { 
-                font-size: 18pt !important; 
+                font-size: 16pt !important; 
                 color: #3d2817 !important;
                 font-family: 'Playfair Display', serif !important;
+                line-height: 1.2 !important;
             }
             h2 { 
-                font-size: 14pt !important; 
-                color: #3d2817 !important;
-            }
-            h3 { 
                 font-size: 12pt !important; 
                 color: #3d2817 !important;
+                margin-bottom: 4pt !important;
+            }
+            h3 { 
+                font-size: 10pt !important; 
+                color: #3d2817 !important;
+                margin-bottom: 6pt !important;
+            }
+
+            /* Text sizing adjustments */
+            .text-sm { font-size: 8pt !important; }
+            .text-xs { font-size: 7pt !important; }
+            .text-lg { font-size: 11pt !important; }
+
+            /* Signature section */
+            .grid-cols-3 {
+                grid-template-columns: 1fr 1fr 1fr !important;
+                gap: 15pt !important;
+                margin-top: 15pt !important;
+            }
+
+            .h-16 {
+                height: 25pt !important;
+            }
+
+            /* Footer adjustments */
+            .mt-12 {
+                margin-top: 20pt !important;
+            }
+
+            .pt-6 {
+                padding-top: 10pt !important;
+            }
+
+            .border-t {
+                border-top: 0.5pt solid #333 !important;
+            }
+
+            /* Special instructions */
+            .space-y-2 > * + * {
+                margin-top: 4pt !important;
             }
 
             /* Background colors for print */
@@ -131,7 +288,18 @@
             
             /* Signature lines */
             .border-b {
-                border-bottom: 1pt solid #333 !important;
+                border-bottom: 0.5pt solid #333 !important;
+            }
+
+            /* Prevent page breaks in critical sections */
+            .no-print-break {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+
+            /* Hide footer strip on print */
+            .absolute.bottom-0 {
+                display: none !important;
             }
         }
 
@@ -501,21 +669,7 @@
                                         </td>
                                     </tr>
                                     @endforelse
-                                    
-                                    {{-- Empty rows for better table appearance on screen --}}
-                                    @php
-                                        $itemCount = $purchaseOrder->purchaseOrderItems ? count($purchaseOrder->purchaseOrderItems) : 0;
-                                    @endphp
-                                    @for($i = $itemCount; $i < min(8, 12); $i++)
-                                    <tr class="border-b border-gray-100 print:hidden">
-                                        <td class="py-4 px-4 text-center text-gray-300">{{ $i + 1 }}</td>
-                                        <td class="py-4 px-4"></td>
-                                        <td class="py-4 px-4"></td>
-                                        <td class="py-4 px-4 text-center">-</td>
-                                        <td class="py-4 px-4 text-right">-</td>
-                                        <td class="py-4 px-4 text-right">-</td>
-                                    </tr>
-                                    @endfor
+
                                 </tbody>
                             </table>
                             
@@ -584,10 +738,9 @@
                         </div>
                     </div>
 
-                    {{-- 5. NOTES & TERMS --}}
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 no-print-break">
-                        {{-- Notes Section --}}
-                        @if(($purchaseOrder->notes ?? false) || ($purchaseOrder->special_instructions ?? false) || ($purchaseOrder->delivery_instructions ?? false))
+                    {{-- 5. NOTES SECTION --}}
+                    @if(($purchaseOrder->notes ?? false) || ($purchaseOrder->special_instructions ?? false) || ($purchaseOrder->delivery_instructions ?? false))
+                    <div class="mb-8 no-print-break">
                         <div class="border border-gray-200 rounded-lg p-4 print:border-black print:rounded-none">
                             <h3 class="text-sm font-bold text-gray-900 print:text-black uppercase tracking-wide mb-3 flex items-center">
                                 <i class="fas fa-sticky-note mr-2 text-chocolate print:text-black"></i>
@@ -611,27 +764,8 @@
                                 @endif
                             </div>
                         </div>
-                        @endif
-
-                        {{-- Terms & Conditions --}}
-                        <div class="border border-gray-200 rounded-lg p-4 print:border-black print:rounded-none">
-                            <h3 class="text-sm font-bold text-gray-900 print:text-black uppercase tracking-wide mb-3 flex items-center">
-                                <i class="fas fa-gavel mr-2 text-chocolate print:text-black"></i>
-                                Terms & Conditions
-                            </h3>
-                            <div class="text-xs text-gray-600 print:text-black space-y-1">
-                                <p>• All deliveries must comply with agreed specifications</p>
-                                <p>• Invoice must reference this purchase order number</p>
-                                <p>• Payment terms: {{ $purchaseOrder->payment_terms ?? 30 }} days from invoice date</p>
-                                <p>• Any discrepancies must be reported within 48 hours</p>
-                                @if($purchaseOrder->expected_delivery_date ?? false)
-                                    <p>• Expected delivery: {{ $purchaseOrder->expected_delivery_date ? $purchaseOrder->expected_delivery_date->format('F d, Y') : 'TBD' }}</p>
-                                @endif
-                                <p>• All goods must be delivered in good condition</p>
-                                <p>• This order is subject to company's standard terms and conditions</p>
-                            </div>
-                        </div>
                     </div>
+                    @endif
 
                     {{-- 6. SIGNATURES & APPROVALS --}}
                     <div class="mt-auto pt-8 no-print-break">
