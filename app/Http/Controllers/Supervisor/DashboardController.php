@@ -62,31 +62,14 @@ class DashboardController extends Controller
             \Log::info('getRecentPurchaseRequests: Starting method execution');
 
             $purchaseRequests = PurchaseRequest::with(['requestedBy'])
-                ->where('status', 'pending')
-                ->orderByRaw("FIELD(priority, 'urgent', 'high', 'normal', 'low')")
+                ->whereIn('status', ['pending', 'Pending'])
                 ->orderBy('created_at', 'desc')
                 ->limit(10)
                 ->get();
 
             \Log::info('getRecentPurchaseRequests: Found ' . $purchaseRequests->count() . ' pending purchase requests');
 
-            $formattedRequests = $purchaseRequests->map(function($request) {
-                return [
-                    'id' => $request->id,
-                    'pr_number' => $request->pr_number,
-                    'requester_name' => $request->requestedBy->name ?? 'Unknown',
-                    'department' => $request->department,
-                    'priority' => $request->priority,
-                    'total_cost' => $request->formatted_total,
-                    'time_ago' => $this->formatTimeAgo($request->created_at),
-                    'notes' => $request->notes,
-                    'request_date' => $request->request_date->format('M d, Y')
-                ];
-            });
-
-            \Log::info('getRecentPurchaseRequests: Returning ' . $formattedRequests->count() . ' formatted purchase requests');
-
-            return $formattedRequests;
+            return $purchaseRequests;
 
         } catch (\Exception $e) {
             \Log::error('getRecentPurchaseRequests: Error occurred - ' . $e->getMessage());

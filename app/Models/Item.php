@@ -28,6 +28,7 @@ class Item extends Model
         'shelf_life_days',
         'storage_requirements',
         'is_active',
+        'is_perishable',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Item extends Model
         'selling_price' => 'decimal:2',
         'shelf_life_days' => 'integer',
         'is_active' => 'boolean',
+        'is_perishable' => 'boolean',
     ];
 
     public function category()

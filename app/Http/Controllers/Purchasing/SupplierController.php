@@ -15,9 +15,9 @@ class SupplierController extends Controller
     {
         $this->middleware('auth');
     }
-
+            
     public function suppliers(Request $request)
-    {
+    {   
         $query = Supplier::query();
 
         if ($request->filled('search')) {
@@ -55,7 +55,7 @@ class SupplierController extends Controller
                 $query->selectRaw('supplier_id, COUNT(*) as supplier_item_count')->groupBy('supplier_id');
             }])
             ->orderBy('name')
-            ->paginate(15);
+            ->get();
 
         $paymentTerms = Supplier::distinct()
             ->whereNotNull('payment_terms')

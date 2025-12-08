@@ -588,7 +588,7 @@ class ReceivingController extends Controller
                     'quantity_received' => $quantityReceived,
                     'quantity_remaining' => $quantityRemaining,
                     'unit_cost' => $poItem->unit_price,
-                    'is_perishable' => $poItem->item->is_perishable ?? false,
+                    'is_perishable' => (bool) $poItem->item->is_perishable,
                     'can_receive' => $quantityRemaining > 0
                 ];
             })->filter(function ($item) {

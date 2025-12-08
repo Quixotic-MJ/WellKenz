@@ -142,6 +142,7 @@ CREATE TABLE items (
     selling_price DECIMAL(10,2) DEFAULT 0.00,
     shelf_life_days INTEGER,
     storage_requirements TEXT,
+    is_perishable BOOLEAN DEFAULT false
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

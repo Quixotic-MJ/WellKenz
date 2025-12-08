@@ -23,6 +23,9 @@
             <p class="text-sm text-gray-500">Management overview for {{ date('F d, Y') }}</p>
         </div>
         <div class="flex space-x-3">
+            <a href="{{ route('supervisor.approvals.purchase-requests') }}" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fas fa-shopping-cart mr-2"></i> Purchase Request Approvals
+            </a>
             <a href="{{ route('supervisor.requisitions.index') }}" class="inline-flex items-center px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors">
                 <i class="fas fa-clipboard-check mr-2"></i> View All Approvals
             </a>
@@ -165,18 +168,24 @@
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center space-x-2">
-                                    <p class="text-sm font-medium text-gray-900">{{ $request['pr_number'] }}</p>
+                                    <p class="text-sm font-medium text-gray-900">{{ $request->pr_number }}</p>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                        @if($request['priority'] === 'urgent') bg-red-100 text-red-800
-                                        @elseif($request['priority'] === 'high') bg-orange-100 text-orange-800
-                                        @elseif($request['priority'] === 'normal') bg-gray-100 text-gray-800
+                                        @if($request->priority === 'urgent') bg-red-100 text-red-800
+                                        @elseif($request->priority === 'high') bg-orange-100 text-orange-800
+                                        @elseif($request->priority === 'normal') bg-gray-100 text-gray-800
                                         @else bg-blue-100 text-blue-800 @endif">
-                                        {{ ucfirst($request['priority']) }}
+                                        {{ ucfirst($request->priority) }}
                                     </span>
                                 </div>
-                                <p class="text-sm text-gray-600 mt-1">{{ $request['requester_name'] }}</p>
-                                <p class="text-xs text-gray-500">{{ $request['department'] }}</p>
-                                <p class="text-sm font-semibold text-gray-900 mt-2">{{ $request['total_cost'] }}</p>
+                                <p class="text-sm text-gray-600 mt-1">{{ $request->requestedBy->name ?? 'Unknown' }}</p>
+                                <p class="text-xs text-gray-500">{{ $request->department }}</p>
+                                <p class="text-sm font-semibold text-gray-900 mt-2">
+                                    @if($request->total_estimated_cost)
+                                        ₱{{ number_format($request->total_estimated_cost, 2) }}
+                                    @else
+                                        ₱0.00
+                                    @endif
+                                </p>
                             </div>
                         </div>
                     </div>
