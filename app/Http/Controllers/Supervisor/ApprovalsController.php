@@ -5,20 +5,26 @@ namespace App\Http\Controllers\Supervisor;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Supervisor\RequisitionController;
 use App\Http\Controllers\Inventory\Outbound\PurchaseRequestController;
+use App\Services\RequisitionApprovalService;
 use Illuminate\Http\Request;
+use App\Http\Requests\Supervisor\Requisition\ApproveRequisitionRequest;
+use App\Http\Requests\Supervisor\Requisition\RejectRequisitionRequest;
 
 class ApprovalsController extends Controller
 {
     protected $requisitionController;
     protected $purchaseRequestController;
+    protected $approvalService;
 
     public function __construct(
         RequisitionController $requisitionController,
-        PurchaseRequestController $purchaseRequestController
+        PurchaseRequestController $purchaseRequestController,
+        RequisitionApprovalService $approvalService
     ) {
         $this->middleware('auth');
         $this->requisitionController = $requisitionController;
         $this->purchaseRequestController = $purchaseRequestController;
+        $this->approvalService = $approvalService;
     }
 
     /**
@@ -109,122 +115,18 @@ class ApprovalsController extends Controller
     }
 
     /**
-     * Approve a requisition (legacy implementation)
+     * Approve a requisition
      */
-    public function approveRequisition(\App\Models\Requisition $requisition, Request $request)
+    public function approveRequisition(\App\Models\Requisition $requisition, ApproveRequisitionRequest $request)
     {
         try {
-            // Check if requisition exists and is pending
-            if (!$requisition) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Requisition not found'
-                ], 404);
-            }
-
-            if ($requisition->status !== 'pending') {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Requisition has already been processed (Status: ' . $requisition->status . ')'
-                ], 400);
-            }
-
-            // Load requisition items to check stock
-            $requisition->load('requisitionItems.item');
-
-            // Verify stock availability before approval
-            $insufficientItems = [];
-            foreach ($requisition->requisitionItems as $item) {
-                $currentStock = \App\Models\CurrentStock::where('item_id', $item->item_id)->first();
-                if (!$currentStock || $currentStock->current_quantity < $item->quantity_requested) {
-                    $insufficientItems[] = ($item->item->name ?? 'Unknown Item') .
-                        ' (Requested: ' . $item->quantity_requested . ', Available: ' .
-                        ($currentStock ? $currentStock->current_quantity : 0) . ')';
-                }
-            }
-
-            if (!empty($insufficientItems)) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Insufficient stock for: ' . implode(', ', $insufficientItems)
-                ], 422);
-            }
-
-            // Update requisition status
-            $oldStatus = $requisition->status;
-            $updated = $requisition->update([
-                'status' => 'approved',
-                'approved_by' => auth()->id(),
-                'approved_at' => \Carbon\Carbon::now()
-            ]);
-
-            if (!$updated) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Failed to update requisition status'
-                ], 500);
-            }
-
-
-
-            // Notify the requesting employee that the requisition was approved
-            try {
-                \App\Models\Notification::create([
-                    'user_id' => $requisition->requested_by,
-                    'title' => 'Requisition Approved',
-                    'message' => "Requisition {$requisition->requisition_number} has been approved by " . (auth()->user()->name ?? 'Supervisor') . '. Items are now ready for fulfillment.',
-                    'type' => 'requisition_update',
-                    'priority' => in_array($requisition->priority, ['high', 'urgent']) ? 'high' : 'normal',
-                    'action_url' => route('employee.requisitions.details', $requisition),
-                    'metadata' => [
-                        'requisition_number' => $requisition->requisition_number,
-                        'requisition_status' => 'approved',
-                        'approved_by' => auth()->user()->name ?? 'Supervisor',
-                        'approved_at' => \Carbon\Carbon::now()->toDateTimeString(),
-                        'department' => $requisition->department,
-                        'purpose' => $requisition->purpose ?? 'No purpose specified',
-                        'total_estimated_value' => $requisition->total_estimated_value,
-                        'items_count' => $requisition->requisitionItems->count(),
-                        'priority' => $requisition->priority ?? 'normal'
-                    ],
-                    'created_at' => \Carbon\Carbon::now(),
-                ]);
-            } catch (\Exception $e) {
-                \Log::warning('Failed to notify employee of requisition approval: ' . $e->getMessage());
-            }
-
-            // Notify inventory team about approved requisition ready for fulfillment
-            try {
-                $inventoryUsers = \App\Models\User::where('role', 'inventory')->get();
-                foreach ($inventoryUsers as $inventoryUser) {
-                    \App\Models\Notification::create([
-                        'user_id' => $inventoryUser->id,
-                        'title' => 'Requisition Ready for Fulfillment',
-                        'message' => "Requisition {$requisition->requisition_number} from {$requisition->department} department has been approved and is ready for fulfillment.",
-                        'type' => 'inventory',
-                        'priority' => $requisition->priority === 'urgent' ? 'urgent' : 'normal',
-                        'action_url' => route('inventory.outbound.fulfill'),
-                        'metadata' => [
-                            'requisition_number' => $requisition->requisition_number,
-                            'department' => $requisition->department,
-                            'requested_by' => $requisition->requestedBy->name ?? 'Unknown',
-                            'purpose' => $requisition->purpose ?? 'No purpose specified',
-                            'total_estimated_value' => $requisition->total_estimated_value,
-                            'items_count' => $requisition->requisitionItems->count(),
-                            'priority' => $requisition->priority ?? 'normal',
-                            'approved_by' => auth()->user()->name ?? 'Supervisor',
-                            'approved_at' => \Carbon\Carbon::now()->toDateTimeString()
-                        ],
-                        'created_at' => \Carbon\Carbon::now(),
-                    ]);
-                }
-            } catch (\Exception $e) {
-                \Log::warning('Failed to notify inventory team of approved requisition: ' . $e->getMessage());
-            }
-
+            $result = $this->approvalService->approveRequisition($requisition, $request);
+            
             return response()->json([
-                'success' => true,
-                'message' => 'Requisition approved successfully'
+                'success' => $result['success'],
+                'message' => $result['message'],
+                'data' => $result['data'] ?? null,
+                'stock_analysis' => $result['stock_analysis'] ?? null
             ]);
 
         } catch (\Exception $e) {
@@ -237,83 +139,18 @@ class ApprovalsController extends Controller
     }
 
     /**
-     * Reject a requisition (legacy implementation)
+     * Reject a requisition
      */
-    public function rejectRequisition(\App\Models\Requisition $requisition, Request $request)
+    public function rejectRequisition(\App\Models\Requisition $requisition, RejectRequisitionRequest $request)
     {
         try {
-            // Check if requisition exists and is pending
-            if (!$requisition) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Requisition not found'
-                ], 404);
-            }
-
-            if ($requisition->status !== 'pending') {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Requisition has already been processed (Status: ' . $requisition->status . ')'
-                ], 400);
-            }
-
-            // Get rejection reason from request
-            $reason = $request->input('reason', 'No reason provided');
-            $comments = $request->input('comments', '');
-
-            // Combine reason and comments for storage
-            $rejectionNotes = $reason;
-            if (!empty($comments)) {
-                $rejectionNotes .= ' - ' . $comments;
-            }
-
-            // Update requisition status to rejected
-            $oldStatus = $requisition->status;
-            $updated = $requisition->update([
-                'status' => 'rejected',
-                'approved_by' => auth()->id(),
-                'approved_at' => \Carbon\Carbon::now(),
-                'reject_reason' => $reason,
-                'notes' => $rejectionNotes
-            ]);
-
-            if (!$updated) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Failed to update requisition status'
-                ], 500);
-            }
-
-
-
-            // Notify the requesting employee that the requisition was rejected
-            try {
-                \App\Models\Notification::create([
-                    'user_id' => $requisition->requested_by,
-                    'title' => 'Requisition Rejected',
-                    'message' => "Requisition {$requisition->requisition_number} has been rejected by " . (auth()->user()->name ?? 'Supervisor') . ".",
-                    'type' => 'requisition_update',
-                    'priority' => 'normal',
-                    'action_url' => route('employee.requisitions.details', $requisition),
-                    'metadata' => [
-                        'requisition_number' => $requisition->requisition_number,
-                        'requisition_status' => 'rejected',
-                        'rejected_by' => auth()->user()->name ?? 'Supervisor',
-                        'rejected_at' => \Carbon\Carbon::now()->toDateTimeString(),
-                        'department' => $requisition->department,
-                        'total_estimated_value' => $requisition->total_estimated_value,
-                        'rejection_reason' => $requisition->notes ?? 'No specific reason provided',
-                        'items_count' => $requisition->requisitionItems->count()
-                    ],
-                    'created_at' => \Carbon\Carbon::now(),
-                ]);
-            } catch (\Exception $e) {
-                \Log::warning('Failed to notify employee of requisition rejection: ' . $e->getMessage());
-            }
-
+            $result = $this->approvalService->rejectRequisition($requisition, $request);
+            
             return response()->json([
-                'success' => true,
-                'message' => 'Requisition rejected successfully'
+                'success' => $result['success'],
+                'message' => $result['message'],
+                'data' => $result['data'] ?? null,
+                'reason' => $result['reason'] ?? null
             ]);
 
         } catch (\Exception $e) {
@@ -339,83 +176,12 @@ class ApprovalsController extends Controller
                 ], 404);
             }
 
-            // Load requisition with all required relationships - simplify the loading
-            $requisition = \App\Models\Requisition::with([
-                'requestedBy:id,name,email',
-                'requisitionItems.item.unit',
-                'requisitionItems.currentStockRecord'
-            ])->find($requisition->id);
-
-            if (!$requisition) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Requisition not found'
-                ], 404);
-            }
-
-            // Process requisition items
-            $items = $requisition->requisitionItems->map(function($item) {
-                $stockRecord = $item->currentStockRecord;
-                $currentStock = $stockRecord ? (float) $stockRecord->current_quantity : 0.0;
-                $requestedQty = (float) $item->quantity_requested;
-
-                // Get item details safely
-                $itemName = $item->item ? ($item->item->name ?? 'Unknown Item') : 'Unknown Item';
-                $unitSymbol = $item->item && $item->item->unit ? ($item->item->unit->symbol ?? '') : '';
-
-                // Calculate stock percentage safely
-                $stockPercentage = $currentStock > 0 && $requestedQty > 0 ?
-                    round(($requestedQty / $currentStock) * 100, 1) : 0;
-
-                // Determine fulfillment status
-                $canFulfillFull = $currentStock >= $requestedQty && $currentStock > 0;
-                $isLowStock = $currentStock < $requestedQty && $currentStock > 0;
-
-                return [
-                    'id' => $item->id,
-                    'item_id' => $item->item_id,
-                    'item_name' => $itemName,
-                    'quantity_requested' => number_format($requestedQty, 3),
-                    'unit_symbol' => $unitSymbol,
-                    'current_stock' => number_format($currentStock, 3),
-                    'stock_percentage' => $stockPercentage,
-                    'can_fulfill_full' => $canFulfillFull,
-                    'is_low_stock' => $isLowStock,
-                    'stock_status' => $currentStock === 0 ? 'out_of_stock' :
-                        ($currentStock < $requestedQty ? 'insufficient' : 'sufficient')
-                ];
-            });
-
-            // Get requester info safely
-            $requesterName = $requisition->requestedBy ?
-                ($requisition->requestedBy->name ?? 'Unknown User') : 'Unknown User';
-            $department = $requisition->department ?? 'General';
-
-            // Calculate summary data safely
-            $totalEstimatedValue = $requisition->requisitionItems->sum('total_estimated_value');
-            $criticalItemsCount = $items->where('is_low_stock', true)->count();
-            $fulfillableItemsCount = $items->where('can_fulfill_full', true)->count();
+            // Use the service method to get requisition details
+            $details = $this->approvalService->getRequisitionDetails($requisition);
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'id' => $requisition->id,
-                    'requisition_number' => $requisition->requisition_number,
-                    'requested_by' => $requesterName,
-                    'department' => $department,
-                    'purpose' => $requisition->purpose ?? 'No purpose specified',
-                    'notes' => $requisition->notes,
-                    'created_at' => $requisition->created_at->toISOString(),
-                    'time_ago' => $this->formatTimeAgo($requisition->created_at),
-                    'items' => $items->values(), // Ensure it's a proper array
-                    'total_items' => $items->count(),
-                    'status' => $requisition->status,
-                    'summary' => [
-                        'total_requested_value' => $totalEstimatedValue,
-                        'critical_items_count' => $criticalItemsCount,
-                        'fulfillable_items_count' => $fulfillableItemsCount
-                    ]
-                ]
+                'data' => $details
             ]);
 
         } catch (\Exception $e) {
@@ -905,17 +671,6 @@ class ApprovalsController extends Controller
     public function modifyRequisitionQuantity(\App\Models\Requisition $requisition, Request $request)
     {
         try {
-            // Log request data for debugging
-            \Log::info('Modification request data:', $request->all());
-            
-            // Validate requisition status
-            if (!$requisition->isPending()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Only pending requisitions can be modified'
-                ], 422);
-            }
-
             // Validate request data
             $validated = $request->validate([
                 'item_id' => 'required|integer|exists:items,id',
@@ -923,59 +678,19 @@ class ApprovalsController extends Controller
                 'reason' => 'required|string|max:500'
             ]);
 
-            // Find the requisition item
-            $requisitionItem = $requisition->requisitionItems()
-                ->where('item_id', $validated['item_id'])
-                ->first();
+            // Convert to array format expected by service
+            $requestData = [
+                'item_id' => $validated['item_id'],
+                'new_quantity' => $validated['new_quantity'],
+                'reason' => $validated['reason']
+            ];
 
-            if (!$requisitionItem) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Requisition item not found'
-                ], 404);
-            }
-
-            // Check stock availability
-            $currentStock = $requisitionItem->currentStock;
-            $newQuantity = (float) $validated['new_quantity'];
-
-            if ($newQuantity > $currentStock) {
-                return response()->json([
-                    'success' => false,
-                    'error' => "Requested quantity ({$newQuantity}) exceeds available stock ({$currentStock})"
-                ], 422);
-            }
-
-            // Store original values for audit log
-            $originalQuantity = $requisitionItem->quantity_requested;
-
-            // Update the quantity
-            $requisitionItem->update([
-                'quantity_requested' => $newQuantity
-            ]);
-
-            // NEW: Notify Requester of Modification
-            try {
-                \App\Models\Notification::create([
-                    'user_id' => $requisition->requested_by,
-                    'title' => 'Requisition Modified',
-                    'message' => "Quantity for {$requisitionItem->item->name} in {$requisition->requisition_number} was changed from {$originalQuantity} to {$newQuantity}. Reason: {$validated['reason']}",
-                    'type' => 'requisition_update',
-                    'priority' => 'high', // Important: User needs to know their request changed
-                    'action_url' => route('employee.requisitions.details', $requisition->id),
-                    'created_at' => now()
-                ]);
-            } catch (\Exception $e) {}
-
+            $result = $this->approvalService->modifyRequisitionQuantity($requisition, $requestData);
+            
             return response()->json([
-                'success' => true,
-                'message' => 'Requisition item quantity modified successfully',
-                'data' => [
-                    'original_quantity' => $originalQuantity,
-                    'new_quantity' => $newQuantity,
-                    'item_name' => $requisitionItem->item->name,
-                    'stock_available' => $currentStock
-                ]
+                'success' => $result['success'],
+                'message' => $result['message'],
+                'data' => $result['data']
             ]);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1015,14 +730,6 @@ class ApprovalsController extends Controller
     public function modifyMultipleRequisitionItems(\App\Models\Requisition $requisition, Request $request)
     {
         try {
-            // Validate requisition status
-            if (!$requisition->isPending()) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'Only pending requisitions can be modified'
-                ], 422);
-            }
-
             // Validate request data
             $validated = $request->validate([
                 'items' => 'required|array|min:1',
@@ -1031,66 +738,21 @@ class ApprovalsController extends Controller
                 'reason' => 'required|string|max:500'
             ]);
 
-            $modifications = [];
-            $errors = [];
-
-            foreach ($validated['items'] as $itemData) {
-                try {
-                    // Find the requisition item
-                    $requisitionItem = $requisition->requisitionItems()
-                        ->where('item_id', $itemData['item_id'])
-                        ->first();
-
-                    if (!$requisitionItem) {
-                        $errors[] = "Item ID {$itemData['item_id']}: Not found in requisition";
-                        continue;
-                    }
-
-                    // Check stock availability
-                    $currentStock = $requisitionItem->currentStock;
-                    $newQuantity = (float) $itemData['new_quantity'];
-
-                    if ($newQuantity > $currentStock) {
-                        $errors[] = "{$requisitionItem->item->name}: Requested quantity ({$newQuantity}) exceeds available stock ({$currentStock})";
-                        continue;
-                    }
-
-                    // Store original values for audit log
-                    $originalQuantity = $requisitionItem->quantity_requested;
-
-                    // Update the quantity
-                    $requisitionItem->update([
-                        'quantity_requested' => $newQuantity
-                    ]);
-
-                    $modifications[] = [
-                        'item_id' => $itemData['item_id'],
-                        'item_name' => $requisitionItem->item->name,
-                        'original_quantity' => $originalQuantity,
-                        'new_quantity' => $newQuantity,
-                        'stock_available' => $currentStock
-                    ];
-
-                } catch (\Exception $e) {
-                    $errors[] = "Item ID {$itemData['item_id']}: " . $e->getMessage();
-                }
-            }
-
-
-
-            // Prepare response
-            $response = [
-                'success' => true,
-                'message' => 'Requisition items modified successfully',
-                'data' => [
-                    'modified_items' => $modifications,
-                    'errors' => $errors,
-                    'total_modified' => count($modifications),
-                    'total_errors' => count($errors)
-                ]
+            // Convert to array format expected by service
+            $requestData = [
+                'items' => $validated['items'],
+                'reason' => $validated['reason']
             ];
 
-            if (!empty($errors)) {
+            $result = $this->approvalService->modifyMultipleRequisitionItems($requisition, $requestData);
+            
+            $response = [
+                'success' => $result['success'],
+                'message' => $result['message'],
+                'data' => $result['data']
+            ];
+
+            if (!empty($result['data']['errors'] ?? [])) {
                 $response['warning'] = 'Some items could not be modified';
             }
 
@@ -1106,7 +768,7 @@ class ApprovalsController extends Controller
             \Log::error('Error modifying multiple requisition items: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to modify requisition items'
+                'error' => 'Failed to modify requisition items: ' . $e->getMessage()
             ], 500);
         }
     }

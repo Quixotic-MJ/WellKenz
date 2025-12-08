@@ -238,6 +238,9 @@ Route::middleware(['auth', 'role:supervisor'])->prefix('supervisor')->name('supe
     });
 
     // Legacy Requisition Actions (deprecated)
+    Route::get('/requisitions/{requisition}/details', [SupervisorApprovalsController::class, 'getRequisitionDetails'])->name('requisitions.details');
+    Route::patch('/requisitions/{requisition}/approve', [SupervisorApprovalsController::class, 'approveRequisition'])->name('requisitions.approve');
+    Route::patch('/requisitions/{requisition}/reject', [SupervisorApprovalsController::class, 'rejectRequisition'])->name('requisitions.reject');
     Route::patch('/requisitions/{requisition}/modify', [SupervisorApprovalsController::class, 'modifyRequisitionQuantity'])->name('requisitions.modify');
     Route::patch('/requisitions/{requisition}/modify-multi', [SupervisorApprovalsController::class, 'modifyMultipleRequisitionItems'])->name('requisitions.modify-multi');
     

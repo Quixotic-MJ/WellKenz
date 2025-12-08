@@ -435,6 +435,17 @@
 {{-- Meta --}}
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
+{{-- Route URLs for JavaScript --}}
+<script>
+    window.AppRoutes = {
+        requisitionDetails: "{{ route('supervisor.requisitions.details', ['requisition' => ':id']) }}",
+        requisitionApprove: "{{ route('supervisor.requisitions.approve', ['requisition' => ':id']) }}",
+        requisitionReject: "{{ route('supervisor.requisitions.reject', ['requisition' => ':id']) }}",
+        requisitionModify: "{{ route('supervisor.requisitions.modify', ['requisition' => ':id']) }}",
+        requisitionModifyMulti: "{{ route('supervisor.requisitions.modify-multi', ['requisition' => ':id']) }}"
+    };
+</script>
+
 @endsection
 
 @push('styles')
@@ -455,15 +466,15 @@ window.RequisitionManager = {
     
     // API endpoints
     getDetailsUrl(requisitionId) {
-        return route('supervisor.requisitions.details', requisitionId);
+        return window.AppRoutes.requisitionDetails.replace(':id', requisitionId);
     },
     
     getApproveUrl(requisitionId) {
-        return route('supervisor.requisitions.approve', requisitionId);
+        return window.AppRoutes.requisitionApprove.replace(':id', requisitionId);
     },
     
     getRejectUrl(requisitionId) {
-        return route('supervisor.requisitions.reject', requisitionId);
+        return window.AppRoutes.requisitionReject.replace(':id', requisitionId);
     },
     
     // Initialize event listeners and DOM elements
@@ -483,11 +494,11 @@ window.RequisitionManager = {
 
     // API endpoints for modification
     getModifyUrl(requisitionId) {
-        return route('supervisor.requisitions.modify', requisitionId);
+        return window.AppRoutes.requisitionModify.replace(':id', requisitionId);
     },
 
     getModifyMultiUrl(requisitionId) {
-        return route('supervisor.requisitions.modify-multi', requisitionId);
+        return window.AppRoutes.requisitionModifyMulti.replace(':id', requisitionId);
     },
 
     // Open modification modal

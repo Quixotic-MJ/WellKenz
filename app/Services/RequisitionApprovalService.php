@@ -365,4 +365,190 @@ class RequisitionApprovalService
 
         return $results;
     }
+
+    /**
+     * Modify single requisition item quantity
+     */
+    public function modifyRequisitionQuantity(Requisition $requisition, array $requestData): array
+    {
+        return DB::transaction(function () use ($requisition, $requestData) {
+            // Check if requisition can be modified
+            if (!$requisition->canBeModified()) {
+                throw new \Exception('Requisition cannot be modified in its current status.');
+            }
+
+            // Validate request data
+            if (empty($requestData['item_id']) || !isset($requestData['new_quantity']) || !isset($requestData['reason'])) {
+                throw new \Exception('Missing required fields: item_id, new_quantity, and reason are required.');
+            }
+
+            // Find the requisition item
+            $requisitionItem = $requisition->requisitionItems()
+                ->where('item_id', $requestData['item_id'])
+                ->first();
+
+            if (!$requisitionItem) {
+                throw new \Exception('Requisition item not found.');
+            }
+
+            // Check stock availability
+            $currentStock = $requisitionItem->currentStockRecord?->current_quantity ?? 0;
+            $newQuantity = (float) $requestData['new_quantity'];
+
+            if ($newQuantity <= 0) {
+                throw new \Exception('New quantity must be greater than 0.');
+            }
+
+            if ($newQuantity > $currentStock) {
+                throw new \Exception("Requested quantity ({$newQuantity}) exceeds available stock ({$currentStock}).");
+            }
+
+            // Store original values for audit log
+            $originalQuantity = $requisitionItem->quantity_requested;
+
+            // Update the quantity
+            $requisitionItem->update([
+                'quantity_requested' => $newQuantity
+            ]);
+
+            // Create audit log
+            $this->createAuditLog($requisition, 'UPDATE', [
+                'quantity_requested' => $originalQuantity
+            ], [
+                'quantity_requested' => $newQuantity,
+                'item_id' => $requestData['item_id'],
+                'modification_reason' => $requestData['reason']
+            ]);
+
+            // Create notification for requester
+            $itemName = $requisitionItem->item?->name ?? 'Unknown Item';
+            $this->createNotification(
+                $requisition->requested_by,
+                'Requisition Modified',
+                "Quantity for {$itemName} in {$requisition->requisition_number} was changed from {$originalQuantity} to {$newQuantity}. Reason: {$requestData['reason']}",
+                'requisition_modified'
+            );
+
+            return [
+                'success' => true,
+                'message' => 'Requisition item quantity modified successfully',
+                'data' => [
+                    'original_quantity' => $originalQuantity,
+                    'new_quantity' => $newQuantity,
+                    'item_name' => $requisitionItem->item?->name ?? 'Unknown Item',
+                    'stock_available' => $currentStock
+                ]
+            ];
+        });
+    }
+
+    /**
+     * Modify multiple requisition items at once
+     */
+    public function modifyMultipleRequisitionItems(Requisition $requisition, array $requestData): array
+    {
+        return DB::transaction(function () use ($requisition, $requestData) {
+            // Check if requisition can be modified
+            if (!$requisition->canBeModified()) {
+                throw new \Exception('Requisition cannot be modified in its current status.');
+            }
+
+            // Validate request data
+            if (empty($requestData['items']) || !is_array($requestData['items']) || !isset($requestData['reason'])) {
+                throw new \Exception('Missing required fields: items array and reason are required.');
+            }
+
+            $modifications = [];
+            $errors = [];
+
+            foreach ($requestData['items'] as $itemData) {
+                try {
+                    // Validate item data
+                    if (empty($itemData['item_id']) || !isset($itemData['new_quantity'])) {
+                        $errors[] = "Item data missing required fields";
+                        continue;
+                    }
+
+                    // Find the requisition item
+                    $requisitionItem = $requisition->requisitionItems()
+                        ->where('item_id', $itemData['item_id'])
+                        ->first();
+
+                    if (!$requisitionItem) {
+                        $errors[] = "Item ID {$itemData['item_id']}: Not found in requisition";
+                        continue;
+                    }
+
+                    // Check stock availability
+                    $currentStock = $requisitionItem->currentStockRecord?->current_quantity ?? 0;
+                    $newQuantity = (float) $itemData['new_quantity'];
+
+                    if ($newQuantity <= 0) {
+                        $itemName = $requisitionItem->item?->name ?? 'Unknown Item';
+                        $errors[] = "{$itemName}: Quantity must be greater than 0";
+                        continue;
+                    }
+
+                    if ($newQuantity > $currentStock) {
+                        $itemName = $requisitionItem->item?->name ?? 'Unknown Item';
+                        $errors[] = "{$itemName}: Requested quantity ({$newQuantity}) exceeds available stock ({$currentStock})";
+                        continue;
+                    }
+
+                    // Store original values for audit log
+                    $originalQuantity = $requisitionItem->quantity_requested;
+
+                    // Update the quantity
+                    $requisitionItem->update([
+                        'quantity_requested' => $newQuantity
+                    ]);
+
+                    $itemName = $requisitionItem->item?->name ?? 'Unknown Item';
+                    $modifications[] = [
+                        'item_id' => $itemData['item_id'],
+                        'item_name' => $itemName,
+                        'original_quantity' => $originalQuantity,
+                        'new_quantity' => $newQuantity,
+                        'stock_available' => $currentStock
+                    ];
+
+                } catch (\Exception $e) {
+                    $errors[] = "Item ID {$itemData['item_id']}: " . $e->getMessage();
+                }
+            }
+
+            // Create audit log for bulk modification
+            if (!empty($modifications)) {
+                $this->createAuditLog($requisition, 'BULK_UPDATE', [
+                    'action' => 'Multiple items modified'
+                ], [
+                    'modified_items_count' => count($modifications),
+                    'modification_reason' => $requestData['reason'],
+                    'items' => $modifications
+                ]);
+            }
+
+            // Create notification for requester
+            if (!empty($modifications)) {
+                $modifiedItemsList = collect($modifications)->pluck('item_name')->implode(', ');
+                $this->createNotification(
+                    $requisition->requested_by,
+                    'Requisition Modified',
+                    "Multiple items in {$requisition->requisition_number} have been modified. Items: {$modifiedItemsList}. Reason: {$requestData['reason']}",
+                    'requisition_modified'
+                );
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Requisition items modified successfully',
+                'data' => [
+                    'modified_items' => $modifications,
+                    'errors' => $errors,
+                    'total_modified' => count($modifications),
+                    'total_errors' => count($errors)
+                ]
+            ];
+        });
+    }
 }
