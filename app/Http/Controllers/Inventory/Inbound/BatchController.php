@@ -246,6 +246,64 @@ class BatchController extends Controller
     }
 
     /**
+     * Stream batch labels for printing
+     */
+    public function streamLabels(Request $request)
+    {
+        try {
+            $request->validate([
+                'batch_ids' => 'required|array|min:1',
+                'batch_ids.*' => 'exists:batches,id'
+            ]);
+
+            $batchIds = $request->batch_ids;
+            $autoPrint = $request->boolean('auto_print', false);
+
+            // Fetch batches with required relationships
+            $batches = Batch::with(['item.unit', 'supplier', 'item.category'])
+                ->whereIn('id', $batchIds)
+                ->whereIn('status', ['active', 'quarantine'])
+                ->get();
+
+            if ($batches->isEmpty()) {
+                return redirect()->back()
+                    ->with('error', 'No valid batches found for printing.');
+            }
+
+            // Prepare QR code data for each batch
+            $batches->each(function ($batch) {
+                $batch->qr_code_data = json_encode([
+                    'batch_number' => $batch->batch_number,
+                    'item_name' => $batch->item->name,
+                    'item_code' => $batch->item->item_code,
+                    'quantity' => $batch->quantity,
+                    'unit' => $batch->item->unit->symbol ?? 'pcs',
+                    'manufacturing_date' => $batch->manufacturing_date?->format('Y-m-d'),
+                    'expiry_date' => $batch->expiry_date?->format('Y-m-d'),
+                    'supplier' => $batch->supplier->name ?? 'N/A',
+                    'location' => $batch->location ?? 'Main Storage',
+                    'generated_at' => now()->format('Y-m-d H:i:s')
+                ]);
+            });
+
+            // Log the printing activity
+            \Log::info("Batch labels streamed for printing", [
+                'batch_ids' => $batchIds,
+                'batch_count' => $batches->count(),
+                'user_id' => auth()->id(),
+                'user_name' => auth()->user()->name
+            ]);
+
+            return view('Inventory.inbound.labels', compact('batches', 'autoPrint'));
+
+        } catch (\Exception $e) {
+            \Log::error('Error streaming batch labels: ' . $e->getMessage());
+            return redirect()->back()
+                ->with('error', 'Failed to prepare batch labels for printing: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Process batch labels printing
      */
     public function printBatchLabelsProcess(Request $request)

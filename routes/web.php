@@ -433,6 +433,7 @@ Route::middleware(['auth', 'role:inventory'])->prefix('inventory')->name('invent
         // Batch Labels Printing Routes
         Route::get('/labels', [BatchController::class, 'batchLogs'])->name('labels');
         Route::get('/labels/batch/{batchId}', [BatchController::class, 'getBatchForPrint'])->name('labels.batch');
+        Route::get('/labels/stream', [BatchController::class, 'streamLabels'])->name('labels.stream');
         Route::post('/labels/print', [BatchController::class, 'printBatchLabelsProcess'])->name('labels.print');
 
         // RTV (Return to Vendor) Routes

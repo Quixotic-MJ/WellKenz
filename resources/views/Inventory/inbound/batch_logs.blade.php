@@ -433,6 +433,15 @@ class BatchLogsManager {
         setTimeout(() => toast.remove(), 4000);
     }
 
+    updateSelectedCount() {
+        const count = this.selectedBatches.size;
+        const counterEl = document.getElementById('selectedBatchCount');
+        if (counterEl) {
+            counterEl.textContent = `${count} batch${count !== 1 ? 'es' : ''} selected`;
+        }
+        console.log(`Selected batches: ${count}`);
+    }
+
     debounce(func, wait) {
         let timeout;
         return function(...args) {
