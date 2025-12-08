@@ -628,24 +628,17 @@ class OrderBuilder {
             if (item.quantity !== newQuantity) {
                 item.quantity = newQuantity;
                 
-                // Only update totals and re-render if immediate or on change event
-                if (immediate) {
-                    this.updateOrderTotals();
-                    this.renderOrderItems();
+                // Calculate the new line total
+                const lineTotal = item.quantity * item.unit_price;
+                
+                // Update the specific row total immediately
+                const rowTotalEl = document.getElementById('row-total-' + String(itemId));
+                if (rowTotalEl) {
+                    rowTotalEl.textContent = '₱' + lineTotal.toFixed(2);
+                    console.log(`Updated row total for item ${itemId}: ₱${lineTotal.toFixed(2)}`);
                 } else {
-                    // For real-time input, just update totals without re-rendering
-                    this.updateOrderTotals();
+                    console.error(`Row total element not found for item ID: ${itemId}`);
                 }
-            }
-        }
-    }
-    
-    updateItemPrice(itemId, price, immediate = false) {
-        const item = this.orderItems.find(item => String(item.item_id) === String(itemId));
-        if (item) {
-            const newPrice = Math.max(0, parseFloat(price) || 0);
-            if (item.unit_price !== newPrice) {
-                item.unit_price = newPrice;
                 
                 // Only update totals and re-render if immediate or on change event
                 if (immediate) {
@@ -656,6 +649,41 @@ class OrderBuilder {
                     this.updateOrderTotals();
                 }
             }
+        } else {
+            console.error(`Item not found for ID: ${itemId}`);
+        }
+    }
+    
+    updateItemPrice(itemId, price, immediate = false) {
+        const item = this.orderItems.find(item => String(item.item_id) === String(itemId));
+        if (item) {
+            const newPrice = Math.max(0, parseFloat(price) || 0);
+            if (item.unit_price !== newPrice) {
+                item.unit_price = newPrice;
+                
+                // Calculate the new line total
+                const lineTotal = item.quantity * item.unit_price;
+                
+                // Update the specific row total immediately
+                const rowTotalEl = document.getElementById('row-total-' + String(itemId));
+                if (rowTotalEl) {
+                    rowTotalEl.textContent = '₱' + lineTotal.toFixed(2);
+                    console.log(`Updated row total for item ${itemId}: ₱${lineTotal.toFixed(2)}`);
+                } else {
+                    console.error(`Row total element not found for item ID: ${itemId}`);
+                }
+                
+                // Only update totals and re-render if immediate or on change event
+                if (immediate) {
+                    this.updateOrderTotals();
+                    this.renderOrderItems();
+                } else {
+                    // For real-time input, just update totals without re-rendering
+                    this.updateOrderTotals();
+                }
+            }
+        } else {
+            console.error(`Item not found for ID: ${itemId}`);
         }
     }
     
@@ -728,7 +756,7 @@ class OrderBuilder {
                         </div>
                     </td>
                     <td class="px-3 py-3 text-right">
-                        <span class="font-bold text-chocolate">₱${total.toFixed(2)}</span>
+                        <span id="row-total-${item.item_id}" class="font-bold text-chocolate">₱${total.toFixed(2)}</span>
                     </td>
                     <td class="px-2 py-3 text-center">
                         <button type="button" 
@@ -772,15 +800,18 @@ class OrderBuilder {
             // Real-time update during typing (no re-render)
             input.addEventListener('input', (e) => {
                 const itemId = input.getAttribute('data-quantity-item-id');
+                console.log(`Quantity input event for item ${itemId}: ${input.value}`);
                 this.updateItemQuantity(itemId, input.value, false);
             });
             // Full update when user finishes editing
             input.addEventListener('change', (e) => {
                 const itemId = input.getAttribute('data-quantity-item-id');
+                console.log(`Quantity change event for item ${itemId}: ${input.value}`);
                 this.updateItemQuantity(itemId, input.value, true);
             });
             input.addEventListener('blur', (e) => {
                 const itemId = input.getAttribute('data-quantity-item-id');
+                console.log(`Quantity blur event for item ${itemId}: ${input.value}`);
                 this.updateItemQuantity(itemId, input.value, true);
             });
         });
@@ -791,15 +822,18 @@ class OrderBuilder {
             // Real-time update during typing (no re-render)
             input.addEventListener('input', (e) => {
                 const itemId = input.getAttribute('data-price-item-id');
+                console.log(`Price input event for item ${itemId}: ${input.value}`);
                 this.updateItemPrice(itemId, input.value, false);
             });
             // Full update when user finishes editing
             input.addEventListener('change', (e) => {
                 const itemId = input.getAttribute('data-price-item-id');
+                console.log(`Price change event for item ${itemId}: ${input.value}`);
                 this.updateItemPrice(itemId, input.value, true);
             });
             input.addEventListener('blur', (e) => {
                 const itemId = input.getAttribute('data-price-item-id');
+                console.log(`Price blur event for item ${itemId}: ${input.value}`);
                 this.updateItemPrice(itemId, input.value, true);
             });
         });
