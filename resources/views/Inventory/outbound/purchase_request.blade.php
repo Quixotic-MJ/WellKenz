@@ -229,21 +229,53 @@
 </div>
 
 <script>
+// Inject PHP data into JavaScript for robust access
+window.LOW_STOCK_ITEMS = @json($lowStockItems);
+
 // Replenishment-focused JavaScript
 const ReplenishmentManager = {
     draft: [],
+    els: {}, // Will be populated in init()
     
     init() {
+        // Re-query DOM elements to ensure they're available
+        this.queryElements();
         this.loadDraft();
         this.updateDraftUI();
     },
+    
+    queryElements() {
+        // Defensive querying of DOM elements
+        this.els = {
+            draftContainer: document.getElementById('draftContainer'),
+            draftCount: document.getElementById('draftCount'),
+            draftTotal: document.getElementById('draftTotal'),
+            totalItems: document.getElementById('totalItems'),
+            submitBtn: document.getElementById('submitBtn'),
+            clearBtn: document.getElementById('clearBtn'),
+            emptyDraftMessage: document.getElementById('emptyDraftMessage'),
+            priorityInput: document.getElementById('priorityInput'),
+            notesInput: document.getElementById('notesInput')
+        };
+        
+        // Verify critical elements exist
+        const missingElements = Object.entries(this.els)
+            .filter(([key, el]) => !el)
+            .map(([key]) => key);
+            
+        if (missingElements.length > 0) {
+            console.warn('Missing DOM elements:', missingElements);
+        }
+    },
 
     addToDraft(itemId) {
-        // Find item in low stock items
-        const itemData = @json($lowStockItems->toJson());
-        const item = itemData.find(i => i.id === itemId);
+        // Find item in low stock items using robust data injection
+        const item = window.LOW_STOCK_ITEMS?.find(i => i.id === itemId);
         
-        if (!item) return;
+        if (!item) {
+            console.error('Item not found in LOW_STOCK_ITEMS:', itemId);
+            return;
+        }
         
         // Check if already in draft
         const existing = this.draft.find(d => d.id === itemId);
@@ -252,50 +284,73 @@ const ReplenishmentManager = {
         } else {
             this.draft.push({
                 id: itemId,
-                name: item.name,
-                code: item.item_code,
-                price: item.cost_price,
-                qty: item.suggested_qty,
-                unit: item.unit,
-                suggested_qty: item.suggested_qty
+                name: item.name || 'Unknown Item',
+                code: item.item_code || 'N/A',
+                price: item.cost_price || 0,
+                qty: item.suggested_qty || 1,
+                unit: item.unit || 'pcs',
+                suggested_qty: item.suggested_qty || 1
             });
         }
         
         this.saveDraft();
         this.updateDraftUI();
         
-        // Show toast notification
-        showToast('Added to Draft', `${item.name} (${item.suggested_qty} ${item.unit}) added to draft request.`);
+        // Show toast notification with error handling
+        const toastTitle = 'Added to Draft';
+        const toastMessage = `${item.name || 'Item'} (${item.suggested_qty || 1} ${item.unit || 'pcs'}) added to draft request.`;
+        
+        if (typeof showToast === 'function') {
+            showToast(toastTitle, toastMessage);
+        } else {
+            console.log(toastTitle, toastMessage);
+        }
     },
 
     updateDraftUI() {
-        const container = document.getElementById('draftContainer');
-        const countEl = document.getElementById('draftCount');
-        const totalEl = document.getElementById('draftTotal');
-        const totalItemsEl = document.getElementById('totalItems');
-        const submitBtn = document.getElementById('submitBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const emptyMsg = document.getElementById('emptyDraftMessage');
+        // Defensive checks for critical elements
+        if (!this.els.draftContainer) {
+            console.error('draftContainer element not found, re-querying...');
+            this.queryElements();
+            if (!this.els.draftContainer) return; // Exit if still not found
+        }
         
+        const container = this.els.draftContainer;
+        const countEl = this.els.draftCount;
+        const totalEl = this.els.draftTotal;
+        const totalItemsEl = this.els.totalItems;
+        const submitBtn = this.els.submitBtn;
+        const clearBtn = this.els.clearBtn;
+        const emptyMsg = this.els.emptyDraftMessage;
+        
+        // Clear container safely
         container.innerHTML = '';
         
         if (this.draft.length === 0) {
-            emptyMsg.classList.remove('hidden');
-            submitBtn.disabled = true;
-            clearBtn.disabled = true;
-            submitBtn.className = 'py-2.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2';
-            clearBtn.className = 'py-2.5 bg-red-50 text-red-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2 border border-red-100';
-            countEl.textContent = '0';
-            totalEl.textContent = '₱ 0.00';
-            totalItemsEl.textContent = '0 items selected';
+            if (emptyMsg) emptyMsg.classList.remove('hidden');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.className = 'py-2.5 bg-gray-100 text-gray-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2';
+            }
+            if (clearBtn) {
+                clearBtn.disabled = true;
+                clearBtn.className = 'py-2.5 bg-red-50 text-red-400 font-bold rounded-xl cursor-not-allowed transition-all shadow-sm flex items-center justify-center gap-2 border border-red-100';
+            }
+            if (countEl) countEl.textContent = '0';
+            if (totalEl) totalEl.textContent = '₱ 0.00';
+            if (totalItemsEl) totalItemsEl.textContent = '0 items selected';
             return;
         }
         
-        emptyMsg.classList.add('hidden');
-        submitBtn.disabled = false;
-        clearBtn.disabled = false;
-        submitBtn.className = 'py-2.5 bg-chocolate text-white font-bold rounded-xl hover:bg-chocolate-dark transition-all shadow-sm flex items-center justify-center gap-2';
-        clearBtn.className = 'py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all shadow-sm flex items-center justify-center gap-2 border border-red-200 hover:border-red-300';
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.className = 'py-2.5 bg-chocolate text-white font-bold rounded-xl hover:bg-chocolate-dark transition-all shadow-sm flex items-center justify-center gap-2';
+        }
+        if (clearBtn) {
+            clearBtn.disabled = false;
+            clearBtn.className = 'py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all shadow-sm flex items-center justify-center gap-2 border border-red-200 hover:border-red-300';
+        }
         
         let total = 0;
         let totalItems = 0;
@@ -336,9 +391,9 @@ const ReplenishmentManager = {
             container.appendChild(row);
         });
         
-        countEl.textContent = this.draft.length;
-        totalEl.textContent = '₱ ' + total.toFixed(2);
-        totalItemsEl.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'items'} selected`;
+        if (countEl) countEl.textContent = this.draft.length;
+        if (totalEl) totalEl.textContent = '₱ ' + total.toFixed(2);
+        if (totalItemsEl) totalItemsEl.textContent = `${totalItems} ${totalItems === 1 ? 'item' : 'items'} selected`;
     },
 
     changeQty(idx, delta) {
@@ -379,11 +434,25 @@ const ReplenishmentManager = {
     },
 
     submitDraft() {
-        const priority = document.getElementById('priorityInput').value;
-        const notes = document.getElementById('notesInput').value.trim();
+        // Defensive checks for form elements
+        if (!this.els.priorityInput || !this.els.notesInput) {
+            console.error('Form elements not found, re-querying...');
+            this.queryElements();
+            if (!this.els.priorityInput || !this.els.notesInput) {
+                console.error('Cannot submit draft: form elements not available');
+                return;
+            }
+        }
+        
+        const priority = this.els.priorityInput?.value || 'normal';
+        const notes = this.els.notesInput?.value?.trim() || '';
         
         if (this.draft.length === 0) {
-            showToast('No Items', 'Please add items to your draft request.', 'error');
+            if (typeof showToast === 'function') {
+                showToast('No Items', 'Please add items to your draft request.', 'error');
+            } else {
+                alert('Please add items to your draft request.');
+            }
             return;
         }
         
@@ -399,9 +468,11 @@ const ReplenishmentManager = {
             }))
         };
         
-        const submitBtn = document.getElementById('submitBtn');
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-        submitBtn.disabled = true;
+        const submitBtn = this.els.submitBtn;
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            submitBtn.disabled = true;
+        }
         
         fetch('{{ route("inventory.purchase-requests.store") }}', {
             method: 'POST',
@@ -418,20 +489,37 @@ const ReplenishmentManager = {
                 this.draft = [];
                 this.saveDraft();
                 this.updateDraftUI();
-                document.getElementById('notesInput').value = '';
-                showToast('Success', 'Purchase request submitted successfully!');
+                if (this.els.notesInput) this.els.notesInput.value = '';
+                
+                if (typeof showToast === 'function') {
+                    showToast('Success', 'Purchase request submitted successfully!');
+                } else {
+                    alert('Purchase request submitted successfully!');
+                }
+                
                 setTimeout(() => location.reload(), 1500);
             } else {
-                showToast('Error', result.message || 'Failed to submit request.', 'error');
+                const errorMsg = result.message || 'Failed to submit request.';
+                if (typeof showToast === 'function') {
+                    showToast('Error', errorMsg, 'error');
+                } else {
+                    alert('Error: ' + errorMsg);
+                }
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showToast('Error', 'System error occurred.', 'error');
+            console.error('Error submitting draft:', error);
+            if (typeof showToast === 'function') {
+                showToast('Error', 'System error occurred.', 'error');
+            } else {
+                alert('System error occurred.');
+            }
         })
         .finally(() => {
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
-            submitBtn.disabled = false;
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit';
+                submitBtn.disabled = false;
+            }
         });
     },
 
@@ -502,10 +590,26 @@ function showToast(title, message, type = 'success') {
 }
 
 // Initialize when DOM is ready
+function initializeReplenishmentManager() {
+    // Ensure DOM elements are available before initializing
+    if (document.getElementById('draftContainer')) {
+        ReplenishmentManager.init();
+    } else {
+        // If elements aren't ready, wait a bit and try again
+        setTimeout(() => {
+            if (document.getElementById('draftContainer')) {
+                ReplenishmentManager.init();
+            } else {
+                console.error('Critical DOM elements not found after waiting');
+            }
+        }, 100);
+    }
+}
+
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => ReplenishmentManager.init());
+    document.addEventListener('DOMContentLoaded', initializeReplenishmentManager);
 } else {
-    ReplenishmentManager.init();
+    initializeReplenishmentManager();
 }
 </script>
 

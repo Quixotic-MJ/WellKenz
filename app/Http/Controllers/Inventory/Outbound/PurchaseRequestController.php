@@ -37,15 +37,25 @@ class PurchaseRequestController extends Controller
     {
         $user = Auth::user();
         
-        // Get only items that need replenishment (current_stock <= reorder_point)
+        // Get items that need replenishment:
+        // 1. Items with currentStockRecord WHERE current_quantity <= reorder_point
+        // 2. Items WITHOUT currentStockRecord WHERE reorder_point > 0
         $lowStockItems = Item::with([
             'category',
             'unit', 
             'currentStockRecord'
         ])
         ->where('is_active', true)
-        ->whereHas('currentStockRecord', function($query) {
-            $query->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point');
+        ->where(function($query) {
+            // Case 1: Items that have currentStockRecord and are below reorder point
+            $query->whereHas('currentStockRecord', function($stockQuery) {
+                $stockQuery->whereColumn('current_stock.current_quantity', '<=', 'items.reorder_point');
+            })
+            // Case 2: Items without currentStockRecord but have reorder_point > 0
+            ->orWhere(function($noStockQuery) {
+                $noStockQuery->whereDoesntHave('currentStockRecord')
+                           ->where('reorder_point', '>', 0);
+            });
         })
         ->orderBy('name')
         ->get()
