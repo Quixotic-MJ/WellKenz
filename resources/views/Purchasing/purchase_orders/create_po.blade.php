@@ -1,4 +1,4 @@
-@extends('Purchasing.layout.app')
+        @extends('Purchasing.layout.app')
 
 @section('title', 'Order Builder')
 
@@ -371,17 +371,21 @@ class OrderBuilder {
                 this.orderItems[existingItemIndex].quantity += item.remaining_quantity;
                 this.orderItems[existingItemIndex].auto_added = true;
             } else {
-                // Add new auto-added item
+                // Add new auto-added item - ensure unit_price is properly set
+                const unitPrice = parseFloat(item.unit_price) || 0;
                 this.orderItems.push({
                     item_id: item.item_id,
                     item_name: item.item_name,
                     item_code: item.item_code,
                     quantity: item.remaining_quantity,
-                    unit_price: item.unit_price || 0,
+                    unit_price: unitPrice,
                     source: 'requests',
                     auto_added: true,
                     source_prs: item.source_prs
                 });
+                
+                // Debug log to check if price is being set correctly
+                console.log(`Auto-added item ${item.item_name} with price: ₱${unitPrice.toFixed(2)}`);
             }
             addedCount++;
         });
@@ -511,15 +515,19 @@ class OrderBuilder {
             // Update existing item
             this.orderItems[existingItemIndex].quantity += quantity;
         } else {
-            // Add new item
+            // Add new item - ensure unit_price is properly handled
+            const price = parseFloat(unitPrice) || 0;
             this.orderItems.push({
                 item_id: itemId,
                 item_name: itemName,
                 item_code: itemCode,
                 quantity: quantity,
-                unit_price: unitPrice || 0,
+                unit_price: price,
                 source: source
             });
+            
+            // Debug log to check if price is being set correctly
+            console.log(`Added item ${itemName} with price: ₱${price.toFixed(2)}`);
         }
         
         this.renderOrderItems();
@@ -594,6 +602,7 @@ class OrderBuilder {
                                value="${item.quantity}" 
                                min="0.01" 
                                step="0.01"
+                               oninput="orderBuilder.updateItemQuantity('${item.item_id}', this.value)"
                                onchange="orderBuilder.updateItemQuantity('${item.item_id}', this.value)"
                                class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
                     </td>
@@ -604,6 +613,7 @@ class OrderBuilder {
                                    value="${item.unit_price}" 
                                    min="0" 
                                    step="0.01"
+                                   oninput="orderBuilder.updateItemPrice('${item.item_id}', this.value)"
                                    onchange="orderBuilder.updateItemPrice('${item.item_id}', this.value)"
                                    class="w-full pl-6 pr-2 py-1 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
                         </div>
@@ -807,6 +817,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Ensure proper flex behavior for scrollable areas */
 .flex-1.overflow-y-auto {
+    min-height: 0;
+}
+
+/* Fix layout overflow for all flex containers */
+.flex {
+    min-height: 0;
+}
+
+.flex-1 {
+    min-height: 0;
+}
+
+/* Ensure proper scrolling in nested flex containers */
+.flex.flex-col {
+    min-height: 0;
+}
+
+.flex-1.flex.flex-col {
     min-height: 0;
 }
 </style>

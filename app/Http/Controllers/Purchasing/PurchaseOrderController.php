@@ -174,7 +174,7 @@ class PurchaseOrderController extends Controller
                     ->whereIn('item_id', $supplierItemIds)
                     ->get()
                     ->groupBy('item_id')
-                    ->map(function ($items, $itemId) use ($orderedQuantities) {
+                    ->map(function ($items, $itemId) use ($orderedQuantities, $priceMap) {
                         $firstItem = $items->first();
                         $totalRequested = $items->sum('quantity_requested');
                         
