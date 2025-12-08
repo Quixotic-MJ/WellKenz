@@ -44,7 +44,7 @@
                 <p class="text-xs text-gray-500 mt-0.5">Choose a supplier to see available items.</p>
             </div>
             
-            <div class="p-4 flex-1 flex flex-col">
+            <div class="p-4 flex-1 flex flex-col min-h-0">
                 {{-- Searchable Dropdown --}}
                 <div class="relative mb-3">
                     <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
@@ -110,7 +110,7 @@
                     <p class="text-xs text-gray-500 mt-0.5">Browse approved requests or full catalog.</p>
                 </div>
                 
-                <div class="flex-1 flex flex-col">
+                <div class="flex-1 flex flex-col min-h-0">
                     {{-- Tab Navigation --}}
                     <div class="border-b border-border-soft">
                         <nav class="flex">
@@ -180,7 +180,7 @@
                     <p class="text-xs text-gray-500 mt-0.5">Review and finalize your purchase order.</p>
                 </div>
                 
-                <div class="flex-1 flex flex-col">
+                <div class="flex-1 flex flex-col min-h-0">
                     {{-- Order Details Form --}}
                     <div class="p-4 lg:p-6 border-b border-border-soft space-y-3 lg:space-y-4">
                         <div>
@@ -212,7 +212,7 @@
                     </div>
 
                     {{-- Order Items Table --}}
-                    <div class="flex-1 flex flex-col">
+                    <div class="flex-1 flex flex-col min-h-0">
                         <div class="px-4 lg:px-6 py-3 bg-gray-50 border-b border-border-soft">
                             <div class="flex justify-between items-center">
                                 <h4 class="font-bold text-gray-800 text-sm">Selected Items</h4>
@@ -377,7 +377,7 @@ class OrderBuilder {
                     item_name: item.item_name,
                     item_code: item.item_code,
                     quantity: item.remaining_quantity,
-                    unit_price: 0, // Will be updated when supplier data is fully loaded
+                    unit_price: item.unit_price || 0,
                     source: 'requests',
                     auto_added: true,
                     source_prs: item.source_prs
@@ -438,7 +438,7 @@ class OrderBuilder {
                         </div>
                         
                         <button type="button" 
-                                onclick="orderBuilder.addItem('${item.item_id}', '${item.item_name}', '${item.item_code}', ${item.remaining_quantity}, 'requests')"
+                                onclick="orderBuilder.addItem('${item.item_id}', '${item.item_name}', '${item.item_code}', ${item.remaining_quantity}, 'requests', ${item.unit_price})"
                                 class="w-full px-3 py-2 bg-chocolate text-white text-xs font-bold rounded hover:bg-chocolate-dark transition-all">
                             <i class="fas fa-plus mr-1"></i>Add All (${item.remaining_quantity} ${item.unit_symbol})
                         </button>
@@ -550,17 +550,24 @@ class OrderBuilder {
     
     renderOrderItems() {
         const tbody = document.getElementById('order-items-table');
-        const noItemsRow = document.getElementById('no-items-row');
         
         if (this.orderItems.length === 0) {
-            noItemsRow.style.display = '';
+            // Set tbody innerHTML to the empty state HTML string directly
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-2 lg:px-4 py-6 lg:py-8 text-center text-gray-400">
+                        <i class="fas fa-shopping-cart text-xl lg:text-2xl mb-2"></i>
+                        <p class="text-sm">No items selected</p>
+                        <p class="text-xs mt-1">Add items from the middle panel</p>
+                    </td>
+                </tr>
+            `;
             document.getElementById('order-items-count').textContent = '0 items';
             document.getElementById('order-total').textContent = '₱0.00';
             return;
         }
         
-        noItemsRow.style.display = 'none';
-        
+        // Set tbody innerHTML to the item rows HTML string
         tbody.innerHTML = this.orderItems.map(item => {
             const total = item.quantity * item.unit_price;
             const isAutoAdded = item.auto_added === true;

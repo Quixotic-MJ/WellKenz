@@ -163,6 +163,9 @@ class PurchaseOrderController extends Controller
                 // Get PR items for items that this supplier sells
                 $supplierItemIds = $catalogItems->pluck('item_id')->toArray();
                 
+                // Create a price lookup map for the supplier
+                $priceMap = SupplierItem::where('supplier_id', $supplierId)->pluck('unit_price', 'item_id');
+                
                 $prItems = PurchaseRequestItem::with([
                         'item.unit',
                         'purchaseRequest:id,pr_number,department,priority,request_date'
@@ -216,6 +219,7 @@ class PurchaseOrderController extends Controller
                             'total_requested_quantity' => (float) $totalRequested,
                             'total_ordered_quantity' => (float) $totalOrdered,
                             'remaining_quantity' => (float) $remainingQuantity,
+                            'unit_price' => (float) ($priceMap[$itemId] ?? 0),
                             'source_prs' => $sourcePRs,
                             'source' => 'requests'
                         ];
