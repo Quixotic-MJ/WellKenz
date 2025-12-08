@@ -385,16 +385,39 @@ class OrderBuilder {
         }
         
         let addedCount = 0;
+        let updatedCount = 0;
         
         // Auto-add each pending item to the cart
         pendingItems.forEach(item => {
-            // Add item with its remaining quantity and mark as auto-added
+            // Check if item already exists in order (including auto-added items)
             const existingItemIndex = this.orderItems.findIndex(orderItem => orderItem.item_id === item.item_id);
             
             if (existingItemIndex >= 0) {
-                // Update existing item
-                this.orderItems[existingItemIndex].quantity += item.remaining_quantity;
-                this.orderItems[existingItemIndex].auto_added = true;
+                // Check if the existing item is auto-added or if we need to merge quantities
+                const existingItem = this.orderItems[existingItemIndex];
+                
+                // If existing item is not auto-added, merge the quantities
+                if (!existingItem.auto_added) {
+                    existingItem.quantity += item.remaining_quantity;
+                    existingItem.auto_added = true; // Mark as auto-added since it now includes pending items
+                    // Merge source_prs if available
+                    if (item.source_prs && Array.isArray(item.source_prs)) {
+                        if (!existingItem.source_prs) {
+                            existingItem.source_prs = [];
+                        }
+                        // Add source_prs that don't already exist
+                        item.source_prs.forEach(pr => {
+                            const prExists = existingItem.source_prs.some(existingPr => existingPr.pr_id === pr.pr_id);
+                            if (!prExists) {
+                                existingItem.source_prs.push(pr);
+                            }
+                        });
+                    }
+                    updatedCount++;
+                } else {
+                    // Item is already auto-added, skip to avoid duplicate
+                    console.log(`Skipping duplicate auto-add for item: ${item.item_name}`);
+                }
             } else {
                 // Add new auto-added item - ensure unit_price is properly set
                 const unitPrice = parseFloat(item.unit_price) || 0;
@@ -411,12 +434,18 @@ class OrderBuilder {
                 
                 // Debug log to check if price is being set correctly
                 console.log(`Auto-added item ${item.item_name} with price: ₱${unitPrice.toFixed(2)}`);
+                addedCount++;
             }
-            addedCount++;
         });
         
-        // Show toast notification
-        this.showToast(`${addedCount} pending items auto-added from approved requests.`, 'success');
+        // Show toast notification with proper counts
+        const messages = [];
+        if (addedCount > 0) messages.push(`${addedCount} new items added`);
+        if (updatedCount > 0) messages.push(`${updatedCount} existing items updated`);
+        
+        if (messages.length > 0) {
+            this.showToast(`${messages.join(', ')} from approved requests.`, 'success');
+        }
         
         // Re-render the order items with highlighting
         this.renderOrderItems();
@@ -469,8 +498,9 @@ class OrderBuilder {
                         
                         <button type="button" 
                                 onclick="orderBuilder.addItem('${item.item_id}', '${item.item_name}', '${item.item_code}', ${item.remaining_quantity}, 'requests', ${item.unit_price})"
-                                class="w-full px-3 py-2 bg-chocolate text-white text-xs font-bold rounded hover:bg-chocolate-dark transition-all">
+                                class="w-full px-3 py-2 bg-chocolate text-white text-xs font-bold rounded hover:bg-chocolate-dark transition-all ${this.orderItems.find(orderItem => String(orderItem.item_id) === String(item.item_id)) ? 'opacity-75' : ''}">
                             <i class="fas fa-plus mr-1"></i>Add All (${item.remaining_quantity} ${item.unit_symbol})
+                            ${this.orderItems.find(orderItem => String(orderItem.item_id) === String(item.item_id)) ? '<br><small class="text-xs opacity-90">Update existing</small>' : ''}
                         </button>
                     </div>
                 `).join('')}
@@ -535,11 +565,16 @@ class OrderBuilder {
     
     addItem(itemId, itemName, itemCode, quantity, source, unitPrice = null) {
         // Check if item already exists in order
-        const existingItemIndex = this.orderItems.findIndex(item => item.item_id === itemId);
+        const existingItemIndex = this.orderItems.findIndex(item => String(item.item_id) === String(itemId));
         
         if (existingItemIndex >= 0) {
-            // Update existing item
-            this.orderItems[existingItemIndex].quantity += quantity;
+            // Update existing item - add to existing quantity
+            const existingItem = this.orderItems[existingItemIndex];
+            const oldQuantity = existingItem.quantity;
+            existingItem.quantity += quantity;
+            
+            // Show notification about the merge
+            this.showToast(`Updated ${itemName}: ${oldQuantity} + ${quantity} = ${existingItem.quantity}`, 'info');
         } else {
             // Add new item - ensure unit_price is properly handled
             const price = parseFloat(unitPrice) || 0;
@@ -549,11 +584,15 @@ class OrderBuilder {
                 item_code: itemCode,
                 quantity: quantity,
                 unit_price: price,
-                source: source
+                source: source,
+                auto_added: false // Mark as manually added
             });
             
             // Debug log to check if price is being set correctly
             console.log(`Added item ${itemName} with price: ₱${price.toFixed(2)}`);
+            
+            // Show success notification for new items
+            this.showToast(`Added ${itemName} (${quantity})`, 'success');
         }
         
         this.renderOrderItems();
@@ -561,25 +600,71 @@ class OrderBuilder {
     }
     
     removeItem(itemId) {
-        this.orderItems = this.orderItems.filter(item => item.item_id !== itemId);
+        console.log('removeItem called with itemId:', itemId);
+        console.log('Current orderItems:', this.orderItems);
+        
+        // Ensure itemId is treated as string for consistent comparison
+        const targetItemId = String(itemId);
+        const initialCount = this.orderItems.length;
+        
+        // Filter out the item with matching ID (convert to string for consistent comparison)
+        this.orderItems = this.orderItems.filter(item => String(item.item_id) !== targetItemId);
+        
+        const finalCount = this.orderItems.length;
+        console.log(`Removed item. Items before: ${initialCount}, after: ${finalCount}`);
+        
+        // Update UI
         this.renderOrderItems();
         this.updateCreateButtonState();
+        
+        // Show confirmation toast
+        this.showToast('Item removed from order', 'info');
     }
     
-    updateItemQuantity(itemId, quantity) {
-        const item = this.orderItems.find(item => item.item_id === itemId);
+    updateItemQuantity(itemId, quantity, immediate = false) {
+        const item = this.orderItems.find(item => String(item.item_id) === String(itemId));
         if (item) {
-            item.quantity = Math.max(0.01, parseFloat(quantity) || 0);
-            this.renderOrderItems();
+            const newQuantity = Math.max(0.01, parseFloat(quantity) || 0);
+            if (item.quantity !== newQuantity) {
+                item.quantity = newQuantity;
+                
+                // Only update totals and re-render if immediate or on change event
+                if (immediate) {
+                    this.updateOrderTotals();
+                    this.renderOrderItems();
+                } else {
+                    // For real-time input, just update totals without re-rendering
+                    this.updateOrderTotals();
+                }
+            }
         }
     }
     
-    updateItemPrice(itemId, price) {
-        const item = this.orderItems.find(item => item.item_id === itemId);
+    updateItemPrice(itemId, price, immediate = false) {
+        const item = this.orderItems.find(item => String(item.item_id) === String(itemId));
         if (item) {
-            item.unit_price = Math.max(0, parseFloat(price) || 0);
-            this.renderOrderItems();
+            const newPrice = Math.max(0, parseFloat(price) || 0);
+            if (item.unit_price !== newPrice) {
+                item.unit_price = newPrice;
+                
+                // Only update totals and re-render if immediate or on change event
+                if (immediate) {
+                    this.updateOrderTotals();
+                    this.renderOrderItems();
+                } else {
+                    // For real-time input, just update totals without re-rendering
+                    this.updateOrderTotals();
+                }
+            }
         }
+    }
+    
+    updateOrderTotals() {
+        const totalItems = this.orderItems.length;
+        const totalAmount = this.orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+        
+        document.getElementById('order-items-count').textContent = `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+        document.getElementById('order-total').textContent = `₱${totalAmount.toFixed(2)}`;
     }
     
     renderOrderItems() {
@@ -596,8 +681,8 @@ class OrderBuilder {
                     </td>
                 </tr>
             `;
-            document.getElementById('order-items-count').textContent = '0 items';
-            document.getElementById('order-total').textContent = '₱0.00';
+            // Update totals for empty state
+            this.updateOrderTotals();
             return;
         }
         
@@ -625,23 +710,21 @@ class OrderBuilder {
                     </td>
                     <td class="px-3 py-3 text-center">
                         <input type="number" 
+                               data-quantity-item-id="${item.item_id}"
                                value="${item.quantity}" 
                                min="0.01" 
                                step="0.01"
-                               oninput="orderBuilder.updateItemQuantity('${item.item_id}', this.value)"
-                               onchange="orderBuilder.updateItemQuantity('${item.item_id}', this.value)"
-                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
+                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate quantity-input">
                     </td>
                     <td class="px-3 py-3 text-center">
                         <div class="relative">
                             <span class="absolute left-2 top-2 text-gray-500 text-xs">₱</span>
                             <input type="number" 
+                                   data-price-item-id="${item.item_id}"
                                    value="${item.unit_price}" 
                                    min="0" 
                                    step="0.01"
-                                   oninput="orderBuilder.updateItemPrice('${item.item_id}', this.value)"
-                                   onchange="orderBuilder.updateItemPrice('${item.item_id}', this.value)"
-                                   class="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
+                                   class="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate price-input">
                         </div>
                     </td>
                     <td class="px-3 py-3 text-right">
@@ -649,8 +732,8 @@ class OrderBuilder {
                     </td>
                     <td class="px-2 py-3 text-center">
                         <button type="button" 
-                                onclick="orderBuilder.removeItem('${item.item_id}')"
-                                class="text-red-500 hover:text-red-700 p-1">
+                                data-remove-item-id="${item.item_id}"
+                                class="text-red-500 hover:text-red-700 p-1 remove-item-btn">
                             <i class="fas fa-times text-xs"></i>
                         </button>
                     </td>
@@ -658,12 +741,68 @@ class OrderBuilder {
             `;
         }).join('');
         
-        // Update summary
-        const totalItems = this.orderItems.length;
-        const totalAmount = this.orderItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+        // Update summary using the dedicated method
+        this.updateOrderTotals();
         
-        document.getElementById('order-items-count').textContent = `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
-        document.getElementById('order-total').textContent = `₱${totalAmount.toFixed(2)}`;
+        // Add event listeners for remove buttons
+        this.addRemoveButtonListeners();
+    }
+    
+    addRemoveButtonListeners() {
+        // Remove existing listeners to avoid duplicates
+        const existingButtons = document.querySelectorAll('.remove-item-btn');
+        existingButtons.forEach(button => {
+            button.replaceWith(button.cloneNode(true));
+        });
+        
+        // Add new event listeners for remove buttons
+        const removeButtons = document.querySelectorAll('.remove-item-btn');
+        removeButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const itemId = button.getAttribute('data-remove-item-id');
+                console.log('Remove button clicked for item ID:', itemId);
+                this.removeItem(itemId);
+            });
+        });
+        
+        // Add event listeners for quantity inputs
+        const quantityInputs = document.querySelectorAll('.quantity-input');
+        quantityInputs.forEach(input => {
+            // Real-time update during typing (no re-render)
+            input.addEventListener('input', (e) => {
+                const itemId = input.getAttribute('data-quantity-item-id');
+                this.updateItemQuantity(itemId, input.value, false);
+            });
+            // Full update when user finishes editing
+            input.addEventListener('change', (e) => {
+                const itemId = input.getAttribute('data-quantity-item-id');
+                this.updateItemQuantity(itemId, input.value, true);
+            });
+            input.addEventListener('blur', (e) => {
+                const itemId = input.getAttribute('data-quantity-item-id');
+                this.updateItemQuantity(itemId, input.value, true);
+            });
+        });
+        
+        // Add event listeners for price inputs
+        const priceInputs = document.querySelectorAll('.price-input');
+        priceInputs.forEach(input => {
+            // Real-time update during typing (no re-render)
+            input.addEventListener('input', (e) => {
+                const itemId = input.getAttribute('data-price-item-id');
+                this.updateItemPrice(itemId, input.value, false);
+            });
+            // Full update when user finishes editing
+            input.addEventListener('change', (e) => {
+                const itemId = input.getAttribute('data-price-item-id');
+                this.updateItemPrice(itemId, input.value, true);
+            });
+            input.addEventListener('blur', (e) => {
+                const itemId = input.getAttribute('data-price-item-id');
+                this.updateItemPrice(itemId, input.value, true);
+            });
+        });
     }
     
     clearOrder() {
@@ -735,6 +874,25 @@ class OrderBuilder {
         formData.append('expected_delivery_date', document.getElementById('expected_delivery_date').value);
         formData.append('payment_terms', document.getElementById('payment_terms').value);
         formData.append('notes', document.getElementById('notes').value);
+        
+        // Collect unique pr_ids from orderItems source_prs arrays
+        const linkedPRIds = new Set();
+        this.orderItems.forEach(item => {
+            if (item.source_prs && Array.isArray(item.source_prs)) {
+                item.source_prs.forEach(pr => {
+                    if (pr.pr_id) {
+                        linkedPRIds.add(pr.pr_id);
+                    }
+                });
+            }
+        });
+        
+        // Add linked_pr_ids to form data
+        linkedPRIds.forEach(prId => {
+            formData.append('linked_pr_ids[]', prId);
+        });
+        
+        console.log('Collected PR IDs for linking:', Array.from(linkedPRIds));
         
         // Add items
         this.orderItems.forEach((item, index) => {

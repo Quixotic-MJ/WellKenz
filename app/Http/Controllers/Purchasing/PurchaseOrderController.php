@@ -286,6 +286,8 @@ class PurchaseOrderController extends Controller
                 'items.*.item_id' => 'required|exists:items,id',
                 'items.*.quantity' => 'required|numeric|min:0.001',
                 'items.*.unit_price' => 'required|numeric|min:0.01',
+                'linked_pr_ids' => 'nullable|array',
+                'linked_pr_ids.*' => 'exists:purchase_requests,id',
             ]);
             
             Log::info('Order Builder PO Validation Passed', [
@@ -402,6 +404,34 @@ class PurchaseOrderController extends Controller
                     'purchase_order_id' => $purchaseOrder->id,
                     'created_at' => Carbon::now(),
                 ]));
+            }
+
+            // Link Purchase Requests to this Purchase Order
+            $linkedPRIds = $request->input('linked_pr_ids', []);
+            if (!empty($linkedPRIds)) {
+                Log::info('Creating PR-PO links for Order Builder PO', [
+                    'po_id' => $purchaseOrder->id,
+                    'linked_pr_ids' => $linkedPRIds
+                ]);
+
+                foreach ($linkedPRIds as $prId) {
+                    PurchaseRequestPurchaseOrderLink::updateOrCreate(
+                        [
+                            'purchase_request_id' => $prId,
+                            'purchase_order_id' => $purchaseOrder->id,
+                        ],
+                        [
+                            'consolidated_by' => Auth::id(),
+                            'consolidated_at' => Carbon::now(),
+                            'created_at' => Carbon::now(),
+                        ]
+                    );
+                }
+
+                Log::info('PR-PO links created successfully for Order Builder PO', [
+                    'po_id' => $purchaseOrder->id,
+                    'links_created' => count($linkedPRIds)
+                ]);
             }
 
             DB::commit();
