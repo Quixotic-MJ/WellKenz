@@ -175,7 +175,7 @@
                 
                 @if($incomingOrders->count() > 0)
                 <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
-                    <a href="{{ route('purchasing.purchase-orders.index') }}" class="text-sm font-medium text-chocolate hover:text-chocolate-dark">
+                    <a href="{{ route('inventory.purchase-orders.index') }}" class="text-sm font-medium text-chocolate hover:text-chocolate-dark">
                         View all purchase orders →
                     </a>
                 </div>

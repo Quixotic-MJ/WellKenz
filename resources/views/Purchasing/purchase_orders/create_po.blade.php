@@ -1,17 +1,83 @@
-        @extends('Purchasing.layout.app')
+@extends('Purchasing.layout.app')
 
 @section('title', 'Order Builder')
 
 @section('content')
-<div class="w-full max-w-[1600px] mx-auto p-4 space-y-4 font-sans text-gray-600">
+<div class="w-full px-6 space-y-6 font-sans text-gray-600 h-[calc(100vh-100px)]">
     
-    {{-- HEADER --}}
+    {{-- HEADER WITH SUPPLIER DROPDOWN --}}
     <div class="flex items-center justify-between">
-        <div>
+        <div class="flex-1">
             <h1 class="font-display text-3xl font-bold text-chocolate mb-1">Order Builder</h1>
             <p class="text-sm text-gray-500">Build your purchase order by selecting a supplier and adding items.</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-4">
+            {{-- SUPPLIER DROPDOWN --}}
+            <div class="relative">
+                <button type="button" 
+                        id="supplier-dropdown-btn"
+                        onclick="orderBuilder.toggleSupplierDropdown()"
+                        class="inline-flex items-center px-4 py-2 bg-white border border-border-soft text-gray-700 text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-chocolate transition-all shadow-sm">
+                    <i class="fas fa-building mr-2 opacity-70"></i>
+                    <span id="selected-supplier-text">Select Supplier</span>
+                    <i class="fas fa-chevron-down ml-2 text-xs"></i>
+                </button>
+                
+                <div id="supplier-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white border border-border-soft rounded-xl shadow-lg z-50 max-h-96 overflow-hidden">
+                    <div class="p-4 border-b border-border-soft bg-cream-bg">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                            <input type="text" 
+                                   id="supplier-search" 
+                                   placeholder="Search suppliers..." 
+                                   class="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20 focus:border-caramel">
+                        </div>
+                    </div>
+                    
+                    <div id="supplier-list" class="max-h-80 overflow-y-auto custom-scrollbar">
+                        @foreach($suppliers ?? [] as $supplier)
+                            <div class="supplier-item p-3 cursor-pointer hover:bg-chocolate/5 transition-all border-b border-gray-100 last:border-b-0"
+                                 data-supplier-id="{{ $supplier->id }}"
+                                 data-supplier-name="{{ strtolower($supplier->name) }}"
+                                 data-pending-count="{{ $supplier->pending_items_count ?? 0 }}"
+                                 onclick="orderBuilder.selectSupplier({{ $supplier->id }})">
+                                <div class="flex items-start justify-between">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-bold text-chocolate text-sm">{{ $supplier->name }}</h4>
+                                            @if(($supplier->pending_items_count ?? 0) > 0)
+                                                <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800">
+                                                    <i class="fas fa-clock mr-1"></i>{{ $supplier->pending_items_count }}
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600">
+                                                    <i class="fas fa-check mr-1"></i>0
+                                                </span>
+                                            @endif
+                                        </div>
+                                        @if($supplier->payment_terms)
+                                            <p class="text-xs text-blue-600">{{ $supplier->payment_terms }}-day terms</p>
+                                        @endif
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="w-6 h-6 bg-chocolate/10 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-building text-chocolate text-xs"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                        
+                        @if(empty($suppliers))
+                            <div class="text-center py-6 text-gray-400">
+                                <i class="fas fa-building text-2xl mb-2"></i>
+                                <p class="text-sm">No active suppliers found</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            
             <a href="{{ route('purchasing.dashboard') }}" 
                class="inline-flex items-center px-4 py-2 bg-white border border-border-soft text-gray-600 text-sm font-bold rounded-lg hover:bg-cream-bg hover:text-chocolate transition-all shadow-sm group">
                 <i class="fas fa-home mr-2 opacity-70 group-hover:opacity-100"></i> Dashboard
@@ -34,77 +100,14 @@
         </div>
     @endif
 
-    {{-- FLEXBOX LAYOUT --}}
-    <div class="flex flex-col lg:flex-row gap-4 h-auto lg:h-[calc(100vh-140px)]">
+    {{-- FULL WORKSPACE LAYOUT --}}
+    <div class="h-[calc(100vh-200px)]">
         
-        {{-- PANEL 1: SUPPLIER SELECT (Fixed Sidebar) --}}
-        <div class="w-full lg:w-72 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col flex-shrink-0">
-            <div class="px-4 py-3 border-b border-border-soft bg-cream-bg">
-                <h3 class="font-display text-base font-bold text-chocolate">1. Select Supplier</h3>
-                <p class="text-xs text-gray-500 mt-0.5">Choose a supplier to see available items.</p>
-            </div>
+        {{-- WORKSPACE: Item Picker + Order Summary --}}
+        <div class="grid grid-cols-12 gap-6 h-full">
             
-            <div class="p-4 flex-1 flex flex-col min-h-0">
-                {{-- Searchable Dropdown --}}
-                <div class="relative mb-3">
-                    <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
-                    <input type="text" 
-                           id="supplier-search" 
-                           placeholder="Search suppliers..." 
-                           class="w-full pl-9 pr-3 py-2 bg-cream-bg border-transparent focus:bg-white border focus:border-caramel rounded-lg text-sm transition-all placeholder-gray-400 focus:ring-2 focus:ring-caramel/20">
-                </div>
-
-                {{-- Supplier List --}}
-                <div id="supplier-list" class="flex-1 overflow-y-auto custom-scrollbar space-y-2">
-                    @foreach($suppliers ?? [] as $supplier)
-                        <div class="supplier-item border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-chocolate hover:bg-chocolate/5 transition-all"
-                             data-supplier-id="{{ $supplier->id }}"
-                             data-supplier-name="{{ strtolower($supplier->name) }}"
-                             data-pending-count="{{ $supplier->pending_items_count ?? 0 }}"
-                             onclick="orderBuilder.selectSupplier({{ $supplier->id }})">
-                            <div class="flex items-start justify-between">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <h4 class="font-bold text-chocolate text-sm">{{ $supplier->name }}</h4>
-                                        @if(($supplier->pending_items_count ?? 0) > 0)
-                                            <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-orange-100 text-orange-800">
-                                                <i class="fas fa-clock mr-1"></i>{{ $supplier->pending_items_count }}
-                                            </span>
-                                        @else
-                                            <span class="inline-flex items-center px-2 py-1 text-xs font-bold rounded-full bg-gray-100 text-gray-600">
-                                                <i class="fas fa-check mr-1"></i>0
-                                            </span>
-                                        @endif
-                                    </div>
-                                    @if($supplier->payment_terms)
-                                        <p class="text-xs text-blue-600">{{ $supplier->payment_terms }}-day terms</p>
-                                    @endif
-                                </div>
-                                <div class="text-right">
-                                    <div class="w-6 h-6 bg-chocolate/10 rounded-full flex items-center justify-center">
-                                        <i class="fas fa-building text-chocolate text-xs"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-
-                {{-- No Suppliers Message --}}
-                @if(empty($suppliers))
-                    <div class="text-center py-6 text-gray-400">
-                        <i class="fas fa-building text-2xl mb-2"></i>
-                        <p class="text-sm">No active suppliers found</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        {{-- MAIN AREA: Item Picker + Summary --}}
-        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4">
-            
-            {{-- PANEL 2: ITEM PICKER (col-span-7 desktop, col-span-1 mobile) --}}
-            <div class="col-span-1 lg:col-span-7 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
+            {{-- WORKSPACE PANEL 1: ITEM PICKER (col-span-8) --}}
+            <div class="col-span-8 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
                 <div class="px-6 py-4 border-b border-border-soft bg-cream-bg">
                     <h3 class="font-display text-lg font-bold text-chocolate">2. Add Items</h3>
                     <p class="text-xs text-gray-500 mt-0.5">Browse approved requests or full catalog.</p>
@@ -173,8 +176,8 @@
                 </div>
             </div>
 
-            {{-- PANEL 3: ORDER SUMMARY (col-span-5 desktop, col-span-1 mobile) --}}
-            <div class="col-span-1 lg:col-span-5 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
+            {{-- WORKSPACE PANEL 2: ORDER SUMMARY (col-span-4) --}}
+            <div class="col-span-4 bg-white border border-border-soft rounded-xl shadow-sm overflow-hidden flex flex-col">
                 <div class="px-4 lg:px-6 py-3 lg:py-4 border-b border-border-soft bg-cream-bg">
                     <h3 class="font-display text-base lg:text-lg font-bold text-chocolate">3. Order Summary</h3>
                     <p class="text-xs text-gray-500 mt-0.5">Review and finalize your purchase order.</p>
@@ -224,11 +227,11 @@
                             <table class="min-w-full">
                                 <thead class="bg-gray-50 sticky top-0">
                                     <tr>
-                                        <th class="px-2 lg:px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
-                                        <th class="px-2 lg:px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-16 lg:w-20">Qty</th>
-                                        <th class="px-2 lg:px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-16 lg:w-24">Price</th>
-                                        <th class="px-2 lg:px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-16 lg:w-20">Total</th>
-                                        <th class="px-2 lg:px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-8"></th>
+                                        <th class="px-3 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Item</th>
+                                        <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Qty</th>
+                                        <th class="px-3 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-28">Price</th>
+                                        <th class="px-3 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider w-24">Total</th>
+                                        <th class="px-2 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider w-10"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="order-items-table" class="bg-white divide-y divide-gray-100">
@@ -285,22 +288,44 @@ class OrderBuilder {
         document.getElementById('requests-search')?.addEventListener('input', this.filterRequests.bind(this));
         document.getElementById('catalog-search')?.addEventListener('input', this.filterCatalog.bind(this));
         
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('supplier-dropdown');
+            const button = document.getElementById('supplier-dropdown-btn');
+            
+            if (!dropdown.contains(e.target) && !button.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+        
         // Set default dates
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 7);
         document.getElementById('expected_delivery_date').value = tomorrow.toISOString().split('T')[0];
     }
     
+    toggleSupplierDropdown() {
+        const dropdown = document.getElementById('supplier-dropdown');
+        dropdown.classList.toggle('hidden');
+    }
+    
     selectSupplier(supplierId) {
-        // Update UI
-        document.querySelectorAll('.supplier-item').forEach(item => {
-            item.classList.remove('border-chocolate', 'bg-chocolate/5');
+        // Update UI - find supplier in dropdown
+        document.querySelectorAll('#supplier-dropdown .supplier-item').forEach(item => {
+            item.classList.remove('bg-chocolate/10');
         });
         
-        const selectedItem = document.querySelector(`[data-supplier-id="${supplierId}"]`);
+        const selectedItem = document.querySelector(`#supplier-dropdown [data-supplier-id="${supplierId}"]`);
         if (selectedItem) {
-            selectedItem.classList.add('border-chocolate', 'bg-chocolate/5');
+            selectedItem.classList.add('bg-chocolate/10');
+            
+            // Update button text
+            const supplierName = selectedItem.querySelector('h4').textContent;
+            document.getElementById('selected-supplier-text').textContent = supplierName;
         }
+        
+        // Close dropdown
+        document.getElementById('supplier-dropdown').classList.add('hidden');
         
         this.selectedSupplier = supplierId;
         this.loadSupplierData(supplierId);
@@ -395,6 +420,7 @@ class OrderBuilder {
         
         // Re-render the order items with highlighting
         this.renderOrderItems();
+        this.updateCreateButtonState();
     }
 
     renderRequests() {
@@ -414,9 +440,9 @@ class OrderBuilder {
         }
         
         container.innerHTML = `
-            <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                 ${prItems.map(item => `
-                    <div class="border border-gray-200 rounded-lg p-4 hover:border-chocolate hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
+                    <div class="bg-gray-50 rounded-lg p-4 hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex-1">
                                 <h4 class="font-bold text-gray-800 text-sm">${item.item_name}</h4>
@@ -471,9 +497,9 @@ class OrderBuilder {
         }
         
         container.innerHTML = `
-            <div class="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                 ${catalogItems.map(item => `
-                    <div class="border border-gray-200 rounded-lg p-4 hover:border-chocolate hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
+                    <div class="bg-gray-50 rounded-lg p-4 hover:bg-chocolate/5 transition-all" data-item-id="${item.item_id}">
                         <div class="flex items-start justify-between mb-3">
                             <div class="flex-1">
                                 <h4 class="font-bold text-gray-800 text-sm">${item.item_name}</h4>
@@ -583,7 +609,7 @@ class OrderBuilder {
             
             return `
                 <tr class="${rowClass}">
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-3">
                         <div class="flex items-center gap-2">
                             <div class="flex-1">
                                 <div class="font-bold text-gray-800 text-sm">${item.item_name}</div>
@@ -597,31 +623,31 @@ class OrderBuilder {
                             </div>
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-3 py-3 text-center">
                         <input type="number" 
                                value="${item.quantity}" 
                                min="0.01" 
                                step="0.01"
                                oninput="orderBuilder.updateItemQuantity('${item.item_id}', this.value)"
                                onchange="orderBuilder.updateItemQuantity('${item.item_id}', this.value)"
-                               class="w-full px-2 py-1 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
+                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-3 py-3 text-center">
                         <div class="relative">
-                            <span class="absolute left-2 top-1.5 text-gray-500 text-xs">₱</span>
+                            <span class="absolute left-2 top-2 text-gray-500 text-xs">₱</span>
                             <input type="number" 
                                    value="${item.unit_price}" 
                                    min="0" 
                                    step="0.01"
                                    oninput="orderBuilder.updateItemPrice('${item.item_id}', this.value)"
                                    onchange="orderBuilder.updateItemPrice('${item.item_id}', this.value)"
-                                   class="w-full pl-6 pr-2 py-1 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
+                                   class="w-full pl-6 pr-3 py-2 text-sm border border-gray-300 rounded text-center focus:border-chocolate focus:ring-1 focus:ring-chocolate">
                         </div>
                     </td>
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-3 py-3 text-right">
                         <span class="font-bold text-chocolate">₱${total.toFixed(2)}</span>
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-2 py-3 text-center">
                         <button type="button" 
                                 onclick="orderBuilder.removeItem('${item.item_id}')"
                                 class="text-red-500 hover:text-red-700 p-1">
